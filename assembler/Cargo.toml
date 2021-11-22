@@ -2,6 +2,7 @@
 name = "kaba-assembler"
 version = "0.1.0"
 edition = "2021"
+license = "BSD-3-Clause"
 
 [dependencies]
 pest = "2.1.3"
