@@ -1,0 +1,19 @@
+assembly = { SOI ~ assembly_line* ~ EOI }
+
+assembly_line = { label_line | instruction_line }
+
+label_line = ${ identifier ~ ":" }
+
+instruction_line = { identifier ~ (expr ~ ("," ~ expr)*)? }
+
+expr = { identifier | number }
+
+identifier = @{
+    (ASCII_ALPHA ~ ("_" | ASCII_ALPHANUMERIC)*)
+    | ("_" ~ ("_" | ASCII_ALPHANUMERIC)+)
+}
+
+number = @{ NUMBER+ }
+
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT = _{ "//" ~ (!NEWLINE ~ ANY)* }
