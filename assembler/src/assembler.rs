@@ -4,24 +4,24 @@ pub fn assemble(assembly: &str) -> Result<Vec<Bytecode>, ()> {
     todo!();
 }
 
-struct AssemblingResult {
-    bytecode: Vec<Bytecode>,
+struct Assembler {
+    result: Vec<Bytecode>,
 }
 
-impl AssemblingResult {
+impl Assembler {
     fn new() -> Self {
-        let mut ar = Self { bytecode: vec![] };
-        ar.add_header_string();
+        let mut assembler = Self { result: vec![] };
+        assembler.add_header_string();
 
-        ar
+        assembler
     }
 
     fn add_header_string(&mut self) {
         let magic_bytes = "KABA BYTECODE".as_bytes();
         let version_bytes = &self.get_version_bytes();
-        let mut header = [magic_bytes, version_bytes].concat();
+        let header = [magic_bytes, version_bytes].concat();
 
-        self.bytecode.extend_from_slice(&mut header);
+        self.result.extend_from_slice(&header);
     }
 
     fn get_version_bytes(&self) -> [u8; 3] {
@@ -39,8 +39,8 @@ mod tests {
 
     #[test]
     fn check_header_string() {
-        let ar = AssemblingResult::new();
+        let assembler = Assembler::new();
 
-        assert_eq!(ar.bytecode.len(), 16usize);
+        assert_eq!(assembler.result.len(), 16usize);
     }
 }
