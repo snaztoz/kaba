@@ -1,6 +1,6 @@
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
-struct KabaAsmParser;
+pub struct KabaAsmParser;
 
 #[cfg(test)]
 mod tests {
