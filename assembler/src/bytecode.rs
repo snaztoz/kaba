@@ -5,7 +5,7 @@ use std::{
 };
 
 type Instruction = &'static str;
-type Bytecode = u8;
+pub type Bytecode = u8;
 type Args = Option<&'static [u8]>;
 
 const PTR: u8 = mem::size_of::<usize>() as u8;
