@@ -1,6 +1,6 @@
 assembly = { SOI ~ assembly_line* ~ EOI }
 
-assembly_line = { label_line | instruction_line }
+assembly_line = { (label_line | instruction_line)? ~ NEWLINE }
 
 label_line = ${ identifier ~ ":" }
 
@@ -15,5 +15,5 @@ identifier = @{
 
 number = @{ NUMBER+ }
 
-WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+WHITESPACE = _{ " " | "\t" }
 COMMENT = _{ "//" ~ (!NEWLINE ~ ANY)* }
