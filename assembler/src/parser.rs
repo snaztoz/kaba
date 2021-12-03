@@ -62,4 +62,26 @@ mod tests {
 
         assert!(parsing_result.is_err());
     }
+
+    #[test]
+    fn parse_with_no_newline_at_the_last_line() {
+        let input = "\
+            main:
+                foo 1, 3";
+
+        let parsing_result = KabaAsmParser::parse(Rule::assembly, input);
+
+        assert!(parsing_result.is_ok());
+    }
+
+    #[test]
+    fn parse_multiple_in_one_line() {
+        let inputs = ["main: foo:\n", "foo 1, 2 bar 3, 4\n"];
+
+        for input in inputs {
+            let parsing_result = KabaAsmParser::parse(Rule::assembly, input);
+
+            assert!(parsing_result.is_err());
+        }
+    }
 }
