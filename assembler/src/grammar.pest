@@ -1,14 +1,14 @@
 assembly = {
     SOI
-    ~ (assembly_line ~ NEWLINE)*
+    ~ (assembly_line? ~ NEWLINE)*
     // the last assembly_line may or may not followed by
     // newline character
-    ~ assembly_line ~ NEWLINE?
+    ~ assembly_line? ~ NEWLINE?
     ~ EOI
 }
 
 // assembly_line may be an empty line
-assembly_line = { (label_line | instruction_line)? }
+assembly_line = { label_line | instruction_line }
 
 label_line = ${ identifier ~ ":" }
 
