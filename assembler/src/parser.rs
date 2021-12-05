@@ -87,9 +87,6 @@ baz:
     something 5, 10, abc  // a comment after instruction
 ";
 
-        let parsing_result = KabaAsmParser::parse(Rule::instruction_line, input);
-
-        assert!(parsing_result.is_ok());
         pest::parses_to! {
             parser: KabaAsmParser,
             input: input,
