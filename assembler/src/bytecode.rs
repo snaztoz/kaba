@@ -53,7 +53,7 @@ static INSTRUCTION_SET: &[(Instruction, Args)] = &[
 ];
 
 lazy_static! {
-    static ref INSTRUCTION_SET_BYTECODE: HashMap<Instruction, Bytecode> = {
+    pub static ref INSTRUCTION_SET_BYTECODE: HashMap<Instruction, Bytecode> = {
         let mut instruction_bytecodes = HashMap::new();
 
         let mut bytecode = BYTECODE_START;
@@ -65,7 +65,7 @@ lazy_static! {
         instruction_bytecodes
     };
 
-    static ref BYTECODE_ARGS: HashMap<Bytecode, Args> = {
+    pub static ref BYTECODE_ARGS: HashMap<Bytecode, Args> = {
         let mut bytecode_args = HashMap::new();
 
         let mut bytecode = BYTECODE_START;
