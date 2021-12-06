@@ -6,22 +6,27 @@ pub struct KabaAsmParser;
 mod tests {
     use super::*;
     use pest::{self, consumes_to, Parser};
+    use regex::{Captures, Regex};
+    use std::fs;
+
+    fn read_input_file(path: &str) -> String {
+        let path = format!("{}/src/testdata/parse/{}", env!("CARGO_MANIFEST_DIR"), path);
+        let file_content = fs::read_to_string(&path).unwrap();
+
+        // convert newline characters to '\n' in all platforms
+        let re = Regex::new("(\r\n|\r)").unwrap();
+        let cleaned_content = re.replace_all(&file_content, |_: &Captures| String::from("\n"));
+
+        String::from(cleaned_content)
+    }
 
     #[test]
     fn parse_assembly() {
-        let input = "\
-// this is a header comment
-
-main:
-    foo 10, 15
-
-baz:
-    bat abc, def
-";
+        let input = read_input_file("test_assembly");
 
         pest::parses_to! {
             parser: KabaAsmParser,
-            input: input,
+            input: &input,
             rule: Rule::assembly,
             tokens: [
                 assembly(0, 73, [
@@ -65,13 +70,11 @@ baz:
 
     #[test]
     fn parse_label() {
-        let input = "\
-    main: // a comment after label
-";
+        let input = read_input_file("test_label");
 
         pest::parses_to! {
             parser: KabaAsmParser,
-            input: input,
+            input: &input,
             rule: Rule::label_line,
             tokens: [
                 label_line(0, 5, [
@@ -83,13 +86,11 @@ baz:
 
     #[test]
     fn parse_instruction() {
-        let input = "\
-    something 5, 10, abc  // a comment after instruction
-";
+        let input = read_input_file("test_instruction");
 
         pest::parses_to! {
             parser: KabaAsmParser,
-            input: input,
+            input: &input,
             rule: Rule::instruction_line,
             tokens: [
                 instruction_line(0, 20, [
@@ -126,13 +127,11 @@ baz:
 
     #[test]
     fn parse_with_no_newline_at_the_last_line() {
-        let input = "\
-main:
-    foo 1, 3";
+        let input = read_input_file("test_no_newline");
 
         pest::parses_to! {
             parser: KabaAsmParser,
-            input: input,
+            input: &input,
             rule: Rule::assembly,
             tokens: [
                 assembly(0, 18, [

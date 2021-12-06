@@ -1,0 +1,7 @@
+// this is a header comment
+
+main:
+    foo 10, 15
+
+baz:
+    bat abc, def
