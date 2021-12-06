@@ -12,6 +12,9 @@ const PTR: u8 = mem::size_of::<usize>() as u8;
 const INT: u8 = 4;
 const BYTE: u8 = 1;
 
+// byte 0x00 is reserved to mark the end of assembly file
+const BYTECODE_START: u8 = 0x01;
+
 static INSTRUCTION_SET: &[(Instruction, Args)] = &[
     // Functions
     ("invoke", Some(&[PTR, INT])),
@@ -53,8 +56,7 @@ lazy_static! {
     static ref INSTRUCTION_SET_BYTECODE: HashMap<Instruction, Bytecode> = {
         let mut instruction_bytecodes = HashMap::new();
 
-        // skip the 0x00 byte
-        let mut bytecode = 0x01;
+        let mut bytecode = BYTECODE_START;
         for &(instruction, _) in INSTRUCTION_SET {
             instruction_bytecodes.insert(instruction, bytecode);
             bytecode += 1;
@@ -66,7 +68,7 @@ lazy_static! {
     static ref BYTECODE_ARGS: HashMap<Bytecode, Args> = {
         let mut bytecode_args = HashMap::new();
 
-        let mut bytecode = 0x01;
+        let mut bytecode = BYTECODE_START;
         for &(_, args) in INSTRUCTION_SET {
             bytecode_args.insert(bytecode, args);
             bytecode += 1;
