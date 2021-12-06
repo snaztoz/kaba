@@ -114,9 +114,15 @@ mod tests {
         let inputs = ["a12bcd_ef", "__", "_123", "a"];
 
         for input in &inputs {
-            let parsing_result = KabaAsmParser::parse(Rule::identifier, input);
+            let tok_start = 0;
+            let tok_end = input.len();
 
-            assert!(parsing_result.is_ok());
+            pest::parses_to! {
+                parser: KabaAsmParser,
+                input: input,
+                rule: Rule::identifier,
+                tokens: [identifier(tok_start, tok_end)]
+            }
         }
 
         // invalid identifier
