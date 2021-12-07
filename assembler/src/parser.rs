@@ -10,7 +10,7 @@ mod tests {
 
     #[test]
     fn parse_assembly() {
-        let input = testutils::read_input_file("parse/test_assembly");
+        let input = testutils::read_input_file("parsing/assembly");
 
         pest::parses_to! {
             parser: KabaAsmParser,
@@ -58,7 +58,7 @@ mod tests {
 
     #[test]
     fn parse_label() {
-        let input = testutils::read_input_file("parse/test_label");
+        let input = testutils::read_input_file("parsing/label");
 
         pest::parses_to! {
             parser: KabaAsmParser,
@@ -74,7 +74,7 @@ mod tests {
 
     #[test]
     fn parse_instruction() {
-        let input = testutils::read_input_file("parse/test_instruction");
+        let input = testutils::read_input_file("parsing/instruction");
 
         pest::parses_to! {
             parser: KabaAsmParser,
@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn parse_with_no_newline_at_the_last_line() {
-        let input = testutils::read_input_file("parse/test_no_newline");
+        let input = testutils::read_input_file("parsing/no_newline");
 
         pest::parses_to! {
             parser: KabaAsmParser,
