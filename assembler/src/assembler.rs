@@ -19,7 +19,7 @@ struct Assembler {
     result: Vec<Bytecode>,
 
     labels_mapping: HashMap<String, usize>,
-    unresolved_labels: Vec<String>,
+    unmapped_labels: Vec<String>,
 }
 
 impl Assembler {
@@ -27,7 +27,7 @@ impl Assembler {
         let mut assembler = Self {
             result: vec![],
             labels_mapping: HashMap::new(),
-            unresolved_labels: vec![],
+            unmapped_labels: vec![],
         };
 
         assembler.add_header_string();
@@ -85,17 +85,17 @@ impl Assembler {
 
     fn assemble_label(&mut self, label: Pair<Rule>) {
         let label = label.as_str();
-        self.unresolved_labels.push(String::from(label));
+        self.unmapped_labels.push(String::from(label));
     }
 
     fn push_instruction_bytecode(&mut self, bytecode: Bytecode) {
         self.result.push(bytecode);
-        self.resolve_labels();
+        self.map_labels();
     }
 
-    fn resolve_labels(&mut self) {
+    fn map_labels(&mut self) {
         let newest_instruction_pos = self.result.len() - 1;
-        for label in self.unresolved_labels.drain(..) {
+        for label in self.unmapped_labels.drain(..) {
             self.labels_mapping.insert(label, newest_instruction_pos);
         }
     }
@@ -122,7 +122,7 @@ mod tests {
         assembler.assemble(&assembly);
 
         assert_eq!(assembler.result.len(), header_size + 1);
-        assert!(assembler.unresolved_labels.is_empty());
+        assert!(assembler.unmapped_labels.is_empty());
 
         let assembly_eoi_pos = assembler.result.len() - 1;
         for label in ["main", "foo"] {
