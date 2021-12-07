@@ -19,7 +19,6 @@ struct Assembler {
     result: Vec<Bytecode>,
 
     labels_mapping: HashMap<String, usize>,
-    unmapped_labels: Vec<String>,
 }
 
 impl Assembler {
@@ -27,7 +26,6 @@ impl Assembler {
         let mut assembler = Self {
             result: vec![],
             labels_mapping: HashMap::new(),
-            unmapped_labels: vec![],
         };
 
         assembler.add_header_string();
@@ -66,7 +64,7 @@ impl Assembler {
             }
         }
 
-        self.push_instruction_bytecode(EOI_BYTECODE);
+        self.result.push(EOI_BYTECODE);
     }
 
     fn assemble_line(&mut self, assembly_line: Pairs<Rule>) {
@@ -84,20 +82,10 @@ impl Assembler {
     }
 
     fn assemble_label(&mut self, label: Pair<Rule>) {
-        let label = label.as_str();
-        self.unmapped_labels.push(String::from(label));
-    }
+        let label = label.as_str().to_string();
+        let next_instruction_pos = self.result.len();
 
-    fn push_instruction_bytecode(&mut self, bytecode: Bytecode) {
-        self.result.push(bytecode);
-        self.map_labels();
-    }
-
-    fn map_labels(&mut self) {
-        let newest_instruction_pos = self.result.len() - 1;
-        for label in self.unmapped_labels.drain(..) {
-            self.labels_mapping.insert(label, newest_instruction_pos);
-        }
+        self.labels_mapping.insert(label, next_instruction_pos);
     }
 }
 
@@ -116,17 +104,13 @@ mod tests {
     #[test]
     fn assemble_labels() {
         let mut assembler = Assembler::new();
-        let header_size = assembler.result.len();
         let assembly = testutils::read_input_file("assembling/label");
 
         assembler.assemble(&assembly);
 
-        assert_eq!(assembler.result.len(), header_size + 1);
-        assert!(assembler.unmapped_labels.is_empty());
-
-        let assembly_eoi_pos = assembler.result.len() - 1;
+        let eoi_pos = assembler.result.len() - 1;
         for label in ["main", "foo"] {
-            assert_eq!(assembler.labels_mapping[label], assembly_eoi_pos);
+            assert_eq!(assembler.labels_mapping[label], eoi_pos);
         }
     }
 }
