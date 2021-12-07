@@ -1,4 +1,4 @@
-name: Kaba
+name: Build
 
 on:
   push:
@@ -11,7 +11,10 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.platform }}
     steps:
     - uses: actions/checkout@v2
     - name: Build
