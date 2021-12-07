@@ -83,6 +83,11 @@ impl Assembler {
         let label = label.as_str().to_string();
         let next_instruction_pos = self.result.len();
 
+        if self.labels_mapping.contains_key(&label) {
+            // duplicated labels error handling
+            todo!()
+        }
+
         self.labels_mapping.insert(label, next_instruction_pos);
     }
 }
@@ -110,5 +115,14 @@ mod tests {
         for label in ["main", "foo"] {
             assert_eq!(assembler.labels_mapping[label], eoi_pos);
         }
+    }
+
+    #[test]
+    #[should_panic]
+    fn assemble_duplicated_labels() {
+        let mut assembler = Assembler::new();
+        let assembly = testutils::read_test_file("assembling/duplicated_labels");
+
+        assembler.assemble(&assembly);
     }
 }
