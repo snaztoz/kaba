@@ -104,6 +104,7 @@ impl Assembler {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testutils;
 
     #[test]
     fn check_header_string() {
@@ -116,12 +117,9 @@ mod tests {
     fn assemble_labels() {
         let mut assembler = Assembler::new();
         let header_size = assembler.result.len();
-        let assembly = "\
-main:
-foo:
-";
+        let assembly = testutils::read_input_file("assembling/label");
 
-        assembler.assemble(assembly);
+        assembler.assemble(&assembly);
 
         assert_eq!(assembler.result.len(), header_size + 1);
         assert!(assembler.unresolved_labels.is_empty());
