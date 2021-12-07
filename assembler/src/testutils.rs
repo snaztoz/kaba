@@ -1,7 +1,7 @@
 use regex::{Captures, Regex};
 use std::fs;
 
-pub fn read_input_file(path: &str) -> String {
+pub fn read_test_file(path: &str) -> String {
     let path = format!("{}/src/testdata/{}", env!("CARGO_MANIFEST_DIR"), path);
     let file_content = fs::read_to_string(&path).unwrap();
 

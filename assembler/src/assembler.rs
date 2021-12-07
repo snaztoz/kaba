@@ -102,7 +102,7 @@ mod tests {
     #[test]
     fn assemble_labels() {
         let mut assembler = Assembler::new();
-        let assembly = testutils::read_input_file("assembling/label");
+        let assembly = testutils::read_test_file("assembling/label");
 
         assembler.assemble(&assembly);
 
