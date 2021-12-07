@@ -2,10 +2,7 @@ use super::{
     bytecode::{Bytecode, EOI_BYTECODE},
     parser::{KabaAsmParser, Rule},
 };
-use pest::{
-    iterators::{Pair, Pairs},
-    Parser,
-};
+use pest::{iterators::Pair, Parser};
 use std::collections::HashMap;
 
 pub fn assemble(assembly: &str) -> Result<Vec<Bytecode>, ()> {
@@ -58,7 +55,11 @@ impl Assembler {
 
         for line in parsed_assembly.into_inner() {
             match line.as_rule() {
-                Rule::assembly_line => self.assemble_line(line.into_inner()),
+                Rule::assembly_line => {
+                    let assembly_line = line.into_inner().next().unwrap();
+                    self.assemble_line(assembly_line);
+                }
+
                 Rule::EOI => (),
                 _ => unreachable!(),
             }
@@ -67,10 +68,7 @@ impl Assembler {
         self.result.push(EOI_BYTECODE);
     }
 
-    fn assemble_line(&mut self, assembly_line: Pairs<Rule>) {
-        let mut assembly_line = assembly_line;
-        let line = assembly_line.next().unwrap();
-
+    fn assemble_line(&mut self, line: Pair<Rule>) {
         match line.as_rule() {
             Rule::label_line => {
                 let label = line.into_inner().next().unwrap();
