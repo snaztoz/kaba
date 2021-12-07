@@ -4,6 +4,8 @@ extern crate pest_derive;
 #[cfg(test)]
 extern crate regex;
 
+pub use assembler::assemble;
+
 mod assembler;
 #[rustfmt::skip]
 mod bytecode;
