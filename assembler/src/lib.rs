@@ -10,3 +10,5 @@ mod assembler;
 #[rustfmt::skip]
 mod bytecode;
 mod parser;
+#[cfg(test)]
+mod testutils;

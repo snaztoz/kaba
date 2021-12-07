@@ -5,24 +5,12 @@ pub struct KabaAsmParser;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testutils;
     use pest::{self, consumes_to, Parser};
-    use regex::{Captures, Regex};
-    use std::fs;
-
-    fn read_input_file(path: &str) -> String {
-        let path = format!("{}/src/testdata/parse/{}", env!("CARGO_MANIFEST_DIR"), path);
-        let file_content = fs::read_to_string(&path).unwrap();
-
-        // convert newline characters to '\n' in all platforms
-        let re = Regex::new("(\r\n|\r)").unwrap();
-        let cleaned_content = re.replace_all(&file_content, |_: &Captures| String::from("\n"));
-
-        String::from(cleaned_content)
-    }
 
     #[test]
     fn parse_assembly() {
-        let input = read_input_file("test_assembly");
+        let input = testutils::read_input_file("parse/test_assembly");
 
         pest::parses_to! {
             parser: KabaAsmParser,
@@ -70,7 +58,7 @@ mod tests {
 
     #[test]
     fn parse_label() {
-        let input = read_input_file("test_label");
+        let input = testutils::read_input_file("parse/test_label");
 
         pest::parses_to! {
             parser: KabaAsmParser,
@@ -86,7 +74,7 @@ mod tests {
 
     #[test]
     fn parse_instruction() {
-        let input = read_input_file("test_instruction");
+        let input = testutils::read_input_file("parse/test_instruction");
 
         pest::parses_to! {
             parser: KabaAsmParser,
@@ -133,7 +121,7 @@ mod tests {
 
     #[test]
     fn parse_with_no_newline_at_the_last_line() {
-        let input = read_input_file("test_no_newline");
+        let input = testutils::read_input_file("parse/test_no_newline");
 
         pest::parses_to! {
             parser: KabaAsmParser,
