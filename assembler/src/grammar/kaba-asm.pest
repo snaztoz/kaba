@@ -7,10 +7,14 @@ assembly = {
     ~ EOI
 }
 
-// assembly_line may be an empty line
 assembly_line = { label_line | instruction_line }
 
-label_line = ${ identifier ~ ":" }
+label_line = ${ (identifier | untracked_label_identifier) ~ ":" }
+
+// Untracked labels won't be listed in the resulting bytecode.
+// It is used in place where the marked position won't be accessed
+// from external code, like in jump instructions target
+untracked_label_identifier = ${ "@" ~ identifier }
 
 instruction_line = { identifier ~ (expr ~ ("," ~ expr)*)? }
 

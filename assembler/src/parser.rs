@@ -73,6 +73,24 @@ mod tests {
     }
 
     #[test]
+    fn parse_untracked_label() {
+        let input = testutils::read_test_file("parsing/untracked_label");
+
+        pest::parses_to! {
+            parser: KabaAsmParser,
+            input: &input,
+            rule: Rule::label_line,
+            tokens: [
+                label_line(0, 24, [
+                    untracked_label_identifier(0, 23, [
+                        identifier(1, 23),
+                    ]),
+                ]),
+            ]
+        };
+    }
+
+    #[test]
     fn parse_instruction() {
         let input = testutils::read_test_file("parsing/instruction");
 
