@@ -1,5 +1,5 @@
 use super::{
-    bytecode::{Bytecode, EOI_BYTECODE},
+    bytecode::Bytecode,
     parser::{KabaAsmParser, Rule},
 };
 use pest::{iterators::Pair, Parser};
@@ -26,6 +26,7 @@ impl Assembler {
         };
 
         assembler.add_header_string();
+        assembler.add_instructions_bytes_count();
 
         assembler
     }
@@ -36,6 +37,10 @@ impl Assembler {
         let header = [magic_bytes, version_bytes].concat();
 
         self.result.extend_from_slice(&header);
+    }
+
+    fn add_instructions_bytes_count(&mut self) {
+        self.result.extend_from_slice(&[0; 4]);
     }
 
     fn get_version_bytes(&self) -> [u8; 3] {
@@ -64,8 +69,6 @@ impl Assembler {
                 _ => unreachable!(),
             }
         }
-
-        self.result.push(EOI_BYTECODE);
     }
 
     fn assemble_line(&mut self, line: Pair<Rule>) {
@@ -98,10 +101,10 @@ mod tests {
     use crate::testutils;
 
     #[test]
-    fn check_header_string() {
+    fn check_assembler_new_size() {
         let assembler = Assembler::new();
 
-        assert_eq!(assembler.result.len(), 16usize);
+        assert_eq!(assembler.result.len(), 20);
     }
 
     #[test]
@@ -111,9 +114,9 @@ mod tests {
 
         assembler.assemble(&assembly);
 
-        let eoi_pos = assembler.result.len() - 1;
+        let instructions_start_pos = 20;
         for label in ["main", "foo"] {
-            assert_eq!(assembler.labels_mapping[label], eoi_pos);
+            assert_eq!(assembler.labels_mapping[label], instructions_start_pos);
         }
     }
 

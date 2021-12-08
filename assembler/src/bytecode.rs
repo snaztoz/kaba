@@ -12,8 +12,7 @@ const PTR: u8 = mem::size_of::<usize>() as u8;
 const INT: u8 = 4;
 const BYTE: u8 = 1;
 
-pub const EOI_BYTECODE: u8 = 0x00;
-const BYTECODE_START: u8 = EOI_BYTECODE + 1;
+const BYTECODE_START: u8 = 0x01;
 
 static INSTRUCTION_SET: &[(Instruction, Args)] = &[
     // Functions
