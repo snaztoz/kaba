@@ -12,7 +12,7 @@ const PTR: u8 = mem::size_of::<usize>() as u8;
 const INT: u8 = 4;
 const BYTE: u8 = 1;
 
-const BYTECODE_START: u8 = 0x01;
+const INSTRUCTION_BYTECODE_START: u8 = 0x01;
 
 static INSTRUCTION_SET: &[(Instruction, Args)] = &[
     // Functions
@@ -55,7 +55,7 @@ lazy_static! {
     pub static ref INSTRUCTION_SET_BYTECODE: HashMap<Instruction, Bytecode> = {
         let mut instruction_bytecodes = HashMap::new();
 
-        let mut bytecode = BYTECODE_START;
+        let mut bytecode = INSTRUCTION_BYTECODE_START;
         for &(instruction, _) in INSTRUCTION_SET {
             instruction_bytecodes.insert(instruction, bytecode);
             bytecode += 1;
@@ -67,7 +67,7 @@ lazy_static! {
     pub static ref BYTECODE_ARGS: HashMap<Bytecode, Args> = {
         let mut bytecode_args = HashMap::new();
 
-        let mut bytecode = BYTECODE_START;
+        let mut bytecode = INSTRUCTION_BYTECODE_START;
         for &(_, args) in INSTRUCTION_SET {
             bytecode_args.insert(bytecode, args);
             bytecode += 1;
