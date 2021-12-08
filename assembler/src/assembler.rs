@@ -69,6 +69,8 @@ impl Assembler {
                 _ => unreachable!(),
             }
         }
+
+        self.add_labels_mapping_information();
     }
 
     fn assemble_line(&mut self, line: Pair<Rule>) {
@@ -93,6 +95,34 @@ impl Assembler {
 
         self.labels_mapping.insert(label, next_instruction_pos);
     }
+
+    fn add_labels_mapping_information(&mut self) {
+        let labels_mapping_bytecode = self.get_labels_mapping_bytecode();
+
+        let labels_mapping_size: u32 = labels_mapping_bytecode
+            .len()
+            .try_into() // looks like label bytes count won't reach u32::MAX anyway
+            .unwrap();
+
+        self.result
+            .extend_from_slice(&labels_mapping_size.to_be_bytes());
+        self.result.extend_from_slice(&labels_mapping_bytecode);
+    }
+
+    fn get_labels_mapping_bytecode(&self) -> Vec<Bytecode> {
+        self.labels_mapping
+            .iter()
+            .filter(|(label, _)| !is_untracked_label(label))
+            .fold(vec![], |mut buffer, (label, target_pos)| {
+                let bytes = [label.as_bytes(), &target_pos.to_be_bytes()].concat();
+                buffer.extend_from_slice(&bytes);
+                buffer
+            })
+    }
+}
+
+fn is_untracked_label(label: &str) -> bool {
+    label.starts_with("@")
 }
 
 #[cfg(test)]
@@ -114,10 +144,27 @@ mod tests {
 
         assembler.assemble(&assembly);
 
-        let instructions_start_pos = 20;
         for label in ["main", "foo"] {
-            assert_eq!(assembler.labels_mapping[label], instructions_start_pos);
+            // input file doesn't contain any instruction, so they
+            // will maps to byte 20
+            assert_eq!(assembler.labels_mapping[label], 20);
         }
+
+        let expected_bytecode_size =
+            // header section
+            16  // size
+            //
+            // instructions section
+            + 4 // size
+            + 0 // no instruction
+            //
+            // labels section
+            + 4                 // size
+            + "main".len() + 8  // first label mapping
+            + "foo".len() + 8   // second label mapping
+        ;
+
+        assert_eq!(assembler.result.len(), expected_bytecode_size);
     }
 
     #[test]
