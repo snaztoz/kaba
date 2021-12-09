@@ -115,8 +115,12 @@ impl Assembler {
         self.labels_mapping
             .iter()
             .filter(|(label, _)| !is_untracked_label(label))
-            .fold(vec![], |mut buffer, (label, target_pos)| {
-                let bytes = [label.as_bytes(), &target_pos.to_be_bytes()].concat();
+            .fold(vec![], |mut buffer, (label, mapping_target)| {
+                let label = label.as_bytes();
+                let separator = 0x00u8.to_be_bytes();
+                let mapping_target = mapping_target.to_be_bytes();
+
+                let bytes = [label, &separator, &mapping_target].concat();
                 buffer.extend_from_slice(&bytes);
                 buffer
             })
@@ -167,8 +171,8 @@ mod tests {
             //
             // labels section
             + SECTION_BYTE_COUNT_SIZE
-            + "main".len() + 8  // first label mapping
-            + "foo".len() + 8   // second label mapping
+            + "main".len() + 1 + 8  // first label mapping
+            + "foo".len() + 1 + 8   // second label mapping
         ;
 
         assert_eq!(assembler.result.len(), expected_bytecode_size);
