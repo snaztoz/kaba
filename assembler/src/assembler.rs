@@ -12,6 +12,8 @@ pub fn assemble(assembly: &str) -> Result<Vec<Bytecode>, ()> {
     Ok(assembler.result)
 }
 
+const SECTION_BYTE_COUNT_SIZE: usize = 4;
+
 struct Assembler {
     result: Vec<Bytecode>,
 
@@ -40,7 +42,7 @@ impl Assembler {
     }
 
     fn add_instructions_bytes_count(&mut self) {
-        self.result.extend_from_slice(&[0; 4]);
+        self.result.extend_from_slice(&[0; SECTION_BYTE_COUNT_SIZE]);
     }
 
     fn get_version_bytes(&self) -> [u8; 3] {
@@ -130,11 +132,16 @@ mod tests {
     use super::*;
     use crate::testutils;
 
+    const HEADER_SIZE: usize = 16;
+
     #[test]
     fn check_assembler_new_size() {
         let assembler = Assembler::new();
 
-        assert_eq!(assembler.result.len(), 20);
+        assert_eq!(
+            assembler.result.len(),
+            HEADER_SIZE + SECTION_BYTE_COUNT_SIZE
+        );
     }
 
     #[test]
@@ -146,20 +153,20 @@ mod tests {
 
         for label in ["main", "foo"] {
             // input file doesn't contain any instruction, so they
-            // will maps to byte 20
-            assert_eq!(assembler.labels_mapping[label], 20);
+            // will maps to position 0 of instructions section
+            let instructions_start = HEADER_SIZE + SECTION_BYTE_COUNT_SIZE;
+            assert_eq!(assembler.labels_mapping[label], instructions_start);
         }
 
         let expected_bytecode_size =
-            // header section
-            16  // size
+            HEADER_SIZE
             //
             // instructions section
-            + 4 // size
+            + SECTION_BYTE_COUNT_SIZE
             + 0 // no instruction
             //
             // labels section
-            + 4                 // size
+            + SECTION_BYTE_COUNT_SIZE
             + "main".len() + 8  // first label mapping
             + "foo".len() + 8   // second label mapping
         ;
