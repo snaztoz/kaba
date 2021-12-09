@@ -1,40 +1,47 @@
 use lazy_static::lazy_static;
-use std::{
-    collections::HashMap,
-    mem,
-};
+use std::collections::HashMap;
 
 pub type Bytecode = u8;
 // we use 64-bit size to ensure the bytecode can be run
 // in 32-bit and 64-bit platforms
 pub type BytecodePtr = u64;
 type Instruction = &'static str;
-type Args = Option<&'static [u8]>;
+type Args = Option<&'static [ArgType]>;
 
-const PTR: u8 = mem::size_of::<BytecodePtr>() as u8;
-const INT: u8 = 4;
-const BYTE: u8 = 1;
+pub enum ArgType {
+    Ptr,
+    Int,
+    Byte,
+}
 
-const INSTRUCTION_BYTECODE_START: u8 = 0x01;
+impl ArgType {
+    pub fn size(&self) -> u8 {
+        match *self {
+            ArgType::Ptr => 8,
+            ArgType::Int => 4,
+            ArgType::Byte => 1,
+        }
+    }
+}
 
-static INSTRUCTION_SET: &[(Instruction, Args)] = &[
+const INSTRUCTION_SET: &[(Instruction, Args)] = &[
     // Functions
-    ("invoke", Some(&[PTR, INT])),
+    ("invoke", Some(&[ArgType::Ptr, ArgType::Int])),
     ("return", None),
 
     // References
-    ("rpushl", Some(&[PTR])),
-    ("rpusho", Some(&[PTR])),
+    ("rpushl", Some(&[ArgType::Ptr])),
+    ("rpusho", Some(&[ArgType::Ptr])),
     ("rset",   None),
     ("rload",  None),
     ("rceq",   None),
     ("rcne",   None),
 
     // Integers
-    ("ipushl", Some(&[INT])),
-    ("ipusho", Some(&[INT])),
-    ("ipopl",  Some(&[INT])),
-    ("ipopo",  Some(&[INT])),
+    ("ipushl", Some(&[ArgType::Int])),
+    ("ipusho", Some(&[ArgType::Int])),
+    ("ipopl",  Some(&[ArgType::Int])),
+    ("ipopo",  Some(&[ArgType::Int])),
     ("iset",   None),
     ("iload",  None),
     ("iadd",   None),
@@ -48,11 +55,13 @@ static INSTRUCTION_SET: &[(Instruction, Args)] = &[
     ("icgt",   None),
     ("icge",   None),
 
-    ("moffset", Some(&[BYTE])),
+    ("moffset", Some(&[ArgType::Byte])),
 
-    ("jmp",  Some(&[PTR])),
-    ("jmpc", Some(&[PTR])),
+    ("jmp",  Some(&[ArgType::Ptr])),
+    ("jmpc", Some(&[ArgType::Ptr])),
 ];
+
+const INSTRUCTION_BYTECODE_START: u8 = 0x01;
 
 lazy_static! {
     pub static ref INSTRUCTION_SET_BYTECODE: HashMap<Instruction, Bytecode> = {
