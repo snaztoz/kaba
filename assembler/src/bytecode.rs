@@ -4,11 +4,14 @@ use std::{
     mem,
 };
 
-type Instruction = &'static str;
 pub type Bytecode = u8;
+// we use 64-bit size to ensure the bytecode can be run
+// in 32-bit and 64-bit platforms
+pub type BytecodePtr = u64;
+type Instruction = &'static str;
 type Args = Option<&'static [u8]>;
 
-const PTR: u8 = mem::size_of::<usize>() as u8;
+const PTR: u8 = mem::size_of::<BytecodePtr>() as u8;
 const INT: u8 = 4;
 const BYTE: u8 = 1;
 

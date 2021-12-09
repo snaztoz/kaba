@@ -1,5 +1,5 @@
 use super::{
-    bytecode::Bytecode,
+    bytecode::{Bytecode, BytecodePtr},
     parser::{KabaAsmParser, Rule},
 };
 use pest::{iterators::Pair, Parser};
@@ -17,7 +17,7 @@ const SECTION_BYTE_COUNT_SIZE: usize = 4;
 struct Assembler {
     result: Vec<Bytecode>,
 
-    labels_mapping: HashMap<String, usize>,
+    labels_mapping: HashMap<String, BytecodePtr>,
 }
 
 impl Assembler {
@@ -88,7 +88,7 @@ impl Assembler {
 
     fn assemble_label(&mut self, label: Pair<Rule>) {
         let label = label.as_str().to_string();
-        let next_instruction_pos = self.result.len();
+        let next_instruction_pos = self.result.len() as BytecodePtr;
 
         if self.labels_mapping.contains_key(&label) {
             // duplicated labels error handling
@@ -158,7 +158,7 @@ mod tests {
         for label in ["main", "foo"] {
             // input file doesn't contain any instruction, so they
             // will maps to position 0 of instructions section
-            let instructions_start = HEADER_SIZE + SECTION_BYTE_COUNT_SIZE;
+            let instructions_start = (HEADER_SIZE + SECTION_BYTE_COUNT_SIZE) as BytecodePtr;
             assert_eq!(assembler.labels_mapping[label], instructions_start);
         }
 
