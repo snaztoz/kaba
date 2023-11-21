@@ -27,7 +27,7 @@ cargo build --release
 
 Contoh penggunaan:
 
-1. Buat file source code (ekstensi `.kaba`, meskipun ekstensi lain juga bisa untuk sekarang).
+1. Buat file source code (ekstensi harus `.kaba`).
 
 2. Jalankan:
   ```

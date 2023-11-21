@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, io::Write};
 
 use crate::parser::Rule;
 use pest::iterators::Pair;
@@ -8,15 +8,26 @@ pub struct Runtime<'a> {
     ast: Option<Pair<'a, Rule>>,
     variables: HashMap<String, i32>,
     pub error: Option<String>,
+
+    // IO streams
+    out_stream: RefCell<&'a mut dyn Write>,
+    _err_stream: RefCell<&'a mut dyn Write>,
 }
 
 impl<'a> Runtime<'a> {
-    pub fn new(src: &str, ast: Pair<'a, Rule>) -> Self {
+    pub fn new(
+        src: &str,
+        ast: Pair<'a, Rule>,
+        out_stream: &'a mut dyn Write,
+        err_stream: &'a mut dyn Write,
+    ) -> Self {
         Self {
             _src: String::from(src),
             ast: Some(ast),
             variables: HashMap::new(),
             error: None,
+            out_stream: RefCell::new(out_stream),
+            _err_stream: RefCell::new(err_stream),
         }
     }
 
@@ -145,7 +156,7 @@ impl<'a> Runtime<'a> {
                         args.len()
                     ));
                 }
-                println!("{}", args[0]);
+                writeln!(self.out_stream.borrow_mut(), "{}", args[0]).unwrap();
                 Ok(0)
             }
 
@@ -169,7 +180,9 @@ mod tests {
 
         let ast = parser::parse(program).unwrap().next().unwrap();
 
-        let mut runtime = Runtime::new(program, ast);
+        let mut out = vec![];
+        let mut err = vec![];
+        let mut runtime = Runtime::new(program, ast, &mut out, &mut err);
         runtime.run();
 
         assert_eq!(runtime.variables.get("x"), Some(&15));
@@ -185,7 +198,9 @@ mod tests {
 
         let ast = parser::parse(program).unwrap().next().unwrap();
 
-        let mut runtime = Runtime::new(program, ast);
+        let mut out = vec![];
+        let mut err = vec![];
+        let mut runtime = Runtime::new(program, ast, &mut out, &mut err);
         runtime.run();
 
         assert_eq!(
@@ -203,7 +218,9 @@ mod tests {
 
         let ast = parser::parse(program).unwrap().next().unwrap();
 
-        let mut runtime = Runtime::new(program, ast);
+        let mut out = vec![];
+        let mut err = vec![];
+        let mut runtime = Runtime::new(program, ast, &mut out, &mut err);
         runtime.run();
 
         assert_eq!(runtime.variables.get("x"), Some(&2048));
@@ -218,7 +235,9 @@ mod tests {
 
         let ast = parser::parse(program).unwrap().next().unwrap();
 
-        let mut runtime = Runtime::new(program, ast);
+        let mut out = vec![];
+        let mut err = vec![];
+        let mut runtime = Runtime::new(program, ast, &mut out, &mut err);
         runtime.run();
 
         assert_eq!(
@@ -238,7 +257,9 @@ mod tests {
 
         let ast = parser::parse(program).unwrap().next().unwrap();
 
-        let mut runtime = Runtime::new(program, ast);
+        let mut out = vec![];
+        let mut err = vec![];
+        let mut runtime = Runtime::new(program, ast, &mut out, &mut err);
         runtime.run();
 
         assert!(runtime.error.is_none());
@@ -253,7 +274,9 @@ mod tests {
 
         let ast = parser::parse(program).unwrap().next().unwrap();
 
-        let mut runtime = Runtime::new(program, ast);
+        let mut out = vec![];
+        let mut err = vec![];
+        let mut runtime = Runtime::new(program, ast, &mut out, &mut err);
         runtime.run();
 
         assert_eq!(
