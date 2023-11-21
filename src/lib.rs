@@ -11,7 +11,7 @@ pub fn run<'a>(program: &str, out_stream: WriteStream<'a>, err_stream: WriteStre
         Ok(mut pairs) => pairs.next().unwrap(),
 
         Err(e) => {
-            eprintln!("{}", e.red());
+            writeln!(err_stream, "{}", e.red()).unwrap();
             return;
         }
     };
@@ -20,6 +20,6 @@ pub fn run<'a>(program: &str, out_stream: WriteStream<'a>, err_stream: WriteStre
     runtime.run();
 
     if let Some(e) = runtime.error {
-        eprintln!("{} {}", "ERR:".red(), e.red());
+        writeln!(err_stream, "{}", e.red()).unwrap();
     }
 }

@@ -12,7 +12,7 @@ fn main() {
 
     let res = _main(&args, &mut io::stdout(), &mut io::stderr());
     if let Err(e) = res {
-        e.print();
+        eprintln!("{} {}\n", "ERR:".red(), e);
         process::exit(1);
     }
 }
@@ -50,12 +50,6 @@ pub enum CliError {
     FileNotFound(PathBuf),
     NoInputFile,
     WrongFileExtension,
-}
-
-impl CliError {
-    fn print(&self) {
-        eprintln!("{} {}\n", "ERR:".red(), self);
-    }
 }
 
 impl fmt::Display for CliError {
