@@ -11,7 +11,10 @@ env:
 
 jobs:
   build:
-    runs-on: ["ubuntu-latest", "windows-latest", "macos-latest"]
+    strategy:
+      matrix:
+        platform: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.platform }}
     steps:
     - uses: actions/checkout@v3
     - name: Build
