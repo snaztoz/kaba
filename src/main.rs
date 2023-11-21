@@ -1,7 +1,8 @@
 use colored::Colorize;
+use kaba::runtime::WriteStream;
 use std::{
     env, fmt, fs,
-    io::{self, ErrorKind, Write},
+    io::{self, ErrorKind},
     path::PathBuf,
     process,
 };
@@ -18,8 +19,8 @@ fn main() {
 
 fn _main(
     args: &[String],
-    out_stream: &mut dyn Write,
-    err_stream: &mut dyn Write,
+    out_stream: WriteStream<'_>,
+    err_stream: WriteStream<'_>,
 ) -> Result<(), CliError> {
     if args.len() != 2 {
         return Err(CliError::NoInputFile);

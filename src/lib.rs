@@ -1,11 +1,10 @@
 use colored::Colorize;
-use runtime::Runtime;
-use std::io::Write;
+use runtime::{Runtime, WriteStream};
 
 mod parser;
-mod runtime;
+pub mod runtime;
 
-pub fn run<'a>(program: &str, out_stream: &'a mut dyn Write, err_stream: &'a mut dyn Write) {
+pub fn run<'a>(program: &str, out_stream: WriteStream<'a>, err_stream: WriteStream<'a>) {
     let ast = parser::parse(program).map_err(|e| e.to_string());
 
     let ast = match ast {

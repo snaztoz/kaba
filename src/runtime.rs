@@ -3,6 +3,8 @@ use std::{cell::RefCell, collections::HashMap, io::Write};
 use crate::parser::Rule;
 use pest::iterators::Pair;
 
+pub type WriteStream<'a> = &'a mut dyn Write;
+
 pub struct Runtime<'a> {
     _src: String,
     ast: Option<Pair<'a, Rule>>,
@@ -10,16 +12,16 @@ pub struct Runtime<'a> {
     pub error: Option<String>,
 
     // IO streams
-    out_stream: RefCell<&'a mut dyn Write>,
-    _err_stream: RefCell<&'a mut dyn Write>,
+    out_stream: RefCell<WriteStream<'a>>,
+    _err_stream: RefCell<WriteStream<'a>>,
 }
 
 impl<'a> Runtime<'a> {
     pub fn new(
         src: &str,
         ast: Pair<'a, Rule>,
-        out_stream: &'a mut dyn Write,
-        err_stream: &'a mut dyn Write,
+        out_stream: WriteStream<'a>,
+        err_stream: WriteStream<'a>,
     ) -> Self {
         Self {
             _src: String::from(src),
@@ -82,7 +84,9 @@ impl<'a> Runtime<'a> {
                     .into_inner()
                     .next()
                     .unwrap();
+
                 self.run_expression(expression)?;
+
                 Ok(())
             }
 
