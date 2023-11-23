@@ -12,5 +12,3 @@ authors = ["Hafidh Muqsithanova Sukarno <hafidhmn@gmail.com>"]
 colored = "2.0.4"
 indoc = "2.0.4"
 logos = "0.13.0"
-pest = "2.7.5"
-pest_derive = "2.7.5"
