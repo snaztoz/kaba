@@ -19,8 +19,8 @@ fn main() {
 
 fn _main(
     args: &[String],
-    out_stream: WriteStream<'_>,
-    err_stream: WriteStream<'_>,
+    output_stream: WriteStream<'_>,
+    error_stream: WriteStream<'_>,
 ) -> Result<(), CliError> {
     if args.len() != 2 {
         return Err(CliError::NoInputFile);
@@ -39,8 +39,12 @@ fn _main(
         _ => unimplemented!(),
     }
 
-    kaba::run(&program.unwrap(), out_stream, err_stream);
-    writeln!(out_stream).unwrap(); // print empty line
+    let result = kaba::run(&program.unwrap(), output_stream, error_stream);
+    if let Err(e) = result {
+        writeln!(output_stream, "{}", e.red()).unwrap();
+    } else {
+        writeln!(output_stream).unwrap(); // print empty line
+    }
 
     Ok(())
 }
