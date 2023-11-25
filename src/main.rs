@@ -41,7 +41,7 @@ fn _main(
 
     let result = kaba::run(&program.unwrap(), output_stream, error_stream);
     if let Err(e) = result {
-        writeln!(output_stream, "{}", e.red()).unwrap();
+        writeln!(output_stream, "{} {}", "ERR:".red(), e.red()).unwrap();
     } else {
         writeln!(output_stream).unwrap(); // print empty line
     }
