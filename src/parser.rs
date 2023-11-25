@@ -43,9 +43,8 @@ impl Parser {
 
         // Expecting "=" (optional, transform to: variable assignment)
 
-        let token = &self.tokens[self.cursor];
-        if token.kind == Token::Assign {
-            self.cursor += 1;
+        if self.get_current_token_kind_or_error()? == Token::Assign {
+            self.advance(); // skip "="
             let rhs = self.parse_expression()?;
 
             expression = AstNode::ValueAssignment {
@@ -60,28 +59,29 @@ impl Parser {
     }
 
     fn parse_variable_declaration(&mut self) -> Result<AstNode, ParserError> {
-        self.cursor += 1; // skip "var" keyword
+        self.advance(); // skip "var" keyword
 
         // Parse identifier
 
-        let token = &self.tokens[self.cursor];
-        let identifier = if token.kind == Token::Identifier {
-            token.value.clone()
-        } else {
-            return Err(ParserError::UnexpectedToken {
-                expected: Token::Identifier,
-                found: token.kind.clone(),
-                pos: token.range.start,
-            });
+        let identifier = match self.get_current_token_kind_or_error()? {
+            Token::Identifier(name) => {
+                self.advance();
+                name
+            }
+            _ => {
+                let token = self.get_current_token_and_advance().unwrap();
+                return Err(ParserError::UnexpectedToken {
+                    expected: Token::Identifier(String::from("foo")),
+                    found: token.kind.clone(),
+                    pos: token.range.start,
+                });
+            }
         };
-
-        self.cursor += 1;
 
         // Expecting ":" (optional)
 
-        let token = &self.tokens[self.cursor];
-        let r#type = if token.kind == Token::Colon {
-            self.cursor += 1;
+        let r#type = if self.get_current_token_kind_or_error()? == Token::Colon {
+            self.advance(); // skip ":"
             todo!("implementing variable type notation")
         } else {
             None
@@ -89,9 +89,8 @@ impl Parser {
 
         // Expecting "=" (optional)
 
-        let token = &self.tokens[self.cursor];
-        let value = if token.kind == Token::Assign {
-            self.cursor += 1;
+        let value = if self.get_current_token_kind_or_error()? == Token::Assign {
+            self.advance(); // skip "="
             Some(Box::from(self.parse_expression()?))
         } else {
             None
@@ -122,16 +121,15 @@ impl Parser {
         loop {
             // Expecting "+" or "-" (both are optional)
 
-            let token = &self.tokens[self.cursor];
-            match token.kind {
+            match self.get_current_token_kind_or_error()? {
                 Token::Add => {
-                    self.cursor += 1;
+                    self.advance(); // skip "+"
                     let rhs = self.parse_multiplicative_expression()?;
                     let add = AstNode::Add(Box::from(node), Box::from(rhs));
                     node = add;
                 }
                 Token::Sub => {
-                    self.cursor += 1;
+                    self.advance(); // skip "-"
                     let rhs = self.parse_multiplicative_expression()?;
                     let sub = AstNode::Sub(Box::from(node), Box::from(rhs));
                     node = sub;
@@ -149,16 +147,15 @@ impl Parser {
         loop {
             // Expecting "*" or "/" (both are optional)
 
-            let token = &self.tokens[self.cursor];
-            match token.kind {
+            match self.get_current_token_kind_or_error()? {
                 Token::Mul => {
-                    self.cursor += 1;
+                    self.advance(); // skip "*"
                     let rhs = self.parse_primary_expression()?;
                     let mul = AstNode::Mul(Box::from(node), Box::from(rhs));
                     node = mul;
                 }
                 Token::Div => {
-                    self.cursor += 1;
+                    self.advance(); // skip "/"
                     let rhs = self.parse_primary_expression()?;
                     let div = AstNode::Div(Box::from(node), Box::from(rhs));
                     node = div;
@@ -171,38 +168,43 @@ impl Parser {
     fn parse_primary_expression(&mut self) -> Result<AstNode, ParserError> {
         // TODO: expand this rule
 
-        let token = &self.tokens[self.cursor];
-        let mut node = match &token.kind {
+        let mut node = match self.get_current_token_kind_or_error()? {
             Token::LParen => {
                 // Parse prioritized expression
-                self.cursor += 1;
-                self.parse_expression()?
+                self.advance(); // skip "("
+                let expression = self.parse_expression()?;
+                self.advance(); // skip ")"
+                expression
             }
 
             // Expecting either identifier or integer
-            Token::Identifier => AstNode::Identifier(token.value.clone()),
-            Token::Integer(n) => AstNode::Integer(*n),
+            Token::Identifier(name) => {
+                self.advance();
+                AstNode::Identifier(name)
+            }
+            Token::Integer(n) => {
+                self.advance();
+                AstNode::Integer(n)
+            }
 
             k => {
+                let token = self.get_current_token_and_advance().unwrap();
                 return Err(ParserError::UnexpectedToken {
-                    expected: Token::Identifier,
+                    expected: Token::Identifier(String::from("foo")),
                     found: k.clone(),
                     pos: token.range.start,
                 });
             }
         };
 
-        self.cursor += 1;
-
         // Followed by >= 0 function call, field access, indexed access
 
         // TODO: field access and indexed access
 
         loop {
-            let token = &self.tokens[self.cursor];
-            match token.kind {
+            match self.get_current_token_kind_or_error()? {
                 Token::LParen => {
-                    self.cursor += 1;
+                    self.advance(); // skip "("
                     let args = self.parse_function_call()?;
                     node = AstNode::FunctionCall {
                         callee: Box::from(node),
@@ -223,9 +225,8 @@ impl Parser {
         loop {
             // Stop when encounter a closing parentheses
 
-            let token = &self.tokens[self.cursor];
-            if token.kind == Token::RParen {
-                self.cursor += 1;
+            if self.get_current_token_kind_or_error()? == Token::RParen {
+                self.advance(); // skip ")"
                 return Ok(args);
             }
 
@@ -236,35 +237,58 @@ impl Parser {
 
             // Continue if encounter "," or break out of loop if encounter ")"
 
-            let token = &self.tokens[self.cursor];
-            if token.kind == Token::Comma {
-                self.cursor += 1;
-                continue;
-            } else if token.kind == Token::RParen {
-                continue;
+            match self.get_current_token_kind_or_error()? {
+                Token::Comma => {
+                    self.advance(); // skip "("
+                    continue;
+                }
+
+                Token::RParen => continue,
+
+                _ => {
+                    // Error if encounter neither "," or ")"
+
+                    let token = self.get_current_token_and_advance().unwrap();
+                    return Err(ParserError::UnexpectedToken {
+                        expected: Token::RParen,
+                        found: token.kind.clone(),
+                        pos: token.range.start,
+                    });
+                }
             }
-
-            // Error if encounter neither "," or ")"
-
-            return Err(ParserError::UnexpectedToken {
-                expected: Token::RParen,
-                found: token.kind.clone(),
-                pos: token.range.start,
-            });
         }
     }
 
     fn assert_current_is_semicolon_and_advance(&mut self) -> Result<(), ParserError> {
-        let token = &self.tokens[self.cursor];
-        if token.kind != Token::Semicolon {
+        if self.get_current_token_kind_or_error()? != Token::Semicolon {
+            let token = self.get_current_token_and_advance().unwrap();
             return Err(ParserError::UnexpectedToken {
                 expected: Token::Semicolon,
                 found: token.kind.clone(),
                 pos: token.range.start,
             });
         }
-        self.cursor += 1;
+
+        self.advance(); // skip ";"
+
         Ok(())
+    }
+
+    fn advance(&mut self) {
+        self.cursor += 1;
+    }
+
+    fn get_current_token_and_advance(&mut self) -> Option<RichToken> {
+        let token = self.tokens.get(self.cursor).cloned();
+        self.advance();
+        token
+    }
+
+    fn get_current_token_kind_or_error(&self) -> Result<Token, ParserError> {
+        self.tokens
+            .get(self.cursor)
+            .map(|rt| rt.kind.clone())
+            .ok_or(ParserError::UnexpectedEof)
     }
 }
 
@@ -275,6 +299,7 @@ pub enum ParserError {
         found: Token,
         pos: usize,
     },
+    UnexpectedEof,
 }
 
 impl Display for ParserError {
@@ -284,9 +309,10 @@ impl Display for ParserError {
                 expected, found, ..
             } => writeln!(
                 f,
-                "expecting to find token {}, but get {} instead",
+                "expecting to find {}, but get {} instead",
                 expected, found
             ),
+            Self::UnexpectedEof => writeln!(f, "unexpected end-of-file (EOF)",),
         }
     }
 }
@@ -422,6 +448,10 @@ mod tests {
             let tokens = lexer::lex(input).unwrap();
             let result = Parser::new(tokens).parse();
 
+            if result.is_err() {
+                dbg!(input);
+                dbg!(&result);
+            }
             assert!(result.is_ok());
             assert_eq!(
                 result.unwrap(),

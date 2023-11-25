@@ -17,7 +17,7 @@ pub fn lex(program: &str) -> Result<Vec<RichToken>, LexerError> {
     Ok(tokens)
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct RichToken {
     pub kind: Token,
     pub range: Span,
@@ -29,7 +29,7 @@ pub struct RichToken {
 #[rustfmt::skip]
 pub enum Token {
     #[regex("[a-zA-Z0-9_]+", identifier)]
-    Identifier,
+    Identifier(String),
 
     //
     // Literals
@@ -64,29 +64,29 @@ pub enum Token {
 impl Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Identifier => writeln!(f, "identifier"),
-            Self::Integer(_) => writeln!(f, "integer"),
-            Self::Var => writeln!(f, "var"),
-            Self::Add => writeln!(f, "+"),
-            Self::Sub => writeln!(f, "-"),
-            Self::Mul => writeln!(f, "*"),
-            Self::Div => writeln!(f, "/"),
-            Self::Colon => writeln!(f, ":"),
-            Self::Semicolon => writeln!(f, ";"),
-            Self::Comma => writeln!(f, ","),
-            Self::Assign => writeln!(f, "="),
-            Self::LParen => writeln!(f, "("),
-            Self::RParen => writeln!(f, ")"),
+            Self::Identifier(name) => write!(f, "identifier `{name}`"),
+            Self::Integer(_) => write!(f, "integer"),
+            Self::Var => write!(f, "`var` keyword"),
+            Self::Add => write!(f, "addition operator (`+`)"),
+            Self::Sub => write!(f, "subtraction operator (`-`)"),
+            Self::Mul => write!(f, "multiplication operator (`*`)"),
+            Self::Div => write!(f, "division operator (`/`)"),
+            Self::Colon => write!(f, "colon (`:`)"),
+            Self::Semicolon => write!(f, "semicolon (`;`)"),
+            Self::Comma => write!(f, "comma (`,`)"),
+            Self::Assign => write!(f, "assignment (`=`)"),
+            Self::LParen => write!(f, "left parentheses (`(`)"),
+            Self::RParen => write!(f, "right parentheses (`)`)"),
         }
     }
 }
 
-fn identifier(lex: &mut Lexer<Token>) -> Result<(), LexerError> {
+fn identifier(lex: &mut Lexer<Token>) -> Result<String, LexerError> {
     let value = lex.slice();
     if value.chars().next().unwrap().is_numeric() {
         return Err(LexerError::IdentifierStartsWithNumber);
     }
-    Ok(())
+    Ok(String::from(value))
 }
 
 fn integer(lex: &mut Lexer<Token>) -> i64 {
@@ -128,8 +128,7 @@ mod tests {
             let tokens = lex_result.unwrap();
 
             assert!(tokens.len() == 1);
-            assert_eq!(tokens[0].kind, Token::Identifier);
-            assert_eq!(tokens[0].value, String::from(c));
+            assert_eq!(tokens[0].kind, Token::Identifier(String::from(c)));
         }
     }
 
