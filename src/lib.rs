@@ -1,26 +1,20 @@
-use colored::Colorize;
-use runtime::Runtime;
-use std::io::Write;
+use runtime::{Runtime, WriteStream};
 
+mod ast;
+mod lexer;
 mod parser;
-mod runtime;
+pub mod runtime;
 
-pub fn run<'a>(program: &str, out_stream: &'a mut dyn Write, err_stream: &'a mut dyn Write) {
-    let ast = parser::parse(program).map_err(|e| e.to_string());
+pub fn run<'a>(
+    program: &str,
+    output_stream: WriteStream<'a>,
+    error_stream: WriteStream<'a>,
+) -> Result<(), String> {
+    let tokens = lexer::lex(program).map_err(|e| e.to_string())?;
+    let ast = parser::parse(tokens).map_err(|e| e.to_string())?;
 
-    let ast = match ast {
-        Ok(mut pairs) => pairs.next().unwrap(),
+    let mut runtime = Runtime::new(program, ast, output_stream, error_stream);
+    runtime.run().map_err(|e| e.to_string())?;
 
-        Err(e) => {
-            eprintln!("{}", e.red());
-            return;
-        }
-    };
-
-    let mut runtime = Runtime::new(program, ast, out_stream, err_stream);
-    runtime.run();
-
-    if let Some(e) = runtime.error {
-        eprintln!("{} {}", "ERR:".red(), e.red());
-    }
+    Ok(())
 }

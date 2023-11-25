@@ -1,166 +1,178 @@
-use std::{cell::RefCell, collections::HashMap, io::Write};
+use crate::ast::{AstNode, Program as ProgramAst};
+use std::{cell::RefCell, collections::HashMap, fmt::Display, io::Write};
 
-use crate::parser::Rule;
-use pest::iterators::Pair;
+pub type WriteStream<'a> = &'a mut dyn Write;
 
 pub struct Runtime<'a> {
     _src: String,
-    ast: Option<Pair<'a, Rule>>,
-    variables: HashMap<String, i32>,
+    ast: Option<ProgramAst>,
+    variables: RefCell<HashMap<String, i64>>,
     pub error: Option<String>,
 
     // IO streams
-    out_stream: RefCell<&'a mut dyn Write>,
-    _err_stream: RefCell<&'a mut dyn Write>,
+    output_stream: RefCell<WriteStream<'a>>,
+    _error_stream: RefCell<WriteStream<'a>>,
 }
 
 impl<'a> Runtime<'a> {
     pub fn new(
         src: &str,
-        ast: Pair<'a, Rule>,
-        out_stream: &'a mut dyn Write,
-        err_stream: &'a mut dyn Write,
+        ast: ProgramAst,
+        output_stream: WriteStream<'a>,
+        error_stream: WriteStream<'a>,
     ) -> Self {
         Self {
             _src: String::from(src),
             ast: Some(ast),
-            variables: HashMap::new(),
+            variables: RefCell::new(HashMap::new()),
             error: None,
-            out_stream: RefCell::new(out_stream),
-            _err_stream: RefCell::new(err_stream),
+            output_stream: RefCell::new(output_stream),
+            _error_stream: RefCell::new(error_stream),
         }
     }
 
-    pub fn run(&mut self) {
-        let program = self.ast.take().unwrap().into_inner();
-        for statement in program {
-            match statement.as_rule() {
-                Rule::Statement => {
-                    let res = self.run_statement(statement.into_inner().next().unwrap());
-                    if let Err(e) = res {
-                        self.error = Some(e);
-                        break;
-                    }
+    pub fn run(&mut self) -> Result<(), RuntimeError> {
+        let mut statements = self.ast.take().unwrap().into_vec_deque();
+
+        loop {
+            let statement = statements.pop_front();
+            if statement.is_none() {
+                break;
+            }
+
+            match statement.unwrap() {
+                AstNode::VariableDeclaration {
+                    identifier,
+                    r#type,
+                    value,
+                } => self.create_variable(&identifier, r#type.clone(), value.map(|v| *v))?,
+
+                AstNode::ValueAssignment { lhs, value } => self.update_value(*lhs, *value)?,
+
+                node => {
+                    self.run_expression(node)?;
+                }
+            };
+        }
+
+        Ok(())
+    }
+
+    fn create_variable(
+        &self,
+        identifier: &str,
+        r#type: Option<String>,
+        value: Option<AstNode>,
+    ) -> Result<(), RuntimeError> {
+        if self.variables.borrow_mut().contains_key(identifier) {
+            return Err(RuntimeError::VariableAlreadyExist(String::from(identifier)));
+        }
+
+        if r#type.is_some() {
+            todo!("variable declaration type notation");
+        }
+
+        let value = match value {
+            Some(expression) => self.run_expression(expression)?,
+            None => 0,
+        };
+
+        self.variables
+            .borrow_mut()
+            .insert(String::from(identifier), value);
+
+        Ok(())
+    }
+
+    fn update_value(&self, lhs: AstNode, value: AstNode) -> Result<(), RuntimeError> {
+        // TODO: make lhs to be able to use more expression (currently only identifier)
+
+        match lhs {
+            AstNode::Identifier(name) => {
+                if !self.variables.borrow_mut().contains_key(&name) {
+                    return Err(RuntimeError::VariableNotExist(name));
                 }
 
-                Rule::EOI => break,
-                _ => unreachable!(),
+                *self.variables.borrow_mut().get_mut(&name).unwrap() =
+                    self.run_expression(value)?;
             }
+
+            _ => todo!("more expression for value assignment"),
         }
+
+        Ok(())
     }
 
-    fn run_statement(&mut self, statement: Pair<'_, Rule>) -> Result<(), String> {
-        match statement.as_rule() {
-            Rule::VariableDeclarationStatement => {
-                let mut components = statement.into_inner();
-                components.next().unwrap(); // skip "var" keyword
-
-                let identifier = components.next().unwrap().as_str();
-
-                let expression = components.next().unwrap().into_inner().next().unwrap();
-                let value = self.run_expression(expression)?;
-
-                self.create_variable(identifier, value)
-            }
-
-            Rule::AssignmentStatement => {
-                let mut components = statement.into_inner();
-
-                let identifier = components.next().unwrap().as_str();
-
-                let expression = components.next().unwrap().into_inner().next().unwrap();
-                let value = self.run_expression(expression)?;
-
-                self.assign_value(identifier, value)
-            }
-
-            Rule::ExpressionStatement => {
-                let expression = statement
-                    .into_inner()
-                    .next()
-                    .unwrap()
-                    .into_inner()
-                    .next()
-                    .unwrap();
-                self.run_expression(expression)?;
-                Ok(())
-            }
-
-            Rule::EmptyStatement => Ok(()), // no-op
+    fn run_expression(&self, expression: AstNode) -> Result<i64, RuntimeError> {
+        match expression {
+            AstNode::Identifier(name) => self.get_variable_value(&name),
+            AstNode::Integer(value) => Ok(value),
+            AstNode::FunctionCall { callee, args } => self.run_function_call(&callee, args),
+            AstNode::Add(lhs, rhs) => Ok(self.run_expression(*lhs)? + self.run_expression(*rhs)?),
+            AstNode::Sub(lhs, rhs) => Ok(self.run_expression(*lhs)? - self.run_expression(*rhs)?),
+            AstNode::Mul(lhs, rhs) => Ok(self.run_expression(*lhs)? * self.run_expression(*rhs)?),
+            AstNode::Div(lhs, rhs) => Ok(self.run_expression(*lhs)? / self.run_expression(*rhs)?),
 
             _ => unreachable!(),
         }
     }
 
-    fn create_variable(&mut self, identifier: &str, value: i32) -> Result<(), String> {
-        if self.variables.contains_key(identifier) {
-            return Err(format!("variable '{}' already exist", identifier));
-        }
-
-        self.variables.insert(String::from(identifier), value);
-
-        Ok(())
+    fn get_variable_value(&self, name: &str) -> Result<i64, RuntimeError> {
+        self.variables
+            .borrow()
+            .get(name)
+            .copied()
+            .ok_or(RuntimeError::VariableNotExist(String::from(name)))
     }
 
-    fn assign_value(&mut self, identifier: &str, value: i32) -> Result<(), String> {
-        if !self.variables.contains_key(identifier) {
-            return Err(format!("variable '{}' is not exist", identifier));
+    fn run_function_call(&self, callee: &AstNode, args: Vec<AstNode>) -> Result<i64, RuntimeError> {
+        let callee = match callee {
+            AstNode::Identifier(identifier) => identifier,
+            _ => todo!("function callee"),
+        };
+
+        let mut evaluated_args: Vec<i64> = vec![];
+        for arg in args {
+            evaluated_args.push(self.run_expression(arg)?);
         }
 
-        *self.variables.get_mut(identifier).unwrap() = value;
-
-        Ok(())
-    }
-
-    fn run_expression(&self, expression: Pair<'_, Rule>) -> Result<i32, String> {
-        match expression.as_rule() {
-            Rule::FunctionCall => {
-                let mut components = expression.into_inner();
-
-                let identifier = components.next().unwrap().as_str();
-
-                let mut args: Vec<i32> = vec![];
-                if let Some(c) = components.next() {
-                    for arg in c.into_inner() {
-                        let res = self.run_expression(arg.into_inner().next().unwrap())?;
-                        args.push(res);
-                    }
-                }
-
-                self.call_function(identifier, &args)
-            }
-
-            Rule::Identifier => self
-                .variables
-                .get(expression.as_str())
-                .map(|n| *n)
-                .ok_or_else(|| format!("variable '{}' is not exist", expression.as_str())),
-
-            Rule::Integer => Ok(expression.as_str().parse::<i32>().unwrap()),
-
-            _ => unreachable!(),
-        }
-    }
-
-    fn call_function(&self, identifier: &str, args: &[i32]) -> Result<i32, String> {
-        //
-        // WARNING:
-        //      Currently only support "print"
-        //
-
-        match identifier {
+        match callee.as_str() {
             "print" => {
-                if args.len() != 1 {
-                    return Err(format!(
-                        "expecting 1 argument, but get {} instead",
-                        args.len()
-                    ));
+                if evaluated_args.len() != 1 {
+                    return Err(RuntimeError::WrongNumberOfArguments {
+                        expected: 1,
+                        provided: evaluated_args.len(),
+                    });
                 }
-                writeln!(self.out_stream.borrow_mut(), "{}", args[0]).unwrap();
-                Ok(0)
+                writeln!(self.output_stream.borrow_mut(), "{}", evaluated_args[0]).unwrap();
             }
 
-            _ => todo!("function not yet supported"),
+            _ => todo!("other function"),
+        }
+
+        Ok(0)
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum RuntimeError {
+    VariableAlreadyExist(String),
+    VariableNotExist(String),
+    IdentifierNotExist(String),
+    WrongNumberOfArguments { expected: usize, provided: usize },
+}
+
+impl Display for RuntimeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::VariableAlreadyExist(name) => writeln!(f, "variable `{name}` already exist"),
+            Self::VariableNotExist(name) => writeln!(f, "variable `{name}` is not exist"),
+            Self::IdentifierNotExist(name) => writeln!(f, "identifier `{name}` is not exist"),
+            Self::WrongNumberOfArguments { expected, provided } => writeln!(
+                f,
+                "expecting {} number of argument(s), get {} instead",
+                expected, provided
+            ),
         }
     }
 }
@@ -168,120 +180,120 @@ impl<'a> Runtime<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser;
+    use crate::{lexer, parser};
     use indoc::indoc;
 
     #[test]
     fn test_creating_variable() {
-        let program = indoc! {"
-            var x = 15;
-            var y = 2048;
-        "};
+        let cases = [
+            // (statement, variable name, expected value)
+            ("var x = 10 * 20;", "x", 200),
+            ("var abc = 200 + 50 * 2;", "abc", 300),
+        ];
 
-        let ast = parser::parse(program).unwrap().next().unwrap();
+        let mut unused_output_stream = vec![];
+        let mut unused_error_stream = vec![];
 
-        let mut out = vec![];
-        let mut err = vec![];
-        let mut runtime = Runtime::new(program, ast, &mut out, &mut err);
-        runtime.run();
+        for (statement, variable_name, expected) in cases {
+            let tokens = lexer::lex(statement).unwrap();
+            let ast = parser::parse(tokens).unwrap();
+            let mut runtime = Runtime::new(
+                statement,
+                ast,
+                &mut unused_output_stream,
+                &mut unused_error_stream,
+            );
 
-        assert_eq!(runtime.variables.get("x"), Some(&15));
-        assert_eq!(runtime.variables.get("y"), Some(&2048));
+            let result = runtime.run();
+
+            assert!(result.is_ok());
+            assert!(runtime.variables.borrow().contains_key(variable_name));
+            assert_eq!(
+                runtime.variables.borrow().get(variable_name).unwrap(),
+                &expected
+            );
+        }
     }
 
     #[test]
-    fn test_creating_duplicated_variable_at_same_scope() {
-        let program = indoc! {"
-            var x = 15;
-            var x = 2048;
-        "};
+    fn test_assigning_value() {
+        let cases = [(
+            indoc! {"
+                var x = 50;
+                var y = 100;
 
-        let ast = parser::parse(program).unwrap().next().unwrap();
+                x = x * y;
+            "},
+            "x",
+            5000,
+        )];
 
-        let mut out = vec![];
-        let mut err = vec![];
-        let mut runtime = Runtime::new(program, ast, &mut out, &mut err);
-        runtime.run();
+        let mut unused_output_stream = vec![];
+        let mut unused_error_stream = vec![];
 
-        assert_eq!(
-            runtime.error,
-            Some(String::from("variable 'x' already exist"))
-        );
+        for (statement, lhs, expected) in cases {
+            let tokens = lexer::lex(statement).unwrap();
+            let ast = parser::parse(tokens).unwrap();
+            let mut runtime = Runtime::new(
+                statement,
+                ast,
+                &mut unused_output_stream,
+                &mut unused_error_stream,
+            );
+
+            let result = runtime.run();
+
+            assert!(result.is_ok());
+            assert!(runtime.variables.borrow().contains_key(lhs));
+            assert_eq!(runtime.variables.borrow().get(lhs).unwrap(), &expected);
+        }
     }
 
     #[test]
-    fn test_assign_new_value_to_variable() {
-        let program = indoc! {"
-            var x = 15;
-            x = 2048;
-        "};
+    fn test_print_value() {
+        let cases = [
+            // (input program, expected output stream content)
+            (
+                indoc! {"
+                    var x = 10;
 
-        let ast = parser::parse(program).unwrap().next().unwrap();
+                    print(x);
+                "},
+                "10\n".as_bytes(),
+            ),
+            (
+                indoc! {"
+                    var x = 5;
+                    var y = 10;
 
-        let mut out = vec![];
-        let mut err = vec![];
-        let mut runtime = Runtime::new(program, ast, &mut out, &mut err);
-        runtime.run();
+                    print(x * y);
+                "},
+                "50\n".as_bytes(),
+            ),
+            (
+                indoc! {"
+                    var x = 2048;
+                    print(x);
 
-        assert_eq!(runtime.variables.get("x"), Some(&2048));
-    }
+                    x = 1024;
+                    print(x);
+                "},
+                "2048\n1024\n".as_bytes(),
+            ),
+        ];
 
-    #[test]
-    fn test_assign_value_to_non_existing_variable() {
-        let program = indoc! {"
-            var x = 15;
-            y = 2048;
-        "};
+        for (input, output_content) in cases {
+            let mut output_stream = vec![];
+            let mut error_stream = vec![];
 
-        let ast = parser::parse(program).unwrap().next().unwrap();
+            let tokens = lexer::lex(input).unwrap();
+            let ast = parser::parse(tokens).unwrap();
 
-        let mut out = vec![];
-        let mut err = vec![];
-        let mut runtime = Runtime::new(program, ast, &mut out, &mut err);
-        runtime.run();
+            let mut runtime = Runtime::new(input, ast, &mut output_stream, &mut error_stream);
+            let result = runtime.run();
 
-        assert_eq!(
-            runtime.error,
-            Some(String::from("variable 'y' is not exist"))
-        );
-    }
-
-    #[test]
-    fn test_running_print_statement() {
-        let program = indoc! {"
-            var x = 15;
-            print(x);
-            15;
-            x;
-        "};
-
-        let ast = parser::parse(program).unwrap().next().unwrap();
-
-        let mut out = vec![];
-        let mut err = vec![];
-        let mut runtime = Runtime::new(program, ast, &mut out, &mut err);
-        runtime.run();
-
-        assert!(runtime.error.is_none());
-    }
-
-    #[test]
-    fn test_running_invalid_print_statement() {
-        let program = indoc! {"
-            var x = 15;
-            print(x, x);
-        "};
-
-        let ast = parser::parse(program).unwrap().next().unwrap();
-
-        let mut out = vec![];
-        let mut err = vec![];
-        let mut runtime = Runtime::new(program, ast, &mut out, &mut err);
-        runtime.run();
-
-        assert_eq!(
-            runtime.error,
-            Some(String::from("expecting 1 argument, but get 2 instead"))
-        );
+            assert!(result.is_ok());
+            assert_eq!(output_content, &output_stream);
+        }
     }
 }
