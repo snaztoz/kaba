@@ -1,17 +1,9 @@
 // Copyright 2023 Hafidh Muqsithanova Sukarno
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::VecDeque;
-
 #[derive(Debug, PartialEq)]
 pub struct Program {
     pub statements: Vec<AstNode>,
-}
-
-impl Program {
-    pub fn into_vec_deque(self) -> VecDeque<AstNode> {
-        VecDeque::from(self.statements)
-    }
 }
 
 #[derive(Debug, PartialEq)]

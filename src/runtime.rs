@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::ast::{AstNode, Program as ProgramAst};
-use std::{cell::RefCell, collections::HashMap, fmt::Display, io::Write};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, VecDeque},
+    fmt::Display,
+    io::Write,
+};
 
 pub type WriteStream<'a> = &'a mut dyn Write;
 
@@ -35,7 +40,7 @@ impl<'a> Runtime<'a> {
     }
 
     pub fn run(&mut self) -> Result<(), RuntimeError> {
-        let mut statements = self.ast.take().unwrap().into_vec_deque();
+        let mut statements = VecDeque::from(self.ast.take().unwrap().statements);
 
         loop {
             let statement = statements.pop_front();
