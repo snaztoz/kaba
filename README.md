@@ -8,7 +8,7 @@ Baru sedikit (project super baru, *boy*!)
 
 ## Build
 
-Pastikan Rust beserta toolchain-nya sudah terinstall (Lihat [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)).
+Pastikan Rust beserta toolchain-nya (Cargo dkk) sudah terinstall (Lihat [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)).
 
 Jika ingin menjalankan dengan instan, gunakan:
 ```bash
@@ -49,7 +49,18 @@ Daripada tanya "batasannya apa aja?", untuk sekarang lebih baik diganti jadi "bi
   x = 999;
   ```
 
-3. Fungsi `print` (ga ada fungsi lainnya, pembuatan fungsi custom juga belum bisa)
+3. Operasi aritmatika dasar (KaTaBaKu)
+  ```
+  23 + 5 * 30 / 2 - 9
+  ```
+
+4. *Grouped expression*
+
+  ```
+  52 * (2 + 3) / 3
+  ```
+
+5. Fungsi `print` (ga ada fungsi lainnya, pembuatan fungsi custom juga belum bisa)
   ```
   var x = 101;
 
@@ -79,10 +90,9 @@ print(y);
 ## Next Goals
 
 Prioritas untuk sekarang:
-1. Support operasi matematika.
+1. Better error handling.
 2. Support control flow (kaya `if-else` dan loop).
 3. Support tipe data lain.
-4. Better error handling.
 
 ## Attention!
 

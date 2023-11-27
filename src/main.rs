@@ -1,7 +1,11 @@
+// Copyright 2023 Hafidh Muqsithanova Sukarno
+// SPDX-License-Identifier: Apache-2.0
+
 use colored::Colorize;
+use kaba::runtime::WriteStream;
 use std::{
     env, fmt, fs,
-    io::{self, ErrorKind, Write},
+    io::{self, ErrorKind},
     path::PathBuf,
     process,
 };
@@ -11,15 +15,15 @@ fn main() {
 
     let res = _main(&args, &mut io::stdout(), &mut io::stderr());
     if let Err(e) = res {
-        e.print();
+        eprintln!("{} {}\n", "ERR:".red(), e);
         process::exit(1);
     }
 }
 
 fn _main(
     args: &[String],
-    out_stream: &mut dyn Write,
-    err_stream: &mut dyn Write,
+    output_stream: WriteStream<'_>,
+    error_stream: WriteStream<'_>,
 ) -> Result<(), CliError> {
     if args.len() != 2 {
         return Err(CliError::NoInputFile);
@@ -38,8 +42,12 @@ fn _main(
         _ => unimplemented!(),
     }
 
-    kaba::run(&program.unwrap(), out_stream, err_stream);
-    writeln!(out_stream).unwrap(); // print empty line
+    let result = kaba::run(&program.unwrap(), output_stream, error_stream);
+    if let Err(e) = result {
+        writeln!(output_stream, "{} {}", "ERR:".red(), e.red()).unwrap();
+    } else {
+        writeln!(output_stream).unwrap(); // print empty line
+    }
 
     Ok(())
 }
@@ -49,12 +57,6 @@ pub enum CliError {
     FileNotFound(PathBuf),
     NoInputFile,
     WrongFileExtension,
-}
-
-impl CliError {
-    fn print(&self) {
-        eprintln!("{} {}\n", "ERR:".red(), self);
-    }
 }
 
 impl fmt::Display for CliError {
