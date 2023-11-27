@@ -28,5 +28,11 @@ pub enum AstNode {
     Div(Box<AstNode>, Box<AstNode>),
 
     Identifier(String),
+
+    Val(Value),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Value {
     Integer(i64),
 }
