@@ -448,10 +448,6 @@ mod tests {
             let tokens = lexer::lex(input).unwrap();
             let result = Parser::new(tokens).parse();
 
-            if result.is_err() {
-                dbg!(input);
-                dbg!(&result);
-            }
             assert!(result.is_ok());
             assert_eq!(
                 result.unwrap(),
