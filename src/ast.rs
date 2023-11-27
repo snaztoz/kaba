@@ -1,14 +1,9 @@
-use std::collections::VecDeque;
+// Copyright 2023 Hafidh Muqsithanova Sukarno
+// SPDX-License-Identifier: Apache-2.0
 
 #[derive(Debug, PartialEq)]
 pub struct Program {
     pub statements: Vec<AstNode>,
-}
-
-impl Program {
-    pub fn into_vec_deque(self) -> VecDeque<AstNode> {
-        VecDeque::from(self.statements)
-    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -33,5 +28,11 @@ pub enum AstNode {
     Div(Box<AstNode>, Box<AstNode>),
 
     Identifier(String),
+
+    Val(Value),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Value {
     Integer(i64),
 }

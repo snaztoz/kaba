@@ -1,6 +1,9 @@
+// Copyright 2023 Hafidh Muqsithanova Sukarno
+// SPDX-License-Identifier: Apache-2.0
+
 use std::fmt::Display;
 
-use crate::ast::{AstNode, Program as ProgramAst};
+use crate::ast::{AstNode, Program as ProgramAst, Value};
 use crate::lexer::{RichToken, Token};
 
 pub fn parse(tokens: Vec<RichToken>) -> Result<ProgramAst, ParserError> {
@@ -31,7 +34,7 @@ impl Parser {
     fn parse_statement(&mut self) -> Result<AstNode, ParserError> {
         // Check if statement starts with a keyword
 
-        if self.tokens[self.cursor].kind == Token::Var {
+        if self.get_current_token_kind_or_error()? == Token::Var {
             return self.parse_variable_declaration();
         } else {
             // TODO: support other statements
@@ -184,7 +187,7 @@ impl Parser {
             }
             Token::Integer(n) => {
                 self.advance();
-                AstNode::Integer(n)
+                AstNode::Val(Value::Integer(n))
             }
 
             k => {
@@ -339,14 +342,14 @@ mod tests {
                     identifier: String::from("abc"),
                     r#type: None,
                     value: Some(Box::from(AstNode::Mul(
-                        Box::from(AstNode::Integer(123)),
+                        Box::from(AstNode::Val(Value::Integer(123))),
                         Box::from(AstNode::Identifier(String::from("x"))),
                     ))),
                 },
             ),
         ];
 
-        for (input, expecting) in cases {
+        for (input, expected) in cases {
             let tokens = lexer::lex(input).unwrap();
             let result = Parser::new(tokens).parse();
 
@@ -354,7 +357,7 @@ mod tests {
             assert_eq!(
                 result.unwrap(),
                 ProgramAst {
-                    statements: vec![expecting]
+                    statements: vec![expected]
                 }
             );
         }
@@ -367,13 +370,13 @@ mod tests {
             AstNode::ValueAssignment {
                 lhs: Box::from(AstNode::Identifier(String::from("abc"))),
                 value: Box::from(AstNode::Mul(
-                    Box::from(AstNode::Integer(123)),
+                    Box::from(AstNode::Val(Value::Integer(123))),
                     Box::from(AstNode::Identifier(String::from("x"))),
                 )),
             },
         )];
 
-        for (input, expecting) in cases {
+        for (input, expected) in cases {
             let tokens = lexer::lex(input).unwrap();
             let result = Parser::new(tokens).parse();
 
@@ -381,7 +384,7 @@ mod tests {
             assert_eq!(
                 result.unwrap(),
                 ProgramAst {
-                    statements: vec![expecting]
+                    statements: vec![expected]
                 }
             );
         }
@@ -396,13 +399,13 @@ mod tests {
                     Box::from(AstNode::Add(
                         Box::from(AstNode::Identifier(String::from("abc"))),
                         Box::from(AstNode::Mul(
-                            Box::from(AstNode::Integer(512)),
-                            Box::from(AstNode::Integer(200)),
+                            Box::from(AstNode::Val(Value::Integer(512))),
+                            Box::from(AstNode::Val(Value::Integer(200))),
                         )),
                     )),
                     Box::from(AstNode::Div(
                         Box::from(AstNode::Identifier(String::from("abc"))),
-                        Box::from(AstNode::Integer(3)),
+                        Box::from(AstNode::Val(Value::Integer(3))),
                     )),
                 ),
             ),
@@ -410,10 +413,10 @@ mod tests {
                 "(123 - 53) * 7;",
                 AstNode::Mul(
                     Box::from(AstNode::Sub(
-                        Box::from(AstNode::Integer(123)),
-                        Box::from(AstNode::Integer(53)),
+                        Box::from(AstNode::Val(Value::Integer(123))),
+                        Box::from(AstNode::Val(Value::Integer(53))),
                     )),
-                    Box::from(AstNode::Integer(7)),
+                    Box::from(AstNode::Val(Value::Integer(7))),
                 ),
             ),
             (
@@ -422,14 +425,14 @@ mod tests {
                     Box::from(AstNode::FunctionCall {
                         callee: Box::from(AstNode::Identifier(String::from("abc"))),
                         args: vec![
-                            AstNode::Integer(123),
+                            AstNode::Val(Value::Integer(123)),
                             AstNode::Add(
-                                Box::from(AstNode::Integer(50)),
-                                Box::from(AstNode::Integer(2)),
+                                Box::from(AstNode::Val(Value::Integer(50))),
+                                Box::from(AstNode::Val(Value::Integer(2))),
                             ),
                         ],
                     }),
-                    Box::from(AstNode::Integer(7)),
+                    Box::from(AstNode::Val(Value::Integer(7))),
                 ),
             ),
             (
@@ -438,25 +441,24 @@ mod tests {
                     callee: Box::from(AstNode::Identifier(String::from("abc"))),
                     args: vec![AstNode::FunctionCall {
                         callee: Box::from(AstNode::Identifier(String::from("xyz"))),
-                        args: vec![AstNode::Integer(123), AstNode::Integer(456)],
+                        args: vec![
+                            AstNode::Val(Value::Integer(123)),
+                            AstNode::Val(Value::Integer(456)),
+                        ],
                     }],
                 },
             ),
         ];
 
-        for (input, expecting) in cases {
+        for (input, expected) in cases {
             let tokens = lexer::lex(input).unwrap();
             let result = Parser::new(tokens).parse();
 
-            if result.is_err() {
-                dbg!(input);
-                dbg!(&result);
-            }
             assert!(result.is_ok());
             assert_eq!(
                 result.unwrap(),
                 ProgramAst {
-                    statements: vec![expecting]
+                    statements: vec![expected]
                 }
             );
         }
