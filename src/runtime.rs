@@ -1,3 +1,6 @@
+// Copyright 2023 Hafidh Muqsithanova Sukarno
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::ast::{AstNode, Program as ProgramAst};
 use std::{cell::RefCell, collections::HashMap, fmt::Display, io::Write};
 

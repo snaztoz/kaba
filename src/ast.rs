@@ -1,3 +1,6 @@
+// Copyright 2023 Hafidh Muqsithanova Sukarno
+// SPDX-License-Identifier: Apache-2.0
+
 use std::collections::VecDeque;
 
 #[derive(Debug, PartialEq)]
