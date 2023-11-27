@@ -31,7 +31,7 @@ impl Parser {
     fn parse_statement(&mut self) -> Result<AstNode, ParserError> {
         // Check if statement starts with a keyword
 
-        if self.tokens[self.cursor].kind == Token::Var {
+        if self.get_current_token_kind_or_error()? == Token::Var {
             return self.parse_variable_declaration();
         } else {
             // TODO: support other statements
@@ -346,7 +346,7 @@ mod tests {
             ),
         ];
 
-        for (input, expecting) in cases {
+        for (input, expected) in cases {
             let tokens = lexer::lex(input).unwrap();
             let result = Parser::new(tokens).parse();
 
@@ -354,7 +354,7 @@ mod tests {
             assert_eq!(
                 result.unwrap(),
                 ProgramAst {
-                    statements: vec![expecting]
+                    statements: vec![expected]
                 }
             );
         }
@@ -373,7 +373,7 @@ mod tests {
             },
         )];
 
-        for (input, expecting) in cases {
+        for (input, expected) in cases {
             let tokens = lexer::lex(input).unwrap();
             let result = Parser::new(tokens).parse();
 
@@ -381,7 +381,7 @@ mod tests {
             assert_eq!(
                 result.unwrap(),
                 ProgramAst {
-                    statements: vec![expecting]
+                    statements: vec![expected]
                 }
             );
         }
@@ -444,7 +444,7 @@ mod tests {
             ),
         ];
 
-        for (input, expecting) in cases {
+        for (input, expected) in cases {
             let tokens = lexer::lex(input).unwrap();
             let result = Parser::new(tokens).parse();
 
@@ -452,7 +452,7 @@ mod tests {
             assert_eq!(
                 result.unwrap(),
                 ProgramAst {
-                    statements: vec![expecting]
+                    statements: vec![expected]
                 }
             );
         }
