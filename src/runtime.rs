@@ -1,6 +1,11 @@
 // Copyright 2023 Hafidh Muqsithanova Sukarno
 // SPDX-License-Identifier: Apache-2.0
 
+//! A temporary prototype of the runtime that currently being used.
+//!
+//! It accept the raw AST as is and will be replaced by a real runtime
+//! that operates on bytecodes.
+
 use crate::ast::{AstNode, Program as ProgramAst, Value};
 use std::{
     cell::RefCell,

@@ -1,10 +1,18 @@
 // Copyright 2023 Hafidh Muqsithanova Sukarno
 // SPDX-License-Identifier: Apache-2.0
 
+//! This module contains the required logic operations during the
+//! lexing/tokenizing stage of a Kaba source code.
+
 use std::fmt::Display;
 
 use logos::{Lexer, Logos, Span};
 
+/// Provide a quick way to lex a Kaba program's source code, without the
+/// needs to setting up and running the lexer manually.
+///
+/// Produces a vector of [`RichToken`] that contains additional
+/// information of a token.
 pub fn lex(program: &str) -> Result<Vec<RichToken>, LexerError> {
     let mut l = Token::lexer(program);
     let mut tokens = vec![];
@@ -20,6 +28,9 @@ pub fn lex(program: &str) -> Result<Vec<RichToken>, LexerError> {
     Ok(tokens)
 }
 
+/// A wrapper around raw [`Token`] that also store the metadata
+/// information of a token, such as its actual position inside
+/// the source code.
 #[derive(Clone, Debug, PartialEq)]
 pub struct RichToken {
     pub kind: Token,
@@ -27,6 +38,8 @@ pub struct RichToken {
     pub value: String,
 }
 
+/// The list of all tokens that may exists in a valid Kaba
+/// source code.
 #[derive(Logos, Clone, Debug, PartialEq)]
 #[logos(skip r"[ \t\r\n\f]+", error = LexerError)]
 #[rustfmt::skip]
@@ -96,12 +109,13 @@ fn integer(lex: &mut Lexer<Token>) -> i64 {
     lex.slice().parse().unwrap()
 }
 
+/// List of all errors that may occur during lexing stage.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum LexerError {
     IdentifierStartsWithNumber,
 
     #[default]
-    Default,
+    Error,
 }
 
 impl Display for LexerError {

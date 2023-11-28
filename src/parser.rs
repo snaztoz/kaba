@@ -1,11 +1,19 @@
 // Copyright 2023 Hafidh Muqsithanova Sukarno
 // SPDX-License-Identifier: Apache-2.0
 
+//! This module contains the required logic operations during the
+//! parsing stage of a Kaba tokens.
+
 use std::fmt::Display;
 
 use crate::ast::{AstNode, Program as ProgramAst, Value};
 use crate::lexer::{RichToken, Token};
 
+/// Provide a quick way to parse Kaba tokens, without the needs to
+/// setting up and running the parser manually.
+///
+/// Produces an AST that represents the entire source code of the
+/// given tokens (see [`crate::ast::Program`]).
 pub fn parse(tokens: Vec<RichToken>) -> Result<ProgramAst, ParserError> {
     Parser::new(tokens).parse()
 }
@@ -295,6 +303,7 @@ impl Parser {
     }
 }
 
+/// List of all errors that may occur during parsing stage.
 #[derive(Debug, PartialEq)]
 pub enum ParserError {
     UnexpectedToken {
