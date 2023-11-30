@@ -29,7 +29,7 @@ Usage instructions:
 
 2. Run:
   ```bash
-  kaba <file-nama>
+  kaba <file-name>
   ```
 
 ## Features
