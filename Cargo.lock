@@ -26,6 +26,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "compiler"
+version = "0.1.0"
+dependencies = [
+ "logos",
+]
+
+[[package]]
 name = "errno"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -69,8 +76,8 @@ name = "kaba"
 version = "0.1.0"
 dependencies = [
  "colored",
+ "compiler",
  "indoc",
- "logos",
 ]
 
 [[package]]

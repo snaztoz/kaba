@@ -6,7 +6,7 @@
 //! It accept the raw AST as is and will be replaced by a real runtime
 //! that operates on bytecodes.
 
-use crate::ast::{AstNode, Program as ProgramAst, Value};
+use compiler::ast::{AstNode, Program as ProgramAst, Value};
 use std::{
     cell::RefCell,
     collections::{HashMap, VecDeque},
@@ -193,7 +193,7 @@ impl Display for RuntimeError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{lexer, parser};
+    use compiler;
     use indoc::indoc;
 
     #[test]
@@ -208,8 +208,7 @@ mod tests {
         let mut unused_error_stream = vec![];
 
         for (statement, variable_name, expected) in cases {
-            let tokens = lexer::lex(statement).unwrap();
-            let ast = parser::parse(tokens).unwrap();
+            let ast = compiler::compile(statement).unwrap();
             let mut runtime = Runtime::new(
                 statement,
                 ast,
@@ -245,8 +244,7 @@ mod tests {
         let mut unused_error_stream = vec![];
 
         for (statement, lhs, expected) in cases {
-            let tokens = lexer::lex(statement).unwrap();
-            let ast = parser::parse(tokens).unwrap();
+            let ast = compiler::compile(statement).unwrap();
             let mut runtime = Runtime::new(
                 statement,
                 ast,
@@ -295,14 +293,13 @@ mod tests {
             ),
         ];
 
-        for (input, output_content) in cases {
+        for (program, output_content) in cases {
             let mut output_stream = vec![];
             let mut error_stream = vec![];
 
-            let tokens = lexer::lex(input).unwrap();
-            let ast = parser::parse(tokens).unwrap();
+            let ast = compiler::compile(program).unwrap();
 
-            let mut runtime = Runtime::new(input, ast, &mut output_stream, &mut error_stream);
+            let mut runtime = Runtime::new(program, ast, &mut output_stream, &mut error_stream);
             let result = runtime.run();
 
             assert!(result.is_ok());

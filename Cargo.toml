@@ -1,3 +1,7 @@
+[workspace]
+members = ["compiler"]
+resolver = "2"
+
 [package]
 name = "kaba"
 description = "Kaba programming language"
@@ -6,9 +10,7 @@ edition = "2021"
 license = "Apache-2.0"
 authors = ["Hafidh Muqsithanova Sukarno <hafidhmn@gmail.com>"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 colored = "2.0.4"
+compiler = { path = "./compiler" }
 indoc = "2.0.4"
-logos = "0.13.0"
