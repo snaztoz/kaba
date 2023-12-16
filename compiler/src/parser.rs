@@ -83,7 +83,7 @@ impl Parser {
                 return Err(Error::ParsingUnexpectedToken {
                     expected: Token::Identifier(String::from("foo")),
                     found: token.kind.clone(),
-                    pos: token.range.start,
+                    span: token.range,
                 });
             }
         };
@@ -202,7 +202,7 @@ impl Parser {
                 return Err(Error::ParsingUnexpectedToken {
                     expected: Token::Identifier(String::from("foo")),
                     found: k.clone(),
-                    pos: token.range.start,
+                    span: token.range,
                 });
             }
         };
@@ -262,7 +262,7 @@ impl Parser {
                     return Err(Error::ParsingUnexpectedToken {
                         expected: Token::RParen,
                         found: token.kind.clone(),
-                        pos: token.range.start,
+                        span: token.range,
                     });
                 }
             }
@@ -275,7 +275,7 @@ impl Parser {
             return Err(Error::ParsingUnexpectedToken {
                 expected: Token::Semicolon,
                 found: token.kind.clone(),
-                pos: token.range.start,
+                span: token.range,
             });
         }
 

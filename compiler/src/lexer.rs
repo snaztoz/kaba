@@ -17,9 +17,17 @@ pub fn lex(program: &str) -> Result<Vec<RichToken>, Error> {
     let mut l = Token::lexer(program);
     let mut tokens = vec![];
 
-    while let Some(t) = l.next() {
+    while let Some(token) = l.next() {
+        let token = token.map_err(|e| match e {
+            Error::Error => Error::LexingUnknownToken {
+                token: String::from(l.slice()),
+                span: l.span(),
+            },
+            _ => e,
+        });
+
         tokens.push(RichToken {
-            kind: t?,
+            kind: token?,
             range: l.span(),
             value: String::from(l.slice()),
         })
@@ -80,7 +88,7 @@ pub enum Token {
 impl Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Identifier(name) => write!(f, "identifier `{name}`"),
+            Self::Identifier(_) => write!(f, "identifier"),
             Self::Integer(_) => write!(f, "integer"),
             Self::Var => write!(f, "`var` keyword"),
             Self::Add => write!(f, "addition operator (`+`)"),
@@ -100,7 +108,10 @@ impl Display for Token {
 fn identifier(lex: &mut Lexer<Token>) -> Result<String, Error> {
     let value = lex.slice();
     if value.chars().next().unwrap().is_numeric() {
-        return Err(Error::LexingIdentifierStartsWithNumber);
+        return Err(Error::LexingIdentifierStartsWithNumber {
+            token: String::from(value),
+            span: lex.span(),
+        });
     }
     Ok(String::from(value))
 }
