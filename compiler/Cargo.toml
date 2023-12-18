@@ -7,4 +7,5 @@ license = "Apache-2.0"
 authors = ["Hafidh Muqsithanova Sukarno <hafidhmn@gmail.com>"]
 
 [dependencies]
+indoc = "2.0.4"
 logos = "0.13.0"
