@@ -10,6 +10,7 @@ pub mod ast;
 mod error;
 mod lexer;
 mod parser;
+mod util;
 
 /// Provide a quick way to compile a Kaba program, without the needs to
 /// manually lex the source code, parsing the tokens, etc.

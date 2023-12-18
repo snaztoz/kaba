@@ -22,7 +22,11 @@ fn handle_run(file: &Path) {
 
     let res = compiler::compile(&program);
     if let Err(e) = res {
-        eprintln!("{} {}", "error:".bright_red().bold(), e);
+        eprint!(
+            "{} {}",
+            "error:".bright_red().bold(),
+            e.get_verbose_message(&file.display().to_string(), &program)
+        );
         process::exit(1);
     }
 
