@@ -4,22 +4,30 @@
 //! This module contains the required logic operations during the
 //! lexing/tokenizing stage of a Kaba source code.
 
-use std::fmt::Display;
-
+use crate::error::ErrorVariant;
 use logos::{Lexer, Logos, Span};
+use std::fmt::Display;
 
 /// Provide a quick way to lex a Kaba program's source code, without the
 /// needs to setting up and running the lexer manually.
 ///
 /// Produces a vector of [`RichToken`] that contains additional
 /// information of a token.
-pub fn lex(program: &str) -> Result<Vec<RichToken>, LexerError> {
+pub fn lex(program: &str) -> Result<Vec<RichToken>, ErrorVariant> {
     let mut l = Token::lexer(program);
     let mut tokens = vec![];
 
-    while let Some(t) = l.next() {
+    while let Some(token) = l.next() {
+        let token = token.map_err(|e| match e {
+            ErrorVariant::Error => ErrorVariant::LexingUnknownToken {
+                token: String::from(l.slice()),
+                span: l.span(),
+            },
+            _ => e,
+        });
+
         tokens.push(RichToken {
-            kind: t?,
+            kind: token?,
             range: l.span(),
             value: String::from(l.slice()),
         })
@@ -41,7 +49,7 @@ pub struct RichToken {
 /// The list of all tokens that may exists in a valid Kaba
 /// source code.
 #[derive(Logos, Clone, Debug, PartialEq)]
-#[logos(skip r"[ \t\r\n\f]+", error = LexerError)]
+#[logos(skip r"[ \t\r\n\f]+", error = ErrorVariant)]
 #[rustfmt::skip]
 pub enum Token {
     #[regex("[a-zA-Z0-9_]+", identifier)]
@@ -80,7 +88,7 @@ pub enum Token {
 impl Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Identifier(name) => write!(f, "identifier `{name}`"),
+            Self::Identifier(_) => write!(f, "identifier"),
             Self::Integer(_) => write!(f, "integer"),
             Self::Var => write!(f, "`var` keyword"),
             Self::Add => write!(f, "addition operator (`+`)"),
@@ -97,36 +105,19 @@ impl Display for Token {
     }
 }
 
-fn identifier(lex: &mut Lexer<Token>) -> Result<String, LexerError> {
+fn identifier(lex: &mut Lexer<Token>) -> Result<String, ErrorVariant> {
     let value = lex.slice();
     if value.chars().next().unwrap().is_numeric() {
-        return Err(LexerError::IdentifierStartsWithNumber);
+        return Err(ErrorVariant::LexingIdentifierStartsWithNumber {
+            token: String::from(value),
+            span: lex.span(),
+        });
     }
     Ok(String::from(value))
 }
 
 fn integer(lex: &mut Lexer<Token>) -> i64 {
     lex.slice().parse().unwrap()
-}
-
-/// List of all errors that may occur during lexing stage.
-#[derive(Clone, Debug, Default, PartialEq)]
-pub enum LexerError {
-    IdentifierStartsWithNumber,
-
-    #[default]
-    Error,
-}
-
-impl Display for LexerError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::IdentifierStartsWithNumber => {
-                writeln!(f, "Identifier can't start with number")
-            }
-            _ => unreachable!(),
-        }
-    }
 }
 
 #[cfg(test)]

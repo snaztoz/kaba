@@ -4,9 +4,8 @@
 //! This module contains the required logic operations during the
 //! parsing stage of a Kaba tokens.
 
-use std::fmt::Display;
-
 use crate::ast::{AstNode, Program as ProgramAst, Value};
+use crate::error::ErrorVariant;
 use crate::lexer::{RichToken, Token};
 
 /// Provide a quick way to parse Kaba tokens, without the needs to
@@ -14,7 +13,7 @@ use crate::lexer::{RichToken, Token};
 ///
 /// Produces an AST that represents the entire source code of the
 /// given tokens (see [`crate::ast::Program`]).
-pub fn parse(tokens: Vec<RichToken>) -> Result<ProgramAst, ParserError> {
+pub fn parse(tokens: Vec<RichToken>) -> Result<ProgramAst, ErrorVariant> {
     Parser::new(tokens).parse()
 }
 
@@ -28,7 +27,7 @@ impl Parser {
         Self { tokens, cursor: 0 }
     }
 
-    fn parse(&mut self) -> Result<ProgramAst, ParserError> {
+    fn parse(&mut self) -> Result<ProgramAst, ErrorVariant> {
         let mut statements = vec![];
 
         while self.cursor < self.tokens.len() {
@@ -39,7 +38,7 @@ impl Parser {
         Ok(ProgramAst { statements })
     }
 
-    fn parse_statement(&mut self) -> Result<AstNode, ParserError> {
+    fn parse_statement(&mut self) -> Result<AstNode, ErrorVariant> {
         // Check if statement starts with a keyword
 
         if self.get_current_token_kind_or_error()? == Token::Var {
@@ -69,7 +68,7 @@ impl Parser {
         Ok(expression)
     }
 
-    fn parse_variable_declaration(&mut self) -> Result<AstNode, ParserError> {
+    fn parse_variable_declaration(&mut self) -> Result<AstNode, ErrorVariant> {
         self.advance(); // skip "var" keyword
 
         // Parse identifier
@@ -81,10 +80,10 @@ impl Parser {
             }
             _ => {
                 let token = self.get_current_token_and_advance().unwrap();
-                return Err(ParserError::UnexpectedToken {
+                return Err(ErrorVariant::ParsingUnexpectedToken {
                     expected: Token::Identifier(String::from("foo")),
                     found: token.kind.clone(),
-                    pos: token.range.start,
+                    span: token.range,
                 });
             }
         };
@@ -118,13 +117,13 @@ impl Parser {
         })
     }
 
-    fn parse_expression(&mut self) -> Result<AstNode, ParserError> {
+    fn parse_expression(&mut self) -> Result<AstNode, ErrorVariant> {
         // TODO: make this rule starts from higher rule
 
         self.parse_additive_expression()
     }
 
-    fn parse_additive_expression(&mut self) -> Result<AstNode, ParserError> {
+    fn parse_additive_expression(&mut self) -> Result<AstNode, ErrorVariant> {
         // Parse first term
 
         let mut node = self.parse_multiplicative_expression()?;
@@ -150,7 +149,7 @@ impl Parser {
         }
     }
 
-    fn parse_multiplicative_expression(&mut self) -> Result<AstNode, ParserError> {
+    fn parse_multiplicative_expression(&mut self) -> Result<AstNode, ErrorVariant> {
         // Parse first term
 
         let mut node = self.parse_primary_expression()?;
@@ -176,7 +175,7 @@ impl Parser {
         }
     }
 
-    fn parse_primary_expression(&mut self) -> Result<AstNode, ParserError> {
+    fn parse_primary_expression(&mut self) -> Result<AstNode, ErrorVariant> {
         // TODO: expand this rule
 
         let mut node = match self.get_current_token_kind_or_error()? {
@@ -200,10 +199,10 @@ impl Parser {
 
             k => {
                 let token = self.get_current_token_and_advance().unwrap();
-                return Err(ParserError::UnexpectedToken {
+                return Err(ErrorVariant::ParsingUnexpectedToken {
                     expected: Token::Identifier(String::from("foo")),
                     found: k.clone(),
-                    pos: token.range.start,
+                    span: token.range,
                 });
             }
         };
@@ -228,7 +227,7 @@ impl Parser {
         }
     }
 
-    fn parse_function_call(&mut self) -> Result<Vec<AstNode>, ParserError> {
+    fn parse_function_call(&mut self) -> Result<Vec<AstNode>, ErrorVariant> {
         // Can have >= 0 arguments
 
         let mut args = vec![];
@@ -260,23 +259,23 @@ impl Parser {
                     // Error if encounter neither "," or ")"
 
                     let token = self.get_current_token_and_advance().unwrap();
-                    return Err(ParserError::UnexpectedToken {
+                    return Err(ErrorVariant::ParsingUnexpectedToken {
                         expected: Token::RParen,
                         found: token.kind.clone(),
-                        pos: token.range.start,
+                        span: token.range,
                     });
                 }
             }
         }
     }
 
-    fn assert_current_is_semicolon_and_advance(&mut self) -> Result<(), ParserError> {
+    fn assert_current_is_semicolon_and_advance(&mut self) -> Result<(), ErrorVariant> {
         if self.get_current_token_kind_or_error()? != Token::Semicolon {
             let token = self.get_current_token_and_advance().unwrap();
-            return Err(ParserError::UnexpectedToken {
+            return Err(ErrorVariant::ParsingUnexpectedToken {
                 expected: Token::Semicolon,
                 found: token.kind.clone(),
-                pos: token.range.start,
+                span: token.range,
             });
         }
 
@@ -295,37 +294,11 @@ impl Parser {
         token
     }
 
-    fn get_current_token_kind_or_error(&self) -> Result<Token, ParserError> {
+    fn get_current_token_kind_or_error(&self) -> Result<Token, ErrorVariant> {
         self.tokens
             .get(self.cursor)
             .map(|rt| rt.kind.clone())
-            .ok_or(ParserError::UnexpectedEof)
-    }
-}
-
-/// List of all errors that may occur during parsing stage.
-#[derive(Debug, PartialEq)]
-pub enum ParserError {
-    UnexpectedToken {
-        expected: Token,
-        found: Token,
-        pos: usize,
-    },
-    UnexpectedEof,
-}
-
-impl Display for ParserError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::UnexpectedToken {
-                expected, found, ..
-            } => writeln!(
-                f,
-                "expecting to find {}, but get {} instead",
-                expected, found
-            ),
-            Self::UnexpectedEof => writeln!(f, "unexpected end-of-file (EOF)",),
-        }
+            .ok_or(ErrorVariant::ParsingUnexpectedEof)
     }
 }
 

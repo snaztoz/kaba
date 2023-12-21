@@ -1,0 +1,11 @@
+[package]
+name = "compiler"
+description = "Compiler for Kaba programming language"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["Hafidh Muqsithanova Sukarno <hafidhmn@gmail.com>"]
+
+[dependencies]
+indoc = "2.0.4"
+logos = "0.13.0"
