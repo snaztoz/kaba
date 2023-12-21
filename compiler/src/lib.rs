@@ -3,36 +3,38 @@
 
 #![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/README.md"))]
 
-use ast::Program as ProgramAst;
+use std::path::Path;
+
+use ast::Program;
+pub use compiler::Compiler;
 pub use error::Error;
 
 pub mod ast;
+mod compiler;
 mod error;
 mod lexer;
 mod parser;
 mod util;
 
-/// Provide a quick way to compile a Kaba program, without the needs to
-/// manually lex the source code, parsing the tokens, etc.
+type Result<T> = std::result::Result<T, Error>;
+
+/// Provide a quick way to compile a Kaba source code file, without the
+/// needs to manually lex the source code, parsing the tokens, etc.
 ///
 /// # Examples
 ///
-/// ```
-///
+/// ```no_run
 /// use compiler as kabac;
+/// use std::path::PathBuf;
 ///
-/// let program = "var x = 5; print(x);";
+/// let source_code_file_path = PathBuf::from("my-program.kaba");
 ///
-/// let result = kabac::compile(program);
+/// let result = kabac::compile(&source_code_file_path);
 ///
 /// assert!(result.is_ok());
 /// ```
 ///
-pub fn compile(program: &str) -> Result<ProgramAst, Error> {
-    let tokens = lexer::lex(program)?;
-    let ast = parser::parse(tokens)?;
-
-    // TODO: return bytecode
-
-    Ok(ast)
+pub fn compile(file_path: &Path) -> Result<Program> {
+    let compiler = Compiler::from_source_code_file(file_path)?;
+    compiler.compile()
 }

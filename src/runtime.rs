@@ -17,7 +17,6 @@ use std::{
 pub type WriteStream<'a> = &'a mut dyn Write;
 
 pub struct Runtime<'a> {
-    _src: String,
     ast: Option<ProgramAst>,
     variables: RefCell<HashMap<String, i64>>,
     pub error: Option<String>,
@@ -29,13 +28,11 @@ pub struct Runtime<'a> {
 
 impl<'a> Runtime<'a> {
     pub fn new(
-        src: &str,
         ast: ProgramAst,
         output_stream: WriteStream<'a>,
         error_stream: WriteStream<'a>,
     ) -> Self {
         Self {
-            _src: String::from(src),
             ast: Some(ast),
             variables: RefCell::new(HashMap::new()),
             error: None,
@@ -193,7 +190,7 @@ impl Display for RuntimeError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use compiler;
+    use compiler::Compiler;
     use indoc::indoc;
 
     #[test]
@@ -208,13 +205,9 @@ mod tests {
         let mut unused_error_stream = vec![];
 
         for (statement, variable_name, expected) in cases {
-            let ast = compiler::compile(statement).unwrap();
-            let mut runtime = Runtime::new(
-                statement,
-                ast,
-                &mut unused_output_stream,
-                &mut unused_error_stream,
-            );
+            let ast = Compiler::from_source_code(statement).compile().unwrap();
+            let mut runtime =
+                Runtime::new(ast, &mut unused_output_stream, &mut unused_error_stream);
 
             let result = runtime.run();
 
@@ -244,13 +237,9 @@ mod tests {
         let mut unused_error_stream = vec![];
 
         for (statement, lhs, expected) in cases {
-            let ast = compiler::compile(statement).unwrap();
-            let mut runtime = Runtime::new(
-                statement,
-                ast,
-                &mut unused_output_stream,
-                &mut unused_error_stream,
-            );
+            let ast = Compiler::from_source_code(statement).compile().unwrap();
+            let mut runtime =
+                Runtime::new(ast, &mut unused_output_stream, &mut unused_error_stream);
 
             let result = runtime.run();
 
@@ -293,13 +282,13 @@ mod tests {
             ),
         ];
 
-        for (program, output_content) in cases {
+        for (source_code, output_content) in cases {
             let mut output_stream = vec![];
             let mut error_stream = vec![];
 
-            let ast = compiler::compile(program).unwrap();
+            let ast = Compiler::from_source_code(source_code).compile().unwrap();
 
-            let mut runtime = Runtime::new(program, ast, &mut output_stream, &mut error_stream);
+            let mut runtime = Runtime::new(ast, &mut output_stream, &mut error_stream);
             let result = runtime.run();
 
             assert!(result.is_ok());

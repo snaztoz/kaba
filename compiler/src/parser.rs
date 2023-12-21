@@ -5,7 +5,7 @@
 //! parsing stage of a Kaba tokens.
 
 use crate::ast::{AstNode, Program as ProgramAst, Value};
-use crate::error::Error;
+use crate::error::ErrorVariant;
 use crate::lexer::{RichToken, Token};
 
 /// Provide a quick way to parse Kaba tokens, without the needs to
@@ -13,7 +13,7 @@ use crate::lexer::{RichToken, Token};
 ///
 /// Produces an AST that represents the entire source code of the
 /// given tokens (see [`crate::ast::Program`]).
-pub fn parse(tokens: Vec<RichToken>) -> Result<ProgramAst, Error> {
+pub fn parse(tokens: Vec<RichToken>) -> Result<ProgramAst, ErrorVariant> {
     Parser::new(tokens).parse()
 }
 
@@ -27,7 +27,7 @@ impl Parser {
         Self { tokens, cursor: 0 }
     }
 
-    fn parse(&mut self) -> Result<ProgramAst, Error> {
+    fn parse(&mut self) -> Result<ProgramAst, ErrorVariant> {
         let mut statements = vec![];
 
         while self.cursor < self.tokens.len() {
@@ -38,7 +38,7 @@ impl Parser {
         Ok(ProgramAst { statements })
     }
 
-    fn parse_statement(&mut self) -> Result<AstNode, Error> {
+    fn parse_statement(&mut self) -> Result<AstNode, ErrorVariant> {
         // Check if statement starts with a keyword
 
         if self.get_current_token_kind_or_error()? == Token::Var {
@@ -68,7 +68,7 @@ impl Parser {
         Ok(expression)
     }
 
-    fn parse_variable_declaration(&mut self) -> Result<AstNode, Error> {
+    fn parse_variable_declaration(&mut self) -> Result<AstNode, ErrorVariant> {
         self.advance(); // skip "var" keyword
 
         // Parse identifier
@@ -80,7 +80,7 @@ impl Parser {
             }
             _ => {
                 let token = self.get_current_token_and_advance().unwrap();
-                return Err(Error::ParsingUnexpectedToken {
+                return Err(ErrorVariant::ParsingUnexpectedToken {
                     expected: Token::Identifier(String::from("foo")),
                     found: token.kind.clone(),
                     span: token.range,
@@ -117,13 +117,13 @@ impl Parser {
         })
     }
 
-    fn parse_expression(&mut self) -> Result<AstNode, Error> {
+    fn parse_expression(&mut self) -> Result<AstNode, ErrorVariant> {
         // TODO: make this rule starts from higher rule
 
         self.parse_additive_expression()
     }
 
-    fn parse_additive_expression(&mut self) -> Result<AstNode, Error> {
+    fn parse_additive_expression(&mut self) -> Result<AstNode, ErrorVariant> {
         // Parse first term
 
         let mut node = self.parse_multiplicative_expression()?;
@@ -149,7 +149,7 @@ impl Parser {
         }
     }
 
-    fn parse_multiplicative_expression(&mut self) -> Result<AstNode, Error> {
+    fn parse_multiplicative_expression(&mut self) -> Result<AstNode, ErrorVariant> {
         // Parse first term
 
         let mut node = self.parse_primary_expression()?;
@@ -175,7 +175,7 @@ impl Parser {
         }
     }
 
-    fn parse_primary_expression(&mut self) -> Result<AstNode, Error> {
+    fn parse_primary_expression(&mut self) -> Result<AstNode, ErrorVariant> {
         // TODO: expand this rule
 
         let mut node = match self.get_current_token_kind_or_error()? {
@@ -199,7 +199,7 @@ impl Parser {
 
             k => {
                 let token = self.get_current_token_and_advance().unwrap();
-                return Err(Error::ParsingUnexpectedToken {
+                return Err(ErrorVariant::ParsingUnexpectedToken {
                     expected: Token::Identifier(String::from("foo")),
                     found: k.clone(),
                     span: token.range,
@@ -227,7 +227,7 @@ impl Parser {
         }
     }
 
-    fn parse_function_call(&mut self) -> Result<Vec<AstNode>, Error> {
+    fn parse_function_call(&mut self) -> Result<Vec<AstNode>, ErrorVariant> {
         // Can have >= 0 arguments
 
         let mut args = vec![];
@@ -259,7 +259,7 @@ impl Parser {
                     // Error if encounter neither "," or ")"
 
                     let token = self.get_current_token_and_advance().unwrap();
-                    return Err(Error::ParsingUnexpectedToken {
+                    return Err(ErrorVariant::ParsingUnexpectedToken {
                         expected: Token::RParen,
                         found: token.kind.clone(),
                         span: token.range,
@@ -269,10 +269,10 @@ impl Parser {
         }
     }
 
-    fn assert_current_is_semicolon_and_advance(&mut self) -> Result<(), Error> {
+    fn assert_current_is_semicolon_and_advance(&mut self) -> Result<(), ErrorVariant> {
         if self.get_current_token_kind_or_error()? != Token::Semicolon {
             let token = self.get_current_token_and_advance().unwrap();
-            return Err(Error::ParsingUnexpectedToken {
+            return Err(ErrorVariant::ParsingUnexpectedToken {
                 expected: Token::Semicolon,
                 found: token.kind.clone(),
                 span: token.range,
@@ -294,11 +294,11 @@ impl Parser {
         token
     }
 
-    fn get_current_token_kind_or_error(&self) -> Result<Token, Error> {
+    fn get_current_token_kind_or_error(&self) -> Result<Token, ErrorVariant> {
         self.tokens
             .get(self.cursor)
             .map(|rt| rt.kind.clone())
-            .ok_or(Error::ParsingUnexpectedEof)
+            .ok_or(ErrorVariant::ParsingUnexpectedEof)
     }
 }
 

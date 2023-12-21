@@ -7,7 +7,7 @@ use kaba::{
     cli::{Cli, Commands},
     runtime::Runtime,
 };
-use std::{fs, io, path::Path, process};
+use std::{io, path::Path, process};
 
 fn main() {
     let cli = Cli::parse();
@@ -17,21 +17,15 @@ fn main() {
     }
 }
 
-fn handle_run(file: &Path) {
-    let program = fs::read_to_string(file).unwrap();
-
-    let res = compiler::compile(&program);
+fn handle_run(file_path: &Path) {
+    let res = compiler::compile(file_path);
     if let Err(e) = res {
-        eprint!(
-            "{} {}",
-            "error:".bright_red().bold(),
-            e.get_verbose_message(&file.display().to_string(), &program)
-        );
+        eprint!("{} {}", "error:".bright_red().bold(), e);
         process::exit(1);
     }
 
     let ast = res.unwrap();
-    let res = Runtime::new(&program, ast, &mut io::stdout(), &mut io::stderr()).run();
+    let res = Runtime::new(ast, &mut io::stdout(), &mut io::stderr()).run();
     if let Err(e) = res {
         eprintln!("{}", e);
         process::exit(1);

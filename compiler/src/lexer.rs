@@ -4,7 +4,7 @@
 //! This module contains the required logic operations during the
 //! lexing/tokenizing stage of a Kaba source code.
 
-use crate::error::Error;
+use crate::error::ErrorVariant;
 use logos::{Lexer, Logos, Span};
 use std::fmt::Display;
 
@@ -13,13 +13,13 @@ use std::fmt::Display;
 ///
 /// Produces a vector of [`RichToken`] that contains additional
 /// information of a token.
-pub fn lex(program: &str) -> Result<Vec<RichToken>, Error> {
+pub fn lex(program: &str) -> Result<Vec<RichToken>, ErrorVariant> {
     let mut l = Token::lexer(program);
     let mut tokens = vec![];
 
     while let Some(token) = l.next() {
         let token = token.map_err(|e| match e {
-            Error::Error => Error::LexingUnknownToken {
+            ErrorVariant::Error => ErrorVariant::LexingUnknownToken {
                 token: String::from(l.slice()),
                 span: l.span(),
             },
@@ -49,7 +49,7 @@ pub struct RichToken {
 /// The list of all tokens that may exists in a valid Kaba
 /// source code.
 #[derive(Logos, Clone, Debug, PartialEq)]
-#[logos(skip r"[ \t\r\n\f]+", error = Error)]
+#[logos(skip r"[ \t\r\n\f]+", error = ErrorVariant)]
 #[rustfmt::skip]
 pub enum Token {
     #[regex("[a-zA-Z0-9_]+", identifier)]
@@ -105,10 +105,10 @@ impl Display for Token {
     }
 }
 
-fn identifier(lex: &mut Lexer<Token>) -> Result<String, Error> {
+fn identifier(lex: &mut Lexer<Token>) -> Result<String, ErrorVariant> {
     let value = lex.slice();
     if value.chars().next().unwrap().is_numeric() {
-        return Err(Error::LexingIdentifierStartsWithNumber {
+        return Err(ErrorVariant::LexingIdentifierStartsWithNumber {
             token: String::from(value),
             span: lex.span(),
         });

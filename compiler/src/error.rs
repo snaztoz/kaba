@@ -5,14 +5,65 @@
 //! compiling process.
 
 use crate::{lexer::Token, util};
-use indoc::formatdoc;
+use indoc::writedoc;
 use logos::Span;
-use std::fmt;
+use std::{borrow::Borrow, fmt, path::PathBuf};
 
-/// Errors that may be thrown during the compiling stage, such
-/// as invalid syntax or semantic errors.
+/// Wraps error variants that may occur during the compilation
+/// process, alongside with the information of its source code
+/// file path and the source code itself.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Error {
+    pub file_path: PathBuf,
+    pub source_code: String,
+    pub variant: Box<ErrorVariant>, // box in order to avoid the size from getting too large
+}
+
+impl Error {
+    fn get_error_span(&self) -> Span {
+        match self.variant.borrow() {
+            ErrorVariant::LexingIdentifierStartsWithNumber { span, .. } => span.clone(),
+            ErrorVariant::LexingUnknownToken { span, .. } => span.clone(),
+            ErrorVariant::ParsingUnexpectedToken { span, .. } => span.clone(),
+            ErrorVariant::ParsingUnexpectedEof => self.source_code.len()..self.source_code.len(),
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let file_path = self.file_path.display();
+        let message = self.variant.to_string();
+        let span = self.get_error_span();
+
+        let (line, row, col) = util::find_line_row_and_col_from_span(&self.source_code, &span);
+
+        let row_number_pad = (0..row.to_string().len()).map(|_| " ").collect::<String>();
+
+        writedoc!(
+            f,
+            "
+            at {file_path} ({row}:{col})
+             {row_number_pad} |
+             {row} | {line}
+             {row_number_pad} |
+             {row_number_pad}--> {message}
+            ",
+        )
+    }
+}
+
+/// Error variants that may be thrown during the compiling stage,
+/// such as invalid syntax or semantic errors.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub enum Error {
+pub enum ErrorVariant {
+    // Source code file errors
+    SourceCodeWrongExtension,
+    SourceCodeFileNotExist {
+        path: PathBuf,
+    },
+
     // Lexer errors
     LexingIdentifierStartsWithNumber {
         token: String,
@@ -35,35 +86,16 @@ pub enum Error {
     Error,
 }
 
-impl Error {
-    pub fn get_verbose_message(&self, filename: &str, program: &str) -> String {
-        let message = self.to_string();
-
-        let span = match self {
-            Self::LexingIdentifierStartsWithNumber { span, .. } => span.clone(),
-            Self::LexingUnknownToken { span, .. } => span.clone(),
-            Self::ParsingUnexpectedToken { span, .. } => span.clone(),
-            Self::ParsingUnexpectedEof => program.len()..program.len(),
-            _ => unreachable!(),
-        };
-
-        let (line, row, col) = util::find_line_row_and_col_from_span(program, &span);
-
-        let row_number_pad = (0..row.to_string().len()).map(|_| " ").collect::<String>();
-
-        formatdoc! {"
-            at {filename} ({row}:{col})
-             {row_number_pad} |
-             {row} | {line}
-             {row_number_pad} |
-             {row_number_pad}--> {message}
-        "}
-    }
-}
-
-impl fmt::Display for Error {
+impl fmt::Display for ErrorVariant {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::SourceCodeWrongExtension => {
+                write!(f, "Kaba source code file must have '.kaba' extension")
+            }
+            Self::SourceCodeFileNotExist { path } => {
+                write!(f, "file '{}' is not exist", path.display())
+            }
+
             Self::LexingIdentifierStartsWithNumber { token, .. } => {
                 write!(f, "identifier can't start with number: `{token}`")
             }
