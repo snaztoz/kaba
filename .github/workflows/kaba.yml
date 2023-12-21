@@ -2,9 +2,9 @@ name: Kaba
 
 on:
   push:
-    branches: ["main", "0.x"]
+    branches: ["main"]
   pull_request:
-    branches: ["main", "0.x"]
+    branches: ["main"]
 
 env:
   CARGO_TERM_COLOR: always
@@ -17,7 +17,7 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
     - uses: actions/checkout@v3
-    - name: Build
-      run: cargo build --verbose
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --workspace --verbose
+    - name: Build
+      run: cargo build --release --verbose
