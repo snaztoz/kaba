@@ -37,9 +37,8 @@ impl fmt::Display for Error {
         let message = self.variant.to_string();
         let span = self.get_error_span();
 
-        let (line, row, col) = util::find_line_row_and_col_from_span(&self.source_code, &span);
-
-        let row_number_pad = (0..row.to_string().len()).map(|_| " ").collect::<String>();
+        let (line, row, col) = util::get_line_row_and_col_from_span(&self.source_code, &span);
+        let row_number_pad = util::pad_white_spaces(row.to_string().len());
 
         writedoc!(
             f,

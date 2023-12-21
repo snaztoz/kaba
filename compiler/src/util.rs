@@ -1,6 +1,6 @@
 use logos::Span;
 
-pub fn find_line_row_and_col_from_span(program: &str, span: &Span) -> (String, usize, usize) {
+pub fn get_line_row_and_col_from_span(program: &str, span: &Span) -> (String, usize, usize) {
     let left_of_selected = &program[..span.start];
     let right_of_selected = &program[span.end..];
 
@@ -20,6 +20,10 @@ pub fn find_line_row_and_col_from_span(program: &str, span: &Span) -> (String, u
     let col = span.start - line_start + 1;
 
     (String::from(line), row, col)
+}
+
+pub fn pad_white_spaces(n: usize) -> String {
+    (0..n).map(|_| " ").collect::<String>()
 }
 
 #[cfg(test)]
@@ -43,7 +47,7 @@ mod tests {
         ];
 
         for (span, expected_line, expected_row, expected_col) in cases {
-            let (line, row, col) = find_line_row_and_col_from_span(input, &span);
+            let (line, row, col) = get_line_row_and_col_from_span(input, &span);
 
             assert_eq!(line, expected_line);
             assert_eq!(row, expected_row);
