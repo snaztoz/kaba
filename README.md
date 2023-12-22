@@ -10,15 +10,15 @@ Make sure that Rust and its toolchains (such as Cargo) are installed (see [https
 
 If you want to try using the language instantly, use:
 ```bash
-cargo run -- <file-name>
+cargo run -- run <file-name>
 ```
 
-If you want to build the binary in release mode, use:
+If you want to build the binary first in release mode, use:
 ```bash
 # Compile once
 cargo build --release
 
-./target/release/kaba <file-name>
+./target/release/kaba run <file-name>
 ```
 
 ## Usage
@@ -29,7 +29,7 @@ Usage instructions:
 
 2. Run:
   ```bash
-  kaba <file-name>
+  kaba run <file-name>
   ```
 
 ## Features
