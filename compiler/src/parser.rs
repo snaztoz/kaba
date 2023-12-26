@@ -333,7 +333,7 @@ mod tests {
 
         for (input, expected) in cases {
             let tokens = lexer::lex(input).unwrap();
-            let result = Parser::new(tokens).parse();
+            let result = parse(tokens);
 
             assert!(result.is_ok());
             assert_eq!(
@@ -360,7 +360,7 @@ mod tests {
 
         for (input, expected) in cases {
             let tokens = lexer::lex(input).unwrap();
-            let result = Parser::new(tokens).parse();
+            let result = parse(tokens);
 
             assert!(result.is_ok());
             assert_eq!(
@@ -434,7 +434,7 @@ mod tests {
 
         for (input, expected) in cases {
             let tokens = lexer::lex(input).unwrap();
-            let result = Parser::new(tokens).parse();
+            let result = parse(tokens);
 
             assert!(result.is_ok());
             assert_eq!(
