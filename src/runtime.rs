@@ -122,6 +122,7 @@ impl<'a> Runtime<'a> {
             AstNode::Sub(lhs, rhs) => Ok(self.run_expression(*lhs)? - self.run_expression(*rhs)?),
             AstNode::Mul(lhs, rhs) => Ok(self.run_expression(*lhs)? * self.run_expression(*rhs)?),
             AstNode::Div(lhs, rhs) => Ok(self.run_expression(*lhs)? / self.run_expression(*rhs)?),
+            AstNode::Negation(value) => Ok(-self.run_expression(*value)?),
 
             _ => unreachable!(),
         }

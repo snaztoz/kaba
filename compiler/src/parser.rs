@@ -176,7 +176,10 @@ impl Parser {
     }
 
     fn parse_primary_expression(&mut self) -> Result<AstNode, ErrorVariant> {
-        // TODO: expand this rule
+        let negated = self.get_current_token()? == Token::Sub;
+        if negated {
+            self.advance();
+        }
 
         let mut node = match self.get_current_token()? {
             Token::LParen => {
@@ -215,6 +218,7 @@ impl Parser {
 
         // TODO: field access and indexed access
 
+        #[allow(clippy::while_let_loop)] // temporary
         loop {
             match self.get_current_token()? {
                 Token::LParen => {
@@ -226,8 +230,14 @@ impl Parser {
                     };
                 }
 
-                _ => return Ok(node),
+                _ => break,
             }
+        }
+
+        if negated {
+            Ok(AstNode::Negation(Box::from(node)))
+        } else {
+            Ok(node)
         }
     }
 
@@ -438,6 +448,22 @@ mod tests {
                         ],
                     }],
                 },
+            ),
+            (
+                "-abc + (-(5)) * -(-7);",
+                AstNode::Add(
+                    Box::from(AstNode::Negation(Box::from(AstNode::Identifier(
+                        String::from("abc"),
+                    )))),
+                    Box::from(AstNode::Mul(
+                        Box::from(AstNode::Negation(Box::from(AstNode::Val(Value::Integer(
+                            5,
+                        ))))),
+                        Box::from(AstNode::Negation(Box::from(AstNode::Negation(Box::from(
+                            AstNode::Val(Value::Integer(7)),
+                        ))))),
+                    )),
+                ),
             ),
         ];
 

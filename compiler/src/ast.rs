@@ -34,6 +34,8 @@ pub enum AstNode {
     Mul(Box<AstNode>, Box<AstNode>),
     Div(Box<AstNode>, Box<AstNode>),
 
+    Negation(Box<AstNode>),
+
     Identifier(String),
 
     Val(Value),
