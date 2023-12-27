@@ -5,7 +5,7 @@
 //! compiling process.
 
 use crate::{lexer::Token, util};
-use indoc::writedoc;
+use indoc::formatdoc;
 use logos::Span;
 use std::{borrow::Borrow, fmt, path::PathBuf};
 
@@ -33,23 +33,27 @@ impl Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let file_path = self.file_path.display();
-        let message = self.variant.to_string();
-        let span = self.get_error_span();
+        let mut message = String::new();
 
-        let (line, row, col) = util::get_line_row_and_col_from_span(&self.source_code, &span);
-        let row_number_pad = util::pad_white_spaces(row.to_string().len());
+        message.push_str(&self.variant.to_string());
 
-        writedoc!(
-            f,
-            "
-            at {file_path} ({row}:{col})
-             {row_number_pad} |
-             {row} | {line}
-             {row_number_pad} |
-             {row_number_pad}--> {message}
-            ",
-        )
+        if !self.variant.is_file_error() {
+            let file_path = self.file_path.display();
+            let span = self.get_error_span();
+            let (line, row, col) = util::get_position_from_span(&self.source_code, &span);
+
+            message.push_str(&format!(", at `{file_path}` ({row}:{col})\n"));
+
+            let row_number_pad = util::pad_white_spaces(row.to_string().len());
+
+            message.push_str(&formatdoc! {"
+                 {row_number_pad} |
+                 {row} | {line}
+                 {row_number_pad} |"
+            })
+        }
+
+        write!(f, "{message}")
     }
 }
 
@@ -85,6 +89,13 @@ pub enum ErrorVariant {
     Error,
 }
 
+impl ErrorVariant {
+    fn is_file_error(&self) -> bool {
+        matches!(self, &Self::SourceCodeFileNotExist { .. })
+            || matches!(self, &Self::SourceCodeWrongExtension)
+    }
+}
+
 impl fmt::Display for ErrorVariant {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -104,7 +115,7 @@ impl fmt::Display for ErrorVariant {
 
             Self::ParsingUnexpectedToken {
                 expected, found, ..
-            } => write!(f, "expecting to find {expected}, but get {found} instead",),
+            } => write!(f, "expecting to find {expected} but get {found} instead",),
             Self::ParsingUnexpectedEof => write!(f, "unexpected end-of-file (EOF)",),
 
             _ => unreachable!(),

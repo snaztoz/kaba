@@ -41,7 +41,7 @@ impl Parser {
     fn parse_statement(&mut self) -> Result<AstNode, ErrorVariant> {
         // Check if statement starts with a keyword
 
-        if self.get_current_token_kind_or_error()? == Token::Var {
+        if self.get_current_token()? == Token::Var {
             return self.parse_variable_declaration();
         } else {
             // TODO: support other statements
@@ -53,7 +53,7 @@ impl Parser {
 
         // Expecting "=" (optional, transform to: variable assignment)
 
-        if self.get_current_token_kind_or_error()? == Token::Assign {
+        if self.get_current_token()? == Token::Assign {
             self.advance(); // skip "="
             let rhs = self.parse_expression()?;
 
@@ -63,7 +63,7 @@ impl Parser {
             };
         }
 
-        self.assert_current_is_semicolon_and_advance()?;
+        self.expect_current_token_then_advance(Token::Semicolon)?;
 
         Ok(expression)
     }
@@ -73,13 +73,13 @@ impl Parser {
 
         // Parse identifier
 
-        let identifier = match self.get_current_token_kind_or_error()? {
+        let identifier = match self.get_current_token()? {
             Token::Identifier(name) => {
                 self.advance();
                 name
             }
             _ => {
-                let token = self.get_current_token_and_advance().unwrap();
+                let token = self.get_current_rich_token_then_advance().unwrap();
                 return Err(ErrorVariant::ParsingUnexpectedToken {
                     expected: Token::Identifier(String::from("foo")),
                     found: token.kind.clone(),
@@ -90,7 +90,7 @@ impl Parser {
 
         // Expecting ":" (optional)
 
-        let r#type = if self.get_current_token_kind_or_error()? == Token::Colon {
+        let r#type = if self.get_current_token()? == Token::Colon {
             self.advance(); // skip ":"
             todo!("implementing variable type notation")
         } else {
@@ -99,7 +99,7 @@ impl Parser {
 
         // Expecting "=" (optional)
 
-        let value = if self.get_current_token_kind_or_error()? == Token::Assign {
+        let value = if self.get_current_token()? == Token::Assign {
             self.advance(); // skip "="
             Some(Box::from(self.parse_expression()?))
         } else {
@@ -108,7 +108,7 @@ impl Parser {
 
         // Expecting ";"
 
-        self.assert_current_is_semicolon_and_advance()?;
+        self.expect_current_token_then_advance(Token::Semicolon)?;
 
         Ok(AstNode::VariableDeclaration {
             identifier,
@@ -131,7 +131,7 @@ impl Parser {
         loop {
             // Expecting "+" or "-" (both are optional)
 
-            match self.get_current_token_kind_or_error()? {
+            match self.get_current_token()? {
                 Token::Add => {
                     self.advance(); // skip "+"
                     let rhs = self.parse_multiplicative_expression()?;
@@ -157,7 +157,7 @@ impl Parser {
         loop {
             // Expecting "*" or "/" (both are optional)
 
-            match self.get_current_token_kind_or_error()? {
+            match self.get_current_token()? {
                 Token::Mul => {
                     self.advance(); // skip "*"
                     let rhs = self.parse_primary_expression()?;
@@ -176,14 +176,21 @@ impl Parser {
     }
 
     fn parse_primary_expression(&mut self) -> Result<AstNode, ErrorVariant> {
-        // TODO: expand this rule
+        let negated = self.get_current_token()? == Token::Sub;
+        if negated {
+            self.advance();
+        }
 
-        let mut node = match self.get_current_token_kind_or_error()? {
+        let mut node = match self.get_current_token()? {
             Token::LParen => {
-                // Parse prioritized expression
+                // Parse group expression
                 self.advance(); // skip "("
+
                 let expression = self.parse_expression()?;
-                self.advance(); // skip ")"
+
+                self.expect_current_token(Token::RParen)?;
+                self.advance();
+
                 expression
             }
 
@@ -198,7 +205,7 @@ impl Parser {
             }
 
             k => {
-                let token = self.get_current_token_and_advance().unwrap();
+                let token = self.get_current_rich_token_then_advance().unwrap();
                 return Err(ErrorVariant::ParsingUnexpectedToken {
                     expected: Token::Identifier(String::from("foo")),
                     found: k.clone(),
@@ -211,8 +218,9 @@ impl Parser {
 
         // TODO: field access and indexed access
 
+        #[allow(clippy::while_let_loop)] // temporary
         loop {
-            match self.get_current_token_kind_or_error()? {
+            match self.get_current_token()? {
                 Token::LParen => {
                     self.advance(); // skip "("
                     let args = self.parse_function_call()?;
@@ -222,8 +230,14 @@ impl Parser {
                     };
                 }
 
-                _ => return Ok(node),
+                _ => break,
             }
+        }
+
+        if negated {
+            Ok(AstNode::Negation(Box::from(node)))
+        } else {
+            Ok(node)
         }
     }
 
@@ -235,7 +249,7 @@ impl Parser {
         loop {
             // Stop when encounter a closing parentheses
 
-            if self.get_current_token_kind_or_error()? == Token::RParen {
+            if self.get_current_token()? == Token::RParen {
                 self.advance(); // skip ")"
                 return Ok(args);
             }
@@ -247,7 +261,7 @@ impl Parser {
 
             // Continue if encounter "," or break out of loop if encounter ")"
 
-            match self.get_current_token_kind_or_error()? {
+            match self.get_current_token()? {
                 Token::Comma => {
                     self.advance(); // skip "("
                     continue;
@@ -258,7 +272,7 @@ impl Parser {
                 _ => {
                     // Error if encounter neither "," or ")"
 
-                    let token = self.get_current_token_and_advance().unwrap();
+                    let token = self.get_current_rich_token_then_advance().unwrap();
                     return Err(ErrorVariant::ParsingUnexpectedToken {
                         expected: Token::RParen,
                         found: token.kind.clone(),
@@ -269,18 +283,23 @@ impl Parser {
         }
     }
 
-    fn assert_current_is_semicolon_and_advance(&mut self) -> Result<(), ErrorVariant> {
-        if self.get_current_token_kind_or_error()? != Token::Semicolon {
-            let token = self.get_current_token_and_advance().unwrap();
+    fn expect_current_token(&mut self, expected: Token) -> Result<(), ErrorVariant> {
+        let current = self.get_current_token()?;
+        if current != expected {
+            let found = self.get_current_rich_token_then_advance().unwrap();
             return Err(ErrorVariant::ParsingUnexpectedToken {
-                expected: Token::Semicolon,
-                found: token.kind.clone(),
-                span: token.range,
+                expected,
+                found: found.kind.clone(),
+                span: found.range,
             });
         }
 
-        self.advance(); // skip ";"
+        Ok(())
+    }
 
+    fn expect_current_token_then_advance(&mut self, expected: Token) -> Result<(), ErrorVariant> {
+        self.expect_current_token(expected)?;
+        self.advance();
         Ok(())
     }
 
@@ -288,13 +307,13 @@ impl Parser {
         self.cursor += 1;
     }
 
-    fn get_current_token_and_advance(&mut self) -> Option<RichToken> {
+    fn get_current_rich_token_then_advance(&mut self) -> Option<RichToken> {
         let token = self.tokens.get(self.cursor).cloned();
         self.advance();
         token
     }
 
-    fn get_current_token_kind_or_error(&self) -> Result<Token, ErrorVariant> {
+    fn get_current_token(&self) -> Result<Token, ErrorVariant> {
         self.tokens
             .get(self.cursor)
             .map(|rt| rt.kind.clone())
@@ -333,7 +352,7 @@ mod tests {
 
         for (input, expected) in cases {
             let tokens = lexer::lex(input).unwrap();
-            let result = Parser::new(tokens).parse();
+            let result = parse(tokens);
 
             assert!(result.is_ok());
             assert_eq!(
@@ -360,7 +379,7 @@ mod tests {
 
         for (input, expected) in cases {
             let tokens = lexer::lex(input).unwrap();
-            let result = Parser::new(tokens).parse();
+            let result = parse(tokens);
 
             assert!(result.is_ok());
             assert_eq!(
@@ -430,11 +449,27 @@ mod tests {
                     }],
                 },
             ),
+            (
+                "-abc + (-(5)) * -(-7);",
+                AstNode::Add(
+                    Box::from(AstNode::Negation(Box::from(AstNode::Identifier(
+                        String::from("abc"),
+                    )))),
+                    Box::from(AstNode::Mul(
+                        Box::from(AstNode::Negation(Box::from(AstNode::Val(Value::Integer(
+                            5,
+                        ))))),
+                        Box::from(AstNode::Negation(Box::from(AstNode::Negation(Box::from(
+                            AstNode::Val(Value::Integer(7)),
+                        ))))),
+                    )),
+                ),
+            ),
         ];
 
         for (input, expected) in cases {
             let tokens = lexer::lex(input).unwrap();
-            let result = Parser::new(tokens).parse();
+            let result = parse(tokens);
 
             assert!(result.is_ok());
             assert_eq!(
@@ -443,6 +478,26 @@ mod tests {
                     statements: vec![expected]
                 }
             );
+        }
+    }
+
+    #[test]
+    fn test_parsing_invalid_expression() {
+        let cases = [(
+            "(123 + 5;",
+            ErrorVariant::ParsingUnexpectedToken {
+                expected: Token::RParen,
+                found: Token::Semicolon,
+                span: 8..9,
+            },
+        )];
+
+        for (input, expected) in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let result = parse(tokens);
+
+            assert!(result.is_err());
+            assert_eq!(result.unwrap_err(), expected);
         }
     }
 }
