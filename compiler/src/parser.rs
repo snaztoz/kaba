@@ -180,10 +180,14 @@ impl Parser {
 
         let mut node = match self.get_current_token_kind_or_error()? {
             Token::LParen => {
-                // Parse prioritized expression
+                // Parse group expression
                 self.advance(); // skip "("
+
                 let expression = self.parse_expression()?;
-                self.advance(); // skip ")"
+
+                self.expect_current_token(Token::RParen)?;
+                self.advance();
+
                 expression
             }
 
@@ -280,6 +284,20 @@ impl Parser {
         }
 
         self.advance(); // skip ";"
+
+        Ok(())
+    }
+
+    fn expect_current_token(&mut self, expected: Token) -> Result<(), ErrorVariant> {
+        let current = self.get_current_token_kind_or_error()?;
+        if current != expected {
+            let found = self.get_current_token_and_advance().unwrap();
+            return Err(ErrorVariant::ParsingUnexpectedToken {
+                expected,
+                found: found.kind.clone(),
+                span: found.range,
+            });
+        }
 
         Ok(())
     }
@@ -443,6 +461,26 @@ mod tests {
                     statements: vec![expected]
                 }
             );
+        }
+    }
+
+    #[test]
+    fn test_parsing_invalid_expression() {
+        let cases = [(
+            "(123 + 5;",
+            ErrorVariant::ParsingUnexpectedToken {
+                expected: Token::RParen,
+                found: Token::Semicolon,
+                span: 8..9,
+            },
+        )];
+
+        for (input, expected) in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let result = parse(tokens);
+
+            assert!(result.is_err());
+            assert_eq!(result.unwrap_err(), expected);
         }
     }
 }
