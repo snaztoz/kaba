@@ -40,7 +40,7 @@ impl fmt::Display for Error {
         if !self.variant.is_file_error() {
             let file_path = self.file_path.display();
             let span = self.get_error_span();
-            let (line, row, col) = util::get_line_row_and_col_from_span(&self.source_code, &span);
+            let (line, row, col) = util::get_position_from_span(&self.source_code, &span);
 
             message.push_str(&format!(", at `{file_path}` ({row}:{col})\n"));
 

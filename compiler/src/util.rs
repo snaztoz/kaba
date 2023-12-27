@@ -1,6 +1,10 @@
 use logos::Span;
 
-pub fn get_line_row_and_col_from_span(program: &str, span: &Span) -> (String, usize, usize) {
+type Line = String;
+type Row = usize;
+type Col = usize;
+
+pub fn get_position_from_span(program: &str, span: &Span) -> (Line, Row, Col) {
     let left_of_selected = &program[..span.start];
     let right_of_selected = &program[span.end..];
 
@@ -47,7 +51,7 @@ mod tests {
         ];
 
         for (span, expected_line, expected_row, expected_col) in cases {
-            let (line, row, col) = get_line_row_and_col_from_span(input, &span);
+            let (line, row, col) = get_position_from_span(input, &span);
 
             assert_eq!(line, expected_line);
             assert_eq!(row, expected_row);
