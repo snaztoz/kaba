@@ -20,7 +20,7 @@ fn main() {
 fn handle_run(file_path: &Path) {
     let res = compiler::compile(file_path);
     if let Err(e) = res {
-        eprint!("{} {}", "error:".bright_red().bold(), e);
+        eprintln!("{} {}", "error:".bright_red().bold(), e);
         process::exit(1);
     }
 
