@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add support for boolean data type.
 - Add support for `if-else` control flow.
 
-## [1.1.2] - 2023-12-27
+## [0.1.2] - 2023-12-27
 
 - Fix versioning.
 - Fix group expression.
