@@ -60,7 +60,10 @@ pub enum Token {
     //
 
     #[regex("[0-9]+", priority = 2, callback = integer)]
-    Integer(i64),
+    Integer(i32),
+
+    #[regex(r"[0-9]+\.[0-9]+", callback = float)]
+    Float(f64),
 
     //
     // Keywords
@@ -90,6 +93,7 @@ impl Display for Token {
         match self {
             Self::Identifier(_) => write!(f, "identifier"),
             Self::Integer(_) => write!(f, "integer"),
+            Self::Float(_) => write!(f, "float"),
             Self::Var => write!(f, "`var` keyword"),
             Self::Add => write!(f, "addition operator (`+`)"),
             Self::Sub => write!(f, "subtraction operator (`-`)"),
@@ -116,7 +120,11 @@ fn identifier(lex: &mut Lexer<Token>) -> Result<String, ErrorVariant> {
     Ok(String::from(value))
 }
 
-fn integer(lex: &mut Lexer<Token>) -> i64 {
+fn integer(lex: &mut Lexer<Token>) -> i32 {
+    lex.slice().parse().unwrap()
+}
+
+fn float(lex: &mut Lexer<Token>) -> f64 {
     lex.slice().parse().unwrap()
 }
 
@@ -164,6 +172,22 @@ mod tests {
 
             assert!(tokens.len() == 1);
             assert_eq!(tokens[0].kind, Token::Integer(c.parse().unwrap()));
+        }
+    }
+
+    #[test]
+    fn test_lexing_float() {
+        let cases = ["123.5", "0.0723"];
+
+        for c in cases {
+            let lex_result = lex(c);
+
+            assert!(lex_result.is_ok());
+
+            let tokens = lex_result.unwrap();
+
+            assert!(tokens.len() == 1);
+            assert_eq!(tokens[0].kind, Token::Float(c.parse().unwrap()));
         }
     }
 }

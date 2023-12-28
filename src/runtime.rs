@@ -18,7 +18,7 @@ pub type WriteStream<'a> = &'a mut dyn Write;
 
 pub struct Runtime<'a> {
     ast: Option<ProgramAst>,
-    variables: RefCell<HashMap<String, i64>>,
+    variables: RefCell<HashMap<String, Value>>,
     pub error: Option<String>,
 
     // IO streams
@@ -84,7 +84,7 @@ impl<'a> Runtime<'a> {
 
         let value = match value {
             Some(expression) => self.run_expression(expression)?,
-            None => 0,
+            None => Value::Integer(0),
         };
 
         self.variables
@@ -113,10 +113,10 @@ impl<'a> Runtime<'a> {
         Ok(())
     }
 
-    fn run_expression(&self, expression: AstNode) -> Result<i64, RuntimeError> {
+    fn run_expression(&self, expression: AstNode) -> Result<Value, RuntimeError> {
         match expression {
             AstNode::Identifier(name) => self.get_variable_value(&name),
-            AstNode::Val(Value::Integer(value)) => Ok(value),
+            AstNode::Val(value) => Ok(value),
             AstNode::FunctionCall { callee, args } => self.run_function_call(&callee, args),
             AstNode::Add(lhs, rhs) => Ok(self.run_expression(*lhs)? + self.run_expression(*rhs)?),
             AstNode::Sub(lhs, rhs) => Ok(self.run_expression(*lhs)? - self.run_expression(*rhs)?),
@@ -128,7 +128,7 @@ impl<'a> Runtime<'a> {
         }
     }
 
-    fn get_variable_value(&self, name: &str) -> Result<i64, RuntimeError> {
+    fn get_variable_value(&self, name: &str) -> Result<Value, RuntimeError> {
         self.variables
             .borrow()
             .get(name)
@@ -136,13 +136,17 @@ impl<'a> Runtime<'a> {
             .ok_or(RuntimeError::VariableNotExist(String::from(name)))
     }
 
-    fn run_function_call(&self, callee: &AstNode, args: Vec<AstNode>) -> Result<i64, RuntimeError> {
+    fn run_function_call(
+        &self,
+        callee: &AstNode,
+        args: Vec<AstNode>,
+    ) -> Result<Value, RuntimeError> {
         let callee = match callee {
             AstNode::Identifier(identifier) => identifier,
             _ => todo!("function callee"),
         };
 
-        let mut evaluated_args: Vec<i64> = vec![];
+        let mut evaluated_args: Vec<Value> = vec![];
         for arg in args {
             evaluated_args.push(self.run_expression(arg)?);
         }
@@ -161,7 +165,7 @@ impl<'a> Runtime<'a> {
             _ => todo!("other function"),
         }
 
-        Ok(0)
+        Ok(Value::Integer(0))
     }
 }
 
@@ -198,8 +202,8 @@ mod tests {
     fn test_creating_variable() {
         let cases = [
             // (statement, variable name, expected value)
-            ("var x = 10 * 20;", "x", 200),
-            ("var abc = 200 + 50 * 2;", "abc", 300),
+            ("var x = 10 * 20;", "x", Value::Integer(200)),
+            ("var abc = 2 * 0.5;", "abc", Value::Float(1.0)),
         ];
 
         let mut unused_output_stream = vec![];
@@ -231,7 +235,7 @@ mod tests {
                 x = x * y;
             "},
             "x",
-            5000,
+            Value::Integer(5000),
         )];
 
         let mut unused_output_stream = vec![];

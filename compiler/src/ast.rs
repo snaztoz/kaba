@@ -6,6 +6,11 @@
 //! Root of the tree will always be the [`Program`] that may contains
 //! `>= 0` statements.
 
+use std::{
+    fmt::Display,
+    ops::{Add, Div, Mul, Neg, Sub},
+};
+
 /// The root of a Kaba source code's AST.
 #[derive(Debug, PartialEq)]
 pub struct Program {
@@ -43,7 +48,96 @@ pub enum AstNode {
 
 /// The representation of each value that may exists in a Kaba
 /// source code, such as integer or string.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Value {
-    Integer(i64),
+    Integer(i32),
+    Float(f64),
+}
+
+impl Add for Value {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        match self {
+            Value::Integer(l) => match rhs {
+                Value::Integer(r) => Value::Integer(l + r),
+                Value::Float(r) => Value::Float(f64::from(l) + r),
+            },
+            Value::Float(l) => match rhs {
+                Value::Integer(r) => Value::Float(l + f64::from(r)),
+                Value::Float(r) => Value::Float(l + r),
+            },
+        }
+    }
+}
+
+impl Sub for Value {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        match self {
+            Value::Integer(l) => match rhs {
+                Value::Integer(r) => Value::Integer(l - r),
+                Value::Float(r) => Value::Float(f64::from(l) - r),
+            },
+            Value::Float(l) => match rhs {
+                Value::Integer(r) => Value::Float(l - f64::from(r)),
+                Value::Float(r) => Value::Float(l - r),
+            },
+        }
+    }
+}
+
+impl Mul for Value {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        match self {
+            Value::Integer(l) => match rhs {
+                Value::Integer(r) => Value::Integer(l * r),
+                Value::Float(r) => Value::Float(f64::from(l) * r),
+            },
+            Value::Float(l) => match rhs {
+                Value::Integer(r) => Value::Float(l * f64::from(r)),
+                Value::Float(r) => Value::Float(l * r),
+            },
+        }
+    }
+}
+
+impl Div for Value {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        match self {
+            Value::Integer(l) => match rhs {
+                Value::Integer(r) => Value::Integer(l / r),
+                Value::Float(r) => Value::Float(f64::from(l) / r),
+            },
+            Value::Float(l) => match rhs {
+                Value::Integer(r) => Value::Float(l / f64::from(r)),
+                Value::Float(r) => Value::Float(l / r),
+            },
+        }
+    }
+}
+
+impl Neg for Value {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        match self {
+            Value::Integer(n) => Value::Integer(-n),
+            Value::Float(n) => Value::Float(-n),
+        }
+    }
+}
+
+impl Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Integer(n) => write!(f, "{n}"),
+            Value::Float(n) => write!(f, "{n}"),
+        }
+    }
 }

@@ -194,7 +194,7 @@ impl Parser {
                 expression
             }
 
-            // Expecting either identifier or integer
+            // Expecting either identifier or literals
             Token::Identifier(name) => {
                 self.advance();
                 AstNode::Identifier(name)
@@ -202,6 +202,10 @@ impl Parser {
             Token::Integer(n) => {
                 self.advance();
                 AstNode::Val(Value::Integer(n))
+            }
+            Token::Float(n) => {
+                self.advance();
+                AstNode::Val(Value::Float(n))
             }
 
             k => {
@@ -463,6 +467,15 @@ mod tests {
                             AstNode::Val(Value::Integer(7)),
                         ))))),
                     )),
+                ),
+            ),
+            (
+                "2 * (-0.5);",
+                AstNode::Mul(
+                    Box::from(AstNode::Val(Value::Integer(2))),
+                    Box::from(AstNode::Negation(Box::from(AstNode::Val(Value::Float(
+                        0.5,
+                    ))))),
                 ),
             ),
         ];
