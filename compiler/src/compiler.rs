@@ -33,13 +33,13 @@ impl Compiler {
             return Err(Error {
                 file_path: PathBuf::from(file_path),
                 source_code: String::new(),
-                variant: Box::from(ErrorVariant::SourceCodeWrongExtension),
+                variant: Box::new(ErrorVariant::SourceCodeWrongExtension),
             });
         } else if !file_path.exists() {
             return Err(Error {
                 file_path: PathBuf::from(file_path),
                 source_code: String::new(),
-                variant: Box::from(ErrorVariant::SourceCodeFileNotExist {
+                variant: Box::new(ErrorVariant::SourceCodeFileNotExist {
                     path: PathBuf::from(file_path),
                 }),
             });
@@ -60,7 +60,7 @@ impl Compiler {
             .map_err(|e| Error {
                 file_path: self.file_path.clone().unwrap_or(PathBuf::new()),
                 source_code: self.source_code.clone(),
-                variant: Box::from(e),
+                variant: Box::new(e),
             })
     }
 }
