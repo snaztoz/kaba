@@ -45,7 +45,7 @@ impl Parser {
     fn parse_statement(&mut self) -> Result<AstNode, ParsingError> {
         // Check if statement starts with a keyword
 
-        if self.get_current_token()? == Token::Var {
+        if self.get_current_token() == Token::Var {
             return self.parse_variable_declaration();
         } else {
             // TODO: support other statements
@@ -57,7 +57,7 @@ impl Parser {
 
         // Expecting "=" (optional, transform to: variable assignment)
 
-        if self.get_current_token()? == Token::Assign {
+        if self.get_current_token() == Token::Assign {
             self.advance(); // skip "="
             let rhs = self.parse_expression()?;
 
@@ -78,13 +78,15 @@ impl Parser {
 
         // Parse identifier
 
-        let identifier = match self.get_current_token()? {
+        let identifier = match self.get_current_token() {
             Token::Identifier(name) => {
                 self.advance();
                 name
             }
             _ => {
-                let token = self.get_current_rich_token_then_advance().unwrap();
+                let token = self.get_current_rich_token();
+                self.advance();
+
                 return Err(ParsingError::UnexpectedToken {
                     expected: Token::Identifier(String::from("foo")),
                     found: token.kind.clone(),
@@ -95,7 +97,7 @@ impl Parser {
 
         // Expecting ":" (optional)
 
-        let r#type = if self.get_current_token()? == Token::Colon {
+        let r#type = if self.get_current_token() == Token::Colon {
             self.advance(); // skip ":"
             todo!("implementing variable type notation")
         } else {
@@ -104,7 +106,7 @@ impl Parser {
 
         // Expecting "=" (optional)
 
-        let value = if self.get_current_token()? == Token::Assign {
+        let value = if self.get_current_token() == Token::Assign {
             self.advance(); // skip "="
             Some(Box::new(self.parse_expression()?))
         } else {
@@ -137,7 +139,7 @@ impl Parser {
         loop {
             // Expecting "+" or "-" (both are optional)
 
-            match self.get_current_token()? {
+            match self.get_current_token() {
                 Token::Add => {
                     self.advance(); // skip "+"
                     let rhs = self.parse_multiplicative_expression()?;
@@ -163,7 +165,7 @@ impl Parser {
         loop {
             // Expecting "*" or "/" (both are optional)
 
-            match self.get_current_token()? {
+            match self.get_current_token() {
                 Token::Mul => {
                     self.advance(); // skip "*"
                     let rhs = self.parse_primary_expression()?;
@@ -182,12 +184,12 @@ impl Parser {
     }
 
     fn parse_primary_expression(&mut self) -> Result<AstNode, ParsingError> {
-        let negated = self.get_current_token()? == Token::Sub;
+        let negated = self.get_current_token() == Token::Sub;
         if negated {
             self.advance();
         }
 
-        let mut node = match self.get_current_token()? {
+        let mut node = match self.get_current_token() {
             Token::LParen => {
                 // Parse group expression
                 self.advance(); // skip "("
@@ -215,7 +217,9 @@ impl Parser {
             }
 
             k => {
-                let token = self.get_current_rich_token_then_advance().unwrap();
+                let token = self.get_current_rich_token();
+                self.advance();
+
                 return Err(ParsingError::UnexpectedToken {
                     expected: Token::Identifier(String::from("foo")),
                     found: k.clone(),
@@ -230,7 +234,7 @@ impl Parser {
 
         #[allow(clippy::while_let_loop)] // temporary
         loop {
-            match self.get_current_token()? {
+            match self.get_current_token() {
                 Token::LParen => {
                     self.advance(); // skip "("
                     let args = self.parse_function_call()?;
@@ -259,7 +263,7 @@ impl Parser {
         loop {
             // Stop when encounter a closing parentheses
 
-            if self.get_current_token()? == Token::RParen {
+            if self.get_current_token() == Token::RParen {
                 self.advance(); // skip ")"
                 return Ok(args);
             }
@@ -271,7 +275,7 @@ impl Parser {
 
             // Continue if encounter "," or break out of loop if encounter ")"
 
-            match self.get_current_token()? {
+            match self.get_current_token() {
                 Token::Comma => {
                     self.advance(); // skip "("
                     continue;
@@ -282,7 +286,9 @@ impl Parser {
                 _ => {
                     // Error if encounter neither "," or ")"
 
-                    let token = self.get_current_rich_token_then_advance().unwrap();
+                    let token = self.get_current_rich_token();
+                    self.advance();
+
                     return Err(ParsingError::UnexpectedToken {
                         expected: Token::RParen,
                         found: token.kind.clone(),
@@ -294,9 +300,11 @@ impl Parser {
     }
 
     fn expect_current_token(&mut self, expected: Token) -> Result<(), ParsingError> {
-        let current = self.get_current_token()?;
+        let current = self.get_current_token();
         if current != expected {
-            let found = self.get_current_rich_token_then_advance().unwrap();
+            let found = self.get_current_rich_token();
+            self.advance();
+
             return Err(ParsingError::UnexpectedToken {
                 expected,
                 found: found.kind.clone(),
@@ -311,22 +319,12 @@ impl Parser {
         self.cursor += 1;
     }
 
-    fn get_current_rich_token_then_advance(&mut self) -> Option<RichToken> {
-        let token = self.tokens.get(self.cursor).cloned();
-        self.advance();
-        token
+    fn get_current_rich_token(&mut self) -> RichToken {
+        self.tokens.get(self.cursor).cloned().unwrap()
     }
 
-    fn get_current_token(&self) -> Result<Token, ParsingError> {
-        let token = self.tokens.get(self.cursor).unwrap();
-
-        if matches!(token.kind, Token::Eof) {
-            Err(ParsingError::UnexpectedEof {
-                span: token.span.clone(),
-            })
-        } else {
-            Ok(token.kind.clone())
-        }
+    fn get_current_token(&self) -> Token {
+        self.tokens.get(self.cursor).unwrap().kind.clone()
     }
 }
 
@@ -337,16 +335,12 @@ pub enum ParsingError {
         found: Token,
         span: Span,
     },
-    UnexpectedEof {
-        span: Span,
-    },
 }
 
 impl ParsingError {
     pub fn get_span(&self) -> Option<Span> {
         match self {
             Self::UnexpectedToken { span, .. } => Some(span.clone()),
-            Self::UnexpectedEof { span } => Some(span.clone()),
         }
     }
 }
@@ -357,10 +351,7 @@ impl Display for ParsingError {
             Self::UnexpectedToken {
                 expected, found, ..
             } => {
-                write!(f, "expecting to find {expected} but get {found} instead",)
-            }
-            Self::UnexpectedEof { .. } => {
-                write!(f, "unexpected end-of-file (EOF)",)
+                write!(f, "expecting to find {expected} but found {found} instead",)
             }
         }
     }
