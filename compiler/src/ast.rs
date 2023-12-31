@@ -42,7 +42,10 @@ pub enum AstNode {
 
     Neg(Box<AstNode>),
 
-    Identifier(String),
+    Identifier {
+        name: String,
+        span: Span,
+    },
 
     Literal {
         value: Value,

@@ -98,7 +98,7 @@ impl<'a> Runtime<'a> {
         // TODO: make lhs to be able to use more expression (currently only identifier)
 
         match lhs {
-            AstNode::Identifier(name) => {
+            AstNode::Identifier { name, .. } => {
                 if !self.variables.borrow_mut().contains_key(&name) {
                     return Err(RuntimeError::VariableNotExist(name));
                 }
@@ -115,7 +115,7 @@ impl<'a> Runtime<'a> {
 
     fn run_expression(&self, expression: AstNode) -> Result<Value, RuntimeError> {
         match expression {
-            AstNode::Identifier(name) => self.get_variable_value(&name),
+            AstNode::Identifier { name, .. } => self.get_variable_value(&name),
             AstNode::Literal { value, .. } => Ok(value),
             AstNode::FunctionCall { callee, args } => self.run_function_call(&callee, args),
             AstNode::Add(lhs, rhs) => Ok(self.run_expression(*lhs)? + self.run_expression(*rhs)?),
@@ -142,7 +142,7 @@ impl<'a> Runtime<'a> {
         args: Vec<AstNode>,
     ) -> Result<Value, RuntimeError> {
         let callee = match callee {
-            AstNode::Identifier(identifier) => identifier,
+            AstNode::Identifier { name, .. } => name,
             _ => todo!("function callee"),
         };
 

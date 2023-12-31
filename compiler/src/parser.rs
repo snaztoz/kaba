@@ -235,7 +235,10 @@ impl Parser {
             // Expecting either identifier or literals
             Token::Identifier(name) => {
                 self.advance();
-                AstNode::Identifier(name)
+                AstNode::Identifier {
+                    name,
+                    span: token.span,
+                }
             }
             Token::Integer(n) => {
                 self.advance();
@@ -393,7 +396,10 @@ mod tests {
                             value: Value::Integer(123),
                             span: 10..13,
                         }),
-                        Box::new(AstNode::Identifier(String::from("x"))),
+                        Box::new(AstNode::Identifier {
+                            name: String::from("x"),
+                            span: 16..17,
+                        }),
                     ))),
                 },
             ),
@@ -418,13 +424,19 @@ mod tests {
         let cases = [(
             "abc = 123 * x;",
             AstNode::ValueAssignment {
-                lhs: Box::new(AstNode::Identifier(String::from("abc"))),
+                lhs: Box::new(AstNode::Identifier {
+                    name: String::from("abc"),
+                    span: 0..3,
+                }),
                 value: Box::new(AstNode::Mul(
                     Box::new(AstNode::Literal {
                         value: Value::Integer(123),
                         span: 6..9,
                     }),
-                    Box::new(AstNode::Identifier(String::from("x"))),
+                    Box::new(AstNode::Identifier {
+                        name: String::from("x"),
+                        span: 12..13,
+                    }),
                 )),
             },
         )];
@@ -450,7 +462,10 @@ mod tests {
                 "abc + 512 * 200 - abc / 3;",
                 AstNode::Sub(
                     Box::new(AstNode::Add(
-                        Box::new(AstNode::Identifier(String::from("abc"))),
+                        Box::new(AstNode::Identifier {
+                            name: String::from("abc"),
+                            span: 0..3,
+                        }),
                         Box::new(AstNode::Mul(
                             Box::new(AstNode::Literal {
                                 value: Value::Integer(512),
@@ -463,7 +478,10 @@ mod tests {
                         )),
                     )),
                     Box::new(AstNode::Div(
-                        Box::new(AstNode::Identifier(String::from("abc"))),
+                        Box::new(AstNode::Identifier {
+                            name: String::from("abc"),
+                            span: 18..21,
+                        }),
                         Box::new(AstNode::Literal {
                             value: Value::Integer(3),
                             span: 24..25,
@@ -494,7 +512,10 @@ mod tests {
                 "abc(123, 50 + 2) * 7;",
                 AstNode::Mul(
                     Box::new(AstNode::FunctionCall {
-                        callee: Box::new(AstNode::Identifier(String::from("abc"))),
+                        callee: Box::new(AstNode::Identifier {
+                            name: String::from("abc"),
+                            span: 0..3,
+                        }),
                         args: vec![
                             AstNode::Literal {
                                 value: Value::Integer(123),
@@ -521,9 +542,15 @@ mod tests {
             (
                 "abc(xyz(123, 456),);",
                 AstNode::FunctionCall {
-                    callee: Box::new(AstNode::Identifier(String::from("abc"))),
+                    callee: Box::new(AstNode::Identifier {
+                        name: String::from("abc"),
+                        span: 0..3,
+                    }),
                     args: vec![AstNode::FunctionCall {
-                        callee: Box::new(AstNode::Identifier(String::from("xyz"))),
+                        callee: Box::new(AstNode::Identifier {
+                            name: String::from("xyz"),
+                            span: 4..7,
+                        }),
                         args: vec![
                             AstNode::Literal {
                                 value: Value::Integer(123),
@@ -540,9 +567,10 @@ mod tests {
             (
                 "-abc + (-(5)) * -(-7);",
                 AstNode::Add(
-                    Box::new(AstNode::Neg(Box::new(AstNode::Identifier(String::from(
-                        "abc",
-                    ))))),
+                    Box::new(AstNode::Neg(Box::new(AstNode::Identifier {
+                        name: String::from("abc"),
+                        span: 1..4,
+                    }))),
                     Box::new(AstNode::Mul(
                         Box::new(AstNode::Neg(Box::new(AstNode::Literal {
                             value: Value::Integer(5),
@@ -573,10 +601,14 @@ mod tests {
             (
                 "-(-abc(-foo));",
                 AstNode::Neg(Box::new(AstNode::Neg(Box::new(AstNode::FunctionCall {
-                    callee: Box::new(AstNode::Identifier(String::from("abc"))),
-                    args: vec![AstNode::Neg(Box::new(AstNode::Identifier(String::from(
-                        "foo",
-                    ))))],
+                    callee: Box::new(AstNode::Identifier {
+                        name: String::from("abc"),
+                        span: 3..6,
+                    }),
+                    args: vec![AstNode::Neg(Box::new(AstNode::Identifier {
+                        name: String::from("foo"),
+                        span: 8..11,
+                    }))],
                 })))),
             ),
         ];
