@@ -55,6 +55,7 @@ impl<'a> Runtime<'a> {
                     identifier,
                     r#type,
                     value,
+                    ..
                 } => self.create_variable(&identifier, r#type.clone(), value.map(|v| *v))?,
 
                 AstNode::ValueAssignment { lhs, value } => self.update_value(*lhs, *value)?,

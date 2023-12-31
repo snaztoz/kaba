@@ -25,6 +25,7 @@ pub enum AstNode {
         identifier: String,
         r#type: Option<String>,
         value: Option<Box<AstNode>>,
+        span: Span,
     },
     ValueAssignment {
         lhs: Box<AstNode>,
@@ -100,7 +101,8 @@ impl AstNode {
 
     pub fn unwrap_group(self) -> AstNode {
         if let AstNode::Group { child, .. } = self {
-            *child
+            // unwrap recursively
+            child.unwrap_group()
         } else {
             self
         }

@@ -53,7 +53,7 @@ impl Parser {
 
         // Expecting expression
 
-        let mut expression = self.parse_expression()?;
+        let mut expression = self.parse_expression()?.unwrap_group();
 
         // Expecting "=" (optional, transform to: variable assignment)
 
@@ -73,18 +73,20 @@ impl Parser {
     }
 
     fn parse_variable_declaration(&mut self) -> Result<AstNode, ParsingError> {
+        let start = self.get_current_rich_token().span.start;
+        let mut end;
+
         self.skip(Token::Var)?;
 
         // Parse identifier
 
-        let identifier = match self.get_current_token() {
+        let token = self.get_current_rich_token();
+        let identifier = match token.kind {
             Token::Identifier(name) => {
                 self.advance();
                 name
             }
             _ => {
-                let token = self.get_current_rich_token();
-
                 return Err(ParsingError::UnexpectedToken {
                     expected: Token::Identifier(String::from("foo")),
                     found: token.kind.clone(),
@@ -93,10 +95,13 @@ impl Parser {
             }
         };
 
+        end = token.span.end;
+
         // Expecting ":" (optional)
 
         let r#type = if self.current_token_is(Token::Colon) {
             self.skip(Token::Colon)?;
+            // end = ...
             todo!("implementing variable type notation")
         } else {
             None
@@ -106,7 +111,11 @@ impl Parser {
 
         let value = if self.current_token_is(Token::Assign) {
             self.skip(Token::Assign)?;
-            Some(Box::new(self.parse_expression()?))
+
+            let expression = self.parse_expression()?;
+            end = expression.get_span().end;
+
+            Some(Box::new(expression.unwrap_group()))
         } else {
             None
         };
@@ -119,6 +128,7 @@ impl Parser {
             identifier,
             r#type,
             value,
+            span: start..end,
         })
     }
 
@@ -434,6 +444,7 @@ mod tests {
                     identifier: String::from("x"),
                     r#type: None,
                     value: None,
+                    span: 0..5,
                 },
             ),
             (
@@ -452,6 +463,38 @@ mod tests {
                         }),
                         span: 10..17,
                     })),
+                    span: 0..17,
+                },
+            ),
+            (
+                "var x = (123 + 50);",
+                AstNode::VariableDeclaration {
+                    identifier: String::from("x"),
+                    r#type: None,
+                    value: Some(Box::new(AstNode::Add {
+                        lhs: Box::new(AstNode::Literal {
+                            value: Value::Integer(123),
+                            span: 9..12,
+                        }),
+                        rhs: Box::new(AstNode::Literal {
+                            value: Value::Integer(50),
+                            span: 15..17,
+                        }),
+                        span: 9..17,
+                    })),
+                    span: 0..18,
+                },
+            ),
+            (
+                "var x = ((((foo))));",
+                AstNode::VariableDeclaration {
+                    identifier: String::from("x"),
+                    r#type: None,
+                    value: Some(Box::new(AstNode::Identifier {
+                        name: String::from("foo"),
+                        span: 12..15,
+                    })),
+                    span: 0..19,
                 },
             ),
         ];
@@ -543,6 +586,13 @@ mod tests {
                         span: 18..25,
                     }),
                     span: 0..25,
+                },
+            ),
+            (
+                "(((75)));",
+                AstNode::Literal {
+                    value: Value::Integer(75),
+                    span: 3..5,
                 },
             ),
             (
