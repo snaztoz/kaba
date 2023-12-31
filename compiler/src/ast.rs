@@ -6,6 +6,7 @@
 //! Root of the tree will always be the [`Program`] that may contains
 //! `>= 0` statements.
 
+use logos::Span;
 use std::{
     fmt::Display,
     ops::{Add, Div, Mul, Neg, Sub},
@@ -43,7 +44,10 @@ pub enum AstNode {
 
     Identifier(String),
 
-    Literal(Value),
+    Literal {
+        value: Value,
+        span: Span,
+    },
 }
 
 /// The representation of each value that may exists in a Kaba
