@@ -14,7 +14,6 @@ mod compiler;
 mod error;
 mod lexer;
 mod parser;
-mod util;
 
 type Result<T> = std::result::Result<T, Error>;
 
