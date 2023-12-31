@@ -31,10 +31,26 @@ pub enum AstNode {
         value: Box<AstNode>,
     },
 
-    Add(Box<AstNode>, Box<AstNode>),
-    Sub(Box<AstNode>, Box<AstNode>),
-    Mul(Box<AstNode>, Box<AstNode>),
-    Div(Box<AstNode>, Box<AstNode>),
+    Add {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+    Sub {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+    Mul {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+    Div {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
 
     Neg {
         child: Box<AstNode>,
@@ -68,13 +84,17 @@ pub enum AstNode {
 impl AstNode {
     pub fn get_span(&self) -> Span {
         match self {
-            Self::Neg { span, .. }
+            Self::Add { span, .. }
+            | Self::Sub { span, .. }
+            | Self::Mul { span, .. }
+            | Self::Div { span, .. }
+            | Self::Neg { span, .. }
             | Self::FunctionCall { span, .. }
             | Self::Group { span, .. }
             | Self::Identifier { span, .. }
             | Self::Literal { span, .. } => span.clone(),
 
-            _ => todo!(),
+            t => todo!("{:?}", t),
         }
     }
 
