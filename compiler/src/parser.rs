@@ -45,7 +45,7 @@ impl Parser {
     fn parse_statement(&mut self) -> Result<AstNode, ParsingError> {
         // Check if statement starts with a keyword
 
-        if self.get_current_token() == Token::Var {
+        if self.current_token_is(Token::Var) {
             return self.parse_variable_declaration();
         } else {
             // TODO: support other statements
@@ -57,8 +57,8 @@ impl Parser {
 
         // Expecting "=" (optional, transform to: variable assignment)
 
-        if self.get_current_token() == Token::Assign {
-            self.advance(); // skip "="
+        if self.current_token_is(Token::Assign) {
+            self.skip(Token::Assign)?;
             let rhs = self.parse_expression()?;
 
             expression = AstNode::ValueAssignment {
@@ -67,14 +67,13 @@ impl Parser {
             };
         }
 
-        self.expect_current_token(Token::Semicolon)?;
-        self.advance(); // skip ";"
+        self.skip(Token::Semicolon)?;
 
         Ok(expression)
     }
 
     fn parse_variable_declaration(&mut self) -> Result<AstNode, ParsingError> {
-        self.advance(); // skip "var" keyword
+        self.skip(Token::Var)?;
 
         // Parse identifier
 
@@ -96,8 +95,8 @@ impl Parser {
 
         // Expecting ":" (optional)
 
-        let r#type = if self.get_current_token() == Token::Colon {
-            self.advance(); // skip ":"
+        let r#type = if self.current_token_is(Token::Colon) {
+            self.skip(Token::Colon)?;
             todo!("implementing variable type notation")
         } else {
             None
@@ -105,8 +104,8 @@ impl Parser {
 
         // Expecting "=" (optional)
 
-        let value = if self.get_current_token() == Token::Assign {
-            self.advance(); // skip "="
+        let value = if self.current_token_is(Token::Assign) {
+            self.skip(Token::Assign)?;
             Some(Box::new(self.parse_expression()?))
         } else {
             None
@@ -114,8 +113,7 @@ impl Parser {
 
         // Expecting ";"
 
-        self.expect_current_token(Token::Semicolon)?;
-        self.advance(); // skip ";"
+        self.skip(Token::Semicolon)?;
 
         Ok(AstNode::VariableDeclaration {
             identifier,
@@ -133,25 +131,23 @@ impl Parser {
     fn parse_additive_expression(&mut self) -> Result<AstNode, ParsingError> {
         // Parse first term
 
-        let mut node = self.parse_multiplicative_expression()?;
+        let mut child = self.parse_multiplicative_expression()?;
 
         loop {
             // Expecting "+" or "-" (both are optional)
 
             match self.get_current_token() {
                 Token::Add => {
-                    self.advance(); // skip "+"
+                    self.skip(Token::Add)?;
                     let rhs = self.parse_multiplicative_expression()?;
-                    let add = AstNode::Add(Box::new(node), Box::new(rhs));
-                    node = add;
+                    child = AstNode::Add(Box::new(child), Box::new(rhs));
                 }
                 Token::Sub => {
-                    self.advance(); // skip "-"
+                    self.skip(Token::Sub)?;
                     let rhs = self.parse_multiplicative_expression()?;
-                    let sub = AstNode::Sub(Box::new(node), Box::new(rhs));
-                    node = sub;
+                    child = AstNode::Sub(Box::new(child), Box::new(rhs));
                 }
-                _ => return Ok(node),
+                _ => return Ok(child),
             }
         }
     }
@@ -159,25 +155,23 @@ impl Parser {
     fn parse_multiplicative_expression(&mut self) -> Result<AstNode, ParsingError> {
         // Parse first term
 
-        let mut node = self.parse_unary_expression()?.unwrap_group();
+        let mut child = self.parse_unary_expression()?.unwrap_group();
 
         loop {
             // Expecting "*" or "/" (both are optional)
 
             match self.get_current_token() {
                 Token::Mul => {
-                    self.advance(); // skip "*"
+                    self.skip(Token::Mul)?;
                     let rhs = self.parse_unary_expression()?.unwrap_group();
-                    let mul = AstNode::Mul(Box::new(node), Box::new(rhs));
-                    node = mul;
+                    child = AstNode::Mul(Box::new(child), Box::new(rhs));
                 }
                 Token::Div => {
-                    self.advance(); // skip "/"
+                    self.skip(Token::Div)?;
                     let rhs = self.parse_unary_expression()?.unwrap_group();
-                    let div = AstNode::Div(Box::new(node), Box::new(rhs));
-                    node = div;
+                    child = AstNode::Div(Box::new(child), Box::new(rhs));
                 }
-                _ => return Ok(node),
+                _ => return Ok(child),
             }
         }
     }
@@ -185,9 +179,9 @@ impl Parser {
     fn parse_unary_expression(&mut self) -> Result<AstNode, ParsingError> {
         //  Prefixed by >= 0 negation expression
 
-        if self.get_current_token() == Token::Sub {
+        if self.current_token_is(Token::Sub) {
             let sub_token_start = self.get_current_rich_token().span.start;
-            self.advance(); // skip "-"
+            self.skip(Token::Sub)?;
 
             let child = self.parse_unary_expression()?;
             let child_end = child.get_span().end;
@@ -200,7 +194,7 @@ impl Parser {
 
         // Parse primary expression
 
-        let mut node = self.parse_primary_expression()?;
+        let mut child = self.parse_primary_expression()?;
 
         // Followed by >= 0 function call, field access, or indexed access
 
@@ -210,16 +204,16 @@ impl Parser {
         loop {
             match self.get_current_token() {
                 Token::LParen => {
-                    let callee_start = node.get_span().start;
-                    self.advance(); // skip "("
+                    let callee_start = child.get_span().start;
+                    self.skip(Token::LParen)?;
 
                     let args = self.parse_function_call()?;
 
                     let function_call_end = self.get_current_rich_token().span.end;
-                    self.advance(); // skip ")"
+                    self.skip(Token::RParen)?;
 
-                    node = AstNode::FunctionCall {
-                        callee: Box::new(node.unwrap_group()),
+                    child = AstNode::FunctionCall {
+                        callee: Box::new(child.unwrap_group()),
                         args,
                         span: callee_start..function_call_end,
                     };
@@ -229,7 +223,7 @@ impl Parser {
             }
         }
 
-        Ok(node)
+        Ok(child)
     }
 
     fn parse_primary_expression(&mut self) -> Result<AstNode, ParsingError> {
@@ -240,13 +234,13 @@ impl Parser {
                 // Parse group expression
 
                 let lparen_start = token.span.start;
-                self.advance(); // skip "("
+                self.skip(Token::LParen)?;
 
                 let expression = self.parse_expression()?;
 
                 self.expect_current_token(Token::RParen)?;
                 let rparen_end = self.get_current_rich_token().span.end;
-                self.advance(); // skip ")"
+                self.skip(Token::RParen)?;
 
                 AstNode::Group {
                     child: Box::new(expression),
@@ -297,7 +291,7 @@ impl Parser {
         loop {
             // Stop when encounter a closing parentheses
 
-            if self.get_current_token() == Token::RParen {
+            if self.current_token_is(Token::RParen) {
                 return Ok(args);
             }
 
@@ -310,7 +304,7 @@ impl Parser {
 
             match self.get_current_token() {
                 Token::Comma => {
-                    self.advance(); // skip "("
+                    self.skip(Token::Comma)?;
                     continue;
                 }
 
@@ -350,12 +344,22 @@ impl Parser {
         self.cursor += 1;
     }
 
+    fn skip(&mut self, expected_token: Token) -> Result<(), ParsingError> {
+        self.expect_current_token(expected_token)?;
+        self.advance();
+        Ok(())
+    }
+
     fn get_current_rich_token(&mut self) -> RichToken {
         self.tokens.get(self.cursor).cloned().unwrap()
     }
 
     fn get_current_token(&self) -> Token {
         self.tokens.get(self.cursor).unwrap().kind.clone()
+    }
+
+    fn current_token_is(&self, token: Token) -> bool {
+        self.get_current_token() == token
     }
 }
 
