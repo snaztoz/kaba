@@ -68,7 +68,7 @@ impl Parser {
         }
 
         self.expect_current_token(Token::Semicolon)?;
-        self.advance();
+        self.advance(); // skip ";"
 
         Ok(expression)
     }
@@ -85,7 +85,6 @@ impl Parser {
             }
             _ => {
                 let token = self.get_current_rich_token();
-                self.advance();
 
                 return Err(ParsingError::UnexpectedToken {
                     expected: Token::Identifier(String::from("foo")),
@@ -116,7 +115,7 @@ impl Parser {
         // Expecting ";"
 
         self.expect_current_token(Token::Semicolon)?;
-        self.advance();
+        self.advance(); // skip ";"
 
         Ok(AstNode::VariableDeclaration {
             identifier,
@@ -160,7 +159,7 @@ impl Parser {
     fn parse_multiplicative_expression(&mut self) -> Result<AstNode, ParsingError> {
         // Parse first term
 
-        let mut node = self.parse_unary_expression()?;
+        let mut node = self.parse_unary_expression()?.unwrap_group();
 
         loop {
             // Expecting "*" or "/" (both are optional)
@@ -168,13 +167,13 @@ impl Parser {
             match self.get_current_token() {
                 Token::Mul => {
                     self.advance(); // skip "*"
-                    let rhs = self.parse_unary_expression()?;
+                    let rhs = self.parse_unary_expression()?.unwrap_group();
                     let mul = AstNode::Mul(Box::new(node), Box::new(rhs));
                     node = mul;
                 }
                 Token::Div => {
                     self.advance(); // skip "/"
-                    let rhs = self.parse_unary_expression()?;
+                    let rhs = self.parse_unary_expression()?.unwrap_group();
                     let div = AstNode::Div(Box::new(node), Box::new(rhs));
                     node = div;
                 }
@@ -187,12 +186,21 @@ impl Parser {
         //  Prefixed by >= 0 negation expression
 
         if self.get_current_token() == Token::Sub {
-            self.advance();
-            let child = self.parse_unary_expression()?.unwrap_group();
-            return Ok(AstNode::Neg(Box::new(child)));
+            let sub_token_start = self.get_current_rich_token().span.start;
+            self.advance(); // skip "-"
+
+            let child = self.parse_unary_expression()?;
+            let child_end = child.get_span().end;
+
+            return Ok(AstNode::Neg {
+                child: Box::new(child.unwrap_group()),
+                span: sub_token_start..child_end,
+            });
         }
 
-        let mut node = self.parse_primary_expression()?.unwrap_group();
+        // Parse primary expression
+
+        let mut node = self.parse_primary_expression()?;
 
         // Followed by >= 0 function call, field access, or indexed access
 
@@ -202,11 +210,18 @@ impl Parser {
         loop {
             match self.get_current_token() {
                 Token::LParen => {
+                    let callee_start = node.get_span().start;
                     self.advance(); // skip "("
+
                     let args = self.parse_function_call()?;
+
+                    let function_call_end = self.get_current_rich_token().span.end;
+                    self.advance(); // skip ")"
+
                     node = AstNode::FunctionCall {
-                        callee: Box::new(node),
+                        callee: Box::new(node.unwrap_group()),
                         args,
+                        span: callee_start..function_call_end,
                     };
                 }
 
@@ -231,7 +246,7 @@ impl Parser {
 
                 self.expect_current_token(Token::RParen)?;
                 let rparen_end = self.get_current_rich_token().span.end;
-                self.advance();
+                self.advance(); // skip ")"
 
                 AstNode::Group {
                     child: Box::new(expression),
@@ -264,7 +279,6 @@ impl Parser {
 
             k => {
                 let token = self.get_current_rich_token();
-                self.advance();
 
                 return Err(ParsingError::UnexpectedToken {
                     expected: Token::Identifier(String::from("foo")),
@@ -284,7 +298,6 @@ impl Parser {
             // Stop when encounter a closing parentheses
 
             if self.get_current_token() == Token::RParen {
-                self.advance(); // skip ")"
                 return Ok(args);
             }
 
@@ -304,10 +317,9 @@ impl Parser {
                 Token::RParen => continue,
 
                 _ => {
-                    // Error if encounter neither "," or ")"
+                    // Error if encountering neither "," or ")"
 
                     let token = self.get_current_rich_token();
-                    self.advance();
 
                     return Err(ParsingError::UnexpectedToken {
                         expected: Token::RParen,
@@ -323,7 +335,6 @@ impl Parser {
         let current = self.get_current_token();
         if current != expected {
             let found = self.get_current_rich_token();
-            self.advance();
 
             return Err(ParsingError::UnexpectedToken {
                 expected,
@@ -516,6 +527,25 @@ mod tests {
                 ),
             ),
             (
+                "123 + (foo - 50);",
+                AstNode::Add(
+                    Box::new(AstNode::Literal {
+                        value: Value::Integer(123),
+                        span: 0..3,
+                    }),
+                    Box::new(AstNode::Sub(
+                        Box::new(AstNode::Identifier {
+                            name: String::from("foo"),
+                            span: 7..10,
+                        }),
+                        Box::new(AstNode::Literal {
+                            value: Value::Integer(50),
+                            span: 13..15,
+                        }),
+                    )),
+                ),
+            ),
+            (
                 "abc(123, 50 + 2) * 7;",
                 AstNode::Mul(
                     Box::new(AstNode::FunctionCall {
@@ -539,6 +569,7 @@ mod tests {
                                 }),
                             ),
                         ],
+                        span: 0..16,
                     }),
                     Box::new(AstNode::Literal {
                         value: Value::Integer(7),
@@ -568,27 +599,39 @@ mod tests {
                                 span: 13..16,
                             },
                         ],
+                        span: 4..17,
                     }],
+                    span: 0..19,
                 },
             ),
             (
                 "-abc + (-(5)) * -(-7);",
                 AstNode::Add(
-                    Box::new(AstNode::Neg(Box::new(AstNode::Identifier {
-                        name: String::from("abc"),
-                        span: 1..4,
-                    }))),
+                    Box::new(AstNode::Neg {
+                        child: Box::new(AstNode::Identifier {
+                            name: String::from("abc"),
+                            span: 1..4,
+                        }),
+                        span: 0..4,
+                    }),
                     Box::new(AstNode::Mul(
-                        Box::new(AstNode::Neg(Box::new(AstNode::Literal {
-                            value: Value::Integer(5),
-                            span: 10..11,
-                        }))),
-                        Box::new(AstNode::Neg(Box::new(AstNode::Neg(Box::new(
-                            AstNode::Literal {
-                                value: Value::Integer(7),
-                                span: 19..20,
-                            },
-                        ))))),
+                        Box::new(AstNode::Neg {
+                            child: Box::new(AstNode::Literal {
+                                value: Value::Integer(5),
+                                span: 10..11,
+                            }),
+                            span: 8..12,
+                        }),
+                        Box::new(AstNode::Neg {
+                            child: Box::new(AstNode::Neg {
+                                child: Box::new(AstNode::Literal {
+                                    value: Value::Integer(7),
+                                    span: 19..20,
+                                }),
+                                span: 18..20,
+                            }),
+                            span: 16..21,
+                        }),
                     )),
                 ),
             ),
@@ -599,24 +642,37 @@ mod tests {
                         value: Value::Integer(2),
                         span: 0..1,
                     }),
-                    Box::new(AstNode::Neg(Box::new(AstNode::Literal {
-                        value: Value::Float(0.5),
-                        span: 6..9,
-                    }))),
+                    Box::new(AstNode::Neg {
+                        child: Box::new(AstNode::Literal {
+                            value: Value::Float(0.5),
+                            span: 6..9,
+                        }),
+                        span: 5..9,
+                    }),
                 ),
             ),
             (
-                "-(-abc(-foo));",
-                AstNode::Neg(Box::new(AstNode::Neg(Box::new(AstNode::FunctionCall {
-                    callee: Box::new(AstNode::Identifier {
-                        name: String::from("abc"),
-                        span: 3..6,
+                "-(-(abc)(-foo));",
+                AstNode::Neg {
+                    child: Box::new(AstNode::Neg {
+                        child: Box::new(AstNode::FunctionCall {
+                            callee: Box::new(AstNode::Identifier {
+                                name: String::from("abc"),
+                                span: 4..7,
+                            }),
+                            args: vec![AstNode::Neg {
+                                child: Box::new(AstNode::Identifier {
+                                    name: String::from("foo"),
+                                    span: 10..13,
+                                }),
+                                span: 9..13,
+                            }],
+                            span: 3..14,
+                        }),
+                        span: 2..14,
                     }),
-                    args: vec![AstNode::Neg(Box::new(AstNode::Identifier {
-                        name: String::from("foo"),
-                        span: 8..11,
-                    }))],
-                })))),
+                    span: 0..15,
+                },
             ),
         ];
 

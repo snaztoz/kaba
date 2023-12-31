@@ -36,10 +36,14 @@ pub enum AstNode {
     Mul(Box<AstNode>, Box<AstNode>),
     Div(Box<AstNode>, Box<AstNode>),
 
-    Neg(Box<AstNode>),
+    Neg {
+        child: Box<AstNode>,
+        span: Span,
+    },
     FunctionCall {
         callee: Box<AstNode>,
         args: Vec<AstNode>,
+        span: Span,
     },
 
     // This variant only be used as the span information holder and
@@ -62,6 +66,18 @@ pub enum AstNode {
 }
 
 impl AstNode {
+    pub fn get_span(&self) -> Span {
+        match self {
+            Self::Neg { span, .. }
+            | Self::FunctionCall { span, .. }
+            | Self::Group { span, .. }
+            | Self::Identifier { span, .. }
+            | Self::Literal { span, .. } => span.clone(),
+
+            _ => todo!(),
+        }
+    }
+
     pub fn unwrap_group(self) -> AstNode {
         if let AstNode::Group { child, .. } = self {
             *child

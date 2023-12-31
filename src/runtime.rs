@@ -117,12 +117,12 @@ impl<'a> Runtime<'a> {
         match expression {
             AstNode::Identifier { name, .. } => self.get_variable_value(&name),
             AstNode::Literal { value, .. } => Ok(value),
-            AstNode::FunctionCall { callee, args } => self.run_function_call(&callee, args),
+            AstNode::FunctionCall { callee, args, .. } => self.run_function_call(&callee, args),
             AstNode::Add(lhs, rhs) => Ok(self.run_expression(*lhs)? + self.run_expression(*rhs)?),
             AstNode::Sub(lhs, rhs) => Ok(self.run_expression(*lhs)? - self.run_expression(*rhs)?),
             AstNode::Mul(lhs, rhs) => Ok(self.run_expression(*lhs)? * self.run_expression(*rhs)?),
             AstNode::Div(lhs, rhs) => Ok(self.run_expression(*lhs)? / self.run_expression(*rhs)?),
-            AstNode::Neg(value) => Ok(-self.run_expression(*value)?),
+            AstNode::Neg { child, .. } => Ok(-self.run_expression(*child)?),
 
             _ => unreachable!(),
         }
