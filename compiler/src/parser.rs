@@ -160,7 +160,7 @@ impl Parser {
     fn parse_multiplicative_expression(&mut self) -> Result<AstNode, ParsingError> {
         // Parse first term
 
-        let mut node = self.parse_primary_expression()?;
+        let mut node = self.parse_unary_expression()?;
 
         loop {
             // Expecting "*" or "/" (both are optional)
@@ -168,13 +168,13 @@ impl Parser {
             match self.get_current_token() {
                 Token::Mul => {
                     self.advance(); // skip "*"
-                    let rhs = self.parse_primary_expression()?;
+                    let rhs = self.parse_unary_expression()?;
                     let mul = AstNode::Mul(Box::new(node), Box::new(rhs));
                     node = mul;
                 }
                 Token::Div => {
                     self.advance(); // skip "/"
-                    let rhs = self.parse_primary_expression()?;
+                    let rhs = self.parse_unary_expression()?;
                     let div = AstNode::Div(Box::new(node), Box::new(rhs));
                     node = div;
                 }
@@ -183,13 +183,41 @@ impl Parser {
         }
     }
 
-    fn parse_primary_expression(&mut self) -> Result<AstNode, ParsingError> {
-        let negated = self.get_current_token() == Token::Sub;
-        if negated {
+    fn parse_unary_expression(&mut self) -> Result<AstNode, ParsingError> {
+        //  Prefixed by >= 0 negation expression
+
+        if self.get_current_token() == Token::Sub {
             self.advance();
+            return Ok(AstNode::Neg(Box::new(self.parse_unary_expression()?)));
         }
 
-        let mut node = match self.get_current_token() {
+        let mut node = self.parse_primary_expression()?;
+
+        // Followed by >= 0 function call, field access, or indexed access
+
+        // TODO: field access and indexed access
+
+        #[allow(clippy::while_let_loop)] // temporary
+        loop {
+            match self.get_current_token() {
+                Token::LParen => {
+                    self.advance(); // skip "("
+                    let args = self.parse_function_call()?;
+                    node = AstNode::FunctionCall {
+                        callee: Box::new(node),
+                        args,
+                    };
+                }
+
+                _ => break,
+            }
+        }
+
+        Ok(node)
+    }
+
+    fn parse_primary_expression(&mut self) -> Result<AstNode, ParsingError> {
+        Ok(match self.get_current_token() {
             Token::LParen => {
                 // Parse group expression
                 self.advance(); // skip "("
@@ -226,33 +254,7 @@ impl Parser {
                     span: token.span,
                 });
             }
-        };
-
-        // Followed by >= 0 function call, field access, indexed access
-
-        // TODO: field access and indexed access
-
-        #[allow(clippy::while_let_loop)] // temporary
-        loop {
-            match self.get_current_token() {
-                Token::LParen => {
-                    self.advance(); // skip "("
-                    let args = self.parse_function_call()?;
-                    node = AstNode::FunctionCall {
-                        callee: Box::new(node),
-                        args,
-                    };
-                }
-
-                _ => break,
-            }
-        }
-
-        if negated {
-            Ok(AstNode::Neg(Box::new(node)))
-        } else {
-            Ok(node)
-        }
+        })
     }
 
     fn parse_function_call(&mut self) -> Result<Vec<AstNode>, ParsingError> {
@@ -505,6 +507,15 @@ mod tests {
                     Box::new(AstNode::Literal(Value::Integer(2))),
                     Box::new(AstNode::Neg(Box::new(AstNode::Literal(Value::Float(0.5))))),
                 ),
+            ),
+            (
+                "-(-abc(-foo));",
+                AstNode::Neg(Box::new(AstNode::Neg(Box::new(AstNode::FunctionCall {
+                    callee: Box::new(AstNode::Identifier(String::from("abc"))),
+                    args: vec![AstNode::Neg(Box::new(AstNode::Identifier(String::from(
+                        "foo",
+                    ))))],
+                })))),
             ),
         ];
 
