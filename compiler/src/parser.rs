@@ -188,10 +188,11 @@ impl Parser {
 
         if self.get_current_token() == Token::Sub {
             self.advance();
-            return Ok(AstNode::Neg(Box::new(self.parse_unary_expression()?)));
+            let child = self.parse_unary_expression()?.unwrap_group();
+            return Ok(AstNode::Neg(Box::new(child)));
         }
 
-        let mut node = self.parse_primary_expression()?;
+        let mut node = self.parse_primary_expression()?.unwrap_group();
 
         // Followed by >= 0 function call, field access, or indexed access
 
@@ -222,14 +223,20 @@ impl Parser {
         Ok(match token.kind {
             Token::LParen => {
                 // Parse group expression
+
+                let lparen_start = token.span.start;
                 self.advance(); // skip "("
 
                 let expression = self.parse_expression()?;
 
                 self.expect_current_token(Token::RParen)?;
+                let rparen_end = self.get_current_rich_token().span.end;
                 self.advance();
 
-                expression
+                AstNode::Group {
+                    child: Box::new(expression),
+                    span: lparen_start..rparen_end,
+                }
             }
 
             // Expecting either identifier or literals

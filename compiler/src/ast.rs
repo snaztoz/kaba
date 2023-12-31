@@ -30,10 +30,6 @@ pub enum AstNode {
         lhs: Box<AstNode>,
         value: Box<AstNode>,
     },
-    FunctionCall {
-        callee: Box<AstNode>,
-        args: Vec<AstNode>,
-    },
 
     Add(Box<AstNode>, Box<AstNode>),
     Sub(Box<AstNode>, Box<AstNode>),
@@ -41,6 +37,18 @@ pub enum AstNode {
     Div(Box<AstNode>, Box<AstNode>),
 
     Neg(Box<AstNode>),
+    FunctionCall {
+        callee: Box<AstNode>,
+        args: Vec<AstNode>,
+    },
+
+    // This variant only be used as the span information holder and
+    // then should be removed. It won't be present in the final
+    // resulting ASTs.
+    Group {
+        child: Box<AstNode>,
+        span: Span,
+    },
 
     Identifier {
         name: String,
@@ -51,6 +59,16 @@ pub enum AstNode {
         value: Value,
         span: Span,
     },
+}
+
+impl AstNode {
+    pub fn unwrap_group(self) -> AstNode {
+        if let AstNode::Group { child, .. } = self {
+            *child
+        } else {
+            self
+        }
+    }
 }
 
 /// The representation of each value that may exists in a Kaba
