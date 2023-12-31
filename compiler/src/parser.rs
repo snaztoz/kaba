@@ -53,23 +53,27 @@ impl Parser {
 
         // Expecting expression
 
-        let mut expression = self.parse_expression()?.unwrap_group();
+        let mut expression = self.parse_expression()?;
 
         // Expecting "=" (optional, transform to: variable assignment)
 
         if self.current_token_is(Token::Assign) {
             self.skip(Token::Assign)?;
+
+            let assignment_start = expression.get_span().start;
             let rhs = self.parse_expression()?;
+            let assignment_end = rhs.get_span().end;
 
             expression = AstNode::ValueAssignment {
-                lhs: Box::new(expression),
-                value: Box::new(rhs),
+                lhs: Box::new(expression.unwrap_group()),
+                value: Box::new(rhs.unwrap_group()),
+                span: assignment_start..assignment_end,
             };
         }
 
         self.skip(Token::Semicolon)?;
 
-        Ok(expression)
+        Ok(expression.unwrap_group())
     }
 
     fn parse_variable_declaration(&mut self) -> Result<AstNode, ParsingError> {
@@ -515,26 +519,46 @@ mod tests {
 
     #[test]
     fn test_parsing_variable_assignment() {
-        let cases = [(
-            "abc = 123 * x;",
-            AstNode::ValueAssignment {
-                lhs: Box::new(AstNode::Identifier {
-                    name: String::from("abc"),
-                    span: 0..3,
-                }),
-                value: Box::new(AstNode::Mul {
-                    lhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(123),
-                        span: 6..9,
+        let cases = [
+            (
+                "abc = 123 * x;",
+                AstNode::ValueAssignment {
+                    lhs: Box::new(AstNode::Identifier {
+                        name: String::from("abc"),
+                        span: 0..3,
                     }),
-                    rhs: Box::new(AstNode::Identifier {
+                    value: Box::new(AstNode::Mul {
+                        lhs: Box::new(AstNode::Literal {
+                            value: Value::Integer(123),
+                            span: 6..9,
+                        }),
+                        rhs: Box::new(AstNode::Identifier {
+                            name: String::from("x"),
+                            span: 12..13,
+                        }),
+                        span: 6..13,
+                    }),
+                    span: 0..13,
+                },
+            ),
+            (
+                "x = (-5);",
+                AstNode::ValueAssignment {
+                    lhs: Box::new(AstNode::Identifier {
                         name: String::from("x"),
-                        span: 12..13,
+                        span: 0..1,
                     }),
-                    span: 6..13,
-                }),
-            },
-        )];
+                    value: Box::new(AstNode::Neg {
+                        child: Box::new(AstNode::Literal {
+                            value: Value::Integer(5),
+                            span: 6..7,
+                        }),
+                        span: 5..7,
+                    }),
+                    span: 0..8,
+                },
+            ),
+        ];
 
         for (input, expected) in cases {
             let tokens = lexer::lex(input).unwrap();

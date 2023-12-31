@@ -30,6 +30,7 @@ pub enum AstNode {
     ValueAssignment {
         lhs: Box<AstNode>,
         value: Box<AstNode>,
+        span: Span,
     },
 
     Add {
@@ -85,7 +86,9 @@ pub enum AstNode {
 impl AstNode {
     pub fn get_span(&self) -> Span {
         match self {
-            Self::Add { span, .. }
+            Self::VariableDeclaration { span, .. }
+            | Self::ValueAssignment { span, .. }
+            | Self::Add { span, .. }
             | Self::Sub { span, .. }
             | Self::Mul { span, .. }
             | Self::Div { span, .. }
@@ -94,8 +97,6 @@ impl AstNode {
             | Self::Group { span, .. }
             | Self::Identifier { span, .. }
             | Self::Literal { span, .. } => span.clone(),
-
-            t => todo!("{:?}", t),
         }
     }
 
