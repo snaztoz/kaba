@@ -116,13 +116,13 @@ impl<'a> Runtime<'a> {
     fn run_expression(&self, expression: AstNode) -> Result<Value, RuntimeError> {
         match expression {
             AstNode::Identifier(name) => self.get_variable_value(&name),
-            AstNode::Val(value) => Ok(value),
+            AstNode::Literal(value) => Ok(value),
             AstNode::FunctionCall { callee, args } => self.run_function_call(&callee, args),
             AstNode::Add(lhs, rhs) => Ok(self.run_expression(*lhs)? + self.run_expression(*rhs)?),
             AstNode::Sub(lhs, rhs) => Ok(self.run_expression(*lhs)? - self.run_expression(*rhs)?),
             AstNode::Mul(lhs, rhs) => Ok(self.run_expression(*lhs)? * self.run_expression(*rhs)?),
             AstNode::Div(lhs, rhs) => Ok(self.run_expression(*lhs)? / self.run_expression(*rhs)?),
-            AstNode::Negation(value) => Ok(-self.run_expression(*value)?),
+            AstNode::Neg(value) => Ok(-self.run_expression(*value)?),
 
             _ => unreachable!(),
         }

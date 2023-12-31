@@ -209,11 +209,11 @@ impl Parser {
             }
             Token::Integer(n) => {
                 self.advance();
-                AstNode::Val(Value::Integer(n))
+                AstNode::Literal(Value::Integer(n))
             }
             Token::Float(n) => {
                 self.advance();
-                AstNode::Val(Value::Float(n))
+                AstNode::Literal(Value::Float(n))
             }
 
             k => {
@@ -249,7 +249,7 @@ impl Parser {
         }
 
         if negated {
-            Ok(AstNode::Negation(Box::new(node)))
+            Ok(AstNode::Neg(Box::new(node)))
         } else {
             Ok(node)
         }
@@ -379,7 +379,7 @@ mod tests {
                     identifier: String::from("abc"),
                     r#type: None,
                     value: Some(Box::new(AstNode::Mul(
-                        Box::new(AstNode::Val(Value::Integer(123))),
+                        Box::new(AstNode::Literal(Value::Integer(123))),
                         Box::new(AstNode::Identifier(String::from("x"))),
                     ))),
                 },
@@ -407,7 +407,7 @@ mod tests {
             AstNode::ValueAssignment {
                 lhs: Box::new(AstNode::Identifier(String::from("abc"))),
                 value: Box::new(AstNode::Mul(
-                    Box::new(AstNode::Val(Value::Integer(123))),
+                    Box::new(AstNode::Literal(Value::Integer(123))),
                     Box::new(AstNode::Identifier(String::from("x"))),
                 )),
             },
@@ -436,13 +436,13 @@ mod tests {
                     Box::new(AstNode::Add(
                         Box::new(AstNode::Identifier(String::from("abc"))),
                         Box::new(AstNode::Mul(
-                            Box::new(AstNode::Val(Value::Integer(512))),
-                            Box::new(AstNode::Val(Value::Integer(200))),
+                            Box::new(AstNode::Literal(Value::Integer(512))),
+                            Box::new(AstNode::Literal(Value::Integer(200))),
                         )),
                     )),
                     Box::new(AstNode::Div(
                         Box::new(AstNode::Identifier(String::from("abc"))),
-                        Box::new(AstNode::Val(Value::Integer(3))),
+                        Box::new(AstNode::Literal(Value::Integer(3))),
                     )),
                 ),
             ),
@@ -450,10 +450,10 @@ mod tests {
                 "(123 - 53) * 7;",
                 AstNode::Mul(
                     Box::new(AstNode::Sub(
-                        Box::new(AstNode::Val(Value::Integer(123))),
-                        Box::new(AstNode::Val(Value::Integer(53))),
+                        Box::new(AstNode::Literal(Value::Integer(123))),
+                        Box::new(AstNode::Literal(Value::Integer(53))),
                     )),
-                    Box::new(AstNode::Val(Value::Integer(7))),
+                    Box::new(AstNode::Literal(Value::Integer(7))),
                 ),
             ),
             (
@@ -462,14 +462,14 @@ mod tests {
                     Box::new(AstNode::FunctionCall {
                         callee: Box::new(AstNode::Identifier(String::from("abc"))),
                         args: vec![
-                            AstNode::Val(Value::Integer(123)),
+                            AstNode::Literal(Value::Integer(123)),
                             AstNode::Add(
-                                Box::new(AstNode::Val(Value::Integer(50))),
-                                Box::new(AstNode::Val(Value::Integer(2))),
+                                Box::new(AstNode::Literal(Value::Integer(50))),
+                                Box::new(AstNode::Literal(Value::Integer(2))),
                             ),
                         ],
                     }),
-                    Box::new(AstNode::Val(Value::Integer(7))),
+                    Box::new(AstNode::Literal(Value::Integer(7))),
                 ),
             ),
             (
@@ -479,8 +479,8 @@ mod tests {
                     args: vec![AstNode::FunctionCall {
                         callee: Box::new(AstNode::Identifier(String::from("xyz"))),
                         args: vec![
-                            AstNode::Val(Value::Integer(123)),
-                            AstNode::Val(Value::Integer(456)),
+                            AstNode::Literal(Value::Integer(123)),
+                            AstNode::Literal(Value::Integer(456)),
                         ],
                     }],
                 },
@@ -488,13 +488,13 @@ mod tests {
             (
                 "-abc + (-(5)) * -(-7);",
                 AstNode::Add(
-                    Box::new(AstNode::Negation(Box::new(AstNode::Identifier(
-                        String::from("abc"),
-                    )))),
+                    Box::new(AstNode::Neg(Box::new(AstNode::Identifier(String::from(
+                        "abc",
+                    ))))),
                     Box::new(AstNode::Mul(
-                        Box::new(AstNode::Negation(Box::new(AstNode::Val(Value::Integer(5))))),
-                        Box::new(AstNode::Negation(Box::new(AstNode::Negation(Box::new(
-                            AstNode::Val(Value::Integer(7)),
+                        Box::new(AstNode::Neg(Box::new(AstNode::Literal(Value::Integer(5))))),
+                        Box::new(AstNode::Neg(Box::new(AstNode::Neg(Box::new(
+                            AstNode::Literal(Value::Integer(7)),
                         ))))),
                     )),
                 ),
@@ -502,8 +502,8 @@ mod tests {
             (
                 "2 * (-0.5);",
                 AstNode::Mul(
-                    Box::new(AstNode::Val(Value::Integer(2))),
-                    Box::new(AstNode::Negation(Box::new(AstNode::Val(Value::Float(0.5))))),
+                    Box::new(AstNode::Literal(Value::Integer(2))),
+                    Box::new(AstNode::Neg(Box::new(AstNode::Literal(Value::Float(0.5))))),
                 ),
             ),
         ];
