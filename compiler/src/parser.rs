@@ -60,14 +60,13 @@ impl Parser {
         if self.current_token_is(Token::Assign) {
             self.skip(Token::Assign)?;
 
-            let assignment_start = expression.get_span().start;
             let rhs = self.parse_expression()?;
-            let assignment_end = rhs.get_span().end;
+            let span = expression.get_span().start..rhs.get_span().end;
 
             expression = AstNode::ValueAssignment {
                 lhs: Box::new(expression.unwrap_group()),
                 value: Box::new(rhs.unwrap_group()),
-                span: assignment_start..assignment_end,
+                span,
             };
         }
 
@@ -226,11 +225,11 @@ impl Parser {
             self.skip(Token::Sub)?;
 
             let child = self.parse_unary_expression()?;
-            let child_end = child.get_span().end;
+            let span = sub_token_start..child.get_span().end;
 
             return Ok(AstNode::Neg {
                 child: Box::new(child.unwrap_group()),
-                span: sub_token_start..child_end,
+                span,
             });
         }
 
@@ -251,13 +250,13 @@ impl Parser {
 
                     let args = self.parse_function_call()?;
 
-                    let function_call_end = self.get_current_rich_token().span.end;
+                    let span = callee_start..self.get_current_rich_token().span.end;
                     self.skip(Token::RParen)?;
 
                     child = AstNode::FunctionCall {
                         callee: Box::new(child.unwrap_group()),
                         args,
-                        span: callee_start..function_call_end,
+                        span,
                     };
                 }
 
@@ -280,13 +279,12 @@ impl Parser {
 
                 let expression = self.parse_expression()?;
 
-                self.expect_current_token(Token::RParen)?;
-                let rparen_end = self.get_current_rich_token().span.end;
+                let span = lparen_start..self.get_current_rich_token().span.end;
                 self.skip(Token::RParen)?;
 
                 AstNode::Group {
                     child: Box::new(expression),
-                    span: lparen_start..rparen_end,
+                    span,
                 }
             }
 
@@ -313,12 +311,10 @@ impl Parser {
                 }
             }
 
-            k => {
-                let token = self.get_current_rich_token();
-
+            kind => {
                 return Err(ParsingError::UnexpectedToken {
                     expected: Token::Identifier(String::from("foo")),
-                    found: k.clone(),
+                    found: kind.clone(),
                     span: token.span,
                 });
             }
@@ -344,7 +340,8 @@ impl Parser {
 
             // Continue if encounter "," or break out of loop if encounter ")"
 
-            match self.get_current_token() {
+            let token = self.get_current_rich_token();
+            match token.kind {
                 Token::Comma => {
                     self.skip(Token::Comma)?;
                     continue;
@@ -352,14 +349,12 @@ impl Parser {
 
                 Token::RParen => continue,
 
-                _ => {
+                kind => {
                     // Error if encountering neither "," or ")"
-
-                    let token = self.get_current_rich_token();
 
                     return Err(ParsingError::UnexpectedToken {
                         expected: Token::RParen,
-                        found: token.kind.clone(),
+                        found: kind.clone(),
                         span: token.span,
                     });
                 }
@@ -368,14 +363,12 @@ impl Parser {
     }
 
     fn expect_current_token(&mut self, expected: Token) -> Result<(), ParsingError> {
-        let current = self.get_current_token();
-        if current != expected {
-            let found = self.get_current_rich_token();
-
+        let current = self.get_current_rich_token();
+        if current.kind != expected {
             return Err(ParsingError::UnexpectedToken {
                 expected,
-                found: found.kind.clone(),
-                span: found.span,
+                found: current.kind.clone(),
+                span: current.span,
             });
         }
 
