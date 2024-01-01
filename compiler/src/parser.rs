@@ -85,10 +85,7 @@ impl Parser {
 
         let token = self.get_current_rich_token();
         let identifier = match token.kind {
-            Token::Identifier(name) => {
-                self.advance();
-                name
-            }
+            Token::Identifier(name) => name,
             _ => {
                 return Err(ParsingError::UnexpectedToken {
                     expected: Token::Identifier(String::from("foo")),
@@ -99,13 +96,29 @@ impl Parser {
         };
 
         end = token.span.end;
+        self.advance();
 
         // Expecting ":" (optional)
 
         let r#type = if self.current_token_is(Token::Colon) {
             self.skip(Token::Colon)?;
-            // end = ...
-            todo!("implementing variable type notation")
+
+            let token = self.get_current_rich_token();
+            let r#type = match token.kind {
+                Token::Identifier(name) => name,
+                _ => {
+                    return Err(ParsingError::UnexpectedToken {
+                        expected: Token::Identifier(String::from("foo")),
+                        found: token.kind.clone(),
+                        span: token.span,
+                    });
+                }
+            };
+
+            end = token.span.end;
+            self.advance();
+
+            Some(r#type)
         } else {
             None
         };
@@ -492,6 +505,27 @@ mod tests {
                         span: 12..15,
                     })),
                     span: 0..19,
+                },
+            ),
+            (
+                "var x: Int;",
+                AstNode::VariableDeclaration {
+                    identifier: String::from("x"),
+                    r#type: Some(String::from("Int")),
+                    value: None,
+                    span: 0..10,
+                },
+            ),
+            (
+                "var x: Float = 5;",
+                AstNode::VariableDeclaration {
+                    identifier: String::from("x"),
+                    r#type: Some(String::from("Float")),
+                    value: Some(Box::new(AstNode::Literal {
+                        value: Value::Integer(5),
+                        span: 15..16,
+                    })),
+                    span: 0..16,
                 },
             ),
         ];
