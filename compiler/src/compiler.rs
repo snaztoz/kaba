@@ -4,7 +4,7 @@
 //! This module contains the high-level utility for the source
 //! code compilation procedure.
 
-use crate::{ast::Program as ProgramAst, lexer, parser, Error, Result};
+use crate::{ast::Program as ProgramAst, lexer, parser, semantic, Error, Result};
 use std::{
     fmt::Display,
     fs,
@@ -80,7 +80,17 @@ impl Compiler {
             });
         }
 
-        Ok(ast.unwrap())
+        let checked_ast = semantic::check(ast.unwrap());
+        if let Err(e) = &checked_ast {
+            return Err(Error {
+                file_path: self.file_path.unwrap_or(PathBuf::new()),
+                source_code: self.source_code,
+                message: e.to_string(),
+                span: e.get_span(),
+            });
+        }
+
+        Ok(checked_ast.unwrap())
     }
 }
 
