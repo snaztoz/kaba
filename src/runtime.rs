@@ -52,11 +52,11 @@ impl<'a> Runtime<'a> {
 
             match statement.unwrap() {
                 AstNode::VariableDeclaration {
-                    identifier,
-                    r#type,
-                    value,
-                    ..
-                } => self.create_variable(&identifier, r#type.clone(), value.map(|v| *v))?,
+                    identifier, value, ..
+                } => {
+                    let name = identifier.unwrap_identifier().0;
+                    self.create_variable(&name, value.map(|v| *v))?
+                }
 
                 AstNode::ValueAssignment { lhs, value, .. } => self.update_value(*lhs, *value)?,
 
@@ -72,15 +72,10 @@ impl<'a> Runtime<'a> {
     fn create_variable(
         &self,
         identifier: &str,
-        r#type: Option<String>,
         value: Option<AstNode>,
     ) -> Result<(), RuntimeError> {
         if self.variables.borrow_mut().contains_key(identifier) {
             return Err(RuntimeError::VariableAlreadyExist(String::from(identifier)));
-        }
-
-        if r#type.is_some() {
-            todo!("variable declaration type notation");
         }
 
         let value = match value {

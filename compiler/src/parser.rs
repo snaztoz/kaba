@@ -85,7 +85,10 @@ impl Parser {
 
         let token = self.get_current_rich_token();
         let identifier = match token.kind {
-            Token::Identifier(name) => name,
+            Token::Identifier(name) => Box::new(AstNode::Identifier {
+                name,
+                span: token.span.clone(),
+            }),
             _ => {
                 return Err(ParsingError::UnexpectedToken {
                     expected: Token::Identifier(String::from("foo")),
@@ -451,7 +454,10 @@ mod tests {
             (
                 "var x;",
                 AstNode::VariableDeclaration {
-                    identifier: String::from("x"),
+                    identifier: Box::from(AstNode::Identifier {
+                        name: String::from("x"),
+                        span: 4..5,
+                    }),
                     r#type: None,
                     value: None,
                     span: 0..5,
@@ -460,7 +466,10 @@ mod tests {
             (
                 "var abc = 123 * x;",
                 AstNode::VariableDeclaration {
-                    identifier: String::from("abc"),
+                    identifier: Box::from(AstNode::Identifier {
+                        name: String::from("abc"),
+                        span: 4..7,
+                    }),
                     r#type: None,
                     value: Some(Box::new(AstNode::Mul {
                         lhs: Box::new(AstNode::Literal {
@@ -479,7 +488,10 @@ mod tests {
             (
                 "var x = (123 + 50);",
                 AstNode::VariableDeclaration {
-                    identifier: String::from("x"),
+                    identifier: Box::from(AstNode::Identifier {
+                        name: String::from("x"),
+                        span: 4..5,
+                    }),
                     r#type: None,
                     value: Some(Box::new(AstNode::Add {
                         lhs: Box::new(AstNode::Literal {
@@ -498,7 +510,10 @@ mod tests {
             (
                 "var x = ((((foo))));",
                 AstNode::VariableDeclaration {
-                    identifier: String::from("x"),
+                    identifier: Box::from(AstNode::Identifier {
+                        name: String::from("x"),
+                        span: 4..5,
+                    }),
                     r#type: None,
                     value: Some(Box::new(AstNode::Identifier {
                         name: String::from("foo"),
@@ -510,7 +525,10 @@ mod tests {
             (
                 "var x: Int;",
                 AstNode::VariableDeclaration {
-                    identifier: String::from("x"),
+                    identifier: Box::from(AstNode::Identifier {
+                        name: String::from("x"),
+                        span: 4..5,
+                    }),
                     r#type: Some(String::from("Int")),
                     value: None,
                     span: 0..10,
@@ -519,7 +537,10 @@ mod tests {
             (
                 "var x: Float = 5;",
                 AstNode::VariableDeclaration {
-                    identifier: String::from("x"),
+                    identifier: Box::from(AstNode::Identifier {
+                        name: String::from("x"),
+                        span: 4..5,
+                    }),
                     r#type: Some(String::from("Float")),
                     value: Some(Box::new(AstNode::Literal {
                         value: Value::Integer(5),

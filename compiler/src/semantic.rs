@@ -50,17 +50,19 @@ impl SemanticChecker {
 
     fn check_variable_declaration(
         &mut self,
-        identifier: &str,
+        identifier: &AstNode,
         r#type: &Option<String>,
         value: &Option<&AstNode>,
         span: &Span,
     ) -> Result<(), SemanticError> {
+        let (identifier_name, identifier_span) = identifier.unwrap_identifier();
+
         // Can't have the same variable be declared multiple times
 
-        if self.variables.contains_key(identifier) {
+        if self.variables.contains_key(&identifier_name) {
             return Err(SemanticError::VariableAlreadyExist {
-                name: String::from(identifier),
-                span: span.clone(),
+                name: identifier_name,
+                span: identifier_span,
             });
         }
 
@@ -90,7 +92,7 @@ impl SemanticChecker {
 
         if r#type.is_none() && value_type.is_none() {
             return Err(SemanticError::UnableToInferVariableType {
-                name: String::from(identifier),
+                name: identifier_name,
                 span: span.clone(),
             });
         }
@@ -113,7 +115,7 @@ impl SemanticChecker {
         // Save variable information
 
         self.variables.insert(
-            String::from(identifier),
+            identifier_name,
             Variable {
                 r#type: r#type.or(value_type).unwrap(),
             },

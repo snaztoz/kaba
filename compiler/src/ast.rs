@@ -22,7 +22,7 @@ pub struct Program {
 #[derive(Debug, PartialEq)]
 pub enum AstNode {
     VariableDeclaration {
-        identifier: String,
+        identifier: Box<AstNode>,
         r#type: Option<String>,
         value: Option<Box<AstNode>>,
         span: Span,
@@ -97,6 +97,17 @@ impl AstNode {
             | Self::Group { span, .. }
             | Self::Identifier { span, .. }
             | Self::Literal { span, .. } => span.clone(),
+        }
+    }
+
+    pub fn unwrap_identifier(&self) -> (String, Span) {
+        if let AstNode::Identifier { name, span } = self {
+            (name.clone(), span.clone())
+        } else {
+            panic!(
+                "calling `unwrap_identifier` on non-identifier AstNode: {:?}",
+                self
+            )
         }
     }
 
