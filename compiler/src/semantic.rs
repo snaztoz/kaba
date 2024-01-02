@@ -37,7 +37,11 @@ impl SemanticChecker {
                     self.check_variable_declaration(identifier, r#type, &value.as_deref(), span)?
                 }
 
-                _ => todo!(),
+                AstNode::ValueAssignment { lhs, value, span } => {
+                    self.check_value_assignment(lhs, value, span)?
+                }
+
+                _ => (),
             }
         }
 
@@ -114,6 +118,26 @@ impl SemanticChecker {
                 r#type: r#type.or(value_type).unwrap(),
             },
         );
+
+        Ok(())
+    }
+
+    fn check_value_assignment(
+        &self,
+        lhs: &AstNode,
+        value: &AstNode,
+        span: &Span,
+    ) -> Result<(), SemanticError> {
+        let lhs_type = self.get_expression_type(lhs)?;
+        let value_type = self.get_expression_type(value)?;
+
+        if !self.can_assign_type(&value_type, &lhs_type) {
+            return Err(SemanticError::UnableToAssignValueType {
+                r#type: lhs_type.clone(),
+                value_type: value_type.clone(),
+                span: span.clone(),
+            });
+        }
 
         Ok(())
     }
@@ -242,6 +266,7 @@ impl Display for SemanticError {
 mod tests {
     use super::*;
     use crate::{lexer, parser};
+    use indoc::indoc;
 
     #[test]
     fn test_variable_declaration_semantic() {
@@ -270,6 +295,54 @@ mod tests {
             "var x;",
             "var x: NonExistingType;",
             "var x = 5; var x = 10;", // declare twice
+        ];
+
+        for input in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let ast = parser::parse(tokens).unwrap();
+
+            let mut checker = SemanticChecker::new();
+            let result = checker.check(&ast);
+
+            assert!(result.is_err());
+        }
+    }
+
+    #[test]
+    fn test_value_assignment() {
+        let cases = [
+            indoc! {"
+                var x: Int;
+                x = 50;
+            "},
+            indoc! {"
+                var x: Float;
+                x = 50;
+            "},
+        ];
+
+        for input in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let ast = parser::parse(tokens).unwrap();
+
+            let mut checker = SemanticChecker::new();
+            let result = checker.check(&ast);
+
+            assert!(result.is_ok());
+        }
+    }
+
+    #[test]
+    fn test_invalid_value_assignment() {
+        let cases = [
+            indoc! {"
+                var x: Int;
+                x = 5.0;
+            "},
+            indoc! {"
+                var x: Float;
+                x = y;
+            "},
         ];
 
         for input in cases {
