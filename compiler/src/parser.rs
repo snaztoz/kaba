@@ -106,22 +106,12 @@ impl Parser {
         let r#type = if self.current_token_is(Token::Colon) {
             self.skip(Token::Colon)?;
 
-            let token = self.get_current_rich_token();
-            let r#type = match token.kind {
-                Token::Identifier(name) => name,
-                _ => {
-                    return Err(ParsingError::UnexpectedToken {
-                        expected: Token::Identifier(String::from("foo")),
-                        found: token.kind.clone(),
-                        span: token.span,
-                    });
-                }
-            };
+            let r#type = self.parse_type_notation()?;
 
-            end = token.span.end;
+            end = r#type.get_span().end;
             self.advance();
 
-            Some(r#type)
+            Some(Box::new(r#type))
         } else {
             None
         };
@@ -149,6 +139,21 @@ impl Parser {
             value,
             span: start..end,
         })
+    }
+
+    fn parse_type_notation(&mut self) -> Result<AstNode, ParsingError> {
+        let token = self.get_current_rich_token();
+        match token.kind {
+            Token::Identifier(name) => Ok(AstNode::TypeNotation {
+                name,
+                span: token.span.clone(),
+            }),
+            _ => Err(ParsingError::UnexpectedToken {
+                expected: Token::Identifier(String::from("foo")),
+                found: token.kind.clone(),
+                span: token.span,
+            }),
+        }
     }
 
     fn parse_expression(&mut self) -> Result<AstNode, ParsingError> {
@@ -529,7 +534,10 @@ mod tests {
                         name: String::from("x"),
                         span: 4..5,
                     }),
-                    r#type: Some(String::from("Int")),
+                    r#type: Some(Box::from(AstNode::TypeNotation {
+                        name: String::from("Int"),
+                        span: 7..10,
+                    })),
                     value: None,
                     span: 0..10,
                 },
@@ -541,7 +549,10 @@ mod tests {
                         name: String::from("x"),
                         span: 4..5,
                     }),
-                    r#type: Some(String::from("Float")),
+                    r#type: Some(Box::from(AstNode::TypeNotation {
+                        name: String::from("Float"),
+                        span: 7..12,
+                    })),
                     value: Some(Box::new(AstNode::Literal {
                         value: Value::Integer(5),
                         span: 15..16,

@@ -33,9 +33,12 @@ impl SemanticChecker {
                     r#type,
                     value,
                     span,
-                } => {
-                    self.check_variable_declaration(identifier, r#type, &value.as_deref(), span)?
-                }
+                } => self.check_variable_declaration(
+                    identifier,
+                    &r#type.as_deref(),
+                    &value.as_deref(),
+                    span,
+                )?,
 
                 AstNode::ValueAssignment { lhs, value, span } => {
                     self.check_value_assignment(lhs, value, span)?
@@ -51,7 +54,7 @@ impl SemanticChecker {
     fn check_variable_declaration(
         &mut self,
         identifier: &AstNode,
-        r#type: &Option<String>,
+        r#type: &Option<&AstNode>,
         value: &Option<&AstNode>,
         span: &Span,
     ) -> Result<(), SemanticError> {
@@ -69,13 +72,14 @@ impl SemanticChecker {
         // Get r#type
 
         let r#type = if let Some(t) = r#type {
-            if !self.is_type_exist(t) {
+            let (type_name, type_span) = t.unwrap_type_notation();
+            if !self.is_type_exist(&type_name) {
                 return Err(SemanticError::TypeNotExist {
-                    name: String::from(t),
-                    span: span.clone(),
+                    name: type_name,
+                    span: type_span,
                 });
             }
-            Some(String::from(t))
+            Some(type_name)
         } else {
             None
         };

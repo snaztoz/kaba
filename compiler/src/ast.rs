@@ -23,7 +23,7 @@ pub struct Program {
 pub enum AstNode {
     VariableDeclaration {
         identifier: Box<AstNode>,
-        r#type: Option<String>,
+        r#type: Option<Box<AstNode>>,
         value: Option<Box<AstNode>>,
         span: Span,
     },
@@ -77,6 +77,11 @@ pub enum AstNode {
         span: Span,
     },
 
+    TypeNotation {
+        name: String,
+        span: Span,
+    },
+
     Literal {
         value: Value,
         span: Span,
@@ -96,6 +101,7 @@ impl AstNode {
             | Self::FunctionCall { span, .. }
             | Self::Group { span, .. }
             | Self::Identifier { span, .. }
+            | Self::TypeNotation { span, .. }
             | Self::Literal { span, .. } => span.clone(),
         }
     }
@@ -106,6 +112,17 @@ impl AstNode {
         } else {
             panic!(
                 "calling `unwrap_identifier` on non-identifier AstNode: {:?}",
+                self
+            )
+        }
+    }
+
+    pub fn unwrap_type_notation(&self) -> (String, Span) {
+        if let AstNode::TypeNotation { name, span } = self {
+            (name.clone(), span.clone())
+        } else {
+            panic!(
+                "calling `unwrap_type_notation` on non-type notation AstNode: {:?}",
                 self
             )
         }
