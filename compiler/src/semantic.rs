@@ -5,8 +5,9 @@
 //! stage of the compiler.
 
 use crate::ast::{AstNode, Program as ProgramAst, Value};
+use builtin::types::Types as BuiltinTypes;
 use logos::Span;
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, fmt::Display, str::FromStr};
 
 pub fn check(ast: ProgramAst) -> Result<ProgramAst, SemanticError> {
     let mut checker = SemanticChecker::new();
@@ -15,7 +16,7 @@ pub fn check(ast: ProgramAst) -> Result<ProgramAst, SemanticError> {
 }
 
 struct SemanticChecker {
-    variables: HashMap<String, Variable>,
+    variables: HashMap<String, BuiltinTypes>,
 }
 
 impl SemanticChecker {
@@ -73,13 +74,12 @@ impl SemanticChecker {
 
         let var_type = if let Some(vt) = var_type {
             let (type_name, type_span) = vt.unwrap_type_notation();
-            if !self.is_type_exist(&type_name) {
-                return Err(SemanticError::TypeNotExist {
+            let vt =
+                BuiltinTypes::from_str(&type_name).map_err(|_| SemanticError::TypeNotExist {
                     name: type_name,
                     span: type_span,
-                });
-            }
-            Some(type_name)
+                })?;
+            Some(vt)
         } else {
             None
         };
@@ -104,12 +104,12 @@ impl SemanticChecker {
         // If both present, check if value can be assigned to
         // the variable
 
-        if let Some(t) = &var_type {
-            if let Some(vt) = &value_type {
-                if !self.can_assign_type(vt, t) {
+        if let Some(var_type) = &var_type {
+            if let Some(value_type) = &value_type {
+                if !value_type.is_assignable_to(var_type) {
                     return Err(SemanticError::UnableToAssignValueType {
-                        var_type: t.clone(),
-                        value_type: vt.clone(),
+                        var_type: var_type.to_string(),
+                        value_type: value_type.to_string(),
                         span: span.clone(),
                     });
                 }
@@ -118,12 +118,8 @@ impl SemanticChecker {
 
         // Save variable information
 
-        self.variables.insert(
-            identifier_name,
-            Variable {
-                var_type: var_type.or(value_type).unwrap(),
-            },
-        );
+        self.variables
+            .insert(identifier_name, var_type.or(value_type).unwrap());
 
         Ok(())
     }
@@ -137,10 +133,10 @@ impl SemanticChecker {
         let lhs_type = self.get_expression_type(lhs)?;
         let value_type = self.get_expression_type(value)?;
 
-        if !self.can_assign_type(&value_type, &lhs_type) {
+        if !value_type.is_assignable_to(&lhs_type) {
             return Err(SemanticError::UnableToAssignValueType {
-                var_type: lhs_type.clone(),
-                value_type: value_type.clone(),
+                var_type: lhs_type.to_string(),
+                value_type: value_type.to_string(),
                 span: span.clone(),
             });
         }
@@ -148,18 +144,7 @@ impl SemanticChecker {
         Ok(())
     }
 
-    fn can_assign_type(&self, from: &str, to: &str) -> bool {
-        if from == to {
-            return true;
-        }
-        from == "Int" && to == "Float"
-    }
-
-    fn is_type_exist(&self, t: &str) -> bool {
-        t == "Int" || t == "Float"
-    }
-
-    fn get_expression_type(&self, expression: &AstNode) -> Result<String, SemanticError> {
+    fn get_expression_type(&self, expression: &AstNode) -> Result<BuiltinTypes, SemanticError> {
         match expression {
             AstNode::Add { lhs, rhs, .. }
             | AstNode::Sub { lhs, rhs, .. }
@@ -167,37 +152,32 @@ impl SemanticChecker {
             | AstNode::Div { lhs, rhs, .. } => {
                 let lhs_type = self.get_expression_type(lhs)?;
                 let rhs_type = self.get_expression_type(rhs)?;
-                let var_type = if &lhs_type == "Int" && &rhs_type == "Int" {
-                    String::from("Int")
+                if lhs_type == BuiltinTypes::Int && rhs_type == BuiltinTypes::Int {
+                    Ok(BuiltinTypes::Int)
                 } else {
-                    String::from("Float")
-                };
-                Ok(var_type)
+                    Ok(BuiltinTypes::Float)
+                }
             }
 
             AstNode::Neg { child, .. } => self.get_expression_type(child),
 
-            AstNode::Identifier { name, span } => {
-                self.variables.get(name).map(|v| v.var_type.clone()).ok_or(
-                    SemanticError::VariableNotExist {
-                        name: String::from(name),
-                        span: span.clone(),
-                    },
-                )
-            }
+            AstNode::Identifier { name, span } => self
+                .variables
+                .get(name)
+                .cloned()
+                .ok_or(SemanticError::VariableNotExist {
+                    name: String::from(name),
+                    span: span.clone(),
+                }),
 
             AstNode::Literal { value, .. } => match value {
-                Value::Integer(_) => Ok(String::from("Int")),
-                Value::Float(_) => Ok(String::from("Float")),
+                Value::Integer(_) => Ok(BuiltinTypes::Int),
+                Value::Float(_) => Ok(BuiltinTypes::Float),
             },
 
             _ => unreachable!(),
         }
     }
-}
-
-struct Variable {
-    var_type: String,
 }
 
 #[derive(Debug, PartialEq)]
@@ -279,9 +259,9 @@ mod tests {
     #[test]
     fn test_variable_declaration_semantic() {
         let cases = [
-            ("var x: Int = 5;", "Int"),
-            ("var x: Int;", "Int"),
-            ("var x = -0.5;", "Float"),
+            ("var x: Int = 5;", BuiltinTypes::Int),
+            ("var x: Int;", BuiltinTypes::Int),
+            ("var x = -0.5;", BuiltinTypes::Float),
         ];
 
         for (input, expected) in cases {
@@ -292,7 +272,7 @@ mod tests {
             let result = checker.check(&ast);
 
             assert!(result.is_ok());
-            assert_eq!(checker.variables.get("x").unwrap().var_type, expected);
+            assert_eq!(*checker.variables.get("x").unwrap(), expected);
         }
     }
 
@@ -367,8 +347,8 @@ mod tests {
     #[test]
     fn test_expression_type() {
         let cases = [
-            ("-5 + 50 * 200 / 7 - 999;", "Int"),
-            ("-5 + -0.25;", "Float"),
+            ("-5 + 50 * 200 / 7 - 999;", BuiltinTypes::Int),
+            ("-5 + -0.25;", BuiltinTypes::Float),
         ];
 
         for (input, expected) in cases {
@@ -379,7 +359,7 @@ mod tests {
             let result = checker.get_expression_type(&ast.statements[0]);
 
             assert!(result.is_ok());
-            assert_eq!(&result.unwrap(), expected);
+            assert_eq!(result.unwrap(), expected);
         }
     }
 }

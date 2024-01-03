@@ -57,6 +57,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a8241f3ebb85c056b509d4327ad0358fbbba6ffb340bf388f26350aeda225b1"
 
 [[package]]
+name = "builtin"
+version = "0.1.2"
+
+[[package]]
 name = "clap"
 version = "4.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -116,6 +120,7 @@ dependencies = [
 name = "compiler"
 version = "0.1.2"
 dependencies = [
+ "builtin",
  "indoc",
  "logos",
 ]
