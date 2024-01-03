@@ -23,7 +23,7 @@ pub struct Program {
 pub enum AstNode {
     VariableDeclaration {
         identifier: Box<AstNode>,
-        r#type: Option<Box<AstNode>>,
+        var_type: Option<Box<AstNode>>,
         value: Option<Box<AstNode>>,
         span: Span,
     },

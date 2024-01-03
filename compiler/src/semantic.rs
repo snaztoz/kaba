@@ -30,12 +30,12 @@ impl SemanticChecker {
             match statement {
                 AstNode::VariableDeclaration {
                     identifier,
-                    r#type,
+                    var_type,
                     value,
                     span,
                 } => self.check_variable_declaration(
                     identifier,
-                    &r#type.as_deref(),
+                    &var_type.as_deref(),
                     &value.as_deref(),
                     span,
                 )?,
@@ -54,7 +54,7 @@ impl SemanticChecker {
     fn check_variable_declaration(
         &mut self,
         identifier: &AstNode,
-        r#type: &Option<&AstNode>,
+        var_type: &Option<&AstNode>,
         value: &Option<&AstNode>,
         span: &Span,
     ) -> Result<(), SemanticError> {
@@ -69,10 +69,10 @@ impl SemanticChecker {
             });
         }
 
-        // Get r#type
+        // Get var_type
 
-        let r#type = if let Some(t) = r#type {
-            let (type_name, type_span) = t.unwrap_type_notation();
+        let var_type = if let Some(vt) = var_type {
+            let (type_name, type_span) = vt.unwrap_type_notation();
             if !self.is_type_exist(&type_name) {
                 return Err(SemanticError::TypeNotExist {
                     name: type_name,
@@ -92,9 +92,9 @@ impl SemanticChecker {
             None
         };
 
-        // Either r#type or value must be present
+        // Either var_type or value must be present
 
-        if r#type.is_none() && value_type.is_none() {
+        if var_type.is_none() && value_type.is_none() {
             return Err(SemanticError::UnableToInferVariableType {
                 name: identifier_name,
                 span: span.clone(),
@@ -104,11 +104,11 @@ impl SemanticChecker {
         // If both present, check if value can be assigned to
         // the variable
 
-        if let Some(t) = &r#type {
+        if let Some(t) = &var_type {
             if let Some(vt) = &value_type {
                 if !self.can_assign_type(vt, t) {
                     return Err(SemanticError::UnableToAssignValueType {
-                        r#type: t.clone(),
+                        var_type: t.clone(),
                         value_type: vt.clone(),
                         span: span.clone(),
                     });
@@ -121,7 +121,7 @@ impl SemanticChecker {
         self.variables.insert(
             identifier_name,
             Variable {
-                r#type: r#type.or(value_type).unwrap(),
+                var_type: var_type.or(value_type).unwrap(),
             },
         );
 
@@ -139,7 +139,7 @@ impl SemanticChecker {
 
         if !self.can_assign_type(&value_type, &lhs_type) {
             return Err(SemanticError::UnableToAssignValueType {
-                r#type: lhs_type.clone(),
+                var_type: lhs_type.clone(),
                 value_type: value_type.clone(),
                 span: span.clone(),
             });
@@ -155,8 +155,8 @@ impl SemanticChecker {
         from == "Int" && to == "Float"
     }
 
-    fn is_type_exist(&self, r#type: &str) -> bool {
-        r#type == "Int" || r#type == "Float"
+    fn is_type_exist(&self, t: &str) -> bool {
+        t == "Int" || t == "Float"
     }
 
     fn get_expression_type(&self, expression: &AstNode) -> Result<String, SemanticError> {
@@ -167,18 +167,18 @@ impl SemanticChecker {
             | AstNode::Div { lhs, rhs, .. } => {
                 let lhs_type = self.get_expression_type(lhs)?;
                 let rhs_type = self.get_expression_type(rhs)?;
-                let r#type = if &lhs_type == "Int" && &rhs_type == "Int" {
+                let var_type = if &lhs_type == "Int" && &rhs_type == "Int" {
                     String::from("Int")
                 } else {
                     String::from("Float")
                 };
-                Ok(r#type)
+                Ok(var_type)
             }
 
             AstNode::Neg { child, .. } => self.get_expression_type(child),
 
             AstNode::Identifier { name, span } => {
-                self.variables.get(name).map(|v| v.r#type.clone()).ok_or(
+                self.variables.get(name).map(|v| v.var_type.clone()).ok_or(
                     SemanticError::VariableNotExist {
                         name: String::from(name),
                         span: span.clone(),
@@ -197,7 +197,7 @@ impl SemanticChecker {
 }
 
 struct Variable {
-    r#type: String,
+    var_type: String,
 }
 
 #[derive(Debug, PartialEq)]
@@ -208,7 +208,7 @@ pub enum SemanticError {
     },
 
     UnableToAssignValueType {
-        r#type: String,
+        var_type: String,
         value_type: String,
         span: Span,
     },
@@ -251,12 +251,14 @@ impl Display for SemanticError {
                 )
             }
             Self::UnableToAssignValueType {
-                r#type, value_type, ..
+                var_type,
+                value_type,
+                ..
             } => {
                 write!(
                     f,
                     "unable to assign value of type `{value_type}` to type `{}`",
-                    r#type
+                    var_type
                 )
             }
             Self::VariableAlreadyExist { name, .. } => {
@@ -290,7 +292,7 @@ mod tests {
             let result = checker.check(&ast);
 
             assert!(result.is_ok());
-            assert_eq!(checker.variables.get("x").unwrap().r#type, expected);
+            assert_eq!(checker.variables.get("x").unwrap().var_type, expected);
         }
     }
 
