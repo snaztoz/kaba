@@ -5,7 +5,7 @@
 //! stage of the compiler.
 
 use crate::ast::{AstNode, Program as ProgramAst, Value};
-use builtin::types::Types as BuiltinTypes;
+use builtin::{self, types::Types as BuiltinTypes};
 use logos::Span;
 use std::{collections::HashMap, fmt::Display, str::FromStr};
 
@@ -16,14 +16,16 @@ pub fn check(ast: ProgramAst) -> Result<ProgramAst, SemanticError> {
 }
 
 struct SemanticChecker {
-    variables: HashMap<String, BuiltinTypes>,
+    identifiers: HashMap<String, BuiltinTypes>,
 }
 
 impl SemanticChecker {
     fn new() -> Self {
-        Self {
-            variables: HashMap::new(),
-        }
+        let mut identifiers = HashMap::new();
+
+        identifiers.extend(builtin::functions::get_types());
+
+        Self { identifiers }
     }
 
     fn check(&mut self, ast: &ProgramAst) -> Result<(), SemanticError> {
@@ -45,7 +47,9 @@ impl SemanticChecker {
                     self.check_value_assignment(lhs, value, span)?
                 }
 
-                _ => (),
+                expression => {
+                    self.check_expression_type(expression)?;
+                }
             }
         }
 
@@ -63,7 +67,7 @@ impl SemanticChecker {
 
         // Can't have the same variable be declared multiple times
 
-        if self.variables.contains_key(&identifier_name) {
+        if self.identifiers.contains_key(&identifier_name) {
             return Err(SemanticError::VariableAlreadyExist {
                 name: identifier_name,
                 span: identifier_span,
@@ -87,12 +91,12 @@ impl SemanticChecker {
         // Get value type
 
         let value_type = if let Some(expression) = value {
-            Some(self.get_expression_type(expression)?)
+            Some(self.check_expression_type(expression)?)
         } else {
             None
         };
 
-        // Either var_type or value must be present
+        // Either var_type or value_type must be present
 
         if var_type.is_none() && value_type.is_none() {
             return Err(SemanticError::UnableToInferVariableType {
@@ -118,7 +122,7 @@ impl SemanticChecker {
 
         // Save variable information
 
-        self.variables
+        self.identifiers
             .insert(identifier_name, var_type.or(value_type).unwrap());
 
         Ok(())
@@ -130,8 +134,8 @@ impl SemanticChecker {
         value: &AstNode,
         span: &Span,
     ) -> Result<(), SemanticError> {
-        let lhs_type = self.get_expression_type(lhs)?;
-        let value_type = self.get_expression_type(value)?;
+        let lhs_type = self.check_expression_type(lhs)?;
+        let value_type = self.check_expression_type(value)?;
 
         if !value_type.is_assignable_to(&lhs_type) {
             return Err(SemanticError::UnableToAssignValueType {
@@ -144,38 +148,116 @@ impl SemanticChecker {
         Ok(())
     }
 
-    fn get_expression_type(&self, expression: &AstNode) -> Result<BuiltinTypes, SemanticError> {
+    fn check_expression_type(&self, expression: &AstNode) -> Result<BuiltinTypes, SemanticError> {
         match expression {
             AstNode::Add { lhs, rhs, .. }
             | AstNode::Sub { lhs, rhs, .. }
             | AstNode::Mul { lhs, rhs, .. }
-            | AstNode::Div { lhs, rhs, .. } => {
-                let lhs_type = self.get_expression_type(lhs)?;
-                let rhs_type = self.get_expression_type(rhs)?;
-                if lhs_type == BuiltinTypes::Int && rhs_type == BuiltinTypes::Int {
-                    Ok(BuiltinTypes::Int)
-                } else {
-                    Ok(BuiltinTypes::Float)
+            | AstNode::Div { lhs, rhs, .. } => self.check_math_binary_operation(lhs, rhs),
+
+            AstNode::Neg { child, .. } => self.check_negation_operation(child),
+
+            AstNode::Identifier { name, span } => self.get_identifier_type(name, span),
+
+            AstNode::Literal { value, .. } => self.get_literal_type(value),
+
+            AstNode::FunctionCall { callee, args, span } => {
+                self.check_function_call(callee, args, span)
+            }
+
+            _ => unreachable!(),
+        }
+    }
+
+    fn check_math_binary_operation(
+        &self,
+        lhs: &AstNode,
+        rhs: &AstNode,
+    ) -> Result<BuiltinTypes, SemanticError> {
+        let lhs_type = self.check_expression_type(lhs)?;
+        let rhs_type = self.check_expression_type(rhs)?;
+
+        if !lhs_type.is_number() {
+            return Err(SemanticError::NotANumber {
+                span: lhs.get_span().clone(),
+            });
+        } else if !rhs_type.is_number() {
+            return Err(SemanticError::NotANumber {
+                span: rhs.get_span().clone(),
+            });
+        }
+
+        if lhs_type == BuiltinTypes::Int && rhs_type == BuiltinTypes::Int {
+            Ok(BuiltinTypes::Int)
+        } else {
+            Ok(BuiltinTypes::Float)
+        }
+    }
+
+    fn check_negation_operation(&self, child: &AstNode) -> Result<BuiltinTypes, SemanticError> {
+        let child_type = self.check_expression_type(child)?;
+        if !child_type.is_number() {
+            return Err(SemanticError::NotANumber {
+                span: child.get_span(),
+            });
+        }
+        Ok(child_type)
+    }
+
+    fn check_function_call(
+        &self,
+        callee: &AstNode,
+        args: &[AstNode],
+        span: &Span,
+    ) -> Result<BuiltinTypes, SemanticError> {
+        let callee_type = self.check_expression_type(callee)?;
+
+        if let BuiltinTypes::Callable {
+            parameters,
+            return_type,
+        } = &callee_type
+        {
+            if args.len() != parameters.len() {
+                return Err(SemanticError::FunctionArgumentCountMismatch {
+                    expecting: parameters.len(),
+                    get: args.len(),
+                    span: span.clone(),
+                });
+            }
+
+            for i in 0..parameters.len() {
+                let arg_type = self.check_expression_type(&args[i])?;
+                if !arg_type.is_assignable_to(&parameters[i]) {
+                    return Err(SemanticError::UnableToAssignValueType {
+                        var_type: parameters[i].to_string(),
+                        value_type: arg_type.to_string(),
+                        span: args[i].get_span(),
+                    });
                 }
             }
 
-            AstNode::Neg { child, .. } => self.get_expression_type(child),
+            Ok(*return_type.clone())
+        } else {
+            Err(SemanticError::NotAFunction {
+                span: callee.get_span().clone(),
+            })
+        }
+    }
 
-            AstNode::Identifier { name, span } => self
-                .variables
-                .get(name)
-                .cloned()
-                .ok_or(SemanticError::VariableNotExist {
-                    name: String::from(name),
-                    span: span.clone(),
-                }),
+    fn get_identifier_type(&self, name: &str, span: &Span) -> Result<BuiltinTypes, SemanticError> {
+        self.identifiers
+            .get(name)
+            .cloned()
+            .ok_or(SemanticError::VariableNotExist {
+                name: String::from(name),
+                span: span.clone(),
+            })
+    }
 
-            AstNode::Literal { value, .. } => match value {
-                Value::Integer(_) => Ok(BuiltinTypes::Int),
-                Value::Float(_) => Ok(BuiltinTypes::Float),
-            },
-
-            _ => unreachable!(),
+    fn get_literal_type(&self, literal_value: &Value) -> Result<BuiltinTypes, SemanticError> {
+        match literal_value {
+            Value::Integer(_) => Ok(BuiltinTypes::Int),
+            Value::Float(_) => Ok(BuiltinTypes::Float),
         }
     }
 }
@@ -207,6 +289,20 @@ pub enum SemanticError {
         name: String,
         span: Span,
     },
+
+    NotANumber {
+        span: Span,
+    },
+
+    NotAFunction {
+        span: Span,
+    },
+
+    FunctionArgumentCountMismatch {
+        expecting: usize,
+        get: usize,
+        span: Span,
+    },
 }
 
 impl SemanticError {
@@ -216,7 +312,10 @@ impl SemanticError {
             | Self::UnableToAssignValueType { span, .. }
             | Self::VariableNotExist { span, .. }
             | Self::VariableAlreadyExist { span, .. }
-            | Self::TypeNotExist { span, .. } => Some(span.clone()),
+            | Self::TypeNotExist { span, .. }
+            | Self::NotANumber { span, .. }
+            | Self::NotAFunction { span, .. }
+            | Self::FunctionArgumentCountMismatch { span, .. } => Some(span.clone()),
         }
     }
 }
@@ -246,6 +345,13 @@ impl Display for SemanticError {
             }
             Self::VariableNotExist { name, .. } => write!(f, "variable `{name}` is not exists"),
             Self::TypeNotExist { name, .. } => write!(f, "type `{name}` is not exists"),
+
+            Self::NotANumber { .. } => write!(f, "not a number"),
+            Self::NotAFunction { .. } => write!(f, "not a function"),
+
+            Self::FunctionArgumentCountMismatch { expecting, get, .. } => {
+                write!(f, "expecting {expecting} argument(s) but get {get} instead")
+            }
         }
     }
 }
@@ -272,7 +378,7 @@ mod tests {
             let result = checker.check(&ast);
 
             assert!(result.is_ok());
-            assert_eq!(*checker.variables.get("x").unwrap(), expected);
+            assert_eq!(*checker.identifiers.get("x").unwrap(), expected);
         }
     }
 
@@ -349,6 +455,7 @@ mod tests {
         let cases = [
             ("-5 + 50 * 200 / 7 - 999;", BuiltinTypes::Int),
             ("-5 + -0.25;", BuiltinTypes::Float),
+            ("print(703 + 5 - 90 * 100 / 86 * 0.5);", BuiltinTypes::Void),
         ];
 
         for (input, expected) in cases {
@@ -356,10 +463,30 @@ mod tests {
             let ast = parser::parse(tokens).unwrap();
 
             let checker = SemanticChecker::new();
-            let result = checker.get_expression_type(&ast.statements[0]);
+            let result = checker.check_expression_type(&ast.statements[0]);
 
             assert!(result.is_ok());
             assert_eq!(result.unwrap(), expected);
+        }
+    }
+
+    #[test]
+    fn test_invalid_expression() {
+        let cases = [
+            "50 * print(73);",
+            "print(50 + print(90));",
+            "100 - notExist;",
+            "-(print);",
+        ];
+
+        for input in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let ast = parser::parse(tokens).unwrap();
+
+            let mut checker = SemanticChecker::new();
+            let result = checker.check(&ast);
+
+            assert!(result.is_err());
         }
     }
 }

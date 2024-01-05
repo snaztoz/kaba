@@ -12,9 +12,17 @@ pub enum Types {
     Void,
     Int,
     Float,
+    Callable {
+        parameters: Vec<Types>,
+        return_type: Box<Types>,
+    },
 }
 
 impl Types {
+    pub fn is_number(&self) -> bool {
+        *self == Self::Int || *self == Self::Float
+    }
+
     pub fn is_assignable_to(&self, other: &Types) -> bool {
         if *self == Self::Void || *other == Self::Void {
             return false;
@@ -31,6 +39,7 @@ impl Display for Types {
             Self::Void => write!(f, "Void"),
             Self::Int => write!(f, "Int"),
             Self::Float => write!(f, "Float"),
+            Self::Callable { .. } => write!(f, "Callable"),
         }
     }
 }
