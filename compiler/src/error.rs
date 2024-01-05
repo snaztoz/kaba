@@ -64,16 +64,17 @@ impl fmt::Display for Error {
         };
 
         if let Some((line, row, col)) = position {
-            let position_information = format!(", at `{file_path}` ({row}:{col})");
+            let position_information = format!("{file_path} ({row}:{col})");
             let row_number_pad = self.pad_white_spaces(row.to_string().len());
 
             writedoc!(
                 f,
                 "
-                {message}{position_information}
+                {position_information}
                  {row_number_pad} |
                  {row} | {line}
-                 {row_number_pad} |"
+                 {row_number_pad} |
+                 {row_number_pad} = {message}"
             )
         } else {
             write!(f, "{message}")

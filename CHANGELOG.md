@@ -15,10 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Support for floating numbers.
+- Support for semantic analysis.
 
 ### Changed
 
-- Change integer limit from 64 bits to 32 bits.
+- Change integer literal limit from 64 bits to 32 bits.
+- Change error message format
 
 ## [0.1.2] - 2023-12-27
 
