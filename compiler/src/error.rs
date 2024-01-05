@@ -4,121 +4,116 @@
 //! This module contains errors that may be thrown during
 //! compiling process.
 
-use crate::{lexer::Token, util};
-use indoc::formatdoc;
+use indoc::writedoc;
 use logos::Span;
-use std::{borrow::Borrow, fmt, path::PathBuf};
+use std::{fmt, path::PathBuf};
+
+type Line = String;
+type Row = usize;
+type Col = usize;
 
 /// Wraps error variants that may occur during the compilation
 /// process, alongside with the information of its source code
 /// file path and the source code itself.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Error {
     pub file_path: PathBuf,
     pub source_code: String,
-    pub variant: Box<ErrorVariant>, // box in order to avoid the size from getting too large
+    pub message: String,
+    pub span: Option<Span>,
 }
 
 impl Error {
-    fn get_error_span(&self) -> Span {
-        match self.variant.borrow() {
-            ErrorVariant::LexingIdentifierStartsWithNumber { span, .. } => span.clone(),
-            ErrorVariant::LexingUnknownToken { span, .. } => span.clone(),
-            ErrorVariant::ParsingUnexpectedToken { span, .. } => span.clone(),
-            ErrorVariant::ParsingUnexpectedEof => self.source_code.len()..self.source_code.len(),
-            _ => unreachable!(),
-        }
+    fn get_position(&self) -> Option<(Line, Row, Col)> {
+        let span = self.span.as_ref().unwrap();
+        let left_of_selected = &self.source_code[..span.start];
+        let right_of_selected = &self.source_code[span.end..];
+
+        let line_start = left_of_selected
+            .rfind('\n')
+            .map(|pos| pos + 1) // don't include the newline character
+            .unwrap_or(0);
+
+        let next_newline = right_of_selected.find('\n').map(|pos| span.end + pos); // offset
+
+        let line = match next_newline {
+            Some(newline) => &self.source_code[line_start..newline],
+            None => &self.source_code[line_start..],
+        };
+
+        let row = left_of_selected.matches('\n').count() + 1;
+        let col = span.start - line_start + 1;
+
+        Some((String::from(line), row, col))
+    }
+
+    fn pad_white_spaces(&self, n: usize) -> String {
+        (0..n).map(|_| " ").collect::<String>()
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut message = String::new();
+        let message = &self.message;
+        let file_path = self.file_path.display();
 
-        message.push_str(&self.variant.to_string());
+        let position = if self.span.is_some() {
+            self.get_position()
+        } else {
+            None
+        };
 
-        if !self.variant.is_file_error() {
-            let file_path = self.file_path.display();
-            let span = self.get_error_span();
-            let (line, row, col) = util::get_position_from_span(&self.source_code, &span);
+        if let Some((line, row, col)) = position {
+            let position_information = format!("{file_path} ({row}:{col})");
+            let row_number_pad = self.pad_white_spaces(row.to_string().len());
 
-            message.push_str(&format!(", at `{file_path}` ({row}:{col})\n"));
-
-            let row_number_pad = util::pad_white_spaces(row.to_string().len());
-
-            message.push_str(&formatdoc! {"
+            writedoc!(
+                f,
+                "
+                {position_information}
                  {row_number_pad} |
                  {row} | {line}
-                 {row_number_pad} |"
-            })
+                 {row_number_pad} |
+                 {row_number_pad} = {message}"
+            )
+        } else {
+            write!(f, "{message}")
         }
-
-        write!(f, "{message}")
     }
 }
 
-/// Error variants that may be thrown during the compiling stage,
-/// such as invalid syntax or semantic errors.
-#[derive(Clone, Debug, Default, PartialEq)]
-pub enum ErrorVariant {
-    // Source code file errors
-    SourceCodeWrongExtension,
-    SourceCodeFileNotExist {
-        path: PathBuf,
-    },
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use indoc::indoc;
 
-    // Lexer errors
-    LexingIdentifierStartsWithNumber {
-        token: String,
-        span: Span,
-    },
-    LexingUnknownToken {
-        token: String,
-        span: Span,
-    },
+    #[test]
+    fn test_find_line_row_and_col_from_span() {
+        let input = indoc! {"
+            var x = 50;
+            x = x + 50;
+            print(x);
+        "};
 
-    // Parser errors
-    ParsingUnexpectedToken {
-        expected: Token,
-        found: Token,
-        span: Span,
-    },
-    ParsingUnexpectedEof,
+        let cases = [
+            // (span, expected_line, expected_row, expected_col)
+            (4..5, String::from("var x = 50;"), 1, 5),
+            (16..22, String::from("x = x + 50;"), 2, 5),
+            (24..29, String::from("print(x);"), 3, 1),
+        ];
 
-    #[default]
-    Error,
-}
+        for (span, expected_line, expected_row, expected_col) in cases {
+            let error = Error {
+                source_code: String::from(input),
+                span: Some(span),
+                ..Error::default()
+            };
 
-impl ErrorVariant {
-    fn is_file_error(&self) -> bool {
-        matches!(self, &Self::SourceCodeFileNotExist { .. })
-            || matches!(self, &Self::SourceCodeWrongExtension)
-    }
-}
+            let (line, row, col) = error.get_position().unwrap();
 
-impl fmt::Display for ErrorVariant {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::SourceCodeWrongExtension => {
-                write!(f, "Kaba source code file must have '.kaba' extension")
-            }
-            Self::SourceCodeFileNotExist { path } => {
-                write!(f, "file '{}' is not exist", path.display())
-            }
-
-            Self::LexingIdentifierStartsWithNumber { token, .. } => {
-                write!(f, "identifier can't start with number: `{token}`")
-            }
-            Self::LexingUnknownToken { token, .. } => {
-                write!(f, "unknown token `{token}`")
-            }
-
-            Self::ParsingUnexpectedToken {
-                expected, found, ..
-            } => write!(f, "expecting to find {expected} but get {found} instead",),
-            Self::ParsingUnexpectedEof => write!(f, "unexpected end-of-file (EOF)",),
-
-            _ => unreachable!(),
+            assert_eq!(line, expected_line);
+            assert_eq!(row, expected_row);
+            assert_eq!(col, expected_col);
         }
     }
 }

@@ -4,7 +4,6 @@
 //! This module contains the required logic operations during the
 //! lexing/tokenizing stage of a Kaba source code.
 
-use crate::error::ErrorVariant;
 use logos::{Lexer, Logos, Span};
 use std::fmt::Display;
 
@@ -13,13 +12,13 @@ use std::fmt::Display;
 ///
 /// Produces a vector of [`RichToken`] that contains additional
 /// information of a token.
-pub fn lex(program: &str) -> Result<Vec<RichToken>, ErrorVariant> {
-    let mut l = Token::lexer(program);
+pub fn lex(source_code: &str) -> Result<Vec<RichToken>, LexingError> {
+    let mut l = Token::lexer(source_code);
     let mut tokens = vec![];
 
     while let Some(token) = l.next() {
         let token = token.map_err(|e| match e {
-            ErrorVariant::Error => ErrorVariant::LexingUnknownToken {
+            LexingError::Default => LexingError::UnknownToken {
                 token: String::from(l.slice()),
                 span: l.span(),
             },
@@ -28,10 +27,16 @@ pub fn lex(program: &str) -> Result<Vec<RichToken>, ErrorVariant> {
 
         tokens.push(RichToken {
             kind: token?,
-            range: l.span(),
+            span: l.span(),
             value: String::from(l.slice()),
         })
     }
+
+    tokens.push(RichToken {
+        kind: Token::Eof,
+        span: source_code.len()..source_code.len(),
+        value: String::from("<EOF>"),
+    });
 
     Ok(tokens)
 }
@@ -42,14 +47,14 @@ pub fn lex(program: &str) -> Result<Vec<RichToken>, ErrorVariant> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct RichToken {
     pub kind: Token,
-    pub range: Span,
+    pub span: Span,
     pub value: String,
 }
 
 /// The list of all tokens that may exists in a valid Kaba
 /// source code.
 #[derive(Logos, Clone, Debug, PartialEq)]
-#[logos(skip r"[ \t\r\n\f]+", error = ErrorVariant)]
+#[logos(skip r"[ \t\r\n\f]+", error = LexingError)]
 #[rustfmt::skip]
 pub enum Token {
     #[regex("[a-zA-Z0-9_]+", identifier)]
@@ -60,7 +65,10 @@ pub enum Token {
     //
 
     #[regex("[0-9]+", priority = 2, callback = integer)]
-    Integer(i64),
+    Integer(i32),
+
+    #[regex(r"[0-9]+\.[0-9]+", callback = float)]
+    Float(f64),
 
     //
     // Keywords
@@ -83,6 +91,10 @@ pub enum Token {
     #[token("=")] Assign,
     #[token("(")] LParen,
     #[token(")")] RParen,
+
+    // This will always be appended as the last token
+    // inside token list
+    Eof,
 }
 
 impl Display for Token {
@@ -90,6 +102,7 @@ impl Display for Token {
         match self {
             Self::Identifier(_) => write!(f, "identifier"),
             Self::Integer(_) => write!(f, "integer"),
+            Self::Float(_) => write!(f, "float"),
             Self::Var => write!(f, "`var` keyword"),
             Self::Add => write!(f, "addition operator (`+`)"),
             Self::Sub => write!(f, "subtraction operator (`-`)"),
@@ -101,14 +114,16 @@ impl Display for Token {
             Self::Assign => write!(f, "assignment (`=`)"),
             Self::LParen => write!(f, "left parentheses (`(`)"),
             Self::RParen => write!(f, "right parentheses (`)`)"),
+
+            Self::Eof => write!(f, "end-of-file (EOF)"),
         }
     }
 }
 
-fn identifier(lex: &mut Lexer<Token>) -> Result<String, ErrorVariant> {
+fn identifier(lex: &mut Lexer<Token>) -> Result<String, LexingError> {
     let value = lex.slice();
     if value.chars().next().unwrap().is_numeric() {
-        return Err(ErrorVariant::LexingIdentifierStartsWithNumber {
+        return Err(LexingError::IdentifierStartsWithNumber {
             token: String::from(value),
             span: lex.span(),
         });
@@ -116,8 +131,51 @@ fn identifier(lex: &mut Lexer<Token>) -> Result<String, ErrorVariant> {
     Ok(String::from(value))
 }
 
-fn integer(lex: &mut Lexer<Token>) -> i64 {
+fn integer(lex: &mut Lexer<Token>) -> i32 {
     lex.slice().parse().unwrap()
+}
+
+fn float(lex: &mut Lexer<Token>) -> f64 {
+    lex.slice().parse().unwrap()
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub enum LexingError {
+    IdentifierStartsWithNumber {
+        token: String,
+        span: Span,
+    },
+    UnknownToken {
+        token: String,
+        span: Span,
+    },
+
+    #[default]
+    Default,
+}
+
+impl LexingError {
+    pub fn get_span(&self) -> Option<Span> {
+        match self {
+            Self::IdentifierStartsWithNumber { span, .. } => Some(span.clone()),
+            Self::UnknownToken { span, .. } => Some(span.clone()),
+            _ => None,
+        }
+    }
+}
+
+impl Display for LexingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::IdentifierStartsWithNumber { token, .. } => {
+                write!(f, "identifier can't start with number: `{token}`")
+            }
+            Self::UnknownToken { token, .. } => {
+                write!(f, "unknown token `{token}`")
+            }
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -135,7 +193,7 @@ mod tests {
 
             let tokens = lex_result.unwrap();
 
-            assert!(tokens.len() == 1);
+            assert!(tokens.len() == 2);
             assert_eq!(tokens[0].kind, Token::Identifier(String::from(c)));
         }
     }
@@ -162,8 +220,24 @@ mod tests {
 
             let tokens = lex_result.unwrap();
 
-            assert!(tokens.len() == 1);
+            assert!(tokens.len() == 2);
             assert_eq!(tokens[0].kind, Token::Integer(c.parse().unwrap()));
+        }
+    }
+
+    #[test]
+    fn test_lexing_float() {
+        let cases = ["123.5", "0.0723"];
+
+        for c in cases {
+            let lex_result = lex(c);
+
+            assert!(lex_result.is_ok());
+
+            let tokens = lex_result.unwrap();
+
+            assert!(tokens.len() == 2);
+            assert_eq!(tokens[0].kind, Token::Float(c.parse().unwrap()));
         }
     }
 }

@@ -4,8 +4,9 @@
 //! This module contains the high-level utility for the source
 //! code compilation procedure.
 
-use crate::{ast::Program as ProgramAst, error::ErrorVariant, lexer, parser, Error, Result};
+use crate::{ast::Program as ProgramAst, lexer, parser, semantic, Error, Result};
 use std::{
+    fmt::Display,
     fs,
     path::{Path, PathBuf},
 };
@@ -29,19 +30,23 @@ impl Compiler {
 
     /// Construct a compiler instance from a source code file path.
     pub fn from_source_code_file(file_path: &Path) -> Result<Self> {
-        if !matches!(file_path.extension().and_then(|e| e.to_str()), Some("kaba")) {
+        let extension = file_path.extension().and_then(|e| e.to_str());
+        if !matches!(extension, Some("kaba")) {
             return Err(Error {
                 file_path: PathBuf::from(file_path),
                 source_code: String::new(),
-                variant: Box::from(ErrorVariant::SourceCodeWrongExtension),
+                message: SourceCodeError::WrongExtension.to_string(),
+                span: None,
             });
         } else if !file_path.exists() {
+            let error = SourceCodeError::FileNotExist {
+                path: PathBuf::from(file_path),
+            };
             return Err(Error {
                 file_path: PathBuf::from(file_path),
                 source_code: String::new(),
-                variant: Box::from(ErrorVariant::SourceCodeFileNotExist {
-                    path: PathBuf::from(file_path),
-                }),
+                message: error.to_string(),
+                span: None,
             });
         }
 
@@ -54,13 +59,51 @@ impl Compiler {
     }
 
     /// Run the compilation process.
-    pub fn compile(&self) -> Result<ProgramAst> {
-        lexer::lex(&self.source_code)
-            .and_then(parser::parse)
-            .map_err(|e| Error {
-                file_path: self.file_path.clone().unwrap_or(PathBuf::new()),
-                source_code: self.source_code.clone(),
-                variant: Box::from(e),
-            })
+    pub fn compile(self) -> Result<ProgramAst> {
+        let tokens = lexer::lex(&self.source_code);
+        if let Err(e) = &tokens {
+            return Err(Error {
+                file_path: self.file_path.unwrap_or(PathBuf::new()),
+                source_code: String::from(&self.source_code),
+                message: e.to_string(),
+                span: e.get_span(),
+            });
+        }
+
+        let ast = parser::parse(tokens.unwrap());
+        if let Err(e) = &ast {
+            return Err(Error {
+                file_path: self.file_path.unwrap_or(PathBuf::new()),
+                source_code: self.source_code,
+                message: e.to_string(),
+                span: e.get_span(),
+            });
+        }
+
+        let checked_ast = semantic::check(ast.unwrap());
+        if let Err(e) = &checked_ast {
+            return Err(Error {
+                file_path: self.file_path.unwrap_or(PathBuf::new()),
+                source_code: self.source_code,
+                message: e.to_string(),
+                span: e.get_span(),
+            });
+        }
+
+        Ok(checked_ast.unwrap())
+    }
+}
+
+enum SourceCodeError {
+    WrongExtension,
+    FileNotExist { path: PathBuf },
+}
+
+impl Display for SourceCodeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::WrongExtension => write!(f, "Kaba source code file must have '.kaba' extension"),
+            Self::FileNotExist { path } => write!(f, "file '{}' is not exist", path.display()),
+        }
     }
 }

@@ -7,13 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Add support for floating numbers.
 - Add support for boolean data type.
 - Add support for `if-else` control flow.
 
+## [0.2.0]
+
+### Added
+
+- Support for floating numbers.
+- Support for semantic analysis.
+
+### Changed
+
+- Change integer literal limit from 64 bits to 32 bits.
+- Change error message format
+
 ## [0.1.2] - 2023-12-27
 
-- Fix versioning.
-- Fix group expression.
-- Fix source file errors output.
-- Add support for negative (`-`) operations.
+### Added
+
+- Support for negation (`-`) operations.
+
+### Fixed
+
+- Versioning.
+- Group expression.
+- Source file errors output.
