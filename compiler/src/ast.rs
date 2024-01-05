@@ -7,10 +7,7 @@
 //! `>= 0` statements.
 
 use logos::Span;
-use std::{
-    fmt::Display,
-    ops::{Add, Div, Mul, Neg, Sub},
-};
+use std::fmt::Display;
 
 /// The root of a Kaba source code's AST.
 #[derive(Debug, PartialEq)]
@@ -144,85 +141,7 @@ impl AstNode {
 pub enum Value {
     Integer(i32),
     Float(f64),
-}
-
-impl Add for Value {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        match self {
-            Value::Integer(l) => match rhs {
-                Value::Integer(r) => Value::Integer(l + r),
-                Value::Float(r) => Value::Float(f64::from(l) + r),
-            },
-            Value::Float(l) => match rhs {
-                Value::Integer(r) => Value::Float(l + f64::from(r)),
-                Value::Float(r) => Value::Float(l + r),
-            },
-        }
-    }
-}
-
-impl Sub for Value {
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        match self {
-            Value::Integer(l) => match rhs {
-                Value::Integer(r) => Value::Integer(l - r),
-                Value::Float(r) => Value::Float(f64::from(l) - r),
-            },
-            Value::Float(l) => match rhs {
-                Value::Integer(r) => Value::Float(l - f64::from(r)),
-                Value::Float(r) => Value::Float(l - r),
-            },
-        }
-    }
-}
-
-impl Mul for Value {
-    type Output = Self;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        match self {
-            Value::Integer(l) => match rhs {
-                Value::Integer(r) => Value::Integer(l * r),
-                Value::Float(r) => Value::Float(f64::from(l) * r),
-            },
-            Value::Float(l) => match rhs {
-                Value::Integer(r) => Value::Float(l * f64::from(r)),
-                Value::Float(r) => Value::Float(l * r),
-            },
-        }
-    }
-}
-
-impl Div for Value {
-    type Output = Self;
-
-    fn div(self, rhs: Self) -> Self::Output {
-        match self {
-            Value::Integer(l) => match rhs {
-                Value::Integer(r) => Value::Integer(l / r),
-                Value::Float(r) => Value::Float(f64::from(l) / r),
-            },
-            Value::Float(l) => match rhs {
-                Value::Integer(r) => Value::Float(l / f64::from(r)),
-                Value::Float(r) => Value::Float(l / r),
-            },
-        }
-    }
-}
-
-impl Neg for Value {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        match self {
-            Value::Integer(n) => Value::Integer(-n),
-            Value::Float(n) => Value::Float(-n),
-        }
-    }
+    Boolean(bool),
 }
 
 impl Display for Value {
@@ -230,6 +149,7 @@ impl Display for Value {
         match self {
             Value::Integer(n) => write!(f, "{n}"),
             Value::Float(n) => write!(f, "{n}"),
+            Value::Boolean(b) => write!(f, "{b}"),
         }
     }
 }

@@ -115,19 +115,91 @@ impl<'a> Runtime<'a> {
             AstNode::Literal { value, .. } => Ok(value),
             AstNode::FunctionCall { callee, args, .. } => self.run_function_call(&callee, args),
             AstNode::Add { lhs, rhs, .. } => {
-                Ok(self.run_expression(*lhs)? + self.run_expression(*rhs)?)
+                Ok(self.math_add(&self.run_expression(*lhs)?, &self.run_expression(*rhs)?))
             }
             AstNode::Sub { lhs, rhs, .. } => {
-                Ok(self.run_expression(*lhs)? - self.run_expression(*rhs)?)
+                Ok(self.math_sub(&self.run_expression(*lhs)?, &self.run_expression(*rhs)?))
             }
             AstNode::Mul { lhs, rhs, .. } => {
-                Ok(self.run_expression(*lhs)? * self.run_expression(*rhs)?)
+                Ok(self.math_mul(&self.run_expression(*lhs)?, &self.run_expression(*rhs)?))
             }
             AstNode::Div { lhs, rhs, .. } => {
-                Ok(self.run_expression(*lhs)? / self.run_expression(*rhs)?)
+                Ok(self.math_div(&self.run_expression(*lhs)?, &self.run_expression(*rhs)?))
             }
-            AstNode::Neg { child, .. } => Ok(-self.run_expression(*child)?),
+            AstNode::Neg { child, .. } => Ok(self.math_neg(&self.run_expression(*child)?)),
 
+            _ => unreachable!(),
+        }
+    }
+
+    fn math_add(&self, lhs: &Value, rhs: &Value) -> Value {
+        match lhs {
+            Value::Integer(l) => match rhs {
+                Value::Integer(r) => Value::Integer(l + r),
+                Value::Float(r) => Value::Float(f64::from(*l) + r),
+                _ => unreachable!(),
+            },
+            Value::Float(l) => match rhs {
+                Value::Integer(r) => Value::Float(l + f64::from(*r)),
+                Value::Float(r) => Value::Float(l + r),
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    fn math_sub(&self, lhs: &Value, rhs: &Value) -> Value {
+        match lhs {
+            Value::Integer(l) => match rhs {
+                Value::Integer(r) => Value::Integer(l - r),
+                Value::Float(r) => Value::Float(f64::from(*l) - r),
+                _ => unreachable!(),
+            },
+            Value::Float(l) => match rhs {
+                Value::Integer(r) => Value::Float(l - f64::from(*r)),
+                Value::Float(r) => Value::Float(l - r),
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    fn math_mul(&self, lhs: &Value, rhs: &Value) -> Value {
+        match lhs {
+            Value::Integer(l) => match rhs {
+                Value::Integer(r) => Value::Integer(l * r),
+                Value::Float(r) => Value::Float(f64::from(*l) * r),
+                _ => unreachable!(),
+            },
+            Value::Float(l) => match rhs {
+                Value::Integer(r) => Value::Float(l * f64::from(*r)),
+                Value::Float(r) => Value::Float(l * r),
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    fn math_div(&self, lhs: &Value, rhs: &Value) -> Value {
+        match lhs {
+            Value::Integer(l) => match rhs {
+                Value::Integer(r) => Value::Integer(l / r),
+                Value::Float(r) => Value::Float(f64::from(*l) / r),
+                _ => unreachable!(),
+            },
+            Value::Float(l) => match rhs {
+                Value::Integer(r) => Value::Float(l / f64::from(*r)),
+                Value::Float(r) => Value::Float(l / r),
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    fn math_neg(&self, child: &Value) -> Value {
+        match child {
+            Value::Integer(n) => Value::Integer(-n),
+            Value::Float(n) => Value::Float(-n),
             _ => unreachable!(),
         }
     }

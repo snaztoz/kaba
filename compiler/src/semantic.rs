@@ -258,6 +258,7 @@ impl SemanticChecker {
         match literal_value {
             Value::Integer(_) => Ok(BuiltinTypes::Int),
             Value::Float(_) => Ok(BuiltinTypes::Float),
+            Value::Boolean(_) => Ok(BuiltinTypes::Boolean),
         }
     }
 }
@@ -368,6 +369,7 @@ mod tests {
             ("var x: Int = 5;", BuiltinTypes::Int),
             ("var x: Int;", BuiltinTypes::Int),
             ("var x = -0.5;", BuiltinTypes::Float),
+            ("var x = true;", BuiltinTypes::Boolean),
         ];
 
         for (input, expected) in cases {
@@ -412,6 +414,10 @@ mod tests {
             indoc! {"
                 var x: Float;
                 x = 50;
+            "},
+            indoc! {"
+                var b: Bool = false;
+                b = true;
             "},
         ];
 
@@ -477,6 +483,7 @@ mod tests {
             "print(50 + print(90));",
             "100 - notExist;",
             "-(print);",
+            "-true;",
         ];
 
         for input in cases {

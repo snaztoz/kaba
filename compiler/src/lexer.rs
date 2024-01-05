@@ -70,6 +70,12 @@ pub enum Token {
     #[regex(r"[0-9]+\.[0-9]+", callback = float)]
     Float(f64),
 
+    #[token("true")]
+    BooleanTrue,
+
+    #[token("false")]
+    BooleanFalse,
+
     //
     // Keywords
     //
@@ -103,6 +109,8 @@ impl Display for Token {
             Self::Identifier(_) => write!(f, "identifier"),
             Self::Integer(_) => write!(f, "integer"),
             Self::Float(_) => write!(f, "float"),
+            Self::BooleanTrue => write!(f, "true"),
+            Self::BooleanFalse => write!(f, "false"),
             Self::Var => write!(f, "`var` keyword"),
             Self::Add => write!(f, "addition operator (`+`)"),
             Self::Sub => write!(f, "subtraction operator (`-`)"),

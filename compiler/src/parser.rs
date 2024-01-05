@@ -331,6 +331,20 @@ impl Parser {
                     span: token.span,
                 }
             }
+            Token::BooleanTrue => {
+                self.advance();
+                AstNode::Literal {
+                    value: Value::Boolean(true),
+                    span: token.span,
+                }
+            }
+            Token::BooleanFalse => {
+                self.advance();
+                AstNode::Literal {
+                    value: Value::Boolean(false),
+                    span: token.span,
+                }
+            }
 
             kind => {
                 return Err(ParsingError::UnexpectedToken {
@@ -852,6 +866,13 @@ mod tests {
                         span: 2..14,
                     }),
                     span: 0..15,
+                },
+            ),
+            (
+                "true;",
+                AstNode::Literal {
+                    value: Value::Boolean(true),
+                    span: 0..4,
                 },
             ),
         ];
