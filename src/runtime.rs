@@ -114,6 +114,24 @@ impl<'a> Runtime<'a> {
             AstNode::Identifier { name, .. } => self.get_variable_value(&name),
             AstNode::Literal { value, .. } => Ok(value),
             AstNode::FunctionCall { callee, args, .. } => self.run_function_call(&callee, args),
+            AstNode::Eq { lhs, rhs, .. } => {
+                Ok(self.run_eq(&self.run_expression(*lhs)?, &self.run_expression(*rhs)?))
+            }
+            AstNode::Neq { lhs, rhs, .. } => {
+                Ok(self.run_neq(&self.run_expression(*lhs)?, &self.run_expression(*rhs)?))
+            }
+            AstNode::Gt { lhs, rhs, .. } => {
+                Ok(self.run_gt(&self.run_expression(*lhs)?, &self.run_expression(*rhs)?))
+            }
+            AstNode::Gte { lhs, rhs, .. } => {
+                Ok(self.run_gte(&self.run_expression(*lhs)?, &self.run_expression(*rhs)?))
+            }
+            AstNode::Lt { lhs, rhs, .. } => {
+                Ok(self.run_lt(&self.run_expression(*lhs)?, &self.run_expression(*rhs)?))
+            }
+            AstNode::Lte { lhs, rhs, .. } => {
+                Ok(self.run_lte(&self.run_expression(*lhs)?, &self.run_expression(*rhs)?))
+            }
             AstNode::Add { lhs, rhs, .. } => {
                 Ok(self.math_add(&self.run_expression(*lhs)?, &self.run_expression(*rhs)?))
             }
@@ -129,6 +147,54 @@ impl<'a> Runtime<'a> {
             AstNode::Neg { child, .. } => Ok(self.math_neg(&self.run_expression(*child)?)),
 
             _ => unreachable!(),
+        }
+    }
+
+    fn run_eq(&self, lhs: &Value, rhs: &Value) -> Value {
+        if lhs == rhs {
+            Value::Boolean(true)
+        } else {
+            Value::Boolean(false)
+        }
+    }
+
+    fn run_neq(&self, lhs: &Value, rhs: &Value) -> Value {
+        if lhs != rhs {
+            Value::Boolean(true)
+        } else {
+            Value::Boolean(false)
+        }
+    }
+
+    fn run_gt(&self, lhs: &Value, rhs: &Value) -> Value {
+        if lhs > rhs {
+            Value::Boolean(true)
+        } else {
+            Value::Boolean(false)
+        }
+    }
+
+    fn run_gte(&self, lhs: &Value, rhs: &Value) -> Value {
+        if lhs >= rhs {
+            Value::Boolean(true)
+        } else {
+            Value::Boolean(false)
+        }
+    }
+
+    fn run_lt(&self, lhs: &Value, rhs: &Value) -> Value {
+        if lhs < rhs {
+            Value::Boolean(true)
+        } else {
+            Value::Boolean(false)
+        }
+    }
+
+    fn run_lte(&self, lhs: &Value, rhs: &Value) -> Value {
+        if lhs <= rhs {
+            Value::Boolean(true)
+        } else {
+            Value::Boolean(false)
         }
     }
 

@@ -30,6 +30,37 @@ pub enum AstNode {
         span: Span,
     },
 
+    Eq {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+    Neq {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+    Gt {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+    Gte {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+    Lt {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+    Lte {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+
     Add {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
@@ -90,6 +121,12 @@ impl AstNode {
         match self {
             Self::VariableDeclaration { span, .. }
             | Self::ValueAssignment { span, .. }
+            | Self::Eq { span, .. }
+            | Self::Neq { span, .. }
+            | Self::Gt { span, .. }
+            | Self::Gte { span, .. }
+            | Self::Lt { span, .. }
+            | Self::Lte { span, .. }
             | Self::Add { span, .. }
             | Self::Sub { span, .. }
             | Self::Mul { span, .. }
@@ -137,7 +174,7 @@ impl AstNode {
 
 /// The representation of each value that may exists in a Kaba
 /// source code, such as integer or string.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub enum Value {
     Integer(i32),
     Float(f64),

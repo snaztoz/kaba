@@ -98,6 +98,13 @@ pub enum Token {
     #[token("(")] LParen,
     #[token(")")] RParen,
 
+    #[token("==")] Eq,
+    #[token("!=")] Neq,
+    #[token(">")]  Gt,
+    #[token(">=")] Gte,
+    #[token("<")]  Lt,
+    #[token("<=")] Lte,
+
     // This will always be appended as the last token
     // inside token list
     Eof,
@@ -122,6 +129,12 @@ impl Display for Token {
             Self::Assign => write!(f, "assignment (`=`)"),
             Self::LParen => write!(f, "left parentheses (`(`)"),
             Self::RParen => write!(f, "right parentheses (`)`)"),
+            Self::Eq => write!(f, "equal operator (`==`)"),
+            Self::Neq => write!(f, "not equal operator (`!=`)"),
+            Self::Gt => write!(f, "greater than operator (`>`)"),
+            Self::Gte => write!(f, "greater than or equal operator (`>=`)"),
+            Self::Lt => write!(f, "less than operator (`<`)"),
+            Self::Lte => write!(f, "less than or equal operator (`<=`)"),
 
             Self::Eof => write!(f, "end-of-file (EOF)"),
         }

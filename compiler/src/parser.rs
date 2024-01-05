@@ -159,7 +159,105 @@ impl Parser {
     fn parse_expression(&mut self) -> Result<AstNode, ParsingError> {
         // TODO: make this rule starts from higher rule
 
-        self.parse_additive_expression()
+        self.parse_equality_expression()
+    }
+
+    fn parse_equality_expression(&mut self) -> Result<AstNode, ParsingError> {
+        // Parse first term
+
+        let mut child = self.parse_comparison_expression()?;
+
+        loop {
+            // Expecting "==" or "!=" (both are optional)
+
+            match self.get_current_token() {
+                Token::Eq => {
+                    self.skip(Token::Eq)?;
+
+                    let rhs = self.parse_comparison_expression()?;
+                    let span = child.get_span().start..rhs.get_span().end;
+
+                    child = AstNode::Eq {
+                        lhs: Box::new(child.unwrap_group()),
+                        rhs: Box::new(rhs.unwrap_group()),
+                        span,
+                    };
+                }
+                Token::Neq => {
+                    self.skip(Token::Neq)?;
+
+                    let rhs = self.parse_comparison_expression()?;
+                    let span = child.get_span().start..rhs.get_span().end;
+
+                    child = AstNode::Neq {
+                        lhs: Box::new(child.unwrap_group()),
+                        rhs: Box::new(rhs.unwrap_group()),
+                        span,
+                    };
+                }
+                _ => return Ok(child),
+            }
+        }
+    }
+
+    fn parse_comparison_expression(&mut self) -> Result<AstNode, ParsingError> {
+        // Parse first term
+
+        let child = self.parse_additive_expression()?;
+
+        // Expecting ">", ">=", "<" or "<=" (all are optional)
+
+        match self.get_current_token() {
+            Token::Gt => {
+                self.skip(Token::Gt)?;
+
+                let rhs = self.parse_additive_expression()?;
+                let span = child.get_span().start..rhs.get_span().end;
+
+                Ok(AstNode::Gt {
+                    lhs: Box::new(child.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                })
+            }
+            Token::Gte => {
+                self.skip(Token::Gte)?;
+
+                let rhs = self.parse_additive_expression()?;
+                let span = child.get_span().start..rhs.get_span().end;
+
+                Ok(AstNode::Gte {
+                    lhs: Box::new(child.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                })
+            }
+            Token::Lt => {
+                self.skip(Token::Lt)?;
+
+                let rhs = self.parse_additive_expression()?;
+                let span = child.get_span().start..rhs.get_span().end;
+
+                Ok(AstNode::Lt {
+                    lhs: Box::new(child.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                })
+            }
+            Token::Lte => {
+                self.skip(Token::Lte)?;
+
+                let rhs = self.parse_additive_expression()?;
+                let span = child.get_span().start..rhs.get_span().end;
+
+                Ok(AstNode::Lte {
+                    lhs: Box::new(child.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                })
+            }
+            _ => Ok(child),
+        }
     }
 
     fn parse_additive_expression(&mut self) -> Result<AstNode, ParsingError> {
@@ -873,6 +971,27 @@ mod tests {
                 AstNode::Literal {
                     value: Value::Boolean(true),
                     span: 0..4,
+                },
+            ),
+            (
+                "1 >= 5 == true;",
+                AstNode::Eq {
+                    lhs: Box::new(AstNode::Gte {
+                        lhs: Box::new(AstNode::Literal {
+                            value: Value::Integer(1),
+                            span: 0..1,
+                        }),
+                        rhs: Box::new(AstNode::Literal {
+                            value: Value::Integer(5),
+                            span: 5..6,
+                        }),
+                        span: 0..6,
+                    }),
+                    rhs: Box::new(AstNode::Literal {
+                        value: Value::Boolean(true),
+                        span: 10..14,
+                    }),
+                    span: 0..14,
                 },
             ),
         ];

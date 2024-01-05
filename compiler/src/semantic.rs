@@ -150,6 +150,15 @@ impl SemanticChecker {
 
     fn get_expression_type(&self, expression: &AstNode) -> Result<BuiltinTypes, SemanticError> {
         match expression {
+            AstNode::Eq { lhs, rhs, .. } | AstNode::Neq { lhs, rhs, .. } => {
+                self.get_equality_operation_type(lhs, rhs)
+            }
+
+            AstNode::Gt { lhs, rhs, .. }
+            | AstNode::Gte { lhs, rhs, .. }
+            | AstNode::Lt { lhs, rhs, .. }
+            | AstNode::Lte { lhs, rhs, .. } => self.get_comparison_operation_type(lhs, rhs),
+
             AstNode::Add { lhs, rhs, .. }
             | AstNode::Sub { lhs, rhs, .. }
             | AstNode::Mul { lhs, rhs, .. }
@@ -192,6 +201,52 @@ impl SemanticChecker {
         } else {
             Ok(BuiltinTypes::Float)
         }
+    }
+
+    fn get_equality_operation_type(
+        &self,
+        lhs: &AstNode,
+        rhs: &AstNode,
+    ) -> Result<BuiltinTypes, SemanticError> {
+        let lhs_type = self.get_expression_type(lhs)?;
+        let rhs_type = self.get_expression_type(rhs)?;
+
+        if lhs_type != rhs_type {
+            return Err(SemanticError::UnableToCompareTypeAWithTypeB {
+                type_a: lhs_type,
+                type_b: rhs_type,
+                span: lhs.get_span().clone(),
+            });
+        }
+
+        Ok(BuiltinTypes::Boolean)
+    }
+
+    fn get_comparison_operation_type(
+        &self,
+        lhs: &AstNode,
+        rhs: &AstNode,
+    ) -> Result<BuiltinTypes, SemanticError> {
+        let lhs_type = self.get_expression_type(lhs)?;
+        let rhs_type = self.get_expression_type(rhs)?;
+
+        if lhs_type != rhs_type {
+            return Err(SemanticError::UnableToCompareTypeAWithTypeB {
+                type_a: lhs_type,
+                type_b: rhs_type,
+                span: lhs.get_span().clone(),
+            });
+        } else if !lhs_type.is_number() {
+            return Err(SemanticError::NotANumber {
+                span: lhs.get_span().clone(),
+            });
+        } else if !rhs_type.is_number() {
+            return Err(SemanticError::NotANumber {
+                span: rhs.get_span().clone(),
+            });
+        }
+
+        Ok(BuiltinTypes::Boolean)
     }
 
     fn get_neg_operation_type(&self, child: &AstNode) -> Result<BuiltinTypes, SemanticError> {
@@ -276,6 +331,12 @@ pub enum SemanticError {
         span: Span,
     },
 
+    UnableToCompareTypeAWithTypeB {
+        type_a: BuiltinTypes,
+        type_b: BuiltinTypes,
+        span: Span,
+    },
+
     VariableAlreadyExist {
         name: String,
         span: Span,
@@ -311,6 +372,7 @@ impl SemanticError {
         match self {
             Self::UnableToInferVariableType { span, .. }
             | Self::UnableToAssignValueType { span, .. }
+            | Self::UnableToCompareTypeAWithTypeB { span, .. }
             | Self::VariableNotExist { span, .. }
             | Self::VariableAlreadyExist { span, .. }
             | Self::TypeNotExist { span, .. }
@@ -341,6 +403,13 @@ impl Display for SemanticError {
                     var_type
                 )
             }
+            Self::UnableToCompareTypeAWithTypeB { type_a, type_b, .. } => {
+                write!(
+                    f,
+                    "unable to compare the value of type `{type_a}` with type `{type_b}`",
+                )
+            }
+
             Self::VariableAlreadyExist { name, .. } => {
                 write!(f, "variable `{name}` already exists")
             }
@@ -462,6 +531,7 @@ mod tests {
             ("-5 + 50 * 200 / 7 - 999;", BuiltinTypes::Int),
             ("-5 + -0.25;", BuiltinTypes::Float),
             ("print(703 + 5 - 90 * 100 / 86 * 0.5);", BuiltinTypes::Void),
+            ("767 >= 900 == (45 < 67);", BuiltinTypes::Boolean),
         ];
 
         for (input, expected) in cases {
@@ -484,6 +554,8 @@ mod tests {
             "100 - notExist;",
             "-(print);",
             "-true;",
+            "true > false;",
+            "93 != 93.0;",
         ];
 
         for input in cases {
