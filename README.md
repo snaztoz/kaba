@@ -36,28 +36,40 @@ Usage instructions:
 
 As this is a really new project, it only has limited features for now:
 
-1. Variable creation (currently integer only)
+1. Variable creation
   ```text
   var x = 15;
   ```
 
-2. Value re-assign (Again, integer only for the time being)
+2. Support for integer and float numbers
+  ```text
+  var a = 5;
+  var b = 10.7;
+  var c = -(999);
+  ```
+
+3. Value re-assign
   ```text
   var x = 20;
   x = 999;
   ```
 
-3. Basic arithmetic operation (Division, Multiplication, Addition, Subtraction)
+4. Support for type notation
+  ```text
+  var x: Float = 5;
+  ```
+
+5. Basic arithmetic operation (Division, Multiplication, Addition, Subtraction)
   ```text
   23 + 5 * 30 / 2 - 9
   ```
 
-4. Grouped expression
+6. Grouped expression
   ```text
   52 * (2 + 3) / 3
   ```
 
-5. `print` function (there is no other function, and it is not yet supported to create a new one)
+7. `print` function (there is no other function, and it is not yet supported to create a new one)
   ```text
   var x = 101;
 
@@ -85,9 +97,8 @@ print(y);
 ## Next Goals
 
 Current priority:
-1. Better error handling.
-2. Control flow support (such as `if-else` and loop).
-3. Support for other data types, such as float and string.
+1. Control flow support (such as `if-else` and loop).
+2. Support for other data types, such as boolean and string.
 
 ## Attention
 

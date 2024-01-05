@@ -48,7 +48,7 @@ impl SemanticChecker {
                 }
 
                 expression => {
-                    self.check_expression_type(expression)?;
+                    self.get_expression_type(expression)?;
                 }
             }
         }
@@ -91,7 +91,7 @@ impl SemanticChecker {
         // Get value type
 
         let value_type = if let Some(expression) = value {
-            Some(self.check_expression_type(expression)?)
+            Some(self.get_expression_type(expression)?)
         } else {
             None
         };
@@ -134,8 +134,8 @@ impl SemanticChecker {
         value: &AstNode,
         span: &Span,
     ) -> Result<(), SemanticError> {
-        let lhs_type = self.check_expression_type(lhs)?;
-        let value_type = self.check_expression_type(value)?;
+        let lhs_type = self.get_expression_type(lhs)?;
+        let value_type = self.get_expression_type(value)?;
 
         if !value_type.is_assignable_to(&lhs_type) {
             return Err(SemanticError::UnableToAssignValueType {
@@ -148,34 +148,34 @@ impl SemanticChecker {
         Ok(())
     }
 
-    fn check_expression_type(&self, expression: &AstNode) -> Result<BuiltinTypes, SemanticError> {
+    fn get_expression_type(&self, expression: &AstNode) -> Result<BuiltinTypes, SemanticError> {
         match expression {
             AstNode::Add { lhs, rhs, .. }
             | AstNode::Sub { lhs, rhs, .. }
             | AstNode::Mul { lhs, rhs, .. }
-            | AstNode::Div { lhs, rhs, .. } => self.check_math_binary_operation(lhs, rhs),
+            | AstNode::Div { lhs, rhs, .. } => self.get_math_binary_operation_type(lhs, rhs),
 
-            AstNode::Neg { child, .. } => self.check_negation_operation(child),
+            AstNode::Neg { child, .. } => self.get_neg_operation_type(child),
 
             AstNode::Identifier { name, span } => self.get_identifier_type(name, span),
 
             AstNode::Literal { value, .. } => self.get_literal_type(value),
 
             AstNode::FunctionCall { callee, args, span } => {
-                self.check_function_call(callee, args, span)
+                self.get_function_call_return_type(callee, args, span)
             }
 
             _ => unreachable!(),
         }
     }
 
-    fn check_math_binary_operation(
+    fn get_math_binary_operation_type(
         &self,
         lhs: &AstNode,
         rhs: &AstNode,
     ) -> Result<BuiltinTypes, SemanticError> {
-        let lhs_type = self.check_expression_type(lhs)?;
-        let rhs_type = self.check_expression_type(rhs)?;
+        let lhs_type = self.get_expression_type(lhs)?;
+        let rhs_type = self.get_expression_type(rhs)?;
 
         if !lhs_type.is_number() {
             return Err(SemanticError::NotANumber {
@@ -194,8 +194,8 @@ impl SemanticChecker {
         }
     }
 
-    fn check_negation_operation(&self, child: &AstNode) -> Result<BuiltinTypes, SemanticError> {
-        let child_type = self.check_expression_type(child)?;
+    fn get_neg_operation_type(&self, child: &AstNode) -> Result<BuiltinTypes, SemanticError> {
+        let child_type = self.get_expression_type(child)?;
         if !child_type.is_number() {
             return Err(SemanticError::NotANumber {
                 span: child.get_span(),
@@ -204,13 +204,13 @@ impl SemanticChecker {
         Ok(child_type)
     }
 
-    fn check_function_call(
+    fn get_function_call_return_type(
         &self,
         callee: &AstNode,
         args: &[AstNode],
         span: &Span,
     ) -> Result<BuiltinTypes, SemanticError> {
-        let callee_type = self.check_expression_type(callee)?;
+        let callee_type = self.get_expression_type(callee)?;
 
         if let BuiltinTypes::Callable {
             parameters,
@@ -226,7 +226,7 @@ impl SemanticChecker {
             }
 
             for i in 0..parameters.len() {
-                let arg_type = self.check_expression_type(&args[i])?;
+                let arg_type = self.get_expression_type(&args[i])?;
                 if !arg_type.is_assignable_to(&parameters[i]) {
                     return Err(SemanticError::UnableToAssignValueType {
                         var_type: parameters[i].to_string(),
@@ -463,7 +463,7 @@ mod tests {
             let ast = parser::parse(tokens).unwrap();
 
             let checker = SemanticChecker::new();
-            let result = checker.check_expression_type(&ast.statements[0]);
+            let result = checker.get_expression_type(&ast.statements[0]);
 
             assert!(result.is_ok());
             assert_eq!(result.unwrap(), expected);
