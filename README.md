@@ -64,16 +64,41 @@ As this is a really new project, it only has limited features for now:
   23 + 5 * 30 / 2 - 9
   ```
 
-6. Grouped expression
+6. Equality and comparison operation
+  ```text
+  50 == 50;
+  50 != 10;
+  43 > 2;
+  2.5 >= 2.5;
+  100 < 101;
+  7.3 <= 10;
+  ```
+
+7. Grouped expression
   ```text
   52 * (2 + 3) / 3
   ```
 
-7. `print` function (there is no other function, and it is not yet supported to create a new one)
+8. `print` function (there is no other function, and it is not yet supported to create a new one)
   ```text
   var x = 101;
 
   print(x);
+  ```
+
+9. Conditional branch
+  ```text
+  var condition = 50 > 10;
+  var condition2 = 50 > 20;
+
+  if condition {
+    print(1);
+    if condition2 {
+      print(2);
+    }
+  } else {
+    print(0);
+  }
   ```
 
 ## Example
@@ -97,13 +122,12 @@ print(y);
 ## Next Goals
 
 Current priority:
-1. Control flow support (such as `if-else` and loop).
-2. Support for other data types, such as boolean and string.
+1. Control flow support (such as loop).
+2. Support for other data types, such as string.
 
 ## Attention
 
 1. All statements must be terminated with semicolon (`;`).
-2. There is no garbage collector yet, so don't create too many variables for now🤣.
 
 ## License
 
