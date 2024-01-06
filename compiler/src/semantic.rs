@@ -219,7 +219,7 @@ impl SemanticChecker {
             });
         }
 
-        Ok(BuiltinTypes::Boolean)
+        Ok(BuiltinTypes::Bool)
     }
 
     fn get_comparison_operation_type(
@@ -246,7 +246,7 @@ impl SemanticChecker {
             });
         }
 
-        Ok(BuiltinTypes::Boolean)
+        Ok(BuiltinTypes::Bool)
     }
 
     fn get_neg_operation_type(&self, child: &AstNode) -> Result<BuiltinTypes, SemanticError> {
@@ -313,7 +313,7 @@ impl SemanticChecker {
         match literal_value {
             Value::Integer(_) => Ok(BuiltinTypes::Int),
             Value::Float(_) => Ok(BuiltinTypes::Float),
-            Value::Boolean(_) => Ok(BuiltinTypes::Boolean),
+            Value::Boolean(_) => Ok(BuiltinTypes::Bool),
         }
     }
 }
@@ -438,7 +438,7 @@ mod tests {
             ("var x: Int = 5;", BuiltinTypes::Int),
             ("var x: Int;", BuiltinTypes::Int),
             ("var x = -0.5;", BuiltinTypes::Float),
-            ("var x = true;", BuiltinTypes::Boolean),
+            ("var x = true;", BuiltinTypes::Bool),
         ];
 
         for (input, expected) in cases {
@@ -531,7 +531,7 @@ mod tests {
             ("-5 + 50 * 200 / 7 - 999;", BuiltinTypes::Int),
             ("-5 + -0.25;", BuiltinTypes::Float),
             ("print(703 + 5 - 90 * 100 / 86 * 0.5);", BuiltinTypes::Void),
-            ("767 >= 900 == (45 < 67);", BuiltinTypes::Boolean),
+            ("767 >= 900 == (45 < 67);", BuiltinTypes::Bool),
         ];
 
         for (input, expected) in cases {
