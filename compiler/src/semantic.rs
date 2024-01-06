@@ -4,10 +4,13 @@
 //! This module contains the implementation for semantic analysis
 //! stage of the compiler.
 
+use self::scope::Scope;
 use crate::ast::{AstNode, Program as ProgramAst, Value};
 use builtin::{self, types::Types as BuiltinTypes};
 use logos::Span;
-use std::{collections::HashMap, fmt::Display, str::FromStr};
+use std::{fmt::Display, str::FromStr};
+
+mod scope;
 
 pub fn check(ast: ProgramAst) -> Result<ProgramAst, SemanticError> {
     let mut checker = SemanticChecker::new();
@@ -16,16 +19,14 @@ pub fn check(ast: ProgramAst) -> Result<ProgramAst, SemanticError> {
 }
 
 struct SemanticChecker {
-    identifiers: HashMap<String, BuiltinTypes>,
+    scopes: Vec<Scope>,
 }
 
 impl SemanticChecker {
     fn new() -> Self {
-        let mut identifiers = HashMap::new();
-
-        identifiers.extend(builtin::functions::get_types());
-
-        Self { identifiers }
+        Self {
+            scopes: vec![Scope::new_builtin_scope(), Scope::new_global_scope()],
+        }
     }
 
     fn check(&mut self, ast: &ProgramAst) -> Result<(), SemanticError> {
@@ -66,8 +67,13 @@ impl SemanticChecker {
         let (identifier_name, identifier_span) = identifier.unwrap_identifier();
 
         // Can't have the same variable be declared multiple times
+        // in the same scope
 
-        if self.identifiers.contains_key(&identifier_name) {
+        if self
+            .get_current_scope()
+            .symbols
+            .contains_key(&identifier_name)
+        {
             return Err(SemanticError::VariableAlreadyExist {
                 name: identifier_name,
                 span: identifier_span,
@@ -122,8 +128,7 @@ impl SemanticChecker {
 
         // Save variable information
 
-        self.identifiers
-            .insert(identifier_name, var_type.or(value_type).unwrap());
+        self.insert_to_current_scope_symbols(&identifier_name, var_type.or(value_type).unwrap());
 
         Ok(())
     }
@@ -300,13 +305,16 @@ impl SemanticChecker {
     }
 
     fn get_identifier_type(&self, name: &str, span: &Span) -> Result<BuiltinTypes, SemanticError> {
-        self.identifiers
-            .get(name)
-            .cloned()
-            .ok_or(SemanticError::VariableNotExist {
-                name: String::from(name),
-                span: span.clone(),
-            })
+        for scope in self.scopes.iter().rev() {
+            if let Some(t) = scope.symbols.get(name) {
+                return Ok(t.clone());
+            }
+        }
+
+        Err(SemanticError::VariableNotExist {
+            name: String::from(name),
+            span: span.clone(),
+        })
     }
 
     fn get_literal_type(&self, literal_value: &Value) -> Result<BuiltinTypes, SemanticError> {
@@ -315,6 +323,17 @@ impl SemanticChecker {
             Value::Float(_) => Ok(BuiltinTypes::Float),
             Value::Boolean(_) => Ok(BuiltinTypes::Bool),
         }
+    }
+
+    fn get_current_scope(&self) -> &Scope {
+        &self.scopes[self.scopes.len() - 1]
+    }
+
+    fn insert_to_current_scope_symbols(&mut self, name: &str, symbol_type: BuiltinTypes) {
+        let last_index = self.scopes.len() - 1;
+        self.scopes[last_index]
+            .symbols
+            .insert(String::from(name), symbol_type);
     }
 }
 
@@ -403,7 +422,7 @@ impl Display for SemanticError {
                     format!("unable to compare the value of type `{type_a}` with type `{type_b}`")
                 }
                 Self::VariableAlreadyExist { name, .. } => {
-                    format!("variable `{name}` already exists")
+                    format!("variable `{name}` already exists in the current scope")
                 }
                 Self::VariableNotExist { name, .. } => {
                     format!("variable `{name}` is not exist")
@@ -448,7 +467,10 @@ mod tests {
             let result = checker.check(&ast);
 
             assert!(result.is_ok());
-            assert_eq!(*checker.identifiers.get("x").unwrap(), expected);
+            assert_eq!(
+                *checker.get_current_scope().symbols.get("x").unwrap(),
+                expected
+            );
         }
     }
 
