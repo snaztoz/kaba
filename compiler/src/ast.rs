@@ -30,6 +30,17 @@ pub enum AstNode {
         span: Span,
     },
 
+    If {
+        condition: Box<AstNode>,
+        body: Vec<AstNode>,
+        or_else: Option<Box<AstNode>>,
+        span: Span,
+    },
+    Else {
+        body: Vec<AstNode>,
+        span: Span,
+    },
+
     Eq {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
@@ -121,6 +132,8 @@ impl AstNode {
         match self {
             Self::VariableDeclaration { span, .. }
             | Self::ValueAssignment { span, .. }
+            | Self::If { span, .. }
+            | Self::Else { span, .. }
             | Self::Eq { span, .. }
             | Self::Neq { span, .. }
             | Self::Gt { span, .. }

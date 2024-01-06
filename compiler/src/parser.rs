@@ -47,8 +47,8 @@ impl Parser {
 
         if self.current_token_is(Token::Var) {
             return self.parse_variable_declaration();
-        } else {
-            // TODO: support other statements
+        } else if self.current_token_is(Token::If) {
+            return self.parse_conditional_branch();
         }
 
         // Expecting expression
@@ -154,6 +154,103 @@ impl Parser {
                 span: token.span,
             }),
         }
+    }
+
+    fn parse_conditional_branch(&mut self) -> Result<AstNode, ParsingError> {
+        let start = self.get_current_rich_token().span.start;
+        let mut end;
+        self.skip(Token::If)?;
+
+        // Expecting boolean expression
+
+        let condition = self.parse_expression()?;
+
+        // Expecting "{"
+
+        self.skip(Token::LBrace)?;
+
+        // Expecting 0 >= statements, delimited with "}"
+
+        let mut statements = vec![];
+        loop {
+            if self.current_token_is(Token::RBrace) {
+                break;
+            }
+
+            let statement = self.parse_statement()?;
+            statements.push(statement);
+        }
+
+        end = self.get_current_rich_token().span.end;
+
+        // Expecting "}"
+
+        self.skip(Token::RBrace)?;
+
+        // Expecting >= 0 "else if" or 1 "else"
+
+        let or_else = if self.current_token_is(Token::Else) {
+            let else_start = self.get_current_rich_token().span.start;
+            self.skip(Token::Else)?;
+
+            let token = self.get_current_rich_token();
+            match token.kind {
+                Token::If => {
+                    // Expecting "else if ..." statement
+
+                    let alt = self.parse_conditional_branch()?;
+                    end = alt.get_span().end;
+
+                    Some(Box::new(alt))
+                }
+
+                Token::LBrace => {
+                    // Expecting "{"
+
+                    self.skip(Token::LBrace)?;
+
+                    // Expecting 0 >= statements, delimited with "}"
+
+                    let mut statements = vec![];
+                    loop {
+                        if self.current_token_is(Token::RBrace) {
+                            break;
+                        }
+                        let statement = self.parse_statement()?;
+                        statements.push(statement);
+                    }
+
+                    let else_end = self.get_current_rich_token().span.end;
+                    end = else_end;
+
+                    // Expecting "}"
+
+                    self.skip(Token::RBrace)?;
+
+                    Some(Box::new(AstNode::Else {
+                        body: statements,
+                        span: else_start..else_end,
+                    }))
+                }
+
+                kind => {
+                    return Err(ParsingError::UnexpectedToken {
+                        expected: Token::Else,
+                        found: kind.clone(),
+                        span: token.span,
+                    });
+                }
+            }
+        } else {
+            None
+        };
+
+        Ok(AstNode::If {
+            condition: Box::new(condition),
+            body: statements,
+            or_else,
+            span: start..end,
+        })
     }
 
     fn parse_expression(&mut self) -> Result<AstNode, ParsingError> {
@@ -557,7 +654,7 @@ impl Display for ParsingError {
                 Self::UnexpectedToken {
                     expected, found, ..
                 } => {
-                    format!("expecting to find {expected} but found {found} instead",)
+                    format!("expecting to find {expected} but get {found} instead",)
                 }
             }
         )
@@ -731,6 +828,77 @@ mod tests {
                         span: 5..7,
                     }),
                     span: 0..8,
+                },
+            ),
+        ];
+
+        for (input, expected) in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let result = parse(tokens);
+
+            assert!(result.is_ok());
+            assert_eq!(
+                result.unwrap(),
+                ProgramAst {
+                    statements: vec![expected]
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn test_parsing_conditional_branch() {
+        let cases = [
+            (
+                "if 15 > 10 { print(1); }",
+                AstNode::If {
+                    condition: Box::new(AstNode::Gt {
+                        lhs: Box::new(AstNode::Literal {
+                            value: Value::Integer(15),
+                            span: 3..5,
+                        }),
+                        rhs: Box::new(AstNode::Literal {
+                            value: Value::Integer(10),
+                            span: 8..10,
+                        }),
+                        span: 3..10,
+                    }),
+                    body: vec![AstNode::FunctionCall {
+                        callee: Box::new(AstNode::Identifier {
+                            name: String::from("print"),
+                            span: 13..18,
+                        }),
+                        args: vec![AstNode::Literal {
+                            value: Value::Integer(1),
+                            span: 19..20,
+                        }],
+                        span: 13..21,
+                    }],
+                    or_else: None,
+                    span: 0..24,
+                },
+            ),
+            (
+                "if false {} else if false {} else {}",
+                AstNode::If {
+                    condition: Box::new(AstNode::Literal {
+                        value: Value::Boolean(false),
+                        span: 3..8,
+                    }),
+                    body: vec![],
+                    or_else: Some(Box::new(AstNode::If {
+                        condition: Box::new(AstNode::Literal {
+                            value: Value::Boolean(false),
+                            span: 20..25,
+                        }),
+                        body: vec![],
+                        or_else: Some(Box::new(AstNode::Else {
+                            body: vec![],
+                            span: 29..36,
+                        })),
+                        span: 17..36,
+                    })),
+                    span: 0..36,
                 },
             ),
         ];

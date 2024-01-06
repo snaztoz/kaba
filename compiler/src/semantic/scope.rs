@@ -24,9 +24,17 @@ impl Scope {
             scope_type: ScopeType::Global,
         }
     }
+
+    pub fn new_conditional_scope() -> Self {
+        Self {
+            symbols: HashMap::new(),
+            scope_type: ScopeType::Conditional,
+        }
+    }
 }
 
 pub enum ScopeType {
     Builtin,
     Global,
+    Conditional,
 }

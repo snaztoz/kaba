@@ -80,7 +80,9 @@ pub enum Token {
     // Keywords
     //
 
-    #[token("var")] Var,
+    #[token("var")]  Var,
+    #[token("if")]   If,
+    #[token("else")] Else,
 
     //
     // Symbols
@@ -97,6 +99,8 @@ pub enum Token {
     #[token("=")] Assign,
     #[token("(")] LParen,
     #[token(")")] RParen,
+    #[token("{")] LBrace,
+    #[token("}")] RBrace,
 
     #[token("==")] Eq,
     #[token("!=")] Neq,
@@ -119,6 +123,8 @@ impl Display for Token {
             Self::BooleanTrue => write!(f, "true"),
             Self::BooleanFalse => write!(f, "false"),
             Self::Var => write!(f, "`var` keyword"),
+            Self::If => write!(f, "`if` keyword"),
+            Self::Else => write!(f, "`else` keyword"),
             Self::Add => write!(f, "addition operator (`+`)"),
             Self::Sub => write!(f, "subtraction operator (`-`)"),
             Self::Mul => write!(f, "multiplication operator (`*`)"),
@@ -129,6 +135,8 @@ impl Display for Token {
             Self::Assign => write!(f, "assignment (`=`)"),
             Self::LParen => write!(f, "left parentheses (`(`)"),
             Self::RParen => write!(f, "right parentheses (`)`)"),
+            Self::LBrace => write!(f, "left brace (`{{`)"),
+            Self::RBrace => write!(f, "right brace (`}}`)"),
             Self::Eq => write!(f, "equal operator (`==`)"),
             Self::Neq => write!(f, "not equal operator (`!=`)"),
             Self::Gt => write!(f, "greater than operator (`>`)"),

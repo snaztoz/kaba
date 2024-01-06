@@ -14,7 +14,7 @@ mod scope;
 
 pub fn check(ast: ProgramAst) -> Result<ProgramAst, SemanticError> {
     let mut checker = SemanticChecker::new();
-    checker.check(&ast)?;
+    checker.check(&ast.statements)?;
     Ok(ast)
 }
 
@@ -29,8 +29,8 @@ impl SemanticChecker {
         }
     }
 
-    fn check(&mut self, ast: &ProgramAst) -> Result<(), SemanticError> {
-        for statement in &ast.statements {
+    fn check(&mut self, statements: &[AstNode]) -> Result<(), SemanticError> {
+        for statement in statements {
             match statement {
                 AstNode::VariableDeclaration {
                     identifier,
@@ -47,6 +47,13 @@ impl SemanticChecker {
                 AstNode::ValueAssignment { lhs, value, span } => {
                     self.check_value_assignment(lhs, value, span)?
                 }
+
+                AstNode::If {
+                    condition,
+                    body,
+                    or_else,
+                    ..
+                } => self.check_conditional_branch(condition, body, &or_else.as_deref())?,
 
                 expression => {
                     self.get_expression_type(expression)?;
@@ -148,6 +155,54 @@ impl SemanticChecker {
                 value_type: value_type.to_string(),
                 span: span.clone(),
             });
+        }
+
+        Ok(())
+    }
+
+    fn check_conditional_branch(
+        &mut self,
+        condition: &AstNode,
+        body: &[AstNode],
+        or_else: &Option<&AstNode>,
+    ) -> Result<(), SemanticError> {
+        // Expecting boolean type for the condition
+
+        if self.get_expression_type(condition)? != BuiltinTypes::Bool {
+            return Err(SemanticError::NotABoolean {
+                span: condition.get_span().clone(),
+            });
+        }
+
+        // Check all statements inside the body with a new scope
+
+        self.scopes.push(Scope::new_conditional_scope());
+        self.check(body)?;
+        self.scopes.pop();
+
+        if or_else.is_none() {
+            return Ok(());
+        }
+
+        match or_else.unwrap() {
+            AstNode::If {
+                condition,
+                body,
+                or_else,
+                ..
+            } => {
+                self.check_conditional_branch(condition, body, &or_else.as_deref())?;
+            }
+
+            AstNode::Else { body, .. } => {
+                // Check all statements inside the body with a new scope
+
+                self.scopes.push(Scope::new_conditional_scope());
+                self.check(body)?;
+                self.scopes.pop();
+            }
+
+            _ => unreachable!(),
         }
 
         Ok(())
@@ -375,6 +430,10 @@ pub enum SemanticError {
         span: Span,
     },
 
+    NotABoolean {
+        span: Span,
+    },
+
     NotAFunction {
         span: Span,
     },
@@ -396,6 +455,7 @@ impl SemanticError {
             | Self::VariableAlreadyExist { span, .. }
             | Self::TypeNotExist { span, .. }
             | Self::NotANumber { span, .. }
+            | Self::NotABoolean { span, .. }
             | Self::NotAFunction { span, .. }
             | Self::FunctionArgumentCountMismatch { span, .. } => Some(span.clone()),
         }
@@ -422,16 +482,19 @@ impl Display for SemanticError {
                     format!("unable to compare the value of type `{type_a}` with type `{type_b}`")
                 }
                 Self::VariableAlreadyExist { name, .. } => {
-                    format!("variable `{name}` already exists in the current scope")
+                    format!("variable `{name}` already exists in current scope")
                 }
                 Self::VariableNotExist { name, .. } => {
-                    format!("variable `{name}` is not exist")
+                    format!("variable `{name}` is not exist in current scope")
                 }
                 Self::TypeNotExist { name, .. } => {
                     format!("type `{name}` is not exist")
                 }
                 Self::NotANumber { .. } => {
                     "not a number".to_string()
+                }
+                Self::NotABoolean { .. } => {
+                    "not a boolean".to_string()
                 }
                 Self::NotAFunction { .. } => {
                     "not a function".to_string()
@@ -464,7 +527,7 @@ mod tests {
             let ast = parser::parse(tokens).unwrap();
 
             let mut checker = SemanticChecker::new();
-            let result = checker.check(&ast);
+            let result = checker.check(&ast.statements);
 
             assert!(result.is_ok());
             assert_eq!(
@@ -488,7 +551,7 @@ mod tests {
             let ast = parser::parse(tokens).unwrap();
 
             let mut checker = SemanticChecker::new();
-            let result = checker.check(&ast);
+            let result = checker.check(&ast.statements);
 
             assert!(result.is_err());
         }
@@ -516,7 +579,7 @@ mod tests {
             let ast = parser::parse(tokens).unwrap();
 
             let mut checker = SemanticChecker::new();
-            let result = checker.check(&ast);
+            let result = checker.check(&ast.statements);
 
             assert!(result.is_ok());
         }
@@ -540,7 +603,82 @@ mod tests {
             let ast = parser::parse(tokens).unwrap();
 
             let mut checker = SemanticChecker::new();
-            let result = checker.check(&ast);
+            let result = checker.check(&ast.statements);
+
+            assert!(result.is_err());
+        }
+    }
+
+    #[test]
+    fn test_conditional_branch() {
+        let cases = [
+            indoc! {"
+                var condition1 = 5 < 10;
+                var condition2 = 0.5 < 0.75;
+
+                if condition1 {
+                    print(condition1);
+                    print(1);
+                } else if condition2 {
+                    print(condition2);
+                    print(2);
+                } else {
+                    print(0);
+                }
+            "},
+            indoc! {"
+                if 1 + 1 == 2 {
+                    if 2 + 2 == 4 {
+                        if 3 + 3 == 6 {
+                            print(true);
+                        }
+                    }
+                }
+            "},
+        ];
+
+        for input in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let ast = parser::parse(tokens).unwrap();
+
+            let mut checker = SemanticChecker::new();
+            let result = checker.check(&ast.statements);
+
+            assert!(result.is_ok());
+        }
+    }
+
+    #[test]
+    fn test_invalid_conditional_branch() {
+        let cases = [
+            indoc! {"
+                if true {
+                    var x = 50;
+                    print(x);
+                }
+
+                print(x);
+            "},
+            indoc! {"
+                if 1 + 1 {
+                    print(1);
+                }
+            "},
+            indoc! {"
+                if true {
+                    var x = 50;
+                } else {
+                    print(x);
+                }
+            "},
+        ];
+
+        for input in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let ast = parser::parse(tokens).unwrap();
+
+            let mut checker = SemanticChecker::new();
+            let result = checker.check(&ast.statements);
 
             assert!(result.is_err());
         }
@@ -584,7 +722,7 @@ mod tests {
             let ast = parser::parse(tokens).unwrap();
 
             let mut checker = SemanticChecker::new();
-            let result = checker.check(&ast);
+            let result = checker.check(&ast.statements);
 
             assert!(result.is_err());
         }
