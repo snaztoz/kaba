@@ -187,15 +187,19 @@ impl LexingError {
 
 impl Display for LexingError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::IdentifierStartsWithNumber { token, .. } => {
-                write!(f, "identifier can't start with number: `{token}`")
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::IdentifierStartsWithNumber { token, .. } => {
+                    format!("identifier can't start with number: `{token}`")
+                }
+                Self::UnknownToken { token, .. } => {
+                    format!("unknown token `{token}`")
+                }
+                _ => unreachable!(),
             }
-            Self::UnknownToken { token, .. } => {
-                write!(f, "unknown token `{token}`")
-            }
-            _ => unreachable!(),
-        }
+        )
     }
 }
 

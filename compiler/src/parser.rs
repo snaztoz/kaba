@@ -550,13 +550,17 @@ impl ParsingError {
 
 impl Display for ParsingError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::UnexpectedToken {
-                expected, found, ..
-            } => {
-                write!(f, "expecting to find {expected} but found {found} instead",)
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::UnexpectedToken {
+                    expected, found, ..
+                } => {
+                    format!("expecting to find {expected} but found {found} instead",)
+                }
             }
-        }
+        )
     }
 }
 

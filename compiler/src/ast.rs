@@ -183,10 +183,14 @@ pub enum Value {
 
 impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Value::Integer(n) => write!(f, "{n}"),
-            Value::Float(n) => write!(f, "{n}"),
-            Value::Boolean(b) => write!(f, "{b}"),
-        }
+        write!(
+            f,
+            "{}",
+            match self {
+                Value::Integer(n) => format!("{n}"),
+                Value::Float(n) => format!("{n}"),
+                Value::Boolean(b) => format!("{b}"),
+            }
+        )
     }
 }

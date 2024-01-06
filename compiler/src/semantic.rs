@@ -215,7 +215,7 @@ impl SemanticChecker {
             return Err(SemanticError::UnableToCompareTypeAWithTypeB {
                 type_a: lhs_type,
                 type_b: rhs_type,
-                span: lhs.get_span().clone(),
+                span: lhs.get_span().clone().start..rhs.get_span().clone().end,
             });
         }
 
@@ -234,7 +234,7 @@ impl SemanticChecker {
             return Err(SemanticError::UnableToCompareTypeAWithTypeB {
                 type_a: lhs_type,
                 type_b: rhs_type,
-                span: lhs.get_span().clone(),
+                span: lhs.get_span().clone().start..rhs.get_span().clone().end,
             });
         } else if !lhs_type.is_number() {
             return Err(SemanticError::NotANumber {
@@ -385,44 +385,43 @@ impl SemanticError {
 
 impl Display for SemanticError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::UnableToInferVariableType { name, .. } => {
-                write!(
-                    f,
-                    "unable to infer the type of variable `{name}`. Please provide a type or initial value",
-                )
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::UnableToInferVariableType { name, .. } => {
+                    format!("unable to infer the type of variable `{name}` because of no type or initial value were provided")
+                }
+                Self::UnableToAssignValueType {
+                    var_type,
+                    value_type,
+                    ..
+                } => {
+                    format!("unable to assign value of type `{value_type}` to type `{var_type}`")
+                }
+                Self::UnableToCompareTypeAWithTypeB { type_a, type_b, .. } => {
+                    format!("unable to compare the value of type `{type_a}` with type `{type_b}`")
+                }
+                Self::VariableAlreadyExist { name, .. } => {
+                    format!("variable `{name}` already exists")
+                }
+                Self::VariableNotExist { name, .. } => {
+                    format!("variable `{name}` is not exist")
+                }
+                Self::TypeNotExist { name, .. } => {
+                    format!("type `{name}` is not exist")
+                }
+                Self::NotANumber { .. } => {
+                    "not a number".to_string()
+                }
+                Self::NotAFunction { .. } => {
+                    "not a function".to_string()
+                }
+                Self::FunctionArgumentCountMismatch { expecting, get, .. } => {
+                    format!("expecting {expecting} argument(s) but get {get} instead")
+                }
             }
-            Self::UnableToAssignValueType {
-                var_type,
-                value_type,
-                ..
-            } => {
-                write!(
-                    f,
-                    "unable to assign value of type `{value_type}` to type `{}`",
-                    var_type
-                )
-            }
-            Self::UnableToCompareTypeAWithTypeB { type_a, type_b, .. } => {
-                write!(
-                    f,
-                    "unable to compare the value of type `{type_a}` with type `{type_b}`",
-                )
-            }
-
-            Self::VariableAlreadyExist { name, .. } => {
-                write!(f, "variable `{name}` already exists")
-            }
-            Self::VariableNotExist { name, .. } => write!(f, "variable `{name}` is not exists"),
-            Self::TypeNotExist { name, .. } => write!(f, "type `{name}` is not exists"),
-
-            Self::NotANumber { .. } => write!(f, "not a number"),
-            Self::NotAFunction { .. } => write!(f, "not a function"),
-
-            Self::FunctionArgumentCountMismatch { expecting, get, .. } => {
-                write!(f, "expecting {expecting} argument(s) but get {get} instead")
-            }
-        }
+        )
     }
 }
 

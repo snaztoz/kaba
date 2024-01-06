@@ -121,6 +121,7 @@ name = "compiler"
 version = "0.2.0"
 dependencies = [
  "builtin",
+ "colored",
  "indoc",
  "logos",
 ]
