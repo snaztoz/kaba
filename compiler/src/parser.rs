@@ -33,13 +33,47 @@ impl Parser {
     fn parse(&mut self) -> Result<ProgramAst, ParsingError> {
         let mut statements = vec![];
 
-        // don't count EOF token
-        while self.cursor < self.tokens.len() - 1 {
+        loop {
+            if self.current_token_is(Token::Eof) {
+                break;
+            }
             let statement = self.parse_statement()?;
             statements.push(statement)
         }
 
         Ok(ProgramAst { statements })
+    }
+
+    fn parse_block(&mut self) -> Result<(Vec<AstNode>, Span), ParsingError> {
+        // Expecting "{"
+
+        let start = self.get_current_rich_token().span.start;
+        self.skip(Token::LBrace)?;
+
+        // Expecting 0 >= statements, delimited with "}"
+
+        let mut statements = vec![];
+        loop {
+            if self.current_token_is(Token::RBrace) {
+                break;
+            } else if self.current_token_is(Token::Eof) {
+                return Err(ParsingError::UnexpectedToken {
+                    expected: Token::RBrace,
+                    found: Token::Eof,
+                    span: self.get_current_rich_token().span,
+                });
+            }
+
+            let statement = self.parse_statement()?;
+            statements.push(statement);
+        }
+
+        // Expecting "}"
+
+        let end = self.get_current_rich_token().span.end;
+        self.skip(Token::RBrace)?;
+
+        Ok((statements, start..end))
     }
 
     fn parse_statement(&mut self) -> Result<AstNode, ParsingError> {
@@ -165,27 +199,10 @@ impl Parser {
 
         let condition = self.parse_expression()?;
 
-        // Expecting "{"
+        // Expecting block
 
-        self.skip(Token::LBrace)?;
-
-        // Expecting 0 >= statements, delimited with "}"
-
-        let mut statements = vec![];
-        loop {
-            if self.current_token_is(Token::RBrace) {
-                break;
-            }
-
-            let statement = self.parse_statement()?;
-            statements.push(statement);
-        }
-
-        end = self.get_current_rich_token().span.end;
-
-        // Expecting "}"
-
-        self.skip(Token::RBrace)?;
+        let (block_statements, block_span) = self.parse_block()?;
+        end = block_span.end;
 
         // Expecting >= 0 "else if" or 1 "else"
 
@@ -205,30 +222,14 @@ impl Parser {
                 }
 
                 Token::LBrace => {
-                    // Expecting "{"
+                    // Expecting block
 
-                    self.skip(Token::LBrace)?;
-
-                    // Expecting 0 >= statements, delimited with "}"
-
-                    let mut statements = vec![];
-                    loop {
-                        if self.current_token_is(Token::RBrace) {
-                            break;
-                        }
-                        let statement = self.parse_statement()?;
-                        statements.push(statement);
-                    }
-
-                    let else_end = self.get_current_rich_token().span.end;
+                    let (block_statements, block_span) = self.parse_block()?;
+                    let else_end = block_span.end;
                     end = else_end;
 
-                    // Expecting "}"
-
-                    self.skip(Token::RBrace)?;
-
                     Some(Box::new(AstNode::Else {
-                        body: statements,
+                        body: block_statements,
                         span: else_start..else_end,
                     }))
                 }
@@ -247,7 +248,7 @@ impl Parser {
 
         Ok(AstNode::If {
             condition: Box::new(condition),
-            body: statements,
+            body: block_statements,
             or_else,
             span: start..end,
         })
