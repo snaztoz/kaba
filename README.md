@@ -132,7 +132,7 @@ Current priority:
 ## License
 
 ```text
-Copyright 2023 Hafidh Muqsithanova Sukarno
+Copyright 2023-2024 Hafidh Muqsithanova Sukarno
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -146,3 +146,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ```
+
+## Acknowledgements
+
+> Standing on the shoulders of giants
+
+This project can be made thanks to the help of amazing works done by the others. You can read [ACKNOWLEDGEMENTS.md](ACKNOWLEDGEMENTS.md) for the list of the projects that Kaba depends on.
+
+p.s. the list is not exhaustive as Kaba may depends on another projects not listed above.
