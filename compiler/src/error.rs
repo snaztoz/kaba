@@ -61,6 +61,7 @@ impl Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = "error:".bright_red().bold();
         let message = &self.message;
         let file_path = self.file_path.display();
 
@@ -82,7 +83,7 @@ impl fmt::Display for Error {
             writedoc!(
                 f,
                 "
-                {position_information}
+                {label} {position_information}
                  {row_number_pad} |
                  {row} | {line}
                  {row_number_pad} | {col_pad}{highlighter_line}
@@ -90,7 +91,7 @@ impl fmt::Display for Error {
                  {row_number_pad} = {message}",
             )
         } else {
-            write!(f, "{message}")
+            write!(f, "{label} {message}")
         }
     }
 }

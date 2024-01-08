@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use clap::Parser;
-use colored::Colorize;
 use kaba::{
     cli::{Cli, Commands},
     runtime::Runtime,
@@ -20,7 +19,7 @@ fn main() {
 fn handle_run(file_path: &Path) {
     let res = compiler::compile(file_path);
     if let Err(e) = res {
-        eprintln!("{} {}", "error:".bright_red().bold(), e);
+        eprintln!("{e}");
         process::exit(1);
     }
 
