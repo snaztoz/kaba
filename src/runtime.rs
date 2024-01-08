@@ -7,18 +7,14 @@
 //! that operates on bytecodes.
 
 use compiler::ast::{AstNode, Program as ProgramAst, Value};
-use std::{
-    cell::RefCell,
-    collections::{HashMap, VecDeque},
-    fmt::Display,
-    io::Write,
-};
+use std::{cell::RefCell, collections::HashMap, fmt::Display, io::Write};
 
 pub type WriteStream<'a> = &'a mut dyn Write;
+type Scope = HashMap<String, Value>;
 
 pub struct Runtime<'a> {
     ast: Option<ProgramAst>,
-    variables: RefCell<HashMap<String, Value>>,
+    scopes: Vec<Scope>,
     pub error: Option<String>,
 
     // IO streams
@@ -32,9 +28,14 @@ impl<'a> Runtime<'a> {
         output_stream: WriteStream<'a>,
         error_stream: WriteStream<'a>,
     ) -> Self {
+        let scopes = vec![
+            HashMap::new(), // built-in
+            HashMap::new(), // global
+        ];
+
         Self {
             ast: Some(ast),
-            variables: RefCell::new(HashMap::new()),
+            scopes,
             error: None,
             output_stream: RefCell::new(output_stream),
             _error_stream: RefCell::new(error_stream),
@@ -42,23 +43,28 @@ impl<'a> Runtime<'a> {
     }
 
     pub fn run(&mut self) -> Result<(), RuntimeError> {
-        let mut statements = VecDeque::from(self.ast.take().unwrap().statements);
+        let statements = self.ast.take().unwrap().statements;
+        self.run_statements(&statements)
+    }
 
-        loop {
-            let statement = statements.pop_front();
-            if statement.is_none() {
-                break;
-            }
-
-            match statement.unwrap() {
+    fn run_statements(&mut self, statements: &[AstNode]) -> Result<(), RuntimeError> {
+        for statement in statements {
+            match statement {
                 AstNode::VariableDeclaration {
                     identifier, value, ..
                 } => {
                     let name = identifier.unwrap_identifier().0;
-                    self.create_variable(&name, value.map(|v| *v))?
+                    self.create_variable(&name, value.as_deref())?
                 }
 
-                AstNode::ValueAssignment { lhs, value, .. } => self.update_value(*lhs, *value)?,
+                AstNode::ValueAssignment { lhs, value, .. } => self.update_value(lhs, value)?,
+
+                AstNode::If {
+                    condition,
+                    body,
+                    or_else,
+                    ..
+                } => self.run_conditional_branch(condition, body, or_else.as_deref())?,
 
                 node => {
                     self.run_expression(node)?;
@@ -70,11 +76,11 @@ impl<'a> Runtime<'a> {
     }
 
     fn create_variable(
-        &self,
+        &mut self,
         identifier: &str,
-        value: Option<AstNode>,
+        value: Option<&AstNode>,
     ) -> Result<(), RuntimeError> {
-        if self.variables.borrow_mut().contains_key(identifier) {
+        if self.is_current_scope_has_variable(identifier) {
             return Err(RuntimeError::VariableAlreadyExist(String::from(identifier)));
         }
 
@@ -83,24 +89,17 @@ impl<'a> Runtime<'a> {
             None => Value::Integer(0),
         };
 
-        self.variables
-            .borrow_mut()
-            .insert(String::from(identifier), value);
+        self.create_variable_in_current_scope(identifier, value);
 
         Ok(())
     }
 
-    fn update_value(&self, lhs: AstNode, value: AstNode) -> Result<(), RuntimeError> {
+    fn update_value(&mut self, lhs: &AstNode, value: &AstNode) -> Result<(), RuntimeError> {
         // TODO: make lhs to be able to use more expression (currently only identifier)
 
         match lhs {
             AstNode::Identifier { name, .. } => {
-                if !self.variables.borrow_mut().contains_key(&name) {
-                    return Err(RuntimeError::VariableNotExist(name));
-                }
-
-                *self.variables.borrow_mut().get_mut(&name).unwrap() =
-                    self.run_expression(value)?;
+                self.update_variable_value(name, value)?;
             }
 
             _ => todo!("more expression for value assignment"),
@@ -109,42 +108,241 @@ impl<'a> Runtime<'a> {
         Ok(())
     }
 
-    fn run_expression(&self, expression: AstNode) -> Result<Value, RuntimeError> {
+    fn run_conditional_branch(
+        &mut self,
+        condition: &AstNode,
+        body: &[AstNode],
+        or_else: Option<&AstNode>,
+    ) -> Result<(), RuntimeError> {
+        let should_execute = match self.run_expression(condition)? {
+            Value::Boolean(b) => b,
+            _ => unreachable!(),
+        };
+
+        if should_execute {
+            self.scopes.push(HashMap::new());
+            self.run_statements(body)?;
+            self.scopes.pop();
+        } else if let Some(alt) = or_else {
+            match alt {
+                AstNode::If {
+                    condition,
+                    body,
+                    or_else,
+                    ..
+                } => self.run_conditional_branch(condition, body, or_else.as_deref())?,
+
+                AstNode::Else { body, .. } => {
+                    self.scopes.push(HashMap::new());
+                    self.run_statements(body)?;
+                    self.scopes.pop();
+                }
+
+                _ => unreachable!(),
+            }
+        }
+
+        Ok(())
+    }
+
+    fn run_expression(&self, expression: &AstNode) -> Result<Value, RuntimeError> {
         match expression {
-            AstNode::Identifier { name, .. } => self.get_variable_value(&name),
-            AstNode::Literal { value, .. } => Ok(value),
-            AstNode::FunctionCall { callee, args, .. } => self.run_function_call(&callee, args),
+            AstNode::Eq { lhs, rhs, .. } => {
+                Ok(self.run_eq(&self.run_expression(lhs)?, &self.run_expression(rhs)?))
+            }
+            AstNode::Neq { lhs, rhs, .. } => {
+                Ok(self.run_neq(&self.run_expression(lhs)?, &self.run_expression(rhs)?))
+            }
+            AstNode::Gt { lhs, rhs, .. } => {
+                Ok(self.run_gt(&self.run_expression(lhs)?, &self.run_expression(rhs)?))
+            }
+            AstNode::Gte { lhs, rhs, .. } => {
+                Ok(self.run_gte(&self.run_expression(lhs)?, &self.run_expression(rhs)?))
+            }
+            AstNode::Lt { lhs, rhs, .. } => {
+                Ok(self.run_lt(&self.run_expression(lhs)?, &self.run_expression(rhs)?))
+            }
+            AstNode::Lte { lhs, rhs, .. } => {
+                Ok(self.run_lte(&self.run_expression(lhs)?, &self.run_expression(rhs)?))
+            }
             AstNode::Add { lhs, rhs, .. } => {
-                Ok(self.run_expression(*lhs)? + self.run_expression(*rhs)?)
+                Ok(self.math_add(&self.run_expression(lhs)?, &self.run_expression(rhs)?))
             }
             AstNode::Sub { lhs, rhs, .. } => {
-                Ok(self.run_expression(*lhs)? - self.run_expression(*rhs)?)
+                Ok(self.math_sub(&self.run_expression(lhs)?, &self.run_expression(rhs)?))
             }
             AstNode::Mul { lhs, rhs, .. } => {
-                Ok(self.run_expression(*lhs)? * self.run_expression(*rhs)?)
+                Ok(self.math_mul(&self.run_expression(lhs)?, &self.run_expression(rhs)?))
             }
             AstNode::Div { lhs, rhs, .. } => {
-                Ok(self.run_expression(*lhs)? / self.run_expression(*rhs)?)
+                Ok(self.math_div(&self.run_expression(lhs)?, &self.run_expression(rhs)?))
             }
-            AstNode::Neg { child, .. } => Ok(-self.run_expression(*child)?),
+
+            AstNode::Neg { child, .. } => Ok(self.math_neg(&self.run_expression(child)?)),
+            AstNode::FunctionCall { callee, args, .. } => self.run_function_call(callee, args),
+
+            AstNode::Identifier { name, .. } => self.get_variable_value(name),
+            AstNode::Literal { value, .. } => Ok(*value),
 
             _ => unreachable!(),
         }
     }
 
-    fn get_variable_value(&self, name: &str) -> Result<Value, RuntimeError> {
-        self.variables
-            .borrow()
-            .get(name)
-            .copied()
-            .ok_or(RuntimeError::VariableNotExist(String::from(name)))
+    fn run_eq(&self, lhs: &Value, rhs: &Value) -> Value {
+        if lhs == rhs {
+            Value::Boolean(true)
+        } else {
+            Value::Boolean(false)
+        }
     }
 
-    fn run_function_call(
-        &self,
-        callee: &AstNode,
-        args: Vec<AstNode>,
-    ) -> Result<Value, RuntimeError> {
+    fn run_neq(&self, lhs: &Value, rhs: &Value) -> Value {
+        if lhs != rhs {
+            Value::Boolean(true)
+        } else {
+            Value::Boolean(false)
+        }
+    }
+
+    fn run_gt(&self, lhs: &Value, rhs: &Value) -> Value {
+        if lhs > rhs {
+            Value::Boolean(true)
+        } else {
+            Value::Boolean(false)
+        }
+    }
+
+    fn run_gte(&self, lhs: &Value, rhs: &Value) -> Value {
+        if lhs >= rhs {
+            Value::Boolean(true)
+        } else {
+            Value::Boolean(false)
+        }
+    }
+
+    fn run_lt(&self, lhs: &Value, rhs: &Value) -> Value {
+        if lhs < rhs {
+            Value::Boolean(true)
+        } else {
+            Value::Boolean(false)
+        }
+    }
+
+    fn run_lte(&self, lhs: &Value, rhs: &Value) -> Value {
+        if lhs <= rhs {
+            Value::Boolean(true)
+        } else {
+            Value::Boolean(false)
+        }
+    }
+
+    fn math_add(&self, lhs: &Value, rhs: &Value) -> Value {
+        match lhs {
+            Value::Integer(l) => match rhs {
+                Value::Integer(r) => Value::Integer(l + r),
+                Value::Float(r) => Value::Float(f64::from(*l) + r),
+                _ => unreachable!(),
+            },
+            Value::Float(l) => match rhs {
+                Value::Integer(r) => Value::Float(l + f64::from(*r)),
+                Value::Float(r) => Value::Float(l + r),
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    fn math_sub(&self, lhs: &Value, rhs: &Value) -> Value {
+        match lhs {
+            Value::Integer(l) => match rhs {
+                Value::Integer(r) => Value::Integer(l - r),
+                Value::Float(r) => Value::Float(f64::from(*l) - r),
+                _ => unreachable!(),
+            },
+            Value::Float(l) => match rhs {
+                Value::Integer(r) => Value::Float(l - f64::from(*r)),
+                Value::Float(r) => Value::Float(l - r),
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    fn math_mul(&self, lhs: &Value, rhs: &Value) -> Value {
+        match lhs {
+            Value::Integer(l) => match rhs {
+                Value::Integer(r) => Value::Integer(l * r),
+                Value::Float(r) => Value::Float(f64::from(*l) * r),
+                _ => unreachable!(),
+            },
+            Value::Float(l) => match rhs {
+                Value::Integer(r) => Value::Float(l * f64::from(*r)),
+                Value::Float(r) => Value::Float(l * r),
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    fn math_div(&self, lhs: &Value, rhs: &Value) -> Value {
+        match lhs {
+            Value::Integer(l) => match rhs {
+                Value::Integer(r) => Value::Integer(l / r),
+                Value::Float(r) => Value::Float(f64::from(*l) / r),
+                _ => unreachable!(),
+            },
+            Value::Float(l) => match rhs {
+                Value::Integer(r) => Value::Float(l / f64::from(*r)),
+                Value::Float(r) => Value::Float(l / r),
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    fn math_neg(&self, child: &Value) -> Value {
+        match child {
+            Value::Integer(n) => Value::Integer(-n),
+            Value::Float(n) => Value::Float(-n),
+            _ => unreachable!(),
+        }
+    }
+
+    fn is_current_scope_has_variable(&self, name: &str) -> bool {
+        let last_index = self.scopes.len() - 1;
+        self.scopes[last_index].contains_key(name)
+    }
+
+    fn create_variable_in_current_scope(&mut self, name: &str, value: Value) {
+        let last_index = self.scopes.len() - 1;
+        self.scopes[last_index].insert(String::from(name), value);
+    }
+
+    fn update_variable_value(&mut self, name: &str, value: &AstNode) -> Result<(), RuntimeError> {
+        let value = self.run_expression(value)?;
+        let scope = self
+            .scopes
+            .iter_mut()
+            .rev()
+            .find(|scope| scope.contains_key(name))
+            .unwrap();
+        *scope.get_mut(name).unwrap() = value;
+        Ok(())
+    }
+
+    fn get_variable_value(&self, name: &str) -> Result<Value, RuntimeError> {
+        Ok(self
+            .scopes
+            .iter()
+            .rev()
+            .find(|scope| scope.contains_key(name))
+            .unwrap()
+            .get(name)
+            .copied()
+            .unwrap())
+    }
+
+    fn run_function_call(&self, callee: &AstNode, args: &[AstNode]) -> Result<Value, RuntimeError> {
         let callee = match callee {
             AstNode::Identifier { name, .. } => name,
             _ => todo!("function callee"),
@@ -221,11 +419,8 @@ mod tests {
             let result = runtime.run();
 
             assert!(result.is_ok());
-            assert!(runtime.variables.borrow().contains_key(variable_name));
-            assert_eq!(
-                runtime.variables.borrow().get(variable_name).unwrap(),
-                &expected
-            );
+            assert!(runtime.is_current_scope_has_variable(variable_name));
+            assert_eq!(runtime.get_variable_value(variable_name).unwrap(), expected);
         }
     }
 
@@ -253,8 +448,8 @@ mod tests {
             let result = runtime.run();
 
             assert!(result.is_ok());
-            assert!(runtime.variables.borrow().contains_key(lhs));
-            assert_eq!(runtime.variables.borrow().get(lhs).unwrap(), &expected);
+            assert!(runtime.is_current_scope_has_variable(lhs));
+            assert_eq!(runtime.get_variable_value(lhs).unwrap(), expected);
         }
     }
 
@@ -288,6 +483,42 @@ mod tests {
                     print(x);
                 "},
                 "2048\n1024\n".as_bytes(),
+            ),
+            (
+                indoc! {"
+                    var x = 2048;
+                    if true {
+                        var x = 1024;
+                        print(x);
+                    }
+                    print(x);
+                "},
+                "1024\n2048\n".as_bytes(),
+            ),
+            (
+                indoc! {"
+                    var x = 2048;
+                    if true {
+                        x = 1024;
+                        print(x);
+                    }
+                    print(x);
+                "},
+                "1024\n1024\n".as_bytes(),
+            ),
+            (
+                indoc! {"
+                    var x = 2048;
+                    if false {
+                        x = 1024;
+                    } else if false {
+                        x = 512;
+                    } else {
+                        x = 256;
+                    }
+                    print(x);
+                "},
+                "256\n".as_bytes(),
             ),
         ];
 

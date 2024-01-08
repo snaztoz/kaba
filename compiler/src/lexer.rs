@@ -70,11 +70,19 @@ pub enum Token {
     #[regex(r"[0-9]+\.[0-9]+", callback = float)]
     Float(f64),
 
+    #[token("true")]
+    BooleanTrue,
+
+    #[token("false")]
+    BooleanFalse,
+
     //
     // Keywords
     //
 
-    #[token("var")] Var,
+    #[token("var")]  Var,
+    #[token("if")]   If,
+    #[token("else")] Else,
 
     //
     // Symbols
@@ -91,6 +99,15 @@ pub enum Token {
     #[token("=")] Assign,
     #[token("(")] LParen,
     #[token(")")] RParen,
+    #[token("{")] LBrace,
+    #[token("}")] RBrace,
+
+    #[token("==")] Eq,
+    #[token("!=")] Neq,
+    #[token(">")]  Gt,
+    #[token(">=")] Gte,
+    #[token("<")]  Lt,
+    #[token("<=")] Lte,
 
     // This will always be appended as the last token
     // inside token list
@@ -103,7 +120,11 @@ impl Display for Token {
             Self::Identifier(_) => write!(f, "identifier"),
             Self::Integer(_) => write!(f, "integer"),
             Self::Float(_) => write!(f, "float"),
+            Self::BooleanTrue => write!(f, "true"),
+            Self::BooleanFalse => write!(f, "false"),
             Self::Var => write!(f, "`var` keyword"),
+            Self::If => write!(f, "`if` keyword"),
+            Self::Else => write!(f, "`else` keyword"),
             Self::Add => write!(f, "addition operator (`+`)"),
             Self::Sub => write!(f, "subtraction operator (`-`)"),
             Self::Mul => write!(f, "multiplication operator (`*`)"),
@@ -114,6 +135,14 @@ impl Display for Token {
             Self::Assign => write!(f, "assignment (`=`)"),
             Self::LParen => write!(f, "left parentheses (`(`)"),
             Self::RParen => write!(f, "right parentheses (`)`)"),
+            Self::LBrace => write!(f, "left brace (`{{`)"),
+            Self::RBrace => write!(f, "right brace (`}}`)"),
+            Self::Eq => write!(f, "equal operator (`==`)"),
+            Self::Neq => write!(f, "not equal operator (`!=`)"),
+            Self::Gt => write!(f, "greater than operator (`>`)"),
+            Self::Gte => write!(f, "greater than or equal operator (`>=`)"),
+            Self::Lt => write!(f, "less than operator (`<`)"),
+            Self::Lte => write!(f, "less than or equal operator (`<=`)"),
 
             Self::Eof => write!(f, "end-of-file (EOF)"),
         }
@@ -166,15 +195,19 @@ impl LexingError {
 
 impl Display for LexingError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::IdentifierStartsWithNumber { token, .. } => {
-                write!(f, "identifier can't start with number: `{token}`")
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::IdentifierStartsWithNumber { token, .. } => {
+                    format!("identifier can't start with number: `{token}`")
+                }
+                Self::UnknownToken { token, .. } => {
+                    format!("unknown token `{token}`")
+                }
+                _ => unreachable!(),
             }
-            Self::UnknownToken { token, .. } => {
-                write!(f, "unknown token `{token}`")
-            }
-            _ => unreachable!(),
-        }
+        )
     }
 }
 

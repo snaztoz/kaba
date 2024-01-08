@@ -4,6 +4,7 @@
 //! This module contains errors that may be thrown during
 //! compiling process.
 
+use colored::Colorize;
 use indoc::writedoc;
 use logos::Span;
 use std::{fmt, path::PathBuf};
@@ -50,10 +51,17 @@ impl Error {
     fn pad_white_spaces(&self, n: usize) -> String {
         (0..n).map(|_| " ").collect::<String>()
     }
+
+    fn create_highlight_line(&self, n: usize) -> String {
+        let mut line = String::from("^");
+        line.push_str(&(1..n).map(|_| "~").collect::<String>());
+        line
+    }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = "error:".bright_red().bold();
         let message = &self.message;
         let file_path = self.file_path.display();
 
@@ -66,18 +74,24 @@ impl fmt::Display for Error {
         if let Some((line, row, col)) = position {
             let position_information = format!("{file_path} ({row}:{col})");
             let row_number_pad = self.pad_white_spaces(row.to_string().len());
+            let col_pad = self.pad_white_spaces(col - 1);
+            let highlighter_line = self
+                .create_highlight_line(self.span.as_ref().unwrap().clone().count())
+                .bright_red()
+                .bold();
 
             writedoc!(
                 f,
                 "
-                {position_information}
+                {label} {position_information}
                  {row_number_pad} |
                  {row} | {line}
+                 {row_number_pad} | {col_pad}{highlighter_line}
                  {row_number_pad} |
-                 {row_number_pad} = {message}"
+                 {row_number_pad} = {message}",
             )
         } else {
-            write!(f, "{message}")
+            write!(f, "{label} {message}")
         }
     }
 }

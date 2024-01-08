@@ -101,9 +101,17 @@ enum SourceCodeError {
 
 impl Display for SourceCodeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::WrongExtension => write!(f, "Kaba source code file must have '.kaba' extension"),
-            Self::FileNotExist { path } => write!(f, "file '{}' is not exist", path.display()),
-        }
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::WrongExtension => {
+                    "Kaba source code file must have '.kaba' extension".to_string()
+                }
+                Self::FileNotExist { path } => {
+                    format!("file '{}' is not exist", path.display())
+                }
+            }
+        )
     }
 }

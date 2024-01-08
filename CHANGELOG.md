@@ -7,8 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Add support for boolean data type.
-- Add support for `if-else` control flow.
+- Support for more boolean algebra operators.
+- Support for loop.
+- Change auto-casting behaviour in number types.
+
+## [0.2.1] - 2024-01-08
+
+### Added
+
+- Support for boolean data type.
+- Support for `if-else` control flow.
+- Support for equality and comparison operators.
+
+### Fixed
+
+- Parser EOF bug.
 
 ## [0.2.0] - 2024-01-05
 

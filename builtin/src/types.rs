@@ -12,6 +12,7 @@ pub enum Types {
     Void,
     Int,
     Float,
+    Bool,
     Callable {
         parameters: Vec<Types>,
         return_type: Box<Types>,
@@ -39,6 +40,7 @@ impl Display for Types {
             Self::Void => write!(f, "Void"),
             Self::Int => write!(f, "Int"),
             Self::Float => write!(f, "Float"),
+            Self::Bool => write!(f, "Bool"),
             Self::Callable { .. } => write!(f, "Callable"),
         }
     }
@@ -53,6 +55,7 @@ impl FromStr for Types {
             "Void" => Ok(Self::Void),
             "Int" => Ok(Self::Int),
             "Float" => Ok(Self::Float),
+            "Bool" => Ok(Self::Bool),
 
             _ => Err(()),
         }

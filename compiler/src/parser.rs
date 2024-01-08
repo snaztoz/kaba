@@ -33,8 +33,10 @@ impl Parser {
     fn parse(&mut self) -> Result<ProgramAst, ParsingError> {
         let mut statements = vec![];
 
-        // don't count EOF token
-        while self.cursor < self.tokens.len() - 1 {
+        loop {
+            if self.current_token_is(Token::Eof) {
+                break;
+            }
             let statement = self.parse_statement()?;
             statements.push(statement)
         }
@@ -42,13 +44,45 @@ impl Parser {
         Ok(ProgramAst { statements })
     }
 
+    fn parse_block(&mut self) -> Result<(Vec<AstNode>, Span), ParsingError> {
+        // Expecting "{"
+
+        let start = self.get_current_rich_token().span.start;
+        self.skip(Token::LBrace)?;
+
+        // Expecting 0 >= statements, delimited with "}"
+
+        let mut statements = vec![];
+        loop {
+            if self.current_token_is(Token::RBrace) {
+                break;
+            } else if self.current_token_is(Token::Eof) {
+                return Err(ParsingError::UnexpectedToken {
+                    expected: Token::RBrace,
+                    found: Token::Eof,
+                    span: self.get_current_rich_token().span,
+                });
+            }
+
+            let statement = self.parse_statement()?;
+            statements.push(statement);
+        }
+
+        // Expecting "}"
+
+        let end = self.get_current_rich_token().span.end;
+        self.skip(Token::RBrace)?;
+
+        Ok((statements, start..end))
+    }
+
     fn parse_statement(&mut self) -> Result<AstNode, ParsingError> {
         // Check if statement starts with a keyword
 
         if self.current_token_is(Token::Var) {
             return self.parse_variable_declaration();
-        } else {
-            // TODO: support other statements
+        } else if self.current_token_is(Token::If) {
+            return self.parse_conditional_branch();
         }
 
         // Expecting expression
@@ -156,10 +190,172 @@ impl Parser {
         }
     }
 
+    fn parse_conditional_branch(&mut self) -> Result<AstNode, ParsingError> {
+        let start = self.get_current_rich_token().span.start;
+        let mut end;
+        self.skip(Token::If)?;
+
+        // Expecting boolean expression
+
+        let condition = self.parse_expression()?;
+
+        // Expecting block
+
+        let (block_statements, block_span) = self.parse_block()?;
+        end = block_span.end;
+
+        // Expecting >= 0 "else if" or 1 "else"
+
+        let or_else = if self.current_token_is(Token::Else) {
+            let else_start = self.get_current_rich_token().span.start;
+            self.skip(Token::Else)?;
+
+            let token = self.get_current_rich_token();
+            match token.kind {
+                Token::If => {
+                    // Expecting "else if ..." statement
+
+                    let alt = self.parse_conditional_branch()?;
+                    end = alt.get_span().end;
+
+                    Some(Box::new(alt))
+                }
+
+                Token::LBrace => {
+                    // Expecting block
+
+                    let (block_statements, block_span) = self.parse_block()?;
+                    let else_end = block_span.end;
+                    end = else_end;
+
+                    Some(Box::new(AstNode::Else {
+                        body: block_statements,
+                        span: else_start..else_end,
+                    }))
+                }
+
+                kind => {
+                    return Err(ParsingError::UnexpectedToken {
+                        expected: Token::Else,
+                        found: kind.clone(),
+                        span: token.span,
+                    });
+                }
+            }
+        } else {
+            None
+        };
+
+        Ok(AstNode::If {
+            condition: Box::new(condition),
+            body: block_statements,
+            or_else,
+            span: start..end,
+        })
+    }
+
     fn parse_expression(&mut self) -> Result<AstNode, ParsingError> {
         // TODO: make this rule starts from higher rule
 
-        self.parse_additive_expression()
+        self.parse_equality_expression()
+    }
+
+    fn parse_equality_expression(&mut self) -> Result<AstNode, ParsingError> {
+        // Parse first term
+
+        let mut child = self.parse_comparison_expression()?;
+
+        loop {
+            // Expecting "==" or "!=" (both are optional)
+
+            match self.get_current_token() {
+                Token::Eq => {
+                    self.skip(Token::Eq)?;
+
+                    let rhs = self.parse_comparison_expression()?;
+                    let span = child.get_span().start..rhs.get_span().end;
+
+                    child = AstNode::Eq {
+                        lhs: Box::new(child.unwrap_group()),
+                        rhs: Box::new(rhs.unwrap_group()),
+                        span,
+                    };
+                }
+                Token::Neq => {
+                    self.skip(Token::Neq)?;
+
+                    let rhs = self.parse_comparison_expression()?;
+                    let span = child.get_span().start..rhs.get_span().end;
+
+                    child = AstNode::Neq {
+                        lhs: Box::new(child.unwrap_group()),
+                        rhs: Box::new(rhs.unwrap_group()),
+                        span,
+                    };
+                }
+                _ => return Ok(child),
+            }
+        }
+    }
+
+    fn parse_comparison_expression(&mut self) -> Result<AstNode, ParsingError> {
+        // Parse first term
+
+        let child = self.parse_additive_expression()?;
+
+        // Expecting ">", ">=", "<" or "<=" (all are optional)
+
+        match self.get_current_token() {
+            Token::Gt => {
+                self.skip(Token::Gt)?;
+
+                let rhs = self.parse_additive_expression()?;
+                let span = child.get_span().start..rhs.get_span().end;
+
+                Ok(AstNode::Gt {
+                    lhs: Box::new(child.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                })
+            }
+            Token::Gte => {
+                self.skip(Token::Gte)?;
+
+                let rhs = self.parse_additive_expression()?;
+                let span = child.get_span().start..rhs.get_span().end;
+
+                Ok(AstNode::Gte {
+                    lhs: Box::new(child.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                })
+            }
+            Token::Lt => {
+                self.skip(Token::Lt)?;
+
+                let rhs = self.parse_additive_expression()?;
+                let span = child.get_span().start..rhs.get_span().end;
+
+                Ok(AstNode::Lt {
+                    lhs: Box::new(child.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                })
+            }
+            Token::Lte => {
+                self.skip(Token::Lte)?;
+
+                let rhs = self.parse_additive_expression()?;
+                let span = child.get_span().start..rhs.get_span().end;
+
+                Ok(AstNode::Lte {
+                    lhs: Box::new(child.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                })
+            }
+            _ => Ok(child),
+        }
     }
 
     fn parse_additive_expression(&mut self) -> Result<AstNode, ParsingError> {
@@ -331,6 +527,20 @@ impl Parser {
                     span: token.span,
                 }
             }
+            Token::BooleanTrue => {
+                self.advance();
+                AstNode::Literal {
+                    value: Value::Boolean(true),
+                    span: token.span,
+                }
+            }
+            Token::BooleanFalse => {
+                self.advance();
+                AstNode::Literal {
+                    value: Value::Boolean(false),
+                    span: token.span,
+                }
+            }
 
             kind => {
                 return Err(ParsingError::UnexpectedToken {
@@ -438,13 +648,17 @@ impl ParsingError {
 
 impl Display for ParsingError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::UnexpectedToken {
-                expected, found, ..
-            } => {
-                write!(f, "expecting to find {expected} but found {found} instead",)
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::UnexpectedToken {
+                    expected, found, ..
+                } => {
+                    format!("expecting to find {expected} but get {found} instead",)
+                }
             }
-        }
+        )
     }
 }
 
@@ -615,6 +829,77 @@ mod tests {
                         span: 5..7,
                     }),
                     span: 0..8,
+                },
+            ),
+        ];
+
+        for (input, expected) in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let result = parse(tokens);
+
+            assert!(result.is_ok());
+            assert_eq!(
+                result.unwrap(),
+                ProgramAst {
+                    statements: vec![expected]
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn test_parsing_conditional_branch() {
+        let cases = [
+            (
+                "if 15 > 10 { print(1); }",
+                AstNode::If {
+                    condition: Box::new(AstNode::Gt {
+                        lhs: Box::new(AstNode::Literal {
+                            value: Value::Integer(15),
+                            span: 3..5,
+                        }),
+                        rhs: Box::new(AstNode::Literal {
+                            value: Value::Integer(10),
+                            span: 8..10,
+                        }),
+                        span: 3..10,
+                    }),
+                    body: vec![AstNode::FunctionCall {
+                        callee: Box::new(AstNode::Identifier {
+                            name: String::from("print"),
+                            span: 13..18,
+                        }),
+                        args: vec![AstNode::Literal {
+                            value: Value::Integer(1),
+                            span: 19..20,
+                        }],
+                        span: 13..21,
+                    }],
+                    or_else: None,
+                    span: 0..24,
+                },
+            ),
+            (
+                "if false {} else if false {} else {}",
+                AstNode::If {
+                    condition: Box::new(AstNode::Literal {
+                        value: Value::Boolean(false),
+                        span: 3..8,
+                    }),
+                    body: vec![],
+                    or_else: Some(Box::new(AstNode::If {
+                        condition: Box::new(AstNode::Literal {
+                            value: Value::Boolean(false),
+                            span: 20..25,
+                        }),
+                        body: vec![],
+                        or_else: Some(Box::new(AstNode::Else {
+                            body: vec![],
+                            span: 29..36,
+                        })),
+                        span: 17..36,
+                    })),
+                    span: 0..36,
                 },
             ),
         ];
@@ -852,6 +1137,34 @@ mod tests {
                         span: 2..14,
                     }),
                     span: 0..15,
+                },
+            ),
+            (
+                "true;",
+                AstNode::Literal {
+                    value: Value::Boolean(true),
+                    span: 0..4,
+                },
+            ),
+            (
+                "1 >= 5 == true;",
+                AstNode::Eq {
+                    lhs: Box::new(AstNode::Gte {
+                        lhs: Box::new(AstNode::Literal {
+                            value: Value::Integer(1),
+                            span: 0..1,
+                        }),
+                        rhs: Box::new(AstNode::Literal {
+                            value: Value::Integer(5),
+                            span: 5..6,
+                        }),
+                        span: 0..6,
+                    }),
+                    rhs: Box::new(AstNode::Literal {
+                        value: Value::Boolean(true),
+                        span: 10..14,
+                    }),
+                    span: 0..14,
                 },
             ),
         ];

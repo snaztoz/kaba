@@ -121,6 +121,7 @@ name = "compiler"
 version = "0.2.0"
 dependencies = [
  "builtin",
+ "colored",
  "indoc",
  "logos",
 ]
@@ -148,7 +149,6 @@ name = "kaba"
 version = "0.2.0"
 dependencies = [
  "clap",
- "colored",
  "compiler",
  "indoc",
 ]
