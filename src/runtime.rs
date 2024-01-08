@@ -484,6 +484,42 @@ mod tests {
                 "},
                 "2048\n1024\n".as_bytes(),
             ),
+            (
+                indoc! {"
+                    var x = 2048;
+                    if true {
+                        var x = 1024;
+                        print(x);
+                    }
+                    print(x);
+                "},
+                "1024\n2048\n".as_bytes(),
+            ),
+            (
+                indoc! {"
+                    var x = 2048;
+                    if true {
+                        x = 1024;
+                        print(x);
+                    }
+                    print(x);
+                "},
+                "1024\n1024\n".as_bytes(),
+            ),
+            (
+                indoc! {"
+                    var x = 2048;
+                    if false {
+                        x = 1024;
+                    } else if false {
+                        x = 512;
+                    } else {
+                        x = 256;
+                    }
+                    print(x);
+                "},
+                "256\n".as_bytes(),
+            ),
         ];
 
         for (source_code, output_content) in cases {
