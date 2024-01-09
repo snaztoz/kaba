@@ -7,7 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Support for more boolean algebra operators.
 - Support for increment and decrement operators.
 - Support for loop.
 - Change auto-casting behaviour in number types.
@@ -17,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Support for comments.
+- Support for logical boolean operators.
 
 ## [0.2.1] - 2024-01-08
 
