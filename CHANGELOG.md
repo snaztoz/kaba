@@ -8,8 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 - Support for more boolean algebra operators.
+- Support for increment and decrement operators.
 - Support for loop.
 - Change auto-casting behaviour in number types.
+
+## [0.2.2] - ...
+
+### Added
+
+- Support for comments.
 
 ## [0.2.1] - 2024-01-08
 
