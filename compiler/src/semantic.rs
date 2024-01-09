@@ -215,6 +215,10 @@ impl SemanticChecker {
                 self.get_equality_operation_type(lhs, rhs)
             }
 
+            AstNode::Or { lhs, rhs, .. } | AstNode::And { lhs, rhs, .. } => {
+                self.get_logical_and_or_operation_type(lhs, rhs)
+            }
+
             AstNode::Gt { lhs, rhs, .. }
             | AstNode::Gte { lhs, rhs, .. }
             | AstNode::Lt { lhs, rhs, .. }
@@ -225,6 +229,7 @@ impl SemanticChecker {
             | AstNode::Mul { lhs, rhs, .. }
             | AstNode::Div { lhs, rhs, .. } => self.get_math_binary_operation_type(lhs, rhs),
 
+            AstNode::Not { child, .. } => self.get_logical_not_operation_type(child),
             AstNode::Neg { child, .. } => self.get_neg_operation_type(child),
 
             AstNode::Identifier { name, span } => self.get_identifier_type(name, span),
@@ -239,7 +244,7 @@ impl SemanticChecker {
         }
     }
 
-    fn get_math_binary_operation_type(
+    fn get_logical_and_or_operation_type(
         &self,
         lhs: &AstNode,
         rhs: &AstNode,
@@ -247,21 +252,17 @@ impl SemanticChecker {
         let lhs_type = self.get_expression_type(lhs)?;
         let rhs_type = self.get_expression_type(rhs)?;
 
-        if !lhs_type.is_number() {
-            return Err(SemanticError::NotANumber {
+        if !lhs_type.is_boolean() {
+            return Err(SemanticError::NotABoolean {
                 span: lhs.get_span().clone(),
             });
-        } else if !rhs_type.is_number() {
-            return Err(SemanticError::NotANumber {
+        } else if !rhs_type.is_boolean() {
+            return Err(SemanticError::NotABoolean {
                 span: rhs.get_span().clone(),
             });
         }
 
-        if lhs_type == BuiltinTypes::Int && rhs_type == BuiltinTypes::Int {
-            Ok(BuiltinTypes::Int)
-        } else {
-            Ok(BuiltinTypes::Float)
-        }
+        Ok(BuiltinTypes::Bool)
     }
 
     fn get_equality_operation_type(
@@ -307,6 +308,44 @@ impl SemanticChecker {
             });
         }
 
+        Ok(BuiltinTypes::Bool)
+    }
+
+    fn get_math_binary_operation_type(
+        &self,
+        lhs: &AstNode,
+        rhs: &AstNode,
+    ) -> Result<BuiltinTypes, SemanticError> {
+        let lhs_type = self.get_expression_type(lhs)?;
+        let rhs_type = self.get_expression_type(rhs)?;
+
+        if !lhs_type.is_number() {
+            return Err(SemanticError::NotANumber {
+                span: lhs.get_span().clone(),
+            });
+        } else if !rhs_type.is_number() {
+            return Err(SemanticError::NotANumber {
+                span: rhs.get_span().clone(),
+            });
+        }
+
+        if lhs_type == BuiltinTypes::Int && rhs_type == BuiltinTypes::Int {
+            Ok(BuiltinTypes::Int)
+        } else {
+            Ok(BuiltinTypes::Float)
+        }
+    }
+
+    fn get_logical_not_operation_type(
+        &self,
+        child: &AstNode,
+    ) -> Result<BuiltinTypes, SemanticError> {
+        let child_type = self.get_expression_type(child)?;
+        if !child_type.is_boolean() {
+            return Err(SemanticError::NotABoolean {
+                span: child.get_span(),
+            });
+        }
         Ok(BuiltinTypes::Bool)
     }
 
@@ -692,6 +731,7 @@ mod tests {
             ("-5 + -0.25;", BuiltinTypes::Float),
             ("print(703 + 5 - 90 * 100 / 86 * 0.5);", BuiltinTypes::Void),
             ("767 >= 900 == (45 < 67);", BuiltinTypes::Bool),
+            ("false || !false && 50 > 0;", BuiltinTypes::Bool),
         ];
 
         for (input, expected) in cases {
@@ -716,6 +756,8 @@ mod tests {
             "-true;",
             "true > false;",
             "93 != 93.0;",
+            "!5;",
+            "false || !false && 50;",
         ];
 
         for input in cases {

@@ -41,6 +41,17 @@ pub enum AstNode {
         span: Span,
     },
 
+    Or {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+    And {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+
     Eq {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
@@ -93,6 +104,10 @@ pub enum AstNode {
         span: Span,
     },
 
+    Not {
+        child: Box<AstNode>,
+        span: Span,
+    },
     Neg {
         child: Box<AstNode>,
         span: Span,
@@ -134,6 +149,8 @@ impl AstNode {
             | Self::ValueAssignment { span, .. }
             | Self::If { span, .. }
             | Self::Else { span, .. }
+            | Self::Or { span, .. }
+            | Self::And { span, .. }
             | Self::Eq { span, .. }
             | Self::Neq { span, .. }
             | Self::Gt { span, .. }
@@ -144,6 +161,7 @@ impl AstNode {
             | Self::Sub { span, .. }
             | Self::Mul { span, .. }
             | Self::Div { span, .. }
+            | Self::Not { span, .. }
             | Self::Neg { span, .. }
             | Self::FunctionCall { span, .. }
             | Self::Group { span, .. }

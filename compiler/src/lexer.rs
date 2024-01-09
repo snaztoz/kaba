@@ -113,6 +113,10 @@ pub enum Token {
     #[token("<")]  Lt,
     #[token("<=")] Lte,
 
+    #[token("||")] Or,
+    #[token("&&")] And,
+    #[token("!")]  Not,
+
     // Comments
 
     #[token("//", callback = single_line_comment)]
@@ -161,6 +165,9 @@ impl Display for Token {
             Self::Gte => write!(f, "greater than or equal operator (`>=`)"),
             Self::Lt => write!(f, "less than operator (`<`)"),
             Self::Lte => write!(f, "less than or equal operator (`<=`)"),
+            Self::Or => write!(f, "logical or operator (`||`)"),
+            Self::And => write!(f, "logical and operator (`&&`)"),
+            Self::Not => write!(f, "logical not operator (`!`)"),
 
             Self::SingleLineComment(_) => write!(f, "single line comment"),
             Self::MultiLineComment(_) => write!(f, "multi line comment"),

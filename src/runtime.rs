@@ -147,6 +147,8 @@ impl<'a> Runtime<'a> {
 
     fn run_expression(&self, expression: &AstNode) -> Result<Value, RuntimeError> {
         match expression {
+            AstNode::Or { lhs, rhs, .. } => Ok(self.run_or(lhs, rhs)),
+            AstNode::And { lhs, rhs, .. } => Ok(self.run_and(lhs, rhs)),
             AstNode::Eq { lhs, rhs, .. } => {
                 Ok(self.run_eq(&self.run_expression(lhs)?, &self.run_expression(rhs)?))
             }
@@ -178,6 +180,7 @@ impl<'a> Runtime<'a> {
                 Ok(self.math_div(&self.run_expression(lhs)?, &self.run_expression(rhs)?))
             }
 
+            AstNode::Not { child, .. } => Ok(self.run_not(&self.run_expression(child)?)),
             AstNode::Neg { child, .. } => Ok(self.math_neg(&self.run_expression(child)?)),
             AstNode::FunctionCall { callee, args, .. } => self.run_function_call(callee, args),
 
@@ -186,6 +189,39 @@ impl<'a> Runtime<'a> {
 
             _ => unreachable!(),
         }
+    }
+
+    fn run_or(&self, lhs: &AstNode, rhs: &AstNode) -> Value {
+        // Use short-circuiting
+
+        if let Ok(Value::Boolean(b)) = self.run_expression(lhs) {
+            if b {
+                return Value::Boolean(true);
+            }
+        }
+        if let Ok(Value::Boolean(b)) = self.run_expression(rhs) {
+            if b {
+                return Value::Boolean(true);
+            }
+        }
+
+        Value::Boolean(false)
+    }
+
+    fn run_and(&self, lhs: &AstNode, rhs: &AstNode) -> Value {
+        // Use short-circuiting
+
+        if let Ok(Value::Boolean(b_lhs)) = self.run_expression(lhs) {
+            if b_lhs {
+                if let Ok(Value::Boolean(b_rhs)) = self.run_expression(rhs) {
+                    if b_rhs {
+                        return Value::Boolean(true);
+                    }
+                }
+            }
+        }
+
+        Value::Boolean(false)
     }
 
     fn run_eq(&self, lhs: &Value, rhs: &Value) -> Value {
@@ -296,6 +332,13 @@ impl<'a> Runtime<'a> {
                 Value::Float(r) => Value::Float(l / r),
                 _ => unreachable!(),
             },
+            _ => unreachable!(),
+        }
+    }
+
+    fn run_not(&self, child: &Value) -> Value {
+        match child {
+            Value::Boolean(b) => Value::Boolean(!b),
             _ => unreachable!(),
         }
     }
@@ -519,6 +562,20 @@ mod tests {
                     print(x);
                 "},
                 "256\n".as_bytes(),
+            ),
+            (
+                indoc! {"
+                    if false && true {
+                        print(1);
+                    }
+                    if false || true {
+                        print(2);
+                    }
+                    if !false {
+                        print(3);
+                    }
+                "},
+                "2\n3\n".as_bytes(),
             ),
         ];
 

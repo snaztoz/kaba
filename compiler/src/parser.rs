@@ -259,7 +259,45 @@ impl Parser {
     fn parse_expression(&mut self) -> Result<AstNode, ParsingError> {
         // TODO: make this rule starts from higher rule
 
-        self.parse_equality_expression()
+        self.parse_logical_and_or_expression()
+    }
+
+    fn parse_logical_and_or_expression(&mut self) -> Result<AstNode, ParsingError> {
+        // Parse first term
+
+        let mut child = self.parse_equality_expression()?;
+
+        loop {
+            // Expecting "||" or "&&" (both are optional)
+
+            match self.get_current_token() {
+                Token::Or => {
+                    self.skip(Token::Or)?;
+
+                    let rhs = self.parse_equality_expression()?;
+                    let span = child.get_span().start..rhs.get_span().end;
+
+                    child = AstNode::Or {
+                        lhs: Box::new(child.unwrap_group()),
+                        rhs: Box::new(rhs.unwrap_group()),
+                        span,
+                    };
+                }
+                Token::And => {
+                    self.skip(Token::And)?;
+
+                    let rhs = self.parse_equality_expression()?;
+                    let span = child.get_span().start..rhs.get_span().end;
+
+                    child = AstNode::And {
+                        lhs: Box::new(child.unwrap_group()),
+                        rhs: Box::new(rhs.unwrap_group()),
+                        span,
+                    };
+                }
+                _ => return Ok(child),
+            }
+        }
     }
 
     fn parse_equality_expression(&mut self) -> Result<AstNode, ParsingError> {
@@ -437,19 +475,12 @@ impl Parser {
     }
 
     fn parse_unary_expression(&mut self) -> Result<AstNode, ParsingError> {
-        //  Prefixed by >= 0 negation expression
+        //  Prefixed by >= 0 negation or not expression
 
         if self.current_token_is(Token::Sub) {
-            let sub_token_start = self.get_current_rich_token().span.start;
-            self.skip(Token::Sub)?;
-
-            let child = self.parse_unary_expression()?;
-            let span = sub_token_start..child.get_span().end;
-
-            return Ok(AstNode::Neg {
-                child: Box::new(child.unwrap_group()),
-                span,
-            });
+            return self.parse_prefix_expression(Token::Sub);
+        } else if self.current_token_is(Token::Not) {
+            return self.parse_prefix_expression(Token::Not);
         }
 
         // Parse primary expression
@@ -484,6 +515,27 @@ impl Parser {
         }
 
         Ok(child)
+    }
+
+    fn parse_prefix_expression(&mut self, token: Token) -> Result<AstNode, ParsingError> {
+        let start = self.get_current_rich_token().span.start;
+        self.skip(token.clone())?;
+
+        let child = self.parse_unary_expression()?;
+        let span = start..child.get_span().end;
+
+        match token {
+            Token::Sub => Ok(AstNode::Neg {
+                child: Box::new(child.unwrap_group()),
+                span,
+            }),
+            Token::Not => Ok(AstNode::Not {
+                child: Box::new(child.unwrap_group()),
+                span,
+            }),
+
+            _ => unreachable!(),
+        }
     }
 
     fn parse_primary_expression(&mut self) -> Result<AstNode, ParsingError> {
@@ -1167,6 +1219,30 @@ mod tests {
                         span: 10..14,
                     }),
                     span: 0..14,
+                },
+            ),
+            (
+                "false || !false && true;",
+                AstNode::And {
+                    lhs: Box::new(AstNode::Or {
+                        lhs: Box::new(AstNode::Literal {
+                            value: Value::Boolean(false),
+                            span: 0..5,
+                        }),
+                        rhs: Box::new(AstNode::Not {
+                            child: Box::new(AstNode::Literal {
+                                value: Value::Boolean(false),
+                                span: 10..15,
+                            }),
+                            span: 9..15,
+                        }),
+                        span: 0..15,
+                    }),
+                    rhs: Box::new(AstNode::Literal {
+                        value: Value::Boolean(true),
+                        span: 19..23,
+                    }),
+                    span: 0..23,
                 },
             ),
         ];

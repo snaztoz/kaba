@@ -24,6 +24,10 @@ impl Types {
         *self == Self::Int || *self == Self::Float
     }
 
+    pub fn is_boolean(&self) -> bool {
+        *self == Self::Bool
+    }
+
     pub fn is_assignable_to(&self, other: &Types) -> bool {
         if *self == Self::Void || *other == Self::Void {
             return false;
