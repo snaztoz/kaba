@@ -17,16 +17,20 @@ pub fn lex(source_code: &str) -> Result<Vec<RichToken>, LexingError> {
     let mut tokens = vec![];
 
     while let Some(token) = l.next() {
-        let token = token.map_err(|e| match e {
+        let kind = token.map_err(|e| match e {
             LexingError::Default => LexingError::UnknownToken {
                 token: String::from(l.slice()),
                 span: l.span(),
             },
             _ => e,
-        });
+        })?;
+
+        if kind.is_comment() {
+            continue;
+        }
 
         tokens.push(RichToken {
-            kind: token?,
+            kind,
             span: l.span(),
             value: String::from(l.slice()),
         })
@@ -109,9 +113,23 @@ pub enum Token {
     #[token("<")]  Lt,
     #[token("<=")] Lte,
 
+    // Comments
+
+    #[token("//", callback = single_line_comment)]
+    SingleLineComment(String),
+
+    #[token("/*", callback = multi_line_comment)]
+    MultiLineComment(String),
+
     // This will always be appended as the last token
     // inside token list
     Eof,
+}
+
+impl Token {
+    fn is_comment(&self) -> bool {
+        matches!(self, Token::SingleLineComment(_)) || matches!(self, Token::MultiLineComment(_))
+    }
 }
 
 impl Display for Token {
@@ -144,6 +162,9 @@ impl Display for Token {
             Self::Lt => write!(f, "less than operator (`<`)"),
             Self::Lte => write!(f, "less than or equal operator (`<=`)"),
 
+            Self::SingleLineComment(_) => write!(f, "single line comment"),
+            Self::MultiLineComment(_) => write!(f, "multi line comment"),
+
             Self::Eof => write!(f, "end-of-file (EOF)"),
         }
     }
@@ -168,10 +189,37 @@ fn float(lex: &mut Lexer<Token>) -> f64 {
     lex.slice().parse().unwrap()
 }
 
+fn single_line_comment(lex: &mut Lexer<Token>) -> String {
+    let remainder = lex.remainder();
+    if let Some(newline_index) = remainder.find('\n') {
+        lex.bump(newline_index + 1);
+        String::from(&remainder[..newline_index])
+    } else {
+        lex.bump(remainder.bytes().len());
+        String::from(remainder)
+    }
+}
+
+fn multi_line_comment(lex: &mut Lexer<Token>) -> Result<String, LexingError> {
+    let remainder = lex.remainder();
+    if let Some(comment_closing_index) = remainder.find("*/") {
+        lex.bump(comment_closing_index + 2);
+        Ok(String::from(&remainder[..comment_closing_index]))
+    } else {
+        let source_len = lex.source().len();
+        Err(LexingError::MissingCommentClosingTag {
+            span: source_len..source_len,
+        })
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum LexingError {
     IdentifierStartsWithNumber {
         token: String,
+        span: Span,
+    },
+    MissingCommentClosingTag {
         span: Span,
     },
     UnknownToken {
@@ -187,6 +235,7 @@ impl LexingError {
     pub fn get_span(&self) -> Option<Span> {
         match self {
             Self::IdentifierStartsWithNumber { span, .. } => Some(span.clone()),
+            Self::MissingCommentClosingTag { span } => Some(span.clone()),
             Self::UnknownToken { span, .. } => Some(span.clone()),
             _ => None,
         }
@@ -202,6 +251,9 @@ impl Display for LexingError {
                 Self::IdentifierStartsWithNumber { token, .. } => {
                     format!("identifier can't start with number: `{token}`")
                 }
+                Self::MissingCommentClosingTag { .. } => {
+                    "missing comment closing tag (`*/`)".to_string()
+                }
                 Self::UnknownToken { token, .. } => {
                     format!("unknown token `{token}`")
                 }
@@ -214,6 +266,7 @@ impl Display for LexingError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use indoc::indoc;
 
     #[test]
     fn test_lexing_identifier() {
@@ -271,6 +324,90 @@ mod tests {
 
             assert!(tokens.len() == 2);
             assert_eq!(tokens[0].kind, Token::Float(c.parse().unwrap()));
+        }
+    }
+
+    #[test]
+    fn test_lexing_single_line_comment() {
+        let cases = [
+            indoc! {"
+                // This is a single line comment
+                var x = 5;
+            "},
+            indoc! {"
+                var x = 10;
+
+                print(x); // this should works too!
+            "},
+            indoc! {"
+                // print(y);
+            "},
+            indoc! {"
+            // A single line comment that spans to EOF"},
+        ];
+
+        for c in cases {
+            let lex_result = lex(c);
+
+            assert!(lex_result.is_ok());
+
+            let tokens = lex_result.unwrap();
+
+            assert!(!tokens
+                .iter()
+                .any(|t| matches!(t.kind, Token::SingleLineComment(_))))
+        }
+    }
+
+    #[test]
+    fn test_lexing_multi_line_comment() {
+        let cases = [
+            indoc! {"
+                /**
+                 * This is a multi line comment
+                 */
+                var x = 5;
+            "},
+            indoc! {"
+                var x = 5; /* no problem */
+            "},
+            indoc! {"
+                /**
+                 * No problem too
+                 */
+
+                /**
+                 * print(y);
+                 *       ^
+                 *      A non existing variable
+                 */
+            "},
+        ];
+
+        for c in cases {
+            let lex_result = lex(c);
+
+            assert!(lex_result.is_ok());
+
+            let tokens = lex_result.unwrap();
+
+            assert!(!tokens
+                .iter()
+                .any(|t| matches!(t.kind, Token::MultiLineComment(_))))
+        }
+    }
+
+    #[test]
+    fn test_lexing_invalid_comment() {
+        let cases = [indoc! {"
+                /* No closing tag
+                print(0);
+            "}];
+
+        for c in cases {
+            let lex_result = lex(c);
+
+            assert!(lex_result.is_err());
         }
     }
 }
