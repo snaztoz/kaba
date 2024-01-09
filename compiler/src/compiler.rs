@@ -82,8 +82,7 @@ impl Compiler {
             });
         }
 
-        let checked_ast = semantic::check(ast.unwrap());
-        if let Err(e) = &checked_ast {
+        if let Err(e) = semantic::check(ast.as_ref().unwrap()) {
             return Err(Error {
                 file_path: self.file_path.unwrap_or(PathBuf::new()),
                 source_code: self.source_code,
@@ -92,7 +91,7 @@ impl Compiler {
             });
         }
 
-        Ok(checked_ast.unwrap())
+        Ok(ast.unwrap())
     }
 
     // Normalize all newline characters to LF

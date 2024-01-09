@@ -104,6 +104,8 @@ impl Parser {
             };
         }
 
+        // Expecting ";"
+
         self.skip(Token::Semicolon)?;
 
         Ok(expression.unwrap_group())

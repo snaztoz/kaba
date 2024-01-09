@@ -12,10 +12,11 @@ use std::{fmt::Display, str::FromStr};
 
 mod scope;
 
-pub fn check(ast: ProgramAst) -> Result<ProgramAst, SemanticError> {
+/// Provides a quick way to run semantic analysis on a Kaba AST.
+pub fn check(ast: &ProgramAst) -> Result<(), SemanticError> {
     let mut checker = SemanticChecker::new();
     checker.check(&ast.statements)?;
-    Ok(ast)
+    Ok(())
 }
 
 struct SemanticChecker {
@@ -87,7 +88,7 @@ impl SemanticChecker {
             });
         }
 
-        // Get var_type
+        // Get variable type
 
         let var_type = if let Some(vt) = var_type {
             let (type_name, type_span) = vt.unwrap_type_notation();
@@ -109,7 +110,7 @@ impl SemanticChecker {
             None
         };
 
-        // Either var_type or value_type must be present
+        // Either variable's or value's type must be present
 
         if var_type.is_none() && value_type.is_none() {
             return Err(SemanticError::UnableToInferVariableType {
@@ -118,8 +119,8 @@ impl SemanticChecker {
             });
         }
 
-        // If both present, check if value can be assigned to
-        // the variable
+        // If both present, check if value's type is compatible with
+        // the variable's
 
         if let Some(var_type) = &var_type {
             if let Some(value_type) = &value_type {
