@@ -59,7 +59,9 @@ impl Compiler {
     }
 
     /// Run the compilation process.
-    pub fn compile(self) -> Result<ProgramAst> {
+    pub fn compile(mut self) -> Result<ProgramAst> {
+        self.normalize_newlines();
+
         let tokens = lexer::lex(&self.source_code);
         if let Err(e) = &tokens {
             return Err(Error {
@@ -91,6 +93,11 @@ impl Compiler {
         }
 
         Ok(checked_ast.unwrap())
+    }
+
+    // Normalize all newline characters to LF
+    fn normalize_newlines(&mut self) {
+        self.source_code = self.source_code.replace("\r\n", "\n").replace('\r', "\n");
     }
 }
 
