@@ -33,7 +33,7 @@ impl Compiler {
         let extension = file_path.extension().and_then(|e| e.to_str());
         if !matches!(extension, Some("kaba")) {
             return Err(Error {
-                file_path: PathBuf::from(file_path),
+                file_path: Some(PathBuf::from(file_path)),
                 source_code: String::new(),
                 message: SourceCodeError::WrongExtension.to_string(),
                 span: None,
@@ -43,7 +43,7 @@ impl Compiler {
                 path: PathBuf::from(file_path),
             };
             return Err(Error {
-                file_path: PathBuf::from(file_path),
+                file_path: Some(PathBuf::from(file_path)),
                 source_code: String::new(),
                 message: error.to_string(),
                 span: None,
@@ -65,7 +65,7 @@ impl Compiler {
         let tokens = lexer::lex(&self.source_code);
         if let Err(e) = &tokens {
             return Err(Error {
-                file_path: self.file_path.unwrap_or(PathBuf::new()),
+                file_path: self.file_path,
                 source_code: String::from(&self.source_code),
                 message: e.to_string(),
                 span: e.get_span(),
@@ -75,7 +75,7 @@ impl Compiler {
         let ast = parser::parse(tokens.unwrap());
         if let Err(e) = &ast {
             return Err(Error {
-                file_path: self.file_path.unwrap_or(PathBuf::new()),
+                file_path: self.file_path,
                 source_code: self.source_code,
                 message: e.to_string(),
                 span: e.get_span(),
@@ -84,7 +84,7 @@ impl Compiler {
 
         if let Err(e) = semantic::check(ast.as_ref().unwrap()) {
             return Err(Error {
-                file_path: self.file_path.unwrap_or(PathBuf::new()),
+                file_path: self.file_path,
                 source_code: self.source_code,
                 message: e.to_string(),
                 span: e.get_span(),
