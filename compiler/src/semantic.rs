@@ -584,7 +584,7 @@ impl Display for SemanticError {
                     format!("expecting {expecting} argument(s) but get {get} instead")
                 }
                 Self::LoopControlNotInLoopScope { .. } => {
-                    "`break` and `continue` keywords must be within a loop".to_string()
+                    "the usage of `break` and `continue` statements must be within a loop".to_string()
                 }
             }
         )
