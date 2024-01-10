@@ -7,7 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Add modulo operator.
 - Add assignment operators.
 - Change `print` function behaviour.
 - Change auto-casting behaviour in number types.
@@ -19,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for comments.
 - Support for logical boolean operators.
 - Support for loop.
+- Support for modulo (`%`) operator.
 
 ## [0.2.1] - 2024-01-08
 
