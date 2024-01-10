@@ -230,6 +230,9 @@ impl<'a> Runtime<'a> {
             AstNode::Div { lhs, rhs, .. } => {
                 Ok(self.math_div(&self.run_expression(lhs)?, &self.run_expression(rhs)?))
             }
+            AstNode::Mod { lhs, rhs, .. } => {
+                Ok(self.math_mod(&self.run_expression(lhs)?, &self.run_expression(rhs)?))
+            }
 
             AstNode::Not { child, .. } => Ok(self.run_not(&self.run_expression(child)?)),
             AstNode::Neg { child, .. } => Ok(self.math_neg(&self.run_expression(child)?)),
@@ -381,6 +384,22 @@ impl<'a> Runtime<'a> {
             Value::Float(l) => match rhs {
                 Value::Integer(r) => Value::Float(l / f64::from(*r)),
                 Value::Float(r) => Value::Float(l / r),
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    fn math_mod(&self, lhs: &Value, rhs: &Value) -> Value {
+        match lhs {
+            Value::Integer(l) => match rhs {
+                Value::Integer(r) => Value::Integer(l % r),
+                Value::Float(r) => Value::Float(f64::from(*l) % r),
+                _ => unreachable!(),
+            },
+            Value::Float(l) => match rhs {
+                Value::Integer(r) => Value::Float(l % f64::from(*r)),
+                Value::Float(r) => Value::Float(l % r),
                 _ => unreachable!(),
             },
             _ => unreachable!(),
@@ -661,6 +680,18 @@ mod tests {
                     }
                 "},
                 "1\n3\n4\n".as_bytes(),
+            ),
+            (
+                indoc! {"
+                    var i = 0;
+                    while i < 10 {
+                        if i % 2 == 0 {
+                            print(i);
+                        }
+                        i = i + 1;
+                    }
+                "},
+                "0\n2\n4\n6\n8\n".as_bytes(),
             ),
         ];
 

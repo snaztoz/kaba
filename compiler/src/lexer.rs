@@ -99,6 +99,7 @@ pub enum Token {
     #[token("-")] Sub,
     #[token("*")] Mul,
     #[token("/")] Div,
+    #[token("%")] Mod,
 
     #[token(":")] Colon,
     #[token(";")] Semicolon,
@@ -157,6 +158,7 @@ impl Display for Token {
             Self::Sub => write!(f, "subtraction operator (`-`)"),
             Self::Mul => write!(f, "multiplication operator (`*`)"),
             Self::Div => write!(f, "division operator (`/`)"),
+            Self::Mod => write!(f, "modulo operator (`%`)"),
             Self::Colon => write!(f, "colon (`:`)"),
             Self::Semicolon => write!(f, "semicolon (`;`)"),
             Self::Comma => write!(f, "comma (`,`)"),

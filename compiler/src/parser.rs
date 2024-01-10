@@ -484,7 +484,7 @@ impl Parser {
         let mut child = self.parse_unary_expression()?;
 
         loop {
-            // Expecting "*" or "/" (both are optional)
+            // Expecting "*", "/" or "%" (all are optional)
 
             match self.get_current_token() {
                 Token::Mul => {
@@ -506,6 +506,18 @@ impl Parser {
                     let span = child.get_span().start..rhs.get_span().end;
 
                     child = AstNode::Div {
+                        lhs: Box::new(child.unwrap_group()),
+                        rhs: Box::new(rhs.unwrap_group()),
+                        span,
+                    };
+                }
+                Token::Mod => {
+                    self.skip(Token::Mod)?;
+
+                    let rhs = self.parse_unary_expression()?;
+                    let span = child.get_span().start..rhs.get_span().end;
+
+                    child = AstNode::Mod {
                         lhs: Box::new(child.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
                         span,
@@ -1094,6 +1106,20 @@ mod tests {
                         span: 18..25,
                     }),
                     span: 0..25,
+                },
+            ),
+            (
+                "50.0 % 2.0;",
+                AstNode::Mod {
+                    lhs: Box::new(AstNode::Literal {
+                        value: Value::Float(50.0),
+                        span: 0..4,
+                    }),
+                    rhs: Box::new(AstNode::Literal {
+                        value: Value::Float(2.0),
+                        span: 7..10,
+                    }),
+                    span: 0..10,
                 },
             ),
             (

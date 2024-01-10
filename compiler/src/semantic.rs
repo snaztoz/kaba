@@ -263,7 +263,8 @@ impl SemanticChecker {
             AstNode::Add { lhs, rhs, .. }
             | AstNode::Sub { lhs, rhs, .. }
             | AstNode::Mul { lhs, rhs, .. }
-            | AstNode::Div { lhs, rhs, .. } => self.get_math_binary_operation_type(lhs, rhs),
+            | AstNode::Div { lhs, rhs, .. }
+            | AstNode::Mod { lhs, rhs, .. } => self.get_math_binary_operation_type(lhs, rhs),
 
             AstNode::Not { child, .. } => self.get_logical_not_operation_type(child),
             AstNode::Neg { child, .. } => self.get_neg_operation_type(child),
@@ -829,6 +830,7 @@ mod tests {
         let cases = [
             ("-5 + 50 * 200 / 7 - 999;", BuiltinTypes::Int),
             ("-5 + -0.25;", BuiltinTypes::Float),
+            ("99.9 % 0.1;", BuiltinTypes::Float),
             ("print(703 + 5 - 90 * 100 / 86 * 0.5);", BuiltinTypes::Void),
             ("767 >= 900 == (45 < 67);", BuiltinTypes::Bool),
             ("false || !false && 50 > 0;", BuiltinTypes::Bool),

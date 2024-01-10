@@ -115,6 +115,11 @@ pub enum AstNode {
         rhs: Box<AstNode>,
         span: Span,
     },
+    Mod {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
 
     Not {
         child: Box<AstNode>,
@@ -176,6 +181,7 @@ impl AstNode {
             | Self::Sub { span, .. }
             | Self::Mul { span, .. }
             | Self::Div { span, .. }
+            | Self::Mod { span, .. }
             | Self::Not { span, .. }
             | Self::Neg { span, .. }
             | Self::FunctionCall { span, .. }
