@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add modulo operator.
+- Add assignment operators.
+- Change `print` function behaviour.
 - Change auto-casting behaviour in number types.
 
 ## [0.2.2] - ...
