@@ -41,6 +41,18 @@ pub enum AstNode {
         span: Span,
     },
 
+    While {
+        condition: Box<AstNode>,
+        body: Vec<AstNode>,
+        span: Span,
+    },
+    Break {
+        span: Span,
+    },
+    Continue {
+        span: Span,
+    },
+
     Or {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
@@ -149,6 +161,9 @@ impl AstNode {
             | Self::ValueAssignment { span, .. }
             | Self::If { span, .. }
             | Self::Else { span, .. }
+            | Self::While { span, .. }
+            | Self::Break { span }
+            | Self::Continue { span }
             | Self::Or { span, .. }
             | Self::And { span, .. }
             | Self::Eq { span, .. }

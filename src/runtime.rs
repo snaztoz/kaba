@@ -20,6 +20,10 @@ pub struct Runtime<'a> {
     // IO streams
     output_stream: RefCell<WriteStream<'a>>,
     _error_stream: RefCell<WriteStream<'a>>,
+
+    // Internal state flags
+    stop_execution: bool,
+    should_break_loop: bool,
 }
 
 impl<'a> Runtime<'a> {
@@ -39,6 +43,8 @@ impl<'a> Runtime<'a> {
             error: None,
             output_stream: RefCell::new(output_stream),
             _error_stream: RefCell::new(error_stream),
+            stop_execution: false,
+            should_break_loop: false,
         }
     }
 
@@ -49,6 +55,10 @@ impl<'a> Runtime<'a> {
 
     fn run_statements(&mut self, statements: &[AstNode]) -> Result<(), RuntimeError> {
         for statement in statements {
+            if self.stop_execution {
+                return Ok(());
+            }
+
             match statement {
                 AstNode::VariableDeclaration {
                     identifier, value, ..
@@ -65,6 +75,19 @@ impl<'a> Runtime<'a> {
                     or_else,
                     ..
                 } => self.run_conditional_branch(condition, body, or_else.as_deref())?,
+
+                AstNode::While {
+                    condition, body, ..
+                } => self.run_while(condition, body)?,
+
+                AstNode::Break { .. } => {
+                    self.stop_execution = true;
+                    self.should_break_loop = true;
+                }
+
+                AstNode::Continue { .. } => {
+                    self.stop_execution = true;
+                }
 
                 node => {
                     self.run_expression(node)?;
@@ -139,6 +162,34 @@ impl<'a> Runtime<'a> {
                 }
 
                 _ => unreachable!(),
+            }
+        }
+
+        Ok(())
+    }
+
+    fn run_while(&mut self, condition: &AstNode, body: &[AstNode]) -> Result<(), RuntimeError> {
+        loop {
+            let should_execute = match self.run_expression(condition)? {
+                Value::Boolean(b) => b,
+                _ => unreachable!(),
+            };
+
+            if should_execute {
+                self.scopes.push(HashMap::new());
+                self.run_statements(body)?;
+                self.scopes.pop();
+
+                if self.stop_execution {
+                    self.stop_execution = false;
+                }
+
+                if self.should_break_loop {
+                    self.should_break_loop = false;
+                    break;
+                }
+            } else {
+                break;
             }
         }
 
@@ -576,6 +627,40 @@ mod tests {
                     }
                 "},
                 "2\n3\n".as_bytes(),
+            ),
+            (
+                indoc! {"
+                    var x = 0;
+
+                    while true {
+                        print(x);
+
+                        if x == 5 {
+                            break;
+                        }
+
+                        x = x + 1;
+                    }
+                "},
+                "0\n1\n2\n3\n4\n5\n".as_bytes(),
+            ),
+            (
+                indoc! {"
+                    var x = 0;
+
+                    while true {
+                        x = x + 1;
+
+                        if x == 2 {
+                            continue;
+                        } else if x == 5 {
+                            break;
+                        }
+
+                        print(x);
+                    }
+                "},
+                "1\n3\n4\n".as_bytes(),
             ),
         ];
 

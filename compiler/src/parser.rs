@@ -79,10 +79,12 @@ impl Parser {
     fn parse_statement(&mut self) -> Result<AstNode, ParsingError> {
         // Check if statement starts with a keyword
 
-        if self.current_token_is(Token::Var) {
-            return self.parse_variable_declaration();
-        } else if self.current_token_is(Token::If) {
-            return self.parse_conditional_branch();
+        match self.get_current_token() {
+            Token::Var => return self.parse_variable_declaration(),
+            Token::If => return self.parse_conditional_branch(),
+            Token::While => return self.parse_while(),
+            Token::Break | Token::Continue => return self.parse_loop_control(),
+            _ => (),
         }
 
         // Expecting expression
@@ -197,7 +199,7 @@ impl Parser {
         let mut end;
         self.skip(Token::If)?;
 
-        // Expecting boolean expression
+        // Expecting expression
 
         let condition = self.parse_expression()?;
 
@@ -254,6 +256,46 @@ impl Parser {
             or_else,
             span: start..end,
         })
+    }
+
+    fn parse_while(&mut self) -> Result<AstNode, ParsingError> {
+        let start = self.get_current_rich_token().span.start;
+        self.skip(Token::While)?;
+
+        // Expecting expression
+
+        let condition = self.parse_expression()?;
+
+        // Expecting block
+
+        let (block_statements, block_span) = self.parse_block()?;
+        let end = block_span.end;
+
+        Ok(AstNode::While {
+            condition: Box::new(condition),
+            body: block_statements,
+            span: start..end,
+        })
+    }
+
+    fn parse_loop_control(&mut self) -> Result<AstNode, ParsingError> {
+        let RichToken { kind, span, .. } = self.get_current_rich_token();
+
+        // Expecting either "break" or "continue" keyword
+
+        let control = match kind {
+            Token::Break => AstNode::Break { span },
+            Token::Continue => AstNode::Continue { span },
+            _ => unreachable!(),
+        };
+
+        self.advance();
+
+        // Expecting ";"
+
+        self.skip(Token::Semicolon)?;
+
+        Ok(control)
     }
 
     fn parse_expression(&mut self) -> Result<AstNode, ParsingError> {
@@ -954,6 +996,50 @@ mod tests {
                         span: 17..36,
                     })),
                     span: 0..36,
+                },
+            ),
+        ];
+
+        for (input, expected) in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let result = parse(tokens);
+
+            assert!(result.is_ok());
+            assert_eq!(
+                result.unwrap(),
+                ProgramAst {
+                    statements: vec![expected]
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn test_parsing_while() {
+        let cases = [
+            (
+                "while true {}",
+                AstNode::While {
+                    condition: Box::new(AstNode::Literal {
+                        value: Value::Boolean(true),
+                        span: 6..10,
+                    }),
+                    body: vec![],
+                    span: 0..13,
+                },
+            ),
+            (
+                "while true { continue; break; }",
+                AstNode::While {
+                    condition: Box::new(AstNode::Literal {
+                        value: Value::Boolean(true),
+                        span: 6..10,
+                    }),
+                    body: vec![
+                        AstNode::Continue { span: 13..21 },
+                        AstNode::Break { span: 23..28 },
+                    ],
+                    span: 0..31,
                 },
             ),
         ];

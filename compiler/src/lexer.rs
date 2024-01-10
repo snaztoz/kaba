@@ -84,9 +84,12 @@ pub enum Token {
     // Keywords
     //
 
-    #[token("var")]  Var,
-    #[token("if")]   If,
-    #[token("else")] Else,
+    #[token("var")]      Var,
+    #[token("if")]       If,
+    #[token("else")]     Else,
+    #[token("while")]    While,
+    #[token("break")]    Break,
+    #[token("continue")] Continue,
 
     //
     // Symbols
@@ -147,6 +150,9 @@ impl Display for Token {
             Self::Var => write!(f, "`var` keyword"),
             Self::If => write!(f, "`if` keyword"),
             Self::Else => write!(f, "`else` keyword"),
+            Self::While => write!(f, "`while` keyword"),
+            Self::Break => write!(f, "`break` keyword"),
+            Self::Continue => write!(f, "`continue` keyword"),
             Self::Add => write!(f, "addition operator (`+`)"),
             Self::Sub => write!(f, "subtraction operator (`-`)"),
             Self::Mul => write!(f, "multiplication operator (`*`)"),

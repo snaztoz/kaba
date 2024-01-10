@@ -4,7 +4,7 @@
 //! This module contains the implementation for semantic analysis
 //! stage of the compiler.
 
-use self::scope::Scope;
+use self::scope::{Scope, ScopeType};
 use crate::ast::{AstNode, Program as ProgramAst, Value};
 use builtin::{self, types::Types as BuiltinTypes};
 use logos::Span;
@@ -55,6 +55,14 @@ impl SemanticChecker {
                     or_else,
                     ..
                 } => self.check_conditional_branch(condition, body, &or_else.as_deref())?,
+
+                AstNode::While {
+                    condition, body, ..
+                } => self.check_while(condition, body)?,
+
+                AstNode::Break { span } | AstNode::Continue { span } => {
+                    self.check_loop_control(span)?
+                }
 
                 expression => {
                     self.get_expression_type(expression)?;
@@ -207,6 +215,34 @@ impl SemanticChecker {
         }
 
         Ok(())
+    }
+
+    fn check_while(&mut self, condition: &AstNode, body: &[AstNode]) -> Result<(), SemanticError> {
+        // Expecting boolean type for the condition
+
+        if self.get_expression_type(condition)? != BuiltinTypes::Bool {
+            return Err(SemanticError::NotABoolean {
+                span: condition.get_span().clone(),
+            });
+        }
+
+        // Check all statements inside the body with a new scope
+
+        self.scopes.push(Scope::new_loop_scope());
+        self.check(body)?;
+        self.scopes.pop();
+
+        Ok(())
+    }
+
+    fn check_loop_control(&mut self, span: &Span) -> Result<(), SemanticError> {
+        for scope in self.scopes.iter().rev() {
+            if scope.scope_type == ScopeType::Loop {
+                return Ok(());
+            }
+        }
+
+        Err(SemanticError::LoopControlNotInLoopScope { span: span.clone() })
     }
 
     fn get_expression_type(&self, expression: &AstNode) -> Result<BuiltinTypes, SemanticError> {
@@ -483,6 +519,10 @@ pub enum SemanticError {
         get: usize,
         span: Span,
     },
+
+    LoopControlNotInLoopScope {
+        span: Span,
+    },
 }
 
 impl SemanticError {
@@ -497,7 +537,8 @@ impl SemanticError {
             | Self::NotANumber { span, .. }
             | Self::NotABoolean { span, .. }
             | Self::NotAFunction { span, .. }
-            | Self::FunctionArgumentCountMismatch { span, .. } => Some(span.clone()),
+            | Self::FunctionArgumentCountMismatch { span, .. }
+            | Self::LoopControlNotInLoopScope { span } => Some(span.clone()),
         }
     }
 }
@@ -541,6 +582,9 @@ impl Display for SemanticError {
                 }
                 Self::FunctionArgumentCountMismatch { expecting, get, .. } => {
                     format!("expecting {expecting} argument(s) but get {get} instead")
+                }
+                Self::LoopControlNotInLoopScope { .. } => {
+                    "`break` and `continue` keywords must be within a loop".to_string()
                 }
             }
         )
@@ -709,6 +753,61 @@ mod tests {
                     var x = 50;
                 } else {
                     print(x);
+                }
+            "},
+        ];
+
+        for input in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let ast = parser::parse(tokens).unwrap();
+
+            let mut checker = SemanticChecker::new();
+            let result = checker.check(&ast.statements);
+
+            assert!(result.is_err());
+        }
+    }
+
+    #[test]
+    fn test_loop() {
+        let cases = [
+            indoc! {"
+                while 2 > 5 {
+                    print(1);
+                }
+            "},
+            indoc! {"
+                var a = 5;
+
+                while true {
+                    if a == 5 {
+                        break;
+                    }
+                    print(0);
+                }
+            "},
+        ];
+
+        for input in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let ast = parser::parse(tokens).unwrap();
+
+            let mut checker = SemanticChecker::new();
+            let result = checker.check(&ast.statements);
+
+            assert!(result.is_ok());
+        }
+    }
+
+    #[test]
+    fn test_invalid_loop() {
+        let cases = [
+            indoc! {"
+                while 5 + 5 {}
+            "},
+            indoc! {"
+                if true {
+                    break;
                 }
             "},
         ];
