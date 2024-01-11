@@ -58,7 +58,7 @@ checksum = "3a8241f3ebb85c056b509d4327ad0358fbbba6ffb340bf388f26350aeda225b1"
 
 [[package]]
 name = "builtin"
-version = "0.2.1"
+version = "0.2.2"
 
 [[package]]
 name = "clap"
@@ -118,7 +118,7 @@ dependencies = [
 
 [[package]]
 name = "compiler"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "builtin",
  "colored",
@@ -146,7 +146,7 @@ checksum = "1e186cfbae8084e513daff4240b4797e342f988cecda4fb6c939150f96315fd8"
 
 [[package]]
 name = "kaba"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "clap",
  "compiler",

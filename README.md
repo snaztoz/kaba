@@ -187,13 +187,14 @@ As this is a really new project, it only has limited features for now:
 
 ## Next Goals
 
-Current priority:
-1. Control flow support (such as loop).
-2. Support for other data types, such as string.
+Current priorities:
+
+0. Better type system.
+1. Support for other data types, such as array and string.
 
 ## Attention
 
-1. All statements must be terminated with semicolon (`;`).
+* All statements must be terminated with either a semicolon (`;`) or right brace (`}`) (in case of conditional branch and loop block).
 
 ## License
 
