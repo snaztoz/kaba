@@ -18,7 +18,7 @@ type Col = usize;
 /// file path and the source code itself.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Error {
-    pub file_path: PathBuf,
+    pub file_path: Option<PathBuf>,
     pub source_code: String,
     pub message: String,
     pub span: Option<Span>,
@@ -63,7 +63,6 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let label = "error:".bright_red().bold();
         let message = &self.message;
-        let file_path = self.file_path.display();
 
         let position = if self.span.is_some() {
             self.get_position()
@@ -72,7 +71,9 @@ impl fmt::Display for Error {
         };
 
         if let Some((line, row, col)) = position {
+            let file_path = self.file_path.as_ref().unwrap().display();
             let position_information = format!("{file_path} ({row}:{col})");
+
             let row_number_pad = self.pad_white_spaces(row.to_string().len());
             let col_pad = self.pad_white_spaces(col - 1);
             let highlighter_line = self

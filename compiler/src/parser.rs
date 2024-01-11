@@ -79,10 +79,12 @@ impl Parser {
     fn parse_statement(&mut self) -> Result<AstNode, ParsingError> {
         // Check if statement starts with a keyword
 
-        if self.current_token_is(Token::Var) {
-            return self.parse_variable_declaration();
-        } else if self.current_token_is(Token::If) {
-            return self.parse_conditional_branch();
+        match self.get_current_token() {
+            Token::Var => return self.parse_variable_declaration(),
+            Token::If => return self.parse_conditional_branch(),
+            Token::While => return self.parse_while(),
+            Token::Break | Token::Continue => return self.parse_loop_control(),
+            _ => (),
         }
 
         // Expecting expression
@@ -103,6 +105,8 @@ impl Parser {
                 span,
             };
         }
+
+        // Expecting ";"
 
         self.skip(Token::Semicolon)?;
 
@@ -195,7 +199,7 @@ impl Parser {
         let mut end;
         self.skip(Token::If)?;
 
-        // Expecting boolean expression
+        // Expecting expression
 
         let condition = self.parse_expression()?;
 
@@ -254,10 +258,88 @@ impl Parser {
         })
     }
 
+    fn parse_while(&mut self) -> Result<AstNode, ParsingError> {
+        let start = self.get_current_rich_token().span.start;
+        self.skip(Token::While)?;
+
+        // Expecting expression
+
+        let condition = self.parse_expression()?;
+
+        // Expecting block
+
+        let (block_statements, block_span) = self.parse_block()?;
+        let end = block_span.end;
+
+        Ok(AstNode::While {
+            condition: Box::new(condition),
+            body: block_statements,
+            span: start..end,
+        })
+    }
+
+    fn parse_loop_control(&mut self) -> Result<AstNode, ParsingError> {
+        let RichToken { kind, span, .. } = self.get_current_rich_token();
+
+        // Expecting either "break" or "continue" keyword
+
+        let control = match kind {
+            Token::Break => AstNode::Break { span },
+            Token::Continue => AstNode::Continue { span },
+            _ => unreachable!(),
+        };
+
+        self.advance();
+
+        // Expecting ";"
+
+        self.skip(Token::Semicolon)?;
+
+        Ok(control)
+    }
+
     fn parse_expression(&mut self) -> Result<AstNode, ParsingError> {
         // TODO: make this rule starts from higher rule
 
-        self.parse_equality_expression()
+        self.parse_logical_and_or_expression()
+    }
+
+    fn parse_logical_and_or_expression(&mut self) -> Result<AstNode, ParsingError> {
+        // Parse first term
+
+        let mut child = self.parse_equality_expression()?;
+
+        loop {
+            // Expecting "||" or "&&" (both are optional)
+
+            match self.get_current_token() {
+                Token::Or => {
+                    self.skip(Token::Or)?;
+
+                    let rhs = self.parse_equality_expression()?;
+                    let span = child.get_span().start..rhs.get_span().end;
+
+                    child = AstNode::Or {
+                        lhs: Box::new(child.unwrap_group()),
+                        rhs: Box::new(rhs.unwrap_group()),
+                        span,
+                    };
+                }
+                Token::And => {
+                    self.skip(Token::And)?;
+
+                    let rhs = self.parse_equality_expression()?;
+                    let span = child.get_span().start..rhs.get_span().end;
+
+                    child = AstNode::And {
+                        lhs: Box::new(child.unwrap_group()),
+                        rhs: Box::new(rhs.unwrap_group()),
+                        span,
+                    };
+                }
+                _ => return Ok(child),
+            }
+        }
     }
 
     fn parse_equality_expression(&mut self) -> Result<AstNode, ParsingError> {
@@ -402,7 +484,7 @@ impl Parser {
         let mut child = self.parse_unary_expression()?;
 
         loop {
-            // Expecting "*" or "/" (both are optional)
+            // Expecting "*", "/" or "%" (all are optional)
 
             match self.get_current_token() {
                 Token::Mul => {
@@ -429,25 +511,30 @@ impl Parser {
                         span,
                     };
                 }
+                Token::Mod => {
+                    self.skip(Token::Mod)?;
+
+                    let rhs = self.parse_unary_expression()?;
+                    let span = child.get_span().start..rhs.get_span().end;
+
+                    child = AstNode::Mod {
+                        lhs: Box::new(child.unwrap_group()),
+                        rhs: Box::new(rhs.unwrap_group()),
+                        span,
+                    };
+                }
                 _ => return Ok(child),
             }
         }
     }
 
     fn parse_unary_expression(&mut self) -> Result<AstNode, ParsingError> {
-        //  Prefixed by >= 0 negation expression
+        //  Prefixed by >= 0 negation or not expression
 
         if self.current_token_is(Token::Sub) {
-            let sub_token_start = self.get_current_rich_token().span.start;
-            self.skip(Token::Sub)?;
-
-            let child = self.parse_unary_expression()?;
-            let span = sub_token_start..child.get_span().end;
-
-            return Ok(AstNode::Neg {
-                child: Box::new(child.unwrap_group()),
-                span,
-            });
+            return self.parse_prefix_expression(Token::Sub);
+        } else if self.current_token_is(Token::Not) {
+            return self.parse_prefix_expression(Token::Not);
         }
 
         // Parse primary expression
@@ -482,6 +569,27 @@ impl Parser {
         }
 
         Ok(child)
+    }
+
+    fn parse_prefix_expression(&mut self, token: Token) -> Result<AstNode, ParsingError> {
+        let start = self.get_current_rich_token().span.start;
+        self.skip(token.clone())?;
+
+        let child = self.parse_unary_expression()?;
+        let span = start..child.get_span().end;
+
+        match token {
+            Token::Sub => Ok(AstNode::Neg {
+                child: Box::new(child.unwrap_group()),
+                span,
+            }),
+            Token::Not => Ok(AstNode::Not {
+                child: Box::new(child.unwrap_group()),
+                span,
+            }),
+
+            _ => unreachable!(),
+        }
     }
 
     fn parse_primary_expression(&mut self) -> Result<AstNode, ParsingError> {
@@ -919,6 +1027,50 @@ mod tests {
     }
 
     #[test]
+    fn test_parsing_while() {
+        let cases = [
+            (
+                "while true {}",
+                AstNode::While {
+                    condition: Box::new(AstNode::Literal {
+                        value: Value::Boolean(true),
+                        span: 6..10,
+                    }),
+                    body: vec![],
+                    span: 0..13,
+                },
+            ),
+            (
+                "while true { continue; break; }",
+                AstNode::While {
+                    condition: Box::new(AstNode::Literal {
+                        value: Value::Boolean(true),
+                        span: 6..10,
+                    }),
+                    body: vec![
+                        AstNode::Continue { span: 13..21 },
+                        AstNode::Break { span: 23..28 },
+                    ],
+                    span: 0..31,
+                },
+            ),
+        ];
+
+        for (input, expected) in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let result = parse(tokens);
+
+            assert!(result.is_ok());
+            assert_eq!(
+                result.unwrap(),
+                ProgramAst {
+                    statements: vec![expected]
+                }
+            );
+        }
+    }
+
+    #[test]
     fn test_parsing_expression() {
         let cases = [
             (
@@ -954,6 +1106,20 @@ mod tests {
                         span: 18..25,
                     }),
                     span: 0..25,
+                },
+            ),
+            (
+                "50.0 % 2.0;",
+                AstNode::Mod {
+                    lhs: Box::new(AstNode::Literal {
+                        value: Value::Float(50.0),
+                        span: 0..4,
+                    }),
+                    rhs: Box::new(AstNode::Literal {
+                        value: Value::Float(2.0),
+                        span: 7..10,
+                    }),
+                    span: 0..10,
                 },
             ),
             (
@@ -1165,6 +1331,30 @@ mod tests {
                         span: 10..14,
                     }),
                     span: 0..14,
+                },
+            ),
+            (
+                "false || !false && true;",
+                AstNode::And {
+                    lhs: Box::new(AstNode::Or {
+                        lhs: Box::new(AstNode::Literal {
+                            value: Value::Boolean(false),
+                            span: 0..5,
+                        }),
+                        rhs: Box::new(AstNode::Not {
+                            child: Box::new(AstNode::Literal {
+                                value: Value::Boolean(false),
+                                span: 10..15,
+                            }),
+                            span: 9..15,
+                        }),
+                        span: 0..15,
+                    }),
+                    rhs: Box::new(AstNode::Literal {
+                        value: Value::Boolean(true),
+                        span: 19..23,
+                    }),
+                    span: 0..23,
                 },
             ),
         ];

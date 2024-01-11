@@ -31,10 +31,19 @@ impl Scope {
             scope_type: ScopeType::Conditional,
         }
     }
+
+    pub fn new_loop_scope() -> Self {
+        Self {
+            symbols: HashMap::new(),
+            scope_type: ScopeType::Loop,
+        }
+    }
 }
 
+#[derive(Debug, PartialEq)]
 pub enum ScopeType {
     Builtin,
     Global,
     Conditional,
+    Loop,
 }

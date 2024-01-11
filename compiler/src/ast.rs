@@ -41,6 +41,29 @@ pub enum AstNode {
         span: Span,
     },
 
+    While {
+        condition: Box<AstNode>,
+        body: Vec<AstNode>,
+        span: Span,
+    },
+    Break {
+        span: Span,
+    },
+    Continue {
+        span: Span,
+    },
+
+    Or {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+    And {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+
     Eq {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
@@ -92,7 +115,16 @@ pub enum AstNode {
         rhs: Box<AstNode>,
         span: Span,
     },
+    Mod {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
 
+    Not {
+        child: Box<AstNode>,
+        span: Span,
+    },
     Neg {
         child: Box<AstNode>,
         span: Span,
@@ -134,6 +166,11 @@ impl AstNode {
             | Self::ValueAssignment { span, .. }
             | Self::If { span, .. }
             | Self::Else { span, .. }
+            | Self::While { span, .. }
+            | Self::Break { span }
+            | Self::Continue { span }
+            | Self::Or { span, .. }
+            | Self::And { span, .. }
             | Self::Eq { span, .. }
             | Self::Neq { span, .. }
             | Self::Gt { span, .. }
@@ -144,6 +181,8 @@ impl AstNode {
             | Self::Sub { span, .. }
             | Self::Mul { span, .. }
             | Self::Div { span, .. }
+            | Self::Mod { span, .. }
+            | Self::Not { span, .. }
             | Self::Neg { span, .. }
             | Self::FunctionCall { span, .. }
             | Self::Group { span, .. }

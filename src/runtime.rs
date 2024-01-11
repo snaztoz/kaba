@@ -20,6 +20,10 @@ pub struct Runtime<'a> {
     // IO streams
     output_stream: RefCell<WriteStream<'a>>,
     _error_stream: RefCell<WriteStream<'a>>,
+
+    // Internal state flags
+    stop_execution: bool,
+    should_break_loop: bool,
 }
 
 impl<'a> Runtime<'a> {
@@ -39,6 +43,8 @@ impl<'a> Runtime<'a> {
             error: None,
             output_stream: RefCell::new(output_stream),
             _error_stream: RefCell::new(error_stream),
+            stop_execution: false,
+            should_break_loop: false,
         }
     }
 
@@ -49,6 +55,10 @@ impl<'a> Runtime<'a> {
 
     fn run_statements(&mut self, statements: &[AstNode]) -> Result<(), RuntimeError> {
         for statement in statements {
+            if self.stop_execution {
+                return Ok(());
+            }
+
             match statement {
                 AstNode::VariableDeclaration {
                     identifier, value, ..
@@ -65,6 +75,19 @@ impl<'a> Runtime<'a> {
                     or_else,
                     ..
                 } => self.run_conditional_branch(condition, body, or_else.as_deref())?,
+
+                AstNode::While {
+                    condition, body, ..
+                } => self.run_while(condition, body)?,
+
+                AstNode::Break { .. } => {
+                    self.stop_execution = true;
+                    self.should_break_loop = true;
+                }
+
+                AstNode::Continue { .. } => {
+                    self.stop_execution = true;
+                }
 
                 node => {
                     self.run_expression(node)?;
@@ -145,8 +168,38 @@ impl<'a> Runtime<'a> {
         Ok(())
     }
 
+    fn run_while(&mut self, condition: &AstNode, body: &[AstNode]) -> Result<(), RuntimeError> {
+        loop {
+            let should_execute = match self.run_expression(condition)? {
+                Value::Boolean(b) => b,
+                _ => unreachable!(),
+            };
+
+            if should_execute {
+                self.scopes.push(HashMap::new());
+                self.run_statements(body)?;
+                self.scopes.pop();
+
+                if self.stop_execution {
+                    self.stop_execution = false;
+                }
+
+                if self.should_break_loop {
+                    self.should_break_loop = false;
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        Ok(())
+    }
+
     fn run_expression(&self, expression: &AstNode) -> Result<Value, RuntimeError> {
         match expression {
+            AstNode::Or { lhs, rhs, .. } => Ok(self.run_or(lhs, rhs)),
+            AstNode::And { lhs, rhs, .. } => Ok(self.run_and(lhs, rhs)),
             AstNode::Eq { lhs, rhs, .. } => {
                 Ok(self.run_eq(&self.run_expression(lhs)?, &self.run_expression(rhs)?))
             }
@@ -177,7 +230,11 @@ impl<'a> Runtime<'a> {
             AstNode::Div { lhs, rhs, .. } => {
                 Ok(self.math_div(&self.run_expression(lhs)?, &self.run_expression(rhs)?))
             }
+            AstNode::Mod { lhs, rhs, .. } => {
+                Ok(self.math_mod(&self.run_expression(lhs)?, &self.run_expression(rhs)?))
+            }
 
+            AstNode::Not { child, .. } => Ok(self.run_not(&self.run_expression(child)?)),
             AstNode::Neg { child, .. } => Ok(self.math_neg(&self.run_expression(child)?)),
             AstNode::FunctionCall { callee, args, .. } => self.run_function_call(callee, args),
 
@@ -186,6 +243,39 @@ impl<'a> Runtime<'a> {
 
             _ => unreachable!(),
         }
+    }
+
+    fn run_or(&self, lhs: &AstNode, rhs: &AstNode) -> Value {
+        // Use short-circuiting
+
+        if let Ok(Value::Boolean(b)) = self.run_expression(lhs) {
+            if b {
+                return Value::Boolean(true);
+            }
+        }
+        if let Ok(Value::Boolean(b)) = self.run_expression(rhs) {
+            if b {
+                return Value::Boolean(true);
+            }
+        }
+
+        Value::Boolean(false)
+    }
+
+    fn run_and(&self, lhs: &AstNode, rhs: &AstNode) -> Value {
+        // Use short-circuiting
+
+        if let Ok(Value::Boolean(b_lhs)) = self.run_expression(lhs) {
+            if b_lhs {
+                if let Ok(Value::Boolean(b_rhs)) = self.run_expression(rhs) {
+                    if b_rhs {
+                        return Value::Boolean(true);
+                    }
+                }
+            }
+        }
+
+        Value::Boolean(false)
     }
 
     fn run_eq(&self, lhs: &Value, rhs: &Value) -> Value {
@@ -296,6 +386,29 @@ impl<'a> Runtime<'a> {
                 Value::Float(r) => Value::Float(l / r),
                 _ => unreachable!(),
             },
+            _ => unreachable!(),
+        }
+    }
+
+    fn math_mod(&self, lhs: &Value, rhs: &Value) -> Value {
+        match lhs {
+            Value::Integer(l) => match rhs {
+                Value::Integer(r) => Value::Integer(l % r),
+                Value::Float(r) => Value::Float(f64::from(*l) % r),
+                _ => unreachable!(),
+            },
+            Value::Float(l) => match rhs {
+                Value::Integer(r) => Value::Float(l % f64::from(*r)),
+                Value::Float(r) => Value::Float(l % r),
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    fn run_not(&self, child: &Value) -> Value {
+        match child {
+            Value::Boolean(b) => Value::Boolean(!b),
             _ => unreachable!(),
         }
     }
@@ -519,6 +632,66 @@ mod tests {
                     print(x);
                 "},
                 "256\n".as_bytes(),
+            ),
+            (
+                indoc! {"
+                    if false && true {
+                        print(1);
+                    }
+                    if false || true {
+                        print(2);
+                    }
+                    if !false {
+                        print(3);
+                    }
+                "},
+                "2\n3\n".as_bytes(),
+            ),
+            (
+                indoc! {"
+                    var x = 0;
+
+                    while true {
+                        print(x);
+
+                        if x == 5 {
+                            break;
+                        }
+
+                        x = x + 1;
+                    }
+                "},
+                "0\n1\n2\n3\n4\n5\n".as_bytes(),
+            ),
+            (
+                indoc! {"
+                    var x = 0;
+
+                    while true {
+                        x = x + 1;
+
+                        if x == 2 {
+                            continue;
+                        } else if x == 5 {
+                            break;
+                        }
+
+                        print(x);
+                    }
+                "},
+                "1\n3\n4\n".as_bytes(),
+            ),
+            (
+                indoc! {"
+                    var i = 0;
+                    while i < 10 {
+                        if i % 2 == 0 {
+                            print(i);
+                        }
+                        i = i + 1;
+                    }
+                "},
+                "0\n2\n4\n6\n8\n".as_bytes(),
             ),
         ];
 

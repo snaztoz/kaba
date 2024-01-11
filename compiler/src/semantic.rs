@@ -4,7 +4,7 @@
 //! This module contains the implementation for semantic analysis
 //! stage of the compiler.
 
-use self::scope::Scope;
+use self::scope::{Scope, ScopeType};
 use crate::ast::{AstNode, Program as ProgramAst, Value};
 use builtin::{self, types::Types as BuiltinTypes};
 use logos::Span;
@@ -12,10 +12,11 @@ use std::{fmt::Display, str::FromStr};
 
 mod scope;
 
-pub fn check(ast: ProgramAst) -> Result<ProgramAst, SemanticError> {
+/// Provides a quick way to run semantic analysis on a Kaba AST.
+pub fn check(ast: &ProgramAst) -> Result<(), SemanticError> {
     let mut checker = SemanticChecker::new();
     checker.check(&ast.statements)?;
-    Ok(ast)
+    Ok(())
 }
 
 struct SemanticChecker {
@@ -55,6 +56,14 @@ impl SemanticChecker {
                     ..
                 } => self.check_conditional_branch(condition, body, &or_else.as_deref())?,
 
+                AstNode::While {
+                    condition, body, ..
+                } => self.check_while(condition, body)?,
+
+                AstNode::Break { span } | AstNode::Continue { span } => {
+                    self.check_loop_control(span)?
+                }
+
                 expression => {
                     self.get_expression_type(expression)?;
                 }
@@ -87,7 +96,7 @@ impl SemanticChecker {
             });
         }
 
-        // Get var_type
+        // Get variable type
 
         let var_type = if let Some(vt) = var_type {
             let (type_name, type_span) = vt.unwrap_type_notation();
@@ -109,7 +118,7 @@ impl SemanticChecker {
             None
         };
 
-        // Either var_type or value_type must be present
+        // Either variable's or value's type must be present
 
         if var_type.is_none() && value_type.is_none() {
             return Err(SemanticError::UnableToInferVariableType {
@@ -118,8 +127,8 @@ impl SemanticChecker {
             });
         }
 
-        // If both present, check if value can be assigned to
-        // the variable
+        // If both present, check if value's type is compatible with
+        // the variable's
 
         if let Some(var_type) = &var_type {
             if let Some(value_type) = &value_type {
@@ -208,10 +217,42 @@ impl SemanticChecker {
         Ok(())
     }
 
+    fn check_while(&mut self, condition: &AstNode, body: &[AstNode]) -> Result<(), SemanticError> {
+        // Expecting boolean type for the condition
+
+        if self.get_expression_type(condition)? != BuiltinTypes::Bool {
+            return Err(SemanticError::NotABoolean {
+                span: condition.get_span().clone(),
+            });
+        }
+
+        // Check all statements inside the body with a new scope
+
+        self.scopes.push(Scope::new_loop_scope());
+        self.check(body)?;
+        self.scopes.pop();
+
+        Ok(())
+    }
+
+    fn check_loop_control(&mut self, span: &Span) -> Result<(), SemanticError> {
+        for scope in self.scopes.iter().rev() {
+            if scope.scope_type == ScopeType::Loop {
+                return Ok(());
+            }
+        }
+
+        Err(SemanticError::LoopControlNotInLoopScope { span: span.clone() })
+    }
+
     fn get_expression_type(&self, expression: &AstNode) -> Result<BuiltinTypes, SemanticError> {
         match expression {
             AstNode::Eq { lhs, rhs, .. } | AstNode::Neq { lhs, rhs, .. } => {
                 self.get_equality_operation_type(lhs, rhs)
+            }
+
+            AstNode::Or { lhs, rhs, .. } | AstNode::And { lhs, rhs, .. } => {
+                self.get_logical_and_or_operation_type(lhs, rhs)
             }
 
             AstNode::Gt { lhs, rhs, .. }
@@ -222,8 +263,10 @@ impl SemanticChecker {
             AstNode::Add { lhs, rhs, .. }
             | AstNode::Sub { lhs, rhs, .. }
             | AstNode::Mul { lhs, rhs, .. }
-            | AstNode::Div { lhs, rhs, .. } => self.get_math_binary_operation_type(lhs, rhs),
+            | AstNode::Div { lhs, rhs, .. }
+            | AstNode::Mod { lhs, rhs, .. } => self.get_math_binary_operation_type(lhs, rhs),
 
+            AstNode::Not { child, .. } => self.get_logical_not_operation_type(child),
             AstNode::Neg { child, .. } => self.get_neg_operation_type(child),
 
             AstNode::Identifier { name, span } => self.get_identifier_type(name, span),
@@ -238,7 +281,7 @@ impl SemanticChecker {
         }
     }
 
-    fn get_math_binary_operation_type(
+    fn get_logical_and_or_operation_type(
         &self,
         lhs: &AstNode,
         rhs: &AstNode,
@@ -246,21 +289,17 @@ impl SemanticChecker {
         let lhs_type = self.get_expression_type(lhs)?;
         let rhs_type = self.get_expression_type(rhs)?;
 
-        if !lhs_type.is_number() {
-            return Err(SemanticError::NotANumber {
+        if !lhs_type.is_boolean() {
+            return Err(SemanticError::NotABoolean {
                 span: lhs.get_span().clone(),
             });
-        } else if !rhs_type.is_number() {
-            return Err(SemanticError::NotANumber {
+        } else if !rhs_type.is_boolean() {
+            return Err(SemanticError::NotABoolean {
                 span: rhs.get_span().clone(),
             });
         }
 
-        if lhs_type == BuiltinTypes::Int && rhs_type == BuiltinTypes::Int {
-            Ok(BuiltinTypes::Int)
-        } else {
-            Ok(BuiltinTypes::Float)
-        }
+        Ok(BuiltinTypes::Bool)
     }
 
     fn get_equality_operation_type(
@@ -306,6 +345,44 @@ impl SemanticChecker {
             });
         }
 
+        Ok(BuiltinTypes::Bool)
+    }
+
+    fn get_math_binary_operation_type(
+        &self,
+        lhs: &AstNode,
+        rhs: &AstNode,
+    ) -> Result<BuiltinTypes, SemanticError> {
+        let lhs_type = self.get_expression_type(lhs)?;
+        let rhs_type = self.get_expression_type(rhs)?;
+
+        if !lhs_type.is_number() {
+            return Err(SemanticError::NotANumber {
+                span: lhs.get_span().clone(),
+            });
+        } else if !rhs_type.is_number() {
+            return Err(SemanticError::NotANumber {
+                span: rhs.get_span().clone(),
+            });
+        }
+
+        if lhs_type == BuiltinTypes::Int && rhs_type == BuiltinTypes::Int {
+            Ok(BuiltinTypes::Int)
+        } else {
+            Ok(BuiltinTypes::Float)
+        }
+    }
+
+    fn get_logical_not_operation_type(
+        &self,
+        child: &AstNode,
+    ) -> Result<BuiltinTypes, SemanticError> {
+        let child_type = self.get_expression_type(child)?;
+        if !child_type.is_boolean() {
+            return Err(SemanticError::NotABoolean {
+                span: child.get_span(),
+            });
+        }
         Ok(BuiltinTypes::Bool)
     }
 
@@ -443,6 +520,10 @@ pub enum SemanticError {
         get: usize,
         span: Span,
     },
+
+    LoopControlNotInLoopScope {
+        span: Span,
+    },
 }
 
 impl SemanticError {
@@ -457,7 +538,8 @@ impl SemanticError {
             | Self::NotANumber { span, .. }
             | Self::NotABoolean { span, .. }
             | Self::NotAFunction { span, .. }
-            | Self::FunctionArgumentCountMismatch { span, .. } => Some(span.clone()),
+            | Self::FunctionArgumentCountMismatch { span, .. }
+            | Self::LoopControlNotInLoopScope { span } => Some(span.clone()),
         }
     }
 }
@@ -501,6 +583,10 @@ impl Display for SemanticError {
                 }
                 Self::FunctionArgumentCountMismatch { expecting, get, .. } => {
                     format!("expecting {expecting} argument(s) but get {get} instead")
+                }
+                Self::LoopControlNotInLoopScope { .. } => {
+                    "the usage of `break` and `continue` statements must be within a loop"
+                        .to_string()
                 }
             }
         )
@@ -685,12 +771,69 @@ mod tests {
     }
 
     #[test]
+    fn test_loop() {
+        let cases = [
+            indoc! {"
+                while 2 > 5 {
+                    print(1);
+                }
+            "},
+            indoc! {"
+                var a = 5;
+
+                while true {
+                    if a == 5 {
+                        break;
+                    }
+                    print(0);
+                }
+            "},
+        ];
+
+        for input in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let ast = parser::parse(tokens).unwrap();
+
+            let mut checker = SemanticChecker::new();
+            let result = checker.check(&ast.statements);
+
+            assert!(result.is_ok());
+        }
+    }
+
+    #[test]
+    fn test_invalid_loop() {
+        let cases = [
+            indoc! {"
+                while 5 + 5 {}
+            "},
+            indoc! {"
+                if true {
+                    break;
+                }
+            "},
+        ];
+
+        for input in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let ast = parser::parse(tokens).unwrap();
+
+            let mut checker = SemanticChecker::new();
+            let result = checker.check(&ast.statements);
+
+            assert!(result.is_err());
+        }
+    }
+
+    #[test]
     fn test_expression_type() {
         let cases = [
             ("-5 + 50 * 200 / 7 - 999;", BuiltinTypes::Int),
             ("-5 + -0.25;", BuiltinTypes::Float),
+            ("99.9 % 0.1;", BuiltinTypes::Float),
             ("print(703 + 5 - 90 * 100 / 86 * 0.5);", BuiltinTypes::Void),
             ("767 >= 900 == (45 < 67);", BuiltinTypes::Bool),
+            ("false || !false && 50 > 0;", BuiltinTypes::Bool),
         ];
 
         for (input, expected) in cases {
@@ -715,6 +858,8 @@ mod tests {
             "-true;",
             "true > false;",
             "93 != 93.0;",
+            "!5;",
+            "false || !false && 50;",
         ];
 
         for input in cases {

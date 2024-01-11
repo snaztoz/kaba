@@ -21,9 +21,16 @@ cargo build --release
 ./target/release/kaba run <file-name>
 ```
 
+If you want to run all tests, use:
+```bash
+cargo test --workspace
+```
+
 ## Usage
 
 Usage instructions:
+
+0. Follow the build step above.
 
 1. Create a source code file (the extension **must be** `.kaba`).
 
@@ -36,32 +43,55 @@ Usage instructions:
 
 As this is a really new project, it only has limited features for now:
 
+0. Comments
+  ```text
+  // This is a single line comment
+
+  /*
+    This
+    is
+    a
+    multi-
+    line
+    comment
+  */
+  ```
+
 1. Variable creation
   ```text
   var x = 15;
   ```
 
-2. Support for integer and float numbers
+2. Support for integer, float and boolean
   ```text
   var a = 5;
   var b = 10.7;
   var c = -(999);
+  var d = true;
   ```
 
 3. Value re-assign
   ```text
   var x = 20;
   x = 999;
+
+  // This will trigger error due to the types are being incompatible:
+  x = 5.0;
   ```
 
 4. Support for type notation
   ```text
   var x: Float = 5;
+
+  // This will trigger error
+  var i: Int = 5.0;
   ```
 
-5. Basic arithmetic operation (Division, Multiplication, Addition, Subtraction)
+5. Basic math operation (division, multiplication, addition, subtraction, and modulo)
   ```text
-  23 + 5 * 30 / 2 - 9
+  23 + 5 * 30 / 2 - 9;
+
+  5 % 2;
   ```
 
 6. Equality and comparison operation
@@ -74,19 +104,26 @@ As this is a really new project, it only has limited features for now:
   7.3 <= 10;
   ```
 
-7. Grouped expression
+7. Logical operation
   ```text
-  52 * (2 + 3) / 3
+  false || true;  // true
+  false && false; // false
+  !false;         // true
   ```
 
-8. `print` function (there is no other function, and it is not yet supported to create a new one)
+8. Grouped expression
+  ```text
+  52 * (2 + 3) / 3;
+  ```
+
+9. `print` function (there is no other function, and it is not yet supported to create a new one)
   ```text
   var x = 101;
 
   print(x);
   ```
 
-9. Conditional branch
+10. Conditional branch
   ```text
   var condition = 50 > 10;
   var condition2 = 50 > 20;
@@ -101,33 +138,63 @@ As this is a really new project, it only has limited features for now:
   }
   ```
 
+11. Loop
+  ```
+  var i = 0;
+
+  while i < 10 {
+    if i % 2 == 0 {
+      print(i);
+    }
+    i = i + 1;
+  }
+
+  // `Break` and `continue` statements are also supported
+  while true {
+    break;
+  }
+  ```
+
 ## Example
 
-Program for variable swapping:
-```text
-var x = 10;
-var y = 20;
+0. Program for variable swapping:
+  ```text
+  var x = 10;
+  var y = 20;
 
-print(x);
-print(y);
+  print(x);
+  print(y);
 
-var temp = x;
-x = y;
-y = temp;
+  var temp = x;
+  x = y;
+  y = temp;
 
-print(x);
-print(y);
-```
+  print(x);
+  print(y);
+  ```
+
+1. Program to print all odd numbers below 10:
+  ```text
+  var i = 0;
+
+  while i < 10 {
+    if i % 2 == 1 {
+      print(i);
+    }
+    i = i + 1;
+  }
+  ```
 
 ## Next Goals
 
-Current priority:
-1. Control flow support (such as loop).
-2. Support for other data types, such as string.
+Current priorities:
+
+0. Better type system.
+1. Support for other data types, such as array and string.
 
 ## Attention
 
-1. All statements must be terminated with semicolon (`;`).
+* All statements must be terminated with either a semicolon (`;`) or right brace (`}`) (in case of conditional branch and loop block).
 
 ## License
 
