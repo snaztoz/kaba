@@ -697,7 +697,7 @@ mod tests {
             "},
             indoc! {"
                 var x: Float;
-                x = 50;
+                x = 50.0;
             "},
             indoc! {"
                 var b: Bool = false;

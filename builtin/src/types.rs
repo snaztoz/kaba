@@ -33,7 +33,7 @@ impl Type {
             return false;
         }
 
-        (self == other) || (*other == Self::Any) || (*self == Self::Int && *other == Self::Float)
+        self == other || *other == Self::Any
     }
 }
 
