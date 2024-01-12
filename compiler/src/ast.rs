@@ -57,6 +57,36 @@ pub enum AstNode {
         span: Span,
     },
 
+    AddAssign {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+
+    SubAssign {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+
+    MulAssign {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+
+    DivAssign {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+
+    ModAssign {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+
     Or {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
@@ -179,12 +209,17 @@ impl AstNode {
     pub fn get_span(&self) -> Span {
         match self {
             Self::VariableDeclaration { span, .. }
-            | Self::Assign { span, .. }
             | Self::If { span, .. }
             | Self::Else { span, .. }
             | Self::While { span, .. }
             | Self::Break { span }
             | Self::Continue { span }
+            | Self::Assign { span, .. }
+            | Self::AddAssign { span, .. }
+            | Self::SubAssign { span, .. }
+            | Self::MulAssign { span, .. }
+            | Self::DivAssign { span, .. }
+            | Self::ModAssign { span, .. }
             | Self::Or { span, .. }
             | Self::And { span, .. }
             | Self::Eq { span, .. }
@@ -266,7 +301,22 @@ impl Display for AstNode {
                 write!(f, "`continue` statement")
             }
             Self::Assign { .. } => {
-                write!(f, "`assignment` expression")
+                write!(f, "`assign` expression")
+            }
+            Self::AddAssign { .. } => {
+                write!(f, "`add assign` expression")
+            }
+            Self::SubAssign { .. } => {
+                write!(f, "`sub assign` expression")
+            }
+            Self::MulAssign { .. } => {
+                write!(f, "`mul assign` expression")
+            }
+            Self::DivAssign { .. } => {
+                write!(f, "`div assign` expression")
+            }
+            Self::ModAssign { .. } => {
+                write!(f, "`mod assign` expression")
             }
             Self::Or { .. } => {
                 write!(f, "`or` expression")
@@ -335,6 +385,7 @@ impl Display for AstNode {
 /// source code, such as integer or string.
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub enum Value {
+    Void,
     Integer(i32),
     Float(f64),
     Boolean(bool),
@@ -346,6 +397,7 @@ impl Display for Value {
             f,
             "{}",
             match self {
+                Value::Void => "void".to_string(),
                 Value::Integer(n) => format!("{n}"),
                 Value::Float(n) => format!("{n}"),
                 Value::Boolean(b) => format!("{b}"),

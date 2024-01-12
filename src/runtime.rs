@@ -14,7 +14,7 @@ type Scope = HashMap<String, Value>;
 
 pub struct Runtime<'a> {
     ast: Option<ProgramAst>,
-    scopes: Vec<Scope>,
+    scopes: RefCell<Vec<Scope>>,
     pub error: Option<String>,
 
     // IO streams
@@ -39,7 +39,7 @@ impl<'a> Runtime<'a> {
 
         Self {
             ast: Some(ast),
-            scopes,
+            scopes: RefCell::new(scopes),
             error: None,
             output_stream: RefCell::new(output_stream),
             _error_stream: RefCell::new(error_stream),
@@ -66,8 +66,6 @@ impl<'a> Runtime<'a> {
                     let name = identifier.unwrap_identifier().0;
                     self.create_variable(&name, value.as_deref())?
                 }
-
-                AstNode::Assign { lhs, rhs, .. } => self.update_value(lhs, rhs)?,
 
                 AstNode::If {
                     condition,
@@ -117,18 +115,95 @@ impl<'a> Runtime<'a> {
         Ok(())
     }
 
-    fn update_value(&mut self, lhs: &AstNode, value: &AstNode) -> Result<(), RuntimeError> {
-        // TODO: make lhs to be able to use more expression (currently only identifier)
+    fn assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Value, RuntimeError> {
+        match lhs {
+            AstNode::Identifier { name, .. } => {
+                let value = self.run_expression(rhs)?;
+                self.update_variable_value(name, value)?;
+            }
+            _ => todo!("more expression for value assignment"),
+        }
+        Ok(Value::Void)
+    }
+
+    fn add_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Value, RuntimeError> {
+        let (name, _) = lhs.unwrap_identifier();
+        let old_value = self.get_variable_value(&name)?;
+        let value = self.run_expression(rhs)?;
+        let new_value = self.math_add(&old_value, &value);
 
         match lhs {
             AstNode::Identifier { name, .. } => {
-                self.update_variable_value(name, value)?;
+                self.update_variable_value(name, new_value)?;
             }
-
             _ => todo!("more expression for value assignment"),
         }
 
-        Ok(())
+        Ok(Value::Void)
+    }
+
+    fn sub_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Value, RuntimeError> {
+        let (name, _) = lhs.unwrap_identifier();
+        let old_value = self.get_variable_value(&name)?;
+        let value = self.run_expression(rhs)?;
+        let new_value = self.math_sub(&old_value, &value);
+
+        match lhs {
+            AstNode::Identifier { name, .. } => {
+                self.update_variable_value(name, new_value)?;
+            }
+            _ => todo!("more expression for value assignment"),
+        }
+
+        Ok(Value::Void)
+    }
+
+    fn mul_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Value, RuntimeError> {
+        let (name, _) = lhs.unwrap_identifier();
+        let old_value = self.get_variable_value(&name)?;
+        let value = self.run_expression(rhs)?;
+        let new_value = self.math_mul(&old_value, &value);
+
+        match lhs {
+            AstNode::Identifier { name, .. } => {
+                self.update_variable_value(name, new_value)?;
+            }
+            _ => todo!("more expression for value assignment"),
+        }
+
+        Ok(Value::Void)
+    }
+
+    fn div_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Value, RuntimeError> {
+        let (name, _) = lhs.unwrap_identifier();
+        let old_value = self.get_variable_value(&name)?;
+        let value = self.run_expression(rhs)?;
+        let new_value = self.math_div(&old_value, &value);
+
+        match lhs {
+            AstNode::Identifier { name, .. } => {
+                self.update_variable_value(name, new_value)?;
+            }
+            _ => todo!("more expression for value assignment"),
+        }
+
+        Ok(Value::Void)
+    }
+
+    fn mod_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Value, RuntimeError> {
+        let (name, _) = lhs.unwrap_identifier();
+        let old_value = self.get_variable_value(&name)?;
+        let value = self.run_expression(rhs)?;
+        let new_value = self.math_mod(&old_value, &value);
+
+        match lhs {
+            AstNode::Identifier { name, .. } => {
+                self.update_variable_value(name, new_value)?;
+            }
+            _ => todo!("more expression for value assignment"),
+        }
+
+        Ok(Value::Void)
     }
 
     fn run_conditional_branch(
@@ -143,9 +218,9 @@ impl<'a> Runtime<'a> {
         };
 
         if should_execute {
-            self.scopes.push(HashMap::new());
+            self.scopes.borrow_mut().push(HashMap::new());
             self.run_statements(body)?;
-            self.scopes.pop();
+            self.scopes.borrow_mut().pop();
         } else if let Some(alt) = or_else {
             match alt {
                 AstNode::If {
@@ -156,9 +231,9 @@ impl<'a> Runtime<'a> {
                 } => self.run_conditional_branch(condition, body, or_else.as_deref())?,
 
                 AstNode::Else { body, .. } => {
-                    self.scopes.push(HashMap::new());
+                    self.scopes.borrow_mut().push(HashMap::new());
                     self.run_statements(body)?;
-                    self.scopes.pop();
+                    self.scopes.borrow_mut().pop();
                 }
 
                 _ => unreachable!(),
@@ -176,9 +251,9 @@ impl<'a> Runtime<'a> {
             };
 
             if should_execute {
-                self.scopes.push(HashMap::new());
+                self.scopes.borrow_mut().push(HashMap::new());
                 self.run_statements(body)?;
-                self.scopes.pop();
+                self.scopes.borrow_mut().pop();
 
                 if self.stop_execution {
                     self.stop_execution = false;
@@ -198,6 +273,14 @@ impl<'a> Runtime<'a> {
 
     fn run_expression(&self, expression: &AstNode) -> Result<Value, RuntimeError> {
         match expression {
+            AstNode::Assign { lhs, rhs, .. } => self.assign(lhs, rhs),
+
+            AstNode::AddAssign { lhs, rhs, .. } => self.add_assign(lhs, rhs),
+            AstNode::SubAssign { lhs, rhs, .. } => self.sub_assign(lhs, rhs),
+            AstNode::MulAssign { lhs, rhs, .. } => self.mul_assign(lhs, rhs),
+            AstNode::DivAssign { lhs, rhs, .. } => self.div_assign(lhs, rhs),
+            AstNode::ModAssign { lhs, rhs, .. } => self.mod_assign(lhs, rhs),
+
             AstNode::Or { lhs, rhs, .. } => Ok(self.run_or(lhs, rhs)),
             AstNode::And { lhs, rhs, .. } => Ok(self.run_and(lhs, rhs)),
             AstNode::Eq { lhs, rhs, .. } => {
@@ -422,19 +505,18 @@ impl<'a> Runtime<'a> {
     }
 
     fn is_current_scope_has_variable(&self, name: &str) -> bool {
-        let last_index = self.scopes.len() - 1;
-        self.scopes[last_index].contains_key(name)
+        let last_index = self.scopes.borrow().len() - 1;
+        self.scopes.borrow()[last_index].contains_key(name)
     }
 
     fn create_variable_in_current_scope(&mut self, name: &str, value: Value) {
-        let last_index = self.scopes.len() - 1;
-        self.scopes[last_index].insert(String::from(name), value);
+        let last_index = self.scopes.borrow().len() - 1;
+        self.scopes.borrow_mut()[last_index].insert(String::from(name), value);
     }
 
-    fn update_variable_value(&mut self, name: &str, value: &AstNode) -> Result<(), RuntimeError> {
-        let value = self.run_expression(value)?;
-        let scope = self
-            .scopes
+    fn update_variable_value(&self, name: &str, value: Value) -> Result<(), RuntimeError> {
+        let mut scopes = self.scopes.borrow_mut();
+        let scope = scopes
             .iter_mut()
             .rev()
             .find(|scope| scope.contains_key(name))
@@ -446,6 +528,7 @@ impl<'a> Runtime<'a> {
     fn get_variable_value(&self, name: &str) -> Result<Value, RuntimeError> {
         Ok(self
             .scopes
+            .borrow()
             .iter()
             .rev()
             .find(|scope| scope.contains_key(name))
@@ -692,6 +775,22 @@ mod tests {
                     }
                 "},
                 "0\n2\n4\n6\n8\n".as_bytes(),
+            ),
+            (
+                indoc! {"
+                    var x = 5;
+                    x += 5;
+                    print(x);
+                    x -= 2;
+                    print(x);
+                    x *= 2;
+                    print(x);
+                    x /= 4;
+                    print(x);
+                    x %= 3;
+                    print(x);
+                "},
+                "10\n8\n16\n4\n1\n".as_bytes(),
             ),
         ];
 

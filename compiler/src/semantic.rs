@@ -172,6 +172,28 @@ impl SemanticChecker {
         Ok(BuiltinTypes::Void)
     }
 
+    fn check_shorthand_assignment(
+        &self,
+        lhs: &AstNode,
+        rhs: &AstNode,
+        span: &Span,
+    ) -> Result<BuiltinTypes, SemanticError> {
+        let lhs_type = self.get_expression_type(lhs)?;
+        let rhs_type = self.get_expression_type(rhs)?;
+
+        if !lhs_type.is_number() {
+            return Err(SemanticError::NotANumber {
+                span: lhs.get_span(),
+            });
+        } else if !rhs_type.is_number() {
+            return Err(SemanticError::NotANumber {
+                span: rhs.get_span(),
+            });
+        }
+
+        self.check_assignment(lhs, rhs, span)
+    }
+
     fn check_conditional_branch(
         &mut self,
         condition: &AstNode,
@@ -251,6 +273,14 @@ impl SemanticChecker {
     fn get_expression_type(&self, expression: &AstNode) -> Result<BuiltinTypes, SemanticError> {
         match expression {
             AstNode::Assign { lhs, rhs, span } => self.check_assignment(lhs, rhs, span),
+
+            AstNode::AddAssign { lhs, rhs, span }
+            | AstNode::SubAssign { lhs, rhs, span }
+            | AstNode::MulAssign { lhs, rhs, span }
+            | AstNode::DivAssign { lhs, rhs, span }
+            | AstNode::ModAssign { lhs, rhs, span } => {
+                self.check_shorthand_assignment(lhs, rhs, span)
+            }
 
             AstNode::Eq { lhs, rhs, .. } | AstNode::Neq { lhs, rhs, .. } => {
                 self.get_equality_operation_type(lhs, rhs)
@@ -456,6 +486,7 @@ impl SemanticChecker {
 
     fn get_literal_type(&self, literal_value: &Value) -> Result<BuiltinTypes, SemanticError> {
         match literal_value {
+            Value::Void => Ok(BuiltinTypes::Void),
             Value::Integer(_) => Ok(BuiltinTypes::Int),
             Value::Float(_) => Ok(BuiltinTypes::Float),
             Value::Boolean(_) => Ok(BuiltinTypes::Bool),
@@ -672,6 +703,18 @@ mod tests {
                 var b: Bool = false;
                 b = true;
             "},
+            indoc! {"
+                var i = 0;
+                i += 1;
+                i -= 2;
+                i *= 3;
+                i /= 4;
+                i %= 5;
+            "},
+            indoc! {"
+                var i = 5.0;
+                i %= 2.5;
+            "},
         ];
 
         for input in cases {
@@ -704,6 +747,9 @@ mod tests {
             "},
             indoc! {"
                 (50) = true;
+            "},
+            indoc! {"
+                true += true;
             "},
         ];
 

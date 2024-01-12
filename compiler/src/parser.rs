@@ -292,7 +292,7 @@ impl Parser {
 
         let lhs = self.parse_logical_and_or_expression()?;
 
-        // Expecting "="" (optional)
+        // Expecting "=", "+=", "-=", "*=", "/=", or "%=" (optional)
 
         match self.get_current_token() {
             Token::Assign => {
@@ -302,6 +302,66 @@ impl Parser {
                 let span = lhs.get_span().start..rhs.get_span().end;
 
                 Ok(AstNode::Assign {
+                    lhs: Box::new(lhs.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                })
+            }
+            Token::AddAssign => {
+                self.skip(Token::AddAssign)?;
+
+                let rhs = self.parse_logical_and_or_expression()?;
+                let span = lhs.get_span().start..rhs.get_span().end;
+
+                Ok(AstNode::AddAssign {
+                    lhs: Box::new(lhs.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                })
+            }
+            Token::SubAssign => {
+                self.skip(Token::SubAssign)?;
+
+                let rhs = self.parse_logical_and_or_expression()?;
+                let span = lhs.get_span().start..rhs.get_span().end;
+
+                Ok(AstNode::SubAssign {
+                    lhs: Box::new(lhs.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                })
+            }
+            Token::MulAssign => {
+                self.skip(Token::MulAssign)?;
+
+                let rhs = self.parse_logical_and_or_expression()?;
+                let span = lhs.get_span().start..rhs.get_span().end;
+
+                Ok(AstNode::MulAssign {
+                    lhs: Box::new(lhs.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                })
+            }
+            Token::DivAssign => {
+                self.skip(Token::DivAssign)?;
+
+                let rhs = self.parse_logical_and_or_expression()?;
+                let span = lhs.get_span().start..rhs.get_span().end;
+
+                Ok(AstNode::DivAssign {
+                    lhs: Box::new(lhs.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                })
+            }
+            Token::ModAssign => {
+                self.skip(Token::ModAssign)?;
+
+                let rhs = self.parse_logical_and_or_expression()?;
+                let span = lhs.get_span().start..rhs.get_span().end;
+
+                Ok(AstNode::ModAssign {
                     lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
                     span,
@@ -1094,6 +1154,91 @@ mod tests {
                         span: 5..7,
                     }),
                     span: 0..8,
+                },
+            ),
+            (
+                "x += (-5);",
+                AstNode::AddAssign {
+                    lhs: Box::new(AstNode::Identifier {
+                        name: String::from("x"),
+                        span: 0..1,
+                    }),
+                    rhs: Box::new(AstNode::Neg {
+                        child: Box::new(AstNode::Literal {
+                            value: Value::Integer(5),
+                            span: 7..8,
+                        }),
+                        span: 6..8,
+                    }),
+                    span: 0..9,
+                },
+            ),
+            (
+                "x -= (-5);",
+                AstNode::SubAssign {
+                    lhs: Box::new(AstNode::Identifier {
+                        name: String::from("x"),
+                        span: 0..1,
+                    }),
+                    rhs: Box::new(AstNode::Neg {
+                        child: Box::new(AstNode::Literal {
+                            value: Value::Integer(5),
+                            span: 7..8,
+                        }),
+                        span: 6..8,
+                    }),
+                    span: 0..9,
+                },
+            ),
+            (
+                "x *= (-5);",
+                AstNode::MulAssign {
+                    lhs: Box::new(AstNode::Identifier {
+                        name: String::from("x"),
+                        span: 0..1,
+                    }),
+                    rhs: Box::new(AstNode::Neg {
+                        child: Box::new(AstNode::Literal {
+                            value: Value::Integer(5),
+                            span: 7..8,
+                        }),
+                        span: 6..8,
+                    }),
+                    span: 0..9,
+                },
+            ),
+            (
+                "x /= (-5);",
+                AstNode::DivAssign {
+                    lhs: Box::new(AstNode::Identifier {
+                        name: String::from("x"),
+                        span: 0..1,
+                    }),
+                    rhs: Box::new(AstNode::Neg {
+                        child: Box::new(AstNode::Literal {
+                            value: Value::Integer(5),
+                            span: 7..8,
+                        }),
+                        span: 6..8,
+                    }),
+                    span: 0..9,
+                },
+            ),
+            (
+                "x %= (-5);",
+                AstNode::ModAssign {
+                    lhs: Box::new(AstNode::Identifier {
+                        name: String::from("x"),
+                        span: 0..1,
+                    }),
+                    rhs: Box::new(AstNode::Neg {
+                        child: Box::new(AstNode::Literal {
+                            value: Value::Integer(5),
+                            span: 7..8,
+                        }),
+                        span: 6..8,
+                    }),
+                    span: 0..9,
                 },
             ),
             (
