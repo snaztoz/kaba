@@ -83,7 +83,8 @@ As this is a really new project, it only has limited features for now:
   x %= 2;
 
   // This will trigger error due to the types are being incompatible:
-  x = 5.0;
+  var i = 5.0;
+  i = 7;
   ```
 
 4. Support for type notation
@@ -108,7 +109,7 @@ As this is a really new project, it only has limited features for now:
   43 > 2;
   2.5 >= 2.5;
   100 < 101;
-  7.3 <= 10;
+  7 <= 10;
   ```
 
 7. Logical operation
