@@ -45,7 +45,7 @@ impl SemanticChecker {
                     span,
                 )?,
 
-                AstNode::ValueAssignment { lhs, value, span } => {
+                AstNode::Assign { lhs, value, span } => {
                     self.check_value_assignment(lhs, value, span)?
                 }
 

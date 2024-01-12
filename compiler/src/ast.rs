@@ -24,7 +24,8 @@ pub enum AstNode {
         value: Option<Box<AstNode>>,
         span: Span,
     },
-    ValueAssignment {
+
+    Assign {
         lhs: Box<AstNode>,
         value: Box<AstNode>,
         span: Span,
@@ -36,6 +37,7 @@ pub enum AstNode {
         or_else: Option<Box<AstNode>>,
         span: Span,
     },
+
     Else {
         body: Vec<AstNode>,
         span: Span,
@@ -46,9 +48,11 @@ pub enum AstNode {
         body: Vec<AstNode>,
         span: Span,
     },
+
     Break {
         span: Span,
     },
+
     Continue {
         span: Span,
     },
@@ -58,6 +62,7 @@ pub enum AstNode {
         rhs: Box<AstNode>,
         span: Span,
     },
+
     And {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
@@ -69,26 +74,31 @@ pub enum AstNode {
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Neq {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Gt {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Gte {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Lt {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Lte {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
@@ -100,21 +110,25 @@ pub enum AstNode {
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Sub {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Mul {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Div {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Mod {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
@@ -125,10 +139,12 @@ pub enum AstNode {
         child: Box<AstNode>,
         span: Span,
     },
+
     Neg {
         child: Box<AstNode>,
         span: Span,
     },
+
     FunctionCall {
         callee: Box<AstNode>,
         args: Vec<AstNode>,
@@ -163,7 +179,7 @@ impl AstNode {
     pub fn get_span(&self) -> Span {
         match self {
             Self::VariableDeclaration { span, .. }
-            | Self::ValueAssignment { span, .. }
+            | Self::Assign { span, .. }
             | Self::If { span, .. }
             | Self::Else { span, .. }
             | Self::While { span, .. }

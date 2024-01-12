@@ -99,7 +99,7 @@ impl Parser {
             let rhs = self.parse_expression()?;
             let span = expression.get_span().start..rhs.get_span().end;
 
-            expression = AstNode::ValueAssignment {
+            expression = AstNode::Assign {
                 lhs: Box::new(expression.unwrap_group()),
                 value: Box::new(rhs.unwrap_group()),
                 span,
@@ -903,7 +903,7 @@ mod tests {
         let cases = [
             (
                 "abc = 123 * x;",
-                AstNode::ValueAssignment {
+                AstNode::Assign {
                     lhs: Box::new(AstNode::Identifier {
                         name: String::from("abc"),
                         span: 0..3,
@@ -924,7 +924,7 @@ mod tests {
             ),
             (
                 "x = (-5);",
-                AstNode::ValueAssignment {
+                AstNode::Assign {
                     lhs: Box::new(AstNode::Identifier {
                         name: String::from("x"),
                         span: 0..1,

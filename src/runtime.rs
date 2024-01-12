@@ -67,7 +67,7 @@ impl<'a> Runtime<'a> {
                     self.create_variable(&name, value.as_deref())?
                 }
 
-                AstNode::ValueAssignment { lhs, value, .. } => self.update_value(lhs, value)?,
+                AstNode::Assign { lhs, value, .. } => self.update_value(lhs, value)?,
 
                 AstNode::If {
                     condition,
