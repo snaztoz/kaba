@@ -1,11 +1,11 @@
 // Copyright 2023 Hafidh Muqsithanova Sukarno
 // SPDX-License-Identifier: Apache-2.0
 
-use builtin::types::Types as BuiltinTypes;
+use builtin::types::Type as BuiltinType;
 use std::collections::HashMap;
 
 pub struct Scope {
-    pub symbols: HashMap<String, BuiltinTypes>,
+    pub symbols: HashMap<String, BuiltinType>,
     pub scope_type: ScopeType,
 }
 

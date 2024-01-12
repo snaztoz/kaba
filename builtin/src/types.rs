@@ -7,19 +7,19 @@
 use std::{fmt::Display, str::FromStr};
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Types {
+pub enum Type {
     Any,
     Void,
     Int,
     Float,
     Bool,
     Callable {
-        parameters: Vec<Types>,
-        return_type: Box<Types>,
+        parameters: Vec<Type>,
+        return_type: Box<Type>,
     },
 }
 
-impl Types {
+impl Type {
     pub fn is_number(&self) -> bool {
         *self == Self::Int || *self == Self::Float
     }
@@ -28,7 +28,7 @@ impl Types {
         *self == Self::Bool
     }
 
-    pub fn is_assignable_to(&self, other: &Types) -> bool {
+    pub fn is_assignable_to(&self, other: &Type) -> bool {
         if *self == Self::Void || *other == Self::Void {
             return false;
         }
@@ -37,7 +37,7 @@ impl Types {
     }
 }
 
-impl Display for Types {
+impl Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Any => write!(f, "Any"),
@@ -50,7 +50,7 @@ impl Display for Types {
     }
 }
 
-impl FromStr for Types {
+impl FromStr for Type {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {

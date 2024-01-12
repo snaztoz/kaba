@@ -4,15 +4,15 @@
 //! Contains the built-in functions of Kaba programming language
 //! implementation.
 
-use crate::types::Types;
+use crate::types::Type;
 use std::collections::HashMap;
 
-pub fn get_types() -> HashMap<String, Types> {
+pub fn get_types() -> HashMap<String, Type> {
     HashMap::from([(
         String::from("print"),
-        Types::Callable {
-            parameters: vec![Types::Any],
-            return_type: Box::new(Types::Void),
+        Type::Callable {
+            parameters: vec![Type::Any],
+            return_type: Box::new(Type::Void),
         },
     )])
 }
