@@ -8,13 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 - Change `print` function behaviour.
-- Change auto-casting behaviour in number types.
 
-## [0.2.3] - ...
+## [0.3.0] - ...
 
 ### Added
 
 - Shorthand assignment operators.
+
+### Changed
+
+- Auto-casting behaviour in number types is disabled.
 
 ## [0.2.2] - 2024-01-11
 
