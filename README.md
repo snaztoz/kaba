@@ -70,10 +70,17 @@ As this is a really new project, it only has limited features for now:
   var d = true;
   ```
 
-3. Value re-assign
+3. Value assignments
   ```text
   var x = 20;
   x = 999;
+
+  // Shorthands are also supported:
+  x += 1;
+  x -= 0;
+  x *= 2;
+  x /= 4;
+  x %= 2;
 
   // This will trigger error due to the types are being incompatible:
   x = 5.0;
@@ -146,7 +153,7 @@ As this is a really new project, it only has limited features for now:
     if i % 2 == 0 {
       print(i);
     }
-    i = i + 1;
+    i += 1;
   }
 
   // `Break` and `continue` statements are also supported
@@ -181,7 +188,7 @@ As this is a really new project, it only has limited features for now:
     if i % 2 == 1 {
       print(i);
     }
-    i = i + 1;
+    i += 1;
   }
   ```
 
