@@ -25,12 +25,6 @@ pub enum AstNode {
         span: Span,
     },
 
-    Assign {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
-        span: Span,
-    },
-
     If {
         condition: Box<AstNode>,
         body: Vec<AstNode>,
@@ -54,6 +48,12 @@ pub enum AstNode {
     },
 
     Continue {
+        span: Span,
+    },
+
+    Assign {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
         span: Span,
     },
 

@@ -314,7 +314,7 @@ impl Parser {
     fn parse_logical_and_or_expression(&mut self) -> Result<AstNode, ParsingError> {
         // Parse first term
 
-        let mut child = self.parse_equality_expression()?;
+        let mut lhs = self.parse_equality_expression()?;
 
         loop {
             // Expecting "||" or "&&" (both are optional)
@@ -324,10 +324,10 @@ impl Parser {
                     self.skip(Token::Or)?;
 
                     let rhs = self.parse_equality_expression()?;
-                    let span = child.get_span().start..rhs.get_span().end;
+                    let span = lhs.get_span().start..rhs.get_span().end;
 
-                    child = AstNode::Or {
-                        lhs: Box::new(child.unwrap_group()),
+                    lhs = AstNode::Or {
+                        lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
                         span,
                     };
@@ -336,15 +336,15 @@ impl Parser {
                     self.skip(Token::And)?;
 
                     let rhs = self.parse_equality_expression()?;
-                    let span = child.get_span().start..rhs.get_span().end;
+                    let span = lhs.get_span().start..rhs.get_span().end;
 
-                    child = AstNode::And {
-                        lhs: Box::new(child.unwrap_group()),
+                    lhs = AstNode::And {
+                        lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
                         span,
                     };
                 }
-                _ => return Ok(child),
+                _ => return Ok(lhs),
             }
         }
     }
@@ -352,7 +352,7 @@ impl Parser {
     fn parse_equality_expression(&mut self) -> Result<AstNode, ParsingError> {
         // Parse first term
 
-        let mut child = self.parse_comparison_expression()?;
+        let mut lhs = self.parse_comparison_expression()?;
 
         loop {
             // Expecting "==" or "!=" (both are optional)
@@ -362,10 +362,10 @@ impl Parser {
                     self.skip(Token::Eq)?;
 
                     let rhs = self.parse_comparison_expression()?;
-                    let span = child.get_span().start..rhs.get_span().end;
+                    let span = lhs.get_span().start..rhs.get_span().end;
 
-                    child = AstNode::Eq {
-                        lhs: Box::new(child.unwrap_group()),
+                    lhs = AstNode::Eq {
+                        lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
                         span,
                     };
@@ -374,15 +374,15 @@ impl Parser {
                     self.skip(Token::Neq)?;
 
                     let rhs = self.parse_comparison_expression()?;
-                    let span = child.get_span().start..rhs.get_span().end;
+                    let span = lhs.get_span().start..rhs.get_span().end;
 
-                    child = AstNode::Neq {
-                        lhs: Box::new(child.unwrap_group()),
+                    lhs = AstNode::Neq {
+                        lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
                         span,
                     };
                 }
-                _ => return Ok(child),
+                _ => return Ok(lhs),
             }
         }
     }
@@ -390,7 +390,7 @@ impl Parser {
     fn parse_comparison_expression(&mut self) -> Result<AstNode, ParsingError> {
         // Parse first term
 
-        let child = self.parse_additive_expression()?;
+        let lhs = self.parse_additive_expression()?;
 
         // Expecting ">", ">=", "<" or "<=" (all are optional)
 
@@ -399,10 +399,10 @@ impl Parser {
                 self.skip(Token::Gt)?;
 
                 let rhs = self.parse_additive_expression()?;
-                let span = child.get_span().start..rhs.get_span().end;
+                let span = lhs.get_span().start..rhs.get_span().end;
 
                 Ok(AstNode::Gt {
-                    lhs: Box::new(child.unwrap_group()),
+                    lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
                     span,
                 })
@@ -411,10 +411,10 @@ impl Parser {
                 self.skip(Token::Gte)?;
 
                 let rhs = self.parse_additive_expression()?;
-                let span = child.get_span().start..rhs.get_span().end;
+                let span = lhs.get_span().start..rhs.get_span().end;
 
                 Ok(AstNode::Gte {
-                    lhs: Box::new(child.unwrap_group()),
+                    lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
                     span,
                 })
@@ -423,10 +423,10 @@ impl Parser {
                 self.skip(Token::Lt)?;
 
                 let rhs = self.parse_additive_expression()?;
-                let span = child.get_span().start..rhs.get_span().end;
+                let span = lhs.get_span().start..rhs.get_span().end;
 
                 Ok(AstNode::Lt {
-                    lhs: Box::new(child.unwrap_group()),
+                    lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
                     span,
                 })
@@ -435,22 +435,22 @@ impl Parser {
                 self.skip(Token::Lte)?;
 
                 let rhs = self.parse_additive_expression()?;
-                let span = child.get_span().start..rhs.get_span().end;
+                let span = lhs.get_span().start..rhs.get_span().end;
 
                 Ok(AstNode::Lte {
-                    lhs: Box::new(child.unwrap_group()),
+                    lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
                     span,
                 })
             }
-            _ => Ok(child),
+            _ => Ok(lhs),
         }
     }
 
     fn parse_additive_expression(&mut self) -> Result<AstNode, ParsingError> {
         // Parse first term
 
-        let mut child = self.parse_multiplicative_expression()?;
+        let mut lhs = self.parse_multiplicative_expression()?;
 
         loop {
             // Expecting "+" or "-" (both are optional)
@@ -460,10 +460,10 @@ impl Parser {
                     self.skip(Token::Add)?;
 
                     let rhs = self.parse_multiplicative_expression()?;
-                    let span = child.get_span().start..rhs.get_span().end;
+                    let span = lhs.get_span().start..rhs.get_span().end;
 
-                    child = AstNode::Add {
-                        lhs: Box::new(child.unwrap_group()),
+                    lhs = AstNode::Add {
+                        lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
                         span,
                     };
@@ -472,15 +472,15 @@ impl Parser {
                     self.skip(Token::Sub)?;
 
                     let rhs = self.parse_multiplicative_expression()?;
-                    let span = child.get_span().start..rhs.get_span().end;
+                    let span = lhs.get_span().start..rhs.get_span().end;
 
-                    child = AstNode::Sub {
-                        lhs: Box::new(child.unwrap_group()),
+                    lhs = AstNode::Sub {
+                        lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
                         span,
                     };
                 }
-                _ => return Ok(child),
+                _ => return Ok(lhs),
             }
         }
     }
@@ -488,7 +488,7 @@ impl Parser {
     fn parse_multiplicative_expression(&mut self) -> Result<AstNode, ParsingError> {
         // Parse first term
 
-        let mut child = self.parse_unary_expression()?;
+        let mut lhs = self.parse_unary_expression()?;
 
         loop {
             // Expecting "*", "/" or "%" (all are optional)
@@ -498,10 +498,10 @@ impl Parser {
                     self.skip(Token::Mul)?;
 
                     let rhs = self.parse_unary_expression()?;
-                    let span = child.get_span().start..rhs.get_span().end;
+                    let span = lhs.get_span().start..rhs.get_span().end;
 
-                    child = AstNode::Mul {
-                        lhs: Box::new(child.unwrap_group()),
+                    lhs = AstNode::Mul {
+                        lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
                         span,
                     };
@@ -510,10 +510,10 @@ impl Parser {
                     self.skip(Token::Div)?;
 
                     let rhs = self.parse_unary_expression()?;
-                    let span = child.get_span().start..rhs.get_span().end;
+                    let span = lhs.get_span().start..rhs.get_span().end;
 
-                    child = AstNode::Div {
-                        lhs: Box::new(child.unwrap_group()),
+                    lhs = AstNode::Div {
+                        lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
                         span,
                     };
@@ -522,15 +522,15 @@ impl Parser {
                     self.skip(Token::Mod)?;
 
                     let rhs = self.parse_unary_expression()?;
-                    let span = child.get_span().start..rhs.get_span().end;
+                    let span = lhs.get_span().start..rhs.get_span().end;
 
-                    child = AstNode::Mod {
-                        lhs: Box::new(child.unwrap_group()),
+                    lhs = AstNode::Mod {
+                        lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
                         span,
                     };
                 }
-                _ => return Ok(child),
+                _ => return Ok(lhs),
             }
         }
     }
