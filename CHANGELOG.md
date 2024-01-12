@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Add assignment operators.
 - Change `print` function behaviour.
 - Change auto-casting behaviour in number types.
+
+## [0.2.3] - ...
+
+### Added
+
+- Shorthand assignment operators.
 
 ## [0.2.2] - 2024-01-11
 
