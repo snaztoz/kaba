@@ -45,10 +45,6 @@ impl SemanticChecker {
                     span,
                 )?,
 
-                AstNode::Assign { lhs, value, span } => {
-                    self.check_value_assignment(lhs, value, span)?
-                }
-
                 AstNode::If {
                     condition,
                     body,
@@ -149,24 +145,31 @@ impl SemanticChecker {
         Ok(())
     }
 
-    fn check_value_assignment(
+    fn check_assignment(
         &self,
         lhs: &AstNode,
-        value: &AstNode,
+        rhs: &AstNode,
         span: &Span,
-    ) -> Result<(), SemanticError> {
+    ) -> Result<BuiltinTypes, SemanticError> {
         let lhs_type = self.get_expression_type(lhs)?;
-        let value_type = self.get_expression_type(value)?;
+        let rhs_type = self.get_expression_type(rhs)?;
 
-        if !value_type.is_assignable_to(&lhs_type) {
+        if !lhs.can_be_assignment_lhs() {
+            return Err(SemanticError::InvalidAssignmentLhs {
+                lhs: lhs.to_string(),
+                span: lhs.get_span(),
+            });
+        }
+
+        if !rhs_type.is_assignable_to(&lhs_type) {
             return Err(SemanticError::UnableToAssignValueType {
                 var_type: lhs_type.to_string(),
-                value_type: value_type.to_string(),
+                value_type: rhs_type.to_string(),
                 span: span.clone(),
             });
         }
 
-        Ok(())
+        Ok(BuiltinTypes::Void)
     }
 
     fn check_conditional_branch(
@@ -247,6 +250,8 @@ impl SemanticChecker {
 
     fn get_expression_type(&self, expression: &AstNode) -> Result<BuiltinTypes, SemanticError> {
         match expression {
+            AstNode::Assign { lhs, rhs, span } => self.check_assignment(lhs, rhs, span),
+
             AstNode::Eq { lhs, rhs, .. } | AstNode::Neq { lhs, rhs, .. } => {
                 self.get_equality_operation_type(lhs, rhs)
             }
@@ -482,6 +487,11 @@ pub enum SemanticError {
         span: Span,
     },
 
+    InvalidAssignmentLhs {
+        lhs: String,
+        span: Span,
+    },
+
     UnableToCompareTypeAWithTypeB {
         type_a: BuiltinTypes,
         type_b: BuiltinTypes,
@@ -531,6 +541,7 @@ impl SemanticError {
         match self {
             Self::UnableToInferVariableType { span, .. }
             | Self::UnableToAssignValueType { span, .. }
+            | Self::InvalidAssignmentLhs { span, .. }
             | Self::UnableToCompareTypeAWithTypeB { span, .. }
             | Self::VariableNotExist { span, .. }
             | Self::VariableAlreadyExist { span, .. }
@@ -559,6 +570,9 @@ impl Display for SemanticError {
                     ..
                 } => {
                     format!("unable to assign value of type `{value_type}` to type `{var_type}`")
+                }
+                Self::InvalidAssignmentLhs { lhs, .. } => {
+                    format!("{lhs} can not be an assignment's lhs")
                 }
                 Self::UnableToCompareTypeAWithTypeB { type_a, type_b, .. } => {
                     format!("unable to compare the value of type `{type_a}` with type `{type_b}`")
@@ -681,6 +695,15 @@ mod tests {
             indoc! {"
                 var x: Float;
                 x = y;
+            "},
+            indoc! {"
+                1 + 1 = 5;
+            "},
+            indoc! {"
+                true = false;
+            "},
+            indoc! {"
+                (50) = true;
             "},
         ];
 

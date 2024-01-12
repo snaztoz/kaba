@@ -27,7 +27,7 @@ pub enum AstNode {
 
     Assign {
         lhs: Box<AstNode>,
-        value: Box<AstNode>,
+        rhs: Box<AstNode>,
         span: Span,
     },
 
@@ -208,6 +208,10 @@ impl AstNode {
         }
     }
 
+    pub fn can_be_assignment_lhs(&self) -> bool {
+        matches!(self, Self::Identifier { .. })
+    }
+
     pub fn unwrap_identifier(&self) -> (String, Span) {
         if let AstNode::Identifier { name, span } = self {
             (name.clone(), span.clone())
@@ -236,6 +240,93 @@ impl AstNode {
             child.unwrap_group()
         } else {
             self
+        }
+    }
+}
+
+impl Display for AstNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::VariableDeclaration { .. } => {
+                write!(f, "variable declaration")
+            }
+            Self::If { .. } => {
+                write!(f, "`if` statement")
+            }
+            Self::Else { .. } => {
+                write!(f, "`else` statement")
+            }
+            Self::While { .. } => {
+                write!(f, "`while` statement")
+            }
+            Self::Break { .. } => {
+                write!(f, "`break` statement")
+            }
+            Self::Continue { .. } => {
+                write!(f, "`continue` statement")
+            }
+            Self::Assign { .. } => {
+                write!(f, "`assignment` expression")
+            }
+            Self::Or { .. } => {
+                write!(f, "`or` expression")
+            }
+            Self::And { .. } => {
+                write!(f, "`and` expression")
+            }
+            Self::Eq { .. } => {
+                write!(f, "`equal` expression")
+            }
+            Self::Neq { .. } => {
+                write!(f, "`not equal` expression")
+            }
+            Self::Gt { .. } => {
+                write!(f, "`greater than` expression")
+            }
+            Self::Gte { .. } => {
+                write!(f, "`greater than or equal` expression")
+            }
+            Self::Lt { .. } => {
+                write!(f, "`less than` expression")
+            }
+            Self::Lte { .. } => {
+                write!(f, "`less than or equal` expression")
+            }
+            Self::Add { .. } => {
+                write!(f, "`addition` expression")
+            }
+            Self::Sub { .. } => {
+                write!(f, "`subtraction` expression")
+            }
+            Self::Mul { .. } => {
+                write!(f, "`multiplication` expression")
+            }
+            Self::Div { .. } => {
+                write!(f, "`division` expression")
+            }
+            Self::Mod { .. } => {
+                write!(f, "`modulo` expression")
+            }
+            Self::Not { .. } => {
+                write!(f, "`not` expression")
+            }
+            Self::Neg { .. } => {
+                write!(f, "`negation` expression")
+            }
+            Self::FunctionCall { .. } => {
+                write!(f, "function call expression")
+            }
+            Self::Identifier { .. } => {
+                write!(f, "identifier")
+            }
+            Self::TypeNotation { .. } => {
+                write!(f, "type notation")
+            }
+            Self::Literal { .. } => {
+                write!(f, "value literal")
+            }
+
+            _ => unreachable!(),
         }
     }
 }
