@@ -7,7 +7,6 @@ license.workspace = true
 authors.workspace = true
 
 [dependencies]
-builtin = { path = "../builtin" }
 colored = "2.1.0"
 indoc = "2.0.4"
 logos = "0.13.0"

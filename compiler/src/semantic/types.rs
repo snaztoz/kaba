@@ -1,9 +1,6 @@
 // Copyright 2023 Hafidh Muqsithanova Sukarno
 // SPDX-License-Identifier: Apache-2.0
 
-//! Contains the built-in types of Kaba programming language
-//! implementation.
-
 use std::{fmt::Display, str::FromStr};
 
 #[derive(Clone, Debug, PartialEq)]

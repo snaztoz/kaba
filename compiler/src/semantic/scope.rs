@@ -1,17 +1,18 @@
 // Copyright 2023 Hafidh Muqsithanova Sukarno
 // SPDX-License-Identifier: Apache-2.0
 
-use builtin::types::Type as BuiltinType;
+use super::{builtin_functions, types::Type};
 use std::collections::HashMap;
 
 pub struct Scope {
-    pub symbols: HashMap<String, BuiltinType>,
+    pub symbols: HashMap<String, Type>,
     pub scope_type: ScopeType,
 }
 
 impl Scope {
     pub fn new_builtin_scope() -> Self {
-        let symbols = builtin::functions::get_types();
+        let symbols = builtin_functions::get_types();
+
         Self {
             symbols,
             scope_type: ScopeType::Builtin,

@@ -1,5 +1,5 @@
 [workspace]
-members = ["builtin", "compiler"]
+members = ["compiler"]
 resolver = "2"
 
 [workspace.package]

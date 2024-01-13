@@ -1,10 +1,4 @@
-// Copyright 2023 Hafidh Muqsithanova Sukarno
-// SPDX-License-Identifier: Apache-2.0
-
-//! Contains the built-in functions of Kaba programming language
-//! implementation.
-
-use crate::types::Type;
+use super::types::Type;
 use std::collections::HashMap;
 
 pub fn get_types() -> HashMap<String, Type> {
