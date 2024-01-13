@@ -588,53 +588,57 @@ impl SemanticError {
 
 impl Display for SemanticError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::UnableToInferVariableType { name, .. } => {
-                    format!("unable to infer the type of variable `{name}` because of no type or initial value were provided")
-                }
-                Self::UnableToAssignValueType {
-                    var_type,
-                    value_type,
-                    ..
-                } => {
-                    format!("unable to assign value of type `{value_type}` to type `{var_type}`")
-                }
-                Self::InvalidAssignmentLhs { lhs, .. } => {
-                    format!("{lhs} can not be an assignment's lhs")
-                }
-                Self::UnableToCompareTypeAWithTypeB { type_a, type_b, .. } => {
-                    format!("unable to compare the value of type `{type_a}` with type `{type_b}`")
-                }
-                Self::VariableAlreadyExist { name, .. } => {
-                    format!("variable `{name}` already exists in current scope")
-                }
-                Self::VariableNotExist { name, .. } => {
-                    format!("variable `{name}` is not exist in current scope")
-                }
-                Self::TypeNotExist { name, .. } => {
-                    format!("type `{name}` is not exist")
-                }
-                Self::NotANumber { .. } => {
-                    "not a number".to_string()
-                }
-                Self::NotABoolean { .. } => {
-                    "not a boolean".to_string()
-                }
-                Self::NotAFunction { .. } => {
-                    "not a function".to_string()
-                }
-                Self::FunctionArgumentCountMismatch { expecting, get, .. } => {
-                    format!("expecting {expecting} argument(s) but get {get} instead")
-                }
-                Self::LoopControlNotInLoopScope { .. } => {
-                    "the usage of `break` and `continue` statements must be within a loop"
-                        .to_string()
-                }
+        match self {
+            Self::UnableToInferVariableType { name, .. } => {
+                write!(f, "unable to infer the type of variable `{name}` because of no type or initial value were provided")
             }
-        )
+            Self::UnableToAssignValueType {
+                var_type,
+                value_type,
+                ..
+            } => {
+                write!(
+                    f,
+                    "unable to assign value of type `{value_type}` to type `{var_type}`"
+                )
+            }
+            Self::InvalidAssignmentLhs { lhs, .. } => {
+                write!(f, "{lhs} can not be an assignment's lhs")
+            }
+            Self::UnableToCompareTypeAWithTypeB { type_a, type_b, .. } => {
+                write!(
+                    f,
+                    "unable to compare the value of type `{type_a}` with type `{type_b}`"
+                )
+            }
+            Self::VariableAlreadyExist { name, .. } => {
+                write!(f, "variable `{name}` already exists in current scope")
+            }
+            Self::VariableNotExist { name, .. } => {
+                write!(f, "variable `{name}` is not exist in current scope")
+            }
+            Self::TypeNotExist { name, .. } => {
+                write!(f, "type `{name}` is not exist")
+            }
+            Self::NotANumber { .. } => {
+                write!(f, "not a number")
+            }
+            Self::NotABoolean { .. } => {
+                write!(f, "not a boolean")
+            }
+            Self::NotAFunction { .. } => {
+                write!(f, "not a function")
+            }
+            Self::FunctionArgumentCountMismatch { expecting, get, .. } => {
+                write!(f, "expecting {expecting} argument(s) but get {get} instead")
+            }
+            Self::LoopControlNotInLoopScope { .. } => {
+                write!(
+                    f,
+                    "the usage of `break` and `continue` statements must be within a loop"
+                )
+            }
+        }
     }
 }
 
