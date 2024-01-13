@@ -385,7 +385,10 @@ impl Display for AstNode {
 /// source code, such as integer or string.
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub enum Value {
+    // A temporary value while the runtime is still using
+    // a tree-walk interpreter mode
     Void,
+
     Integer(i32),
     Float(f64),
     Boolean(bool),
