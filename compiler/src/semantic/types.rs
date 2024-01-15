@@ -1,17 +1,16 @@
 // Copyright 2023 Hafidh Muqsithanova Sukarno
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{fmt::Display, str::FromStr};
+use std::{collections::BTreeSet, fmt::Display, str::FromStr};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Type {
-    Any,
     Void,
     Int,
     Float,
     Bool,
     Callable {
-        parameters: Vec<Type>,
+        parameter_variants: BTreeSet<Vec<Type>>,
         return_type: Box<Type>,
     },
 }
@@ -30,14 +29,13 @@ impl Type {
             return false;
         }
 
-        self == other || *other == Self::Any
+        self == other
     }
 }
 
 impl Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Any => write!(f, "Any"),
             Self::Void => write!(f, "Void"),
             Self::Int => write!(f, "Int"),
             Self::Float => write!(f, "Float"),
@@ -52,7 +50,6 @@ impl FromStr for Type {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Any" => Ok(Self::Any),
             "Void" => Ok(Self::Void),
             "Int" => Ok(Self::Int),
             "Float" => Ok(Self::Float),

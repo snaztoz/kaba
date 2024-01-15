@@ -440,27 +440,21 @@ impl SemanticChecker {
         let callee_type = self.get_expression_type(callee)?;
 
         if let Type::Callable {
-            parameters,
+            parameter_variants,
             return_type,
         } = &callee_type
         {
-            if args.len() != parameters.len() {
-                return Err(SemanticError::FunctionArgumentCountMismatch {
-                    expecting: parameters.len(),
-                    get: args.len(),
-                    span: span.clone(),
-                });
+            // transform the arguments into their respective type
+            let mut arg_types = vec![];
+            for arg in args {
+                arg_types.push(self.get_expression_type(arg)?)
             }
 
-            for i in 0..parameters.len() {
-                let arg_type = self.get_expression_type(&args[i])?;
-                if !arg_type.is_assignable_to(&parameters[i]) {
-                    return Err(SemanticError::UnableToAssignValueType {
-                        var_type: parameters[i].to_string(),
-                        value_type: arg_type.to_string(),
-                        span: args[i].get_span(),
-                    });
-                }
+            if !parameter_variants.contains(&arg_types) {
+                return Err(SemanticError::FunctionCallVariantNotFound {
+                    args: arg_types,
+                    span: span.clone(),
+                });
             }
 
             Ok(*return_type.clone())
@@ -556,9 +550,8 @@ pub enum SemanticError {
         span: Span,
     },
 
-    FunctionArgumentCountMismatch {
-        expecting: usize,
-        get: usize,
+    FunctionCallVariantNotFound {
+        args: Vec<Type>,
         span: Span,
     },
 
@@ -580,7 +573,7 @@ impl SemanticError {
             | Self::NotANumber { span, .. }
             | Self::NotABoolean { span, .. }
             | Self::NotAFunction { span, .. }
-            | Self::FunctionArgumentCountMismatch { span, .. }
+            | Self::FunctionCallVariantNotFound { span, .. }
             | Self::LoopControlNotInLoopScope { span } => Some(span.clone()),
         }
     }
@@ -629,8 +622,12 @@ impl Display for SemanticError {
             Self::NotAFunction { .. } => {
                 write!(f, "not a function")
             }
-            Self::FunctionArgumentCountMismatch { expecting, get, .. } => {
-                write!(f, "expecting {expecting} argument(s) but get {get} instead")
+            Self::FunctionCallVariantNotFound { args, .. } => {
+                write!(
+                    f,
+                    "unable to call function with argument(s) of type {:?}",
+                    args
+                )
             }
             Self::LoopControlNotInLoopScope { .. } => {
                 write!(
