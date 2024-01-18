@@ -296,146 +296,198 @@ mod tests {
     use super::*;
     use indoc::indoc;
 
+    fn lex_and_assert_result(input: &str, expected: Token) {
+        let result = lex(input);
+        assert!(result.is_ok());
+
+        let tokens = result.unwrap();
+        assert!(tokens.len() == 2);
+        assert_eq!(tokens[0].kind, expected);
+    }
+
+    fn lex_and_assert_err(input: &str) {
+        let result = lex(input);
+        assert!(result.is_err());
+    }
+
+    //
+    // Test identifiers
+    //
+
     #[test]
-    fn test_lexing_identifier() {
-        let cases = ["abc", "_d768a7ABC_adsf", "_", "_123"];
-
-        for c in cases {
-            let lex_result = lex(c);
-
-            assert!(lex_result.is_ok());
-
-            let tokens = lex_result.unwrap();
-
-            assert!(tokens.len() == 2);
-            assert_eq!(tokens[0].kind, Token::Identifier(String::from(c)));
-        }
+    fn test_lexing_normal_identifier() {
+        let input = "abc";
+        lex_and_assert_result(input, Token::Identifier(String::from(input)));
     }
 
     #[test]
-    fn test_lexing_invalid_identifier() {
-        let cases = ["123abc"];
-
-        for c in cases {
-            let lex_result = lex(c);
-
-            assert!(lex_result.is_err());
-        }
+    fn test_lexing_identifier_with_mixed_characters() {
+        let input = "_d768a7ABC_adsf";
+        lex_and_assert_result(input, Token::Identifier(String::from(input)));
     }
 
     #[test]
-    fn test_lexing_integer() {
-        let cases = ["123", "0"];
-
-        for c in cases {
-            let lex_result = lex(c);
-
-            assert!(lex_result.is_ok());
-
-            let tokens = lex_result.unwrap();
-
-            assert!(tokens.len() == 2);
-            assert_eq!(tokens[0].kind, Token::Integer(c.parse().unwrap()));
-        }
+    fn test_lexing_identifier_that_only_a_single_underline() {
+        let input = "_";
+        lex_and_assert_result(input, Token::Identifier(String::from(input)));
     }
 
     #[test]
-    fn test_lexing_float() {
-        let cases = ["123.5", "0.0723"];
-
-        for c in cases {
-            let lex_result = lex(c);
-
-            assert!(lex_result.is_ok());
-
-            let tokens = lex_result.unwrap();
-
-            assert!(tokens.len() == 2);
-            assert_eq!(tokens[0].kind, Token::Float(c.parse().unwrap()));
-        }
+    fn test_lexing_identifier_without_alphabets() {
+        let input = "_123";
+        lex_and_assert_result(input, Token::Identifier(String::from(input)));
     }
 
     #[test]
-    fn test_lexing_single_line_comment() {
-        let cases = [
-            indoc! {"
-                // This is a single line comment
-                var x = 5;
-            "},
-            indoc! {"
-                var x = 10;
+    fn test_lexing_identifier_that_starts_with_number() {
+        let input = "123abc";
+        lex_and_assert_err(input);
+    }
 
-                print(x); // this should works too!
-            "},
-            indoc! {"
-                // print(y);
-            "},
-            indoc! {"
-            // A single line comment that spans to EOF"},
-        ];
+    //
+    // Test integer literals
+    //
 
-        for c in cases {
-            let lex_result = lex(c);
-
-            assert!(lex_result.is_ok());
-
-            let tokens = lex_result.unwrap();
-
-            assert!(!tokens
-                .iter()
-                .any(|t| matches!(t.kind, Token::SingleLineComment(_))))
-        }
+    #[test]
+    fn test_lexing_an_integer_literal() {
+        let input = "123";
+        lex_and_assert_result(input, Token::Integer(input.parse().unwrap()));
     }
 
     #[test]
-    fn test_lexing_multi_line_comment() {
-        let cases = [
-            indoc! {"
-                /**
-                 * This is a multi line comment
-                 */
-                var x = 5;
-            "},
-            indoc! {"
-                var x = 5; /* no problem */
-            "},
-            indoc! {"
-                /**
-                 * No problem too
-                 */
-
-                /**
-                 * print(y);
-                 *       ^
-                 *      A non existing variable
-                 */
-            "},
-        ];
-
-        for c in cases {
-            let lex_result = lex(c);
-
-            assert!(lex_result.is_ok());
-
-            let tokens = lex_result.unwrap();
-
-            assert!(!tokens
-                .iter()
-                .any(|t| matches!(t.kind, Token::MultiLineComment(_))))
-        }
+    fn test_lexing_a_zero_literal() {
+        let input = "0";
+        lex_and_assert_result(input, Token::Integer(input.parse().unwrap()));
     }
 
     #[test]
-    fn test_lexing_invalid_comment() {
-        let cases = [indoc! {"
-                /* No closing tag
-                print(0);
-            "}];
+    fn test_lexing_a_big_integer_literal() {
+        let input = "2147483647";
+        lex_and_assert_result(input, Token::Integer(input.parse().unwrap()));
+    }
 
-        for c in cases {
-            let lex_result = lex(c);
+    //
+    // Test float literals
+    //
 
-            assert!(lex_result.is_err());
-        }
+    #[test]
+    fn test_lexing_a_float_literal() {
+        let input = "123.5";
+        lex_and_assert_result(input, Token::Float(input.parse().unwrap()));
+    }
+
+    #[test]
+    fn test_lexing_a_small_float_literal() {
+        let input = "0.0723";
+        lex_and_assert_result(input, Token::Float(input.parse().unwrap()));
+    }
+
+    //
+    // Test comment literals
+    //
+
+    fn lex_and_assert_contains_single_line_comment(input: &str) {
+        let result = lex(input);
+        assert!(result.is_ok());
+
+        let tokens = result.unwrap();
+        assert!(!tokens
+            .iter()
+            .any(|t| matches!(t.kind, Token::SingleLineComment(_))))
+    }
+
+    fn lex_and_assert_contains_multi_line_comment(input: &str) {
+        let result = lex(input);
+        assert!(result.is_ok());
+
+        let tokens = result.unwrap();
+        assert!(!tokens
+            .iter()
+            .any(|t| matches!(t.kind, Token::MultiLineComment(_))))
+    }
+
+    #[test]
+    fn test_lexing_a_single_line_comment_above_code() {
+        let input = indoc! {"
+            // This is a single line comment
+            var x = 5;
+        "};
+        lex_and_assert_contains_single_line_comment(input);
+    }
+
+    #[test]
+    fn test_lexing_a_single_line_comment_after_code() {
+        let input = indoc! {"
+            var x = 10;
+            print(x); // this should works too!
+        "};
+        lex_and_assert_contains_single_line_comment(input);
+    }
+
+    #[test]
+    fn test_lexing_a_single_line_comment_that_commenting_out_a_code() {
+        let input = indoc! {"
+            // print(y);
+        "};
+        lex_and_assert_contains_single_line_comment(input);
+    }
+
+    #[test]
+    fn test_lexing_a_single_line_comment_spans_until_eof() {
+        let input = indoc! {"
+        // A single line comment that spans to EOF"};
+        lex_and_assert_contains_single_line_comment(input);
+    }
+
+    #[test]
+    fn test_lexing_a_multi_line_comment_above_code() {
+        let input = indoc! {"
+            /**
+             * This is a multi line comment
+             */
+            var x = 5;
+        "};
+        lex_and_assert_contains_multi_line_comment(input);
+    }
+
+    #[test]
+    fn test_lexing_a_multi_line_comment_before_code() {
+        let input = indoc! {"
+            /* no problem */ var x = 5;
+        "};
+        lex_and_assert_contains_multi_line_comment(input);
+    }
+
+    #[test]
+    fn test_lexing_a_multi_line_comment_after_code() {
+        let input = indoc! {"
+            var x = 5; /* also no problem */
+        "};
+        lex_and_assert_contains_multi_line_comment(input);
+    }
+
+    #[test]
+    fn test_lexing_a_multi_line_comment_that_commenting_out_a_code() {
+        let input = indoc! {"
+            /**
+             * All good
+             */
+
+            /**
+             * print(y);
+             *       ^
+             *      A non existing variable
+             */
+        "};
+        lex_and_assert_contains_single_line_comment(input);
+    }
+
+    #[test]
+    fn test_lexing_a_multi_line_comment_that_has_no_closing_tag() {
+        let input = indoc! {"
+            /* No closing tag
+            print(0);
+        "};
+        assert!(lex(input).is_err());
     }
 }
