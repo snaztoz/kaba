@@ -39,6 +39,13 @@ impl Scope {
             scope_type: ScopeType::Loop,
         }
     }
+
+    pub fn new_function_scope(return_type: Type) -> Self {
+        Self {
+            symbols: HashMap::new(),
+            scope_type: ScopeType::Function { return_type },
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -47,4 +54,5 @@ pub enum ScopeType {
     Global,
     Conditional,
     Loop,
+    Function { return_type: Type },
 }

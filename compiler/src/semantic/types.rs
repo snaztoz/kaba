@@ -50,7 +50,6 @@ impl FromStr for Type {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Void" => Ok(Self::Void),
             "Int" => Ok(Self::Int),
             "Float" => Ok(Self::Float),
             "Bool" => Ok(Self::Bool),

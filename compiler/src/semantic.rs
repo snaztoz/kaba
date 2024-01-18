@@ -10,7 +10,7 @@ use self::{
 };
 use crate::ast::{AstNode, Program as ProgramAst, Value};
 use logos::Span;
-use std::{fmt::Display, str::FromStr};
+use std::{collections::BTreeSet, fmt::Display, str::FromStr};
 
 mod builtin_functions;
 mod scope;
@@ -63,6 +63,16 @@ impl SemanticChecker {
                 AstNode::Break { span } | AstNode::Continue { span } => {
                     self.check_loop_control(span)?
                 }
+
+                AstNode::FunctionDefinition {
+                    name,
+                    parameters,
+                    return_type,
+                    body,
+                    ..
+                } => self.check_function_definition(name, parameters, return_type, body)?,
+
+                AstNode::Return { expression, span } => self.check_return(expression, span)?,
 
                 expression => {
                     self.get_expression_type(expression)?;
@@ -273,6 +283,161 @@ impl SemanticChecker {
         Err(SemanticError::LoopControlNotInLoopScope { span: span.clone() })
     }
 
+    fn check_function_definition(
+        &mut self,
+        name: &AstNode,
+        parameters: &[(AstNode, AstNode)],
+        return_type: &Option<Box<AstNode>>,
+        body: &[AstNode],
+    ) -> Result<(), SemanticError> {
+        // Can't have function definition to be declared in scope other
+        // than global
+
+        if self.get_current_scope().scope_type != ScopeType::Global {
+            return Err(SemanticError::FunctionDefinitionNotInGlobal {
+                span: name.get_span(),
+            });
+        }
+
+        // Can't use the name if it's already used by another data type.
+        //
+        // But if it's also a function, then it should be no problem
+        // (function overloading).
+
+        let (name, name_span) = name.unwrap_identifier();
+
+        if let Some(t) = self.get_current_scope().symbols.get(&name) {
+            if !matches!(t, Type::Callable { .. }) {
+                return Err(SemanticError::VariableAlreadyExist {
+                    name,
+                    span: name_span,
+                });
+            }
+        }
+
+        // Check its return type
+
+        let return_type = if let Some(type_notation) = return_type {
+            let (type_name, type_span) = type_notation.unwrap_type_notation();
+            Type::from_str(&type_name).map_err(|_| SemanticError::TypeNotExist {
+                name: type_name,
+                span: type_span.clone(),
+            })?
+        } else {
+            Type::Void
+        };
+
+        // Entering new scope
+
+        self.scopes
+            .push(Scope::new_function_scope(return_type.clone()));
+
+        let mut parameter_types = vec![];
+        for (parameter_name, parameter_type) in parameters {
+            // Parameters can't have duplicated name
+
+            let (parameter_name, parameter_name_span) = parameter_name.unwrap_identifier();
+            if self
+                .get_current_scope()
+                .symbols
+                .contains_key(&parameter_name)
+            {
+                return Err(SemanticError::VariableAlreadyExist {
+                    name: parameter_name,
+                    span: parameter_name_span,
+                });
+            }
+
+            // Check if parameter type is valid
+
+            let (type_name, type_span) = parameter_type.unwrap_type_notation();
+            let parameter_type =
+                Type::from_str(&type_name).map_err(|_| SemanticError::TypeNotExist {
+                    name: type_name,
+                    span: type_span,
+                })?;
+
+            // Save parameter information
+
+            self.insert_to_current_scope_symbols(&parameter_name, parameter_type.clone());
+            parameter_types.push(parameter_type);
+        }
+
+        // Save function information
+
+        let global_scope = self
+            .scopes
+            .iter_mut()
+            .rev()
+            .find(|scope| scope.scope_type == ScopeType::Global)
+            .unwrap();
+
+        if let Some(function) = global_scope.symbols.get_mut(&name) {
+            if let Type::Callable {
+                parameter_variants, ..
+            } = function
+            {
+                // Functions only can be defined multiple times if the parameter
+                // list variant is not existed yet
+
+                if parameter_variants.contains(&parameter_types) {
+                    return Err(SemanticError::FunctionVariantAlreadyExist {
+                        name,
+                        args: parameter_types,
+                        span: name_span,
+                    });
+                }
+
+                parameter_variants.insert(parameter_types);
+            }
+        } else {
+            global_scope.symbols.insert(
+                name,
+                Type::Callable {
+                    parameter_variants: BTreeSet::from([parameter_types]),
+                    return_type: Box::new(return_type),
+                },
+            );
+        }
+
+        // Check function body
+        //
+        // We do this last in order to accommodate features such as
+        // recursive function call.
+
+        self.check(body)?;
+        self.scopes.pop();
+
+        Ok(())
+    }
+
+    fn check_return(
+        &self,
+        expression: &Option<Box<AstNode>>,
+        span: &Span,
+    ) -> Result<(), SemanticError> {
+        let expression_type = expression
+            .as_ref()
+            .map(|expr| self.get_expression_type(expr).unwrap())
+            .unwrap_or(Type::Void);
+
+        for scope in self.scopes.iter().rev() {
+            if let ScopeType::Function { return_type } = &scope.scope_type {
+                if !expression_type.is_assignable_to(return_type) {
+                    return Err(SemanticError::ReturnTypeMismatch {
+                        expecting: return_type.clone(),
+                        get: expression_type,
+                        span: span.clone(),
+                    });
+                }
+
+                return Ok(());
+            }
+        }
+
+        Err(SemanticError::ReturnNotInFunctionScope { span: span.clone() })
+    }
+
     fn get_expression_type(&self, expression: &AstNode) -> Result<Type, SemanticError> {
         match expression {
             AstNode::Assign { lhs, rhs, span } => self.check_assignment(lhs, rhs, span),
@@ -451,7 +616,7 @@ impl SemanticChecker {
             }
 
             if !parameter_variants.contains(&arg_types) {
-                return Err(SemanticError::FunctionCallVariantNotFound {
+                return Err(SemanticError::FunctionVariantNotExist {
                     args: arg_types,
                     span: span.clone(),
                 });
@@ -550,8 +715,28 @@ pub enum SemanticError {
         span: Span,
     },
 
-    FunctionCallVariantNotFound {
+    FunctionDefinitionNotInGlobal {
+        span: Span,
+    },
+
+    FunctionVariantAlreadyExist {
+        name: String,
         args: Vec<Type>,
+        span: Span,
+    },
+
+    FunctionVariantNotExist {
+        args: Vec<Type>,
+        span: Span,
+    },
+
+    ReturnNotInFunctionScope {
+        span: Span,
+    },
+
+    ReturnTypeMismatch {
+        expecting: Type,
+        get: Type,
         span: Span,
     },
 
@@ -573,7 +758,11 @@ impl SemanticError {
             | Self::NotANumber { span, .. }
             | Self::NotABoolean { span, .. }
             | Self::NotAFunction { span, .. }
-            | Self::FunctionCallVariantNotFound { span, .. }
+            | Self::FunctionDefinitionNotInGlobal { span, .. }
+            | Self::FunctionVariantAlreadyExist { span, .. }
+            | Self::FunctionVariantNotExist { span, .. }
+            | Self::ReturnNotInFunctionScope { span, .. }
+            | Self::ReturnTypeMismatch { span, .. }
             | Self::LoopControlNotInLoopScope { span } => Some(span.clone()),
         }
     }
@@ -622,11 +811,33 @@ impl Display for SemanticError {
             Self::NotAFunction { .. } => {
                 write!(f, "not a function")
             }
-            Self::FunctionCallVariantNotFound { args, .. } => {
+            Self::FunctionDefinitionNotInGlobal { .. } => {
+                write!(f, "unable to define functions in non-global scope",)
+            }
+            Self::FunctionVariantAlreadyExist { name, args, .. } => {
+                write!(
+                    f,
+                    "function `{name}` with variant of `{:?}` is already exists",
+                    args
+                )
+            }
+            Self::FunctionVariantNotExist { args, .. } => {
                 write!(
                     f,
                     "unable to call function with argument(s) of type {:?}",
                     args
+                )
+            }
+            Self::ReturnNotInFunctionScope { .. } => {
+                write!(
+                    f,
+                    "the usage of `return` statement must be within a function body",
+                )
+            }
+            Self::ReturnTypeMismatch { expecting, get, .. } => {
+                write!(
+                    f,
+                    "expecting to returning value of type `{expecting}`, but get `{get}` instead",
                 )
             }
             Self::LoopControlNotInLoopScope { .. } => {
@@ -890,6 +1101,115 @@ mod tests {
 
             let mut checker = SemanticChecker::new();
             let result = checker.check(&ast.statements);
+
+            assert!(result.is_err());
+        }
+    }
+
+    #[test]
+    fn test_function_definition() {
+        let cases = [
+            indoc! {"
+                fn add() {}
+            "},
+            indoc! {"
+                fn printSumOf(a: Int, b: Int,) {
+                    print(a + b);
+                }
+
+                fn printSumOf(a: Float, b: Float) {
+                    print(a + b);
+                }
+            "},
+            indoc! {"
+                fn sum(x: Int, y: Int): Int {
+                    return x + y;
+                }
+            "},
+            indoc! {"
+                fn sum(x: Int, y: Int): Int {
+                    return x + y;
+                }
+
+                fn sum(x: Float, y: Float): Float {
+                    return x + y;
+                }
+
+                var result = sum(5, 7);
+
+                print(result);
+            "},
+        ];
+
+        for input in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let ast = parser::parse(tokens).unwrap();
+
+            let mut checker = SemanticChecker::new();
+            let result = checker.check(&ast.statements);
+
+            assert!(result.is_ok());
+        }
+    }
+
+    #[test]
+    fn test_invalid_function_definition() {
+        let cases = [
+            indoc! {"
+                if true {
+                    fn foo() {}
+                }
+            "},
+            indoc! {"
+                var foo: Int = 0;
+
+                fn foo() {}
+            "},
+            indoc! {"
+                fn foo(): NonExistingType {}
+            "},
+            indoc! {"
+                fn addSumOf(x: Int, x: Int) {}
+            "},
+            indoc! {"
+                fn foo(x: NonExistingType) {}
+            "},
+            indoc! {"
+                fn foo() {
+                    return 5;
+                }
+            "},
+            indoc! {"
+                fn sum(x: Int, y: Int): Int {
+                    return 5.0;
+                }
+            "},
+            indoc! {"
+                fn sum(x: Int, y: Int): Int {
+                    return x + y;
+                }
+
+                fn sum(x: Int, y: Int): Int {
+                    return x + y;
+                }
+            "},
+            indoc! {"
+                if true {
+                    return;
+                }
+            "},
+        ];
+
+        for input in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let ast = parser::parse(tokens).unwrap();
+
+            let mut checker = SemanticChecker::new();
+            let result = checker.check(&ast.statements);
+
+            if result.is_ok() {
+                dbg!(input);
+            }
 
             assert!(result.is_err());
         }

@@ -51,6 +51,19 @@ pub enum AstNode {
         span: Span,
     },
 
+    FunctionDefinition {
+        name: Box<AstNode>,
+        parameters: Vec<(AstNode, AstNode)>, // (Identifier, TypeNotation)
+        return_type: Option<Box<AstNode>>,
+        body: Vec<AstNode>,
+        span: Span,
+    },
+
+    Return {
+        expression: Option<Box<AstNode>>,
+        span: Span,
+    },
+
     Assign {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
@@ -214,6 +227,8 @@ impl AstNode {
             | Self::While { span, .. }
             | Self::Break { span }
             | Self::Continue { span }
+            | Self::FunctionDefinition { span, .. }
+            | Self::Return { span, .. }
             | Self::Assign { span, .. }
             | Self::AddAssign { span, .. }
             | Self::SubAssign { span, .. }

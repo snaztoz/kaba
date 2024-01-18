@@ -90,6 +90,8 @@ pub enum Token {
     #[token("while")]    While,
     #[token("break")]    Break,
     #[token("continue")] Continue,
+    #[token("fn")]       Fn,
+    #[token("return")]   Return,
 
     //
     // Symbols
@@ -154,12 +156,16 @@ impl Display for Token {
             Self::Float(_) => write!(f, "float"),
             Self::BooleanTrue => write!(f, "true"),
             Self::BooleanFalse => write!(f, "false"),
+
             Self::Var => write!(f, "`var` keyword"),
             Self::If => write!(f, "`if` keyword"),
             Self::Else => write!(f, "`else` keyword"),
             Self::While => write!(f, "`while` keyword"),
             Self::Break => write!(f, "`break` keyword"),
             Self::Continue => write!(f, "`continue` keyword"),
+            Self::Fn => write!(f, "`fn` keyword"),
+            Self::Return => write!(f, "`return` keyword"),
+
             Self::Add => write!(f, "addition operator (`+`)"),
             Self::Sub => write!(f, "subtraction operator (`-`)"),
             Self::Mul => write!(f, "multiplication operator (`*`)"),

@@ -84,6 +84,8 @@ impl Parser {
             Token::If => return self.parse_conditional_branch(),
             Token::While => return self.parse_while(),
             Token::Break | Token::Continue => return self.parse_loop_control(),
+            Token::Fn => return self.parse_function_definition(),
+            Token::Return => return self.parse_return_statement(),
             _ => (),
         }
 
@@ -132,7 +134,6 @@ impl Parser {
             let vt = self.parse_type_notation()?;
 
             end = vt.get_span().end;
-            self.advance();
 
             Some(Box::new(vt))
         } else {
@@ -167,10 +168,13 @@ impl Parser {
     fn parse_type_notation(&mut self) -> Result<AstNode, ParsingError> {
         let token = self.get_current_rich_token();
         match token.kind {
-            Token::Identifier(name) => Ok(AstNode::TypeNotation {
-                name,
-                span: token.span.clone(),
-            }),
+            Token::Identifier(name) => {
+                self.advance();
+                Ok(AstNode::TypeNotation {
+                    name,
+                    span: token.span.clone(),
+                })
+            }
             _ => Err(ParsingError::UnexpectedToken {
                 expected: Token::Identifier(String::from("foo")),
                 found: token.kind.clone(),
@@ -281,6 +285,145 @@ impl Parser {
         self.skip(Token::Semicolon)?;
 
         Ok(control)
+    }
+
+    fn parse_function_definition(&mut self) -> Result<AstNode, ParsingError> {
+        let start = self.get_current_rich_token().span.start;
+        self.skip(Token::Fn)?;
+
+        // Expecting identifier
+
+        let token = self.get_current_rich_token();
+        let name = match token.kind {
+            Token::Identifier(name) => {
+                self.advance();
+                AstNode::Identifier {
+                    name,
+                    span: token.span,
+                }
+            }
+
+            kind => {
+                return Err(ParsingError::UnexpectedToken {
+                    expected: Token::Identifier(String::from("function_name")),
+                    found: kind.clone(),
+                    span: token.span,
+                });
+            }
+        };
+
+        // Expecting "("
+
+        self.skip(Token::LParen)?;
+
+        // Followed by >= 0 function parameter declaration(s)
+
+        let mut parameters = vec![];
+        while !self.current_token_is(Token::RParen) {
+            // Expecting identifier
+
+            let token = self.get_current_rich_token();
+            let parameter = match token.kind {
+                Token::Identifier(name) => {
+                    self.advance();
+                    AstNode::Identifier {
+                        name,
+                        span: token.span,
+                    }
+                }
+
+                kind => {
+                    return Err(ParsingError::UnexpectedToken {
+                        expected: Token::Identifier(String::from("function_name")),
+                        found: kind.clone(),
+                        span: token.span,
+                    });
+                }
+            };
+
+            // Expecting ":"
+
+            self.skip(Token::Colon)?;
+
+            // Expecting type notation
+
+            let parameter_type = self.parse_type_notation()?;
+
+            // Add to parameter list
+
+            parameters.push((parameter, parameter_type));
+
+            // Expecting either "," or ")"
+
+            let token = self.get_current_rich_token();
+            match token.kind {
+                Token::Comma => {
+                    self.skip(Token::Comma)?;
+                    continue;
+                }
+
+                Token::RParen => continue,
+
+                kind => {
+                    return Err(ParsingError::UnexpectedToken {
+                        expected: Token::RParen,
+                        found: kind.clone(),
+                        span: token.span,
+                    });
+                }
+            }
+        }
+
+        // Expecting ")"
+
+        self.skip(Token::RParen)?;
+
+        // Expecting return type notation (optional)
+
+        let return_type = if self.current_token_is(Token::Colon) {
+            self.skip(Token::Colon)?;
+
+            Some(Box::new(self.parse_type_notation()?))
+        } else {
+            None
+        };
+
+        // Expecting function body
+
+        let (body, body_span) = self.parse_block()?;
+
+        Ok(AstNode::FunctionDefinition {
+            name: Box::new(name),
+            parameters,
+            return_type,
+            body,
+            span: start..body_span.end,
+        })
+    }
+
+    fn parse_return_statement(&mut self) -> Result<AstNode, ParsingError> {
+        let start = self.get_current_rich_token().span.start;
+        let mut end = self.get_current_rich_token().span.end;
+        self.skip(Token::Return)?;
+
+        // Expecting expression (optional)
+
+        let expression = if self.current_token_is(Token::Semicolon) {
+            None
+        } else {
+            let expression = self.parse_expression()?;
+            end = expression.get_span().end;
+            Some(Box::new(expression))
+        };
+
+        // Expecting ";"
+
+        self.skip(Token::Semicolon)?;
+
+        Ok(AstNode::Return {
+            expression,
+            span: start..end,
+        })
     }
 
     fn parse_expression(&mut self) -> Result<AstNode, ParsingError> {
@@ -1058,6 +1201,126 @@ mod tests {
                         AstNode::Break { span: 23..28 },
                     ],
                     span: 0..31,
+                },
+            ),
+        ];
+
+        for (input, expected) in cases {
+            let tokens = lexer::lex(input).unwrap();
+            let result = parse(tokens);
+
+            assert!(result.is_ok());
+            assert_eq!(
+                result.unwrap(),
+                ProgramAst {
+                    statements: vec![expected]
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn test_parsing_function_definition() {
+        let cases = [
+            (
+                "fn foo() {}",
+                AstNode::FunctionDefinition {
+                    name: Box::new(AstNode::Identifier {
+                        name: String::from("foo"),
+                        span: 3..6,
+                    }),
+                    parameters: vec![],
+                    return_type: None,
+                    body: vec![],
+                    span: 0..11,
+                },
+            ),
+            (
+                "fn foo(x: Int, y: Bool,) {}",
+                AstNode::FunctionDefinition {
+                    name: Box::new(AstNode::Identifier {
+                        name: String::from("foo"),
+                        span: 3..6,
+                    }),
+                    parameters: vec![
+                        (
+                            AstNode::Identifier {
+                                name: String::from("x"),
+                                span: 7..8,
+                            },
+                            AstNode::TypeNotation {
+                                name: String::from("Int"),
+                                span: 10..13,
+                            },
+                        ),
+                        (
+                            AstNode::Identifier {
+                                name: String::from("y"),
+                                span: 15..16,
+                            },
+                            AstNode::TypeNotation {
+                                name: String::from("Bool"),
+                                span: 18..22,
+                            },
+                        ),
+                    ],
+                    return_type: None,
+                    body: vec![],
+                    span: 0..27,
+                },
+            ),
+            (
+                "fn write(x: Int) { print(x); }",
+                AstNode::FunctionDefinition {
+                    name: Box::new(AstNode::Identifier {
+                        name: String::from("write"),
+                        span: 3..8,
+                    }),
+                    parameters: vec![(
+                        AstNode::Identifier {
+                            name: String::from("x"),
+                            span: 9..10,
+                        },
+                        AstNode::TypeNotation {
+                            name: String::from("Int"),
+                            span: 12..15,
+                        },
+                    )],
+                    return_type: None,
+                    body: vec![AstNode::FunctionCall {
+                        callee: Box::new(AstNode::Identifier {
+                            name: String::from("print"),
+                            span: 19..24,
+                        }),
+                        args: vec![AstNode::Identifier {
+                            name: String::from("x"),
+                            span: 25..26,
+                        }],
+                        span: 19..27,
+                    }],
+                    span: 0..30,
+                },
+            ),
+            (
+                "fn foo(): Int { return 5; }",
+                AstNode::FunctionDefinition {
+                    name: Box::new(AstNode::Identifier {
+                        name: String::from("foo"),
+                        span: 3..6,
+                    }),
+                    parameters: vec![],
+                    return_type: Some(Box::new(AstNode::TypeNotation {
+                        name: String::from("Int"),
+                        span: 10..13,
+                    })),
+                    body: vec![AstNode::Return {
+                        expression: Some(Box::new(AstNode::Literal {
+                            value: Value::Integer(5),
+                            span: 23..24,
+                        })),
+                        span: 16..24,
+                    }],
+                    span: 0..27,
                 },
             ),
         ];
