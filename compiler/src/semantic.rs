@@ -10,7 +10,7 @@ use self::{
 };
 use crate::ast::{AstNode, Program as ProgramAst, Value};
 use logos::Span;
-use std::{collections::BTreeSet, fmt::Display, str::FromStr};
+use std::{fmt::Display, str::FromStr};
 
 mod builtin_functions;
 mod scope;
@@ -306,13 +306,11 @@ impl SemanticChecker {
 
         let (name, name_span) = name.unwrap_identifier();
 
-        if let Some(t) = self.get_current_scope().symbols.get(&name) {
-            if !matches!(t, Type::Callable { .. }) {
-                return Err(SemanticError::VariableAlreadyExist {
-                    name,
-                    span: name_span,
-                });
-            }
+        if self.get_current_scope().symbols.contains_key(&name) {
+            return Err(SemanticError::VariableAlreadyExist {
+                name,
+                span: name_span,
+            });
         }
 
         // Check its return type
@@ -363,6 +361,13 @@ impl SemanticChecker {
             parameter_types.push(parameter_type);
         }
 
+        // Create function type
+
+        let function_type = Type::Callable {
+            parameter_types: parameter_types.clone(),
+            return_type: Box::new(return_type),
+        };
+
         // Save function information
 
         let global_scope = self
@@ -372,33 +377,19 @@ impl SemanticChecker {
             .find(|scope| scope.scope_type == ScopeType::Global)
             .unwrap();
 
-        if let Some(function) = global_scope.symbols.get_mut(&name) {
-            if let Type::Callable {
-                parameter_variants, ..
-            } = function
-            {
-                // Functions only can be defined multiple times if the parameter
-                // list variant is not existed yet
+        let function_signature = format!("{name}{function_type}");
 
-                if parameter_variants.contains(&parameter_types) {
-                    return Err(SemanticError::FunctionVariantAlreadyExist {
-                        name,
-                        args: parameter_types,
-                        span: name_span,
-                    });
-                }
-
-                parameter_variants.insert(parameter_types);
-            }
-        } else {
-            global_scope.symbols.insert(
+        if global_scope.symbols.contains_key(&function_signature) {
+            return Err(SemanticError::FunctionVariantAlreadyExist {
                 name,
-                Type::Callable {
-                    parameter_variants: BTreeSet::from([parameter_types]),
-                    return_type: Box::new(return_type),
-                },
-            );
+                args: parameter_types,
+                span: name_span,
+            });
         }
+
+        global_scope
+            .symbols
+            .insert(function_signature, function_type);
 
         // Check function body
         //
@@ -602,20 +593,29 @@ impl SemanticChecker {
         args: &[AstNode],
         span: &Span,
     ) -> Result<Type, SemanticError> {
-        let callee_type = self.get_expression_type(callee)?;
+        // transform the arguments into their respective type
+        let mut arg_types = vec![];
+        for arg in args {
+            arg_types.push(self.get_expression_type(arg)?)
+        }
 
-        if let Type::Callable {
-            parameter_variants,
-            return_type,
-        } = &callee_type
-        {
-            // transform the arguments into their respective type
-            let mut arg_types = vec![];
-            for arg in args {
-                arg_types.push(self.get_expression_type(arg)?)
+        let t = match callee {
+            AstNode::Identifier { name, span } => {
+                let arg_types: Vec<_> = arg_types.iter().map(|arg| arg.to_string()).collect();
+                let function_signature = format!("{name}/{}", arg_types.join(","));
+
+                self.get_identifier_type(&function_signature, span)?
             }
 
-            if !parameter_variants.contains(&arg_types) {
+            _ => todo!(),
+        };
+
+        if let Type::Callable {
+            parameter_types,
+            return_type,
+        } = &t
+        {
+            if parameter_types != &arg_types {
                 return Err(SemanticError::FunctionVariantNotExist {
                     args: arg_types,
                     span: span.clone(),
@@ -1189,7 +1189,7 @@ mod tests {
                     return x + y;
                 }
 
-                fn sum(x: Int, y: Int): Int {
+                fn sum(x: Int, y: Int): Float {
                     return x + y;
                 }
             "},
@@ -1206,10 +1206,6 @@ mod tests {
 
             let mut checker = SemanticChecker::new();
             let result = checker.check(&ast.statements);
-
-            if result.is_ok() {
-                dbg!(input);
-            }
 
             assert!(result.is_err());
         }

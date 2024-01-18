@@ -1,7 +1,7 @@
 // Copyright 2023 Hafidh Muqsithanova Sukarno
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{collections::BTreeSet, fmt::Display, str::FromStr};
+use std::{fmt::Display, str::FromStr};
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Type {
@@ -10,7 +10,7 @@ pub enum Type {
     Float,
     Bool,
     Callable {
-        parameter_variants: BTreeSet<Vec<Type>>,
+        parameter_types: Vec<Type>,
         return_type: Box<Type>,
     },
 }
@@ -40,7 +40,12 @@ impl Display for Type {
             Self::Int => write!(f, "Int"),
             Self::Float => write!(f, "Float"),
             Self::Bool => write!(f, "Bool"),
-            Self::Callable { .. } => write!(f, "Callable"),
+            Self::Callable {
+                parameter_types, ..
+            } => {
+                let pts: Vec<_> = parameter_types.iter().map(|pt| pt.to_string()).collect();
+                write!(f, "/{}", pts.join(","))
+            }
         }
     }
 }
