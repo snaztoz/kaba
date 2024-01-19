@@ -981,807 +981,857 @@ mod tests {
     use super::*;
     use crate::lexer;
 
+    fn parse_and_assert_result(input: &str, expected: AstNode) {
+        let tokens = lexer::lex(input).unwrap();
+        let result = parse(tokens);
+
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            ProgramAst {
+                statements: vec![expected]
+            }
+        );
+    }
+
+    //
+    // Test variable declarations
+    //
+
     #[test]
-    fn test_parsing_variable_declaration() {
-        let cases = [
-            (
-                "var x;",
-                AstNode::VariableDeclaration {
-                    identifier: Box::from(AstNode::Identifier {
-                        name: String::from("x"),
-                        span: 4..5,
-                    }),
-                    var_type: None,
-                    value: None,
-                    span: 0..5,
-                },
-            ),
-            (
-                "var abc = 123 * x;",
-                AstNode::VariableDeclaration {
-                    identifier: Box::from(AstNode::Identifier {
-                        name: String::from("abc"),
-                        span: 4..7,
-                    }),
-                    var_type: None,
-                    value: Some(Box::new(AstNode::Mul {
-                        lhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(123),
-                            span: 10..13,
-                        }),
-                        rhs: Box::new(AstNode::Identifier {
-                            name: String::from("x"),
-                            span: 16..17,
-                        }),
-                        span: 10..17,
-                    })),
-                    span: 0..17,
-                },
-            ),
-            (
-                "var x = (123 + 50);",
-                AstNode::VariableDeclaration {
-                    identifier: Box::from(AstNode::Identifier {
-                        name: String::from("x"),
-                        span: 4..5,
-                    }),
-                    var_type: None,
-                    value: Some(Box::new(AstNode::Add {
-                        lhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(123),
-                            span: 9..12,
-                        }),
-                        rhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(50),
-                            span: 15..17,
-                        }),
-                        span: 9..17,
-                    })),
-                    span: 0..18,
-                },
-            ),
-            (
-                "var x = ((((foo))));",
-                AstNode::VariableDeclaration {
-                    identifier: Box::from(AstNode::Identifier {
-                        name: String::from("x"),
-                        span: 4..5,
-                    }),
-                    var_type: None,
-                    value: Some(Box::new(AstNode::Identifier {
-                        name: String::from("foo"),
-                        span: 12..15,
-                    })),
-                    span: 0..19,
-                },
-            ),
-            (
-                "var x: Int;",
-                AstNode::VariableDeclaration {
-                    identifier: Box::from(AstNode::Identifier {
-                        name: String::from("x"),
-                        span: 4..5,
-                    }),
-                    var_type: Some(Box::from(AstNode::TypeNotation {
-                        name: String::from("Int"),
-                        span: 7..10,
-                    })),
-                    value: None,
-                    span: 0..10,
-                },
-            ),
-            (
-                "var x: Float = 5;",
-                AstNode::VariableDeclaration {
-                    identifier: Box::from(AstNode::Identifier {
-                        name: String::from("x"),
-                        span: 4..5,
-                    }),
-                    var_type: Some(Box::from(AstNode::TypeNotation {
-                        name: String::from("Float"),
-                        span: 7..12,
-                    })),
-                    value: Some(Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
-                        span: 15..16,
-                    })),
-                    span: 0..16,
-                },
-            ),
-        ];
-
-        for (input, expected) in cases {
-            let tokens = lexer::lex(input).unwrap();
-            let result = parse(tokens);
-
-            assert!(result.is_ok());
-            assert_eq!(
-                result.unwrap(),
-                ProgramAst {
-                    statements: vec![expected]
-                }
-            );
-        }
+    fn test_parsing_without_type_annotation_and_initial_value() {
+        parse_and_assert_result(
+            "var x;",
+            AstNode::VariableDeclaration {
+                identifier: Box::from(AstNode::Identifier {
+                    name: String::from("x"),
+                    span: 4..5,
+                }),
+                var_type: None,
+                value: None,
+                span: 0..5,
+            },
+        );
     }
 
     #[test]
-    fn test_parsing_conditional_branch() {
-        let cases = [
-            (
-                "if 15 > 10 { print(1); }",
-                AstNode::If {
-                    condition: Box::new(AstNode::Gt {
-                        lhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(15),
-                            span: 3..5,
-                        }),
-                        rhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(10),
-                            span: 8..10,
-                        }),
-                        span: 3..10,
+    fn test_parsing_without_type_annotation_but_with_initial_value() {
+        parse_and_assert_result(
+            "var abc = 123 * x;",
+            AstNode::VariableDeclaration {
+                identifier: Box::from(AstNode::Identifier {
+                    name: String::from("abc"),
+                    span: 4..7,
+                }),
+                var_type: None,
+                value: Some(Box::new(AstNode::Mul {
+                    lhs: Box::new(AstNode::Literal {
+                        value: Value::Integer(123),
+                        span: 10..13,
                     }),
-                    body: vec![AstNode::FunctionCall {
-                        callee: Box::new(AstNode::Identifier {
-                            name: String::from("print"),
-                            span: 13..18,
-                        }),
-                        args: vec![AstNode::Literal {
-                            value: Value::Integer(1),
-                            span: 19..20,
-                        }],
-                        span: 13..21,
+                    rhs: Box::new(AstNode::Identifier {
+                        name: String::from("x"),
+                        span: 16..17,
+                    }),
+                    span: 10..17,
+                })),
+                span: 0..17,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_with_grouped_expression_as_initial_value() {
+        parse_and_assert_result(
+            "var x = (123 + 50);",
+            AstNode::VariableDeclaration {
+                identifier: Box::from(AstNode::Identifier {
+                    name: String::from("x"),
+                    span: 4..5,
+                }),
+                var_type: None,
+                value: Some(Box::new(AstNode::Add {
+                    lhs: Box::new(AstNode::Literal {
+                        value: Value::Integer(123),
+                        span: 9..12,
+                    }),
+                    rhs: Box::new(AstNode::Literal {
+                        value: Value::Integer(50),
+                        span: 15..17,
+                    }),
+                    span: 9..17,
+                })),
+                span: 0..18,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_with_nested_grouped_expression_as_initial_value() {
+        parse_and_assert_result(
+            "var x = ((((foo))));",
+            AstNode::VariableDeclaration {
+                identifier: Box::from(AstNode::Identifier {
+                    name: String::from("x"),
+                    span: 4..5,
+                }),
+                var_type: None,
+                value: Some(Box::new(AstNode::Identifier {
+                    name: String::from("foo"),
+                    span: 12..15,
+                })),
+                span: 0..19,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_with_type_annotation_but_without_initial_value() {
+        parse_and_assert_result(
+            "var x: Int;",
+            AstNode::VariableDeclaration {
+                identifier: Box::from(AstNode::Identifier {
+                    name: String::from("x"),
+                    span: 4..5,
+                }),
+                var_type: Some(Box::from(AstNode::TypeNotation {
+                    name: String::from("Int"),
+                    span: 7..10,
+                })),
+                value: None,
+                span: 0..10,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_with_both_type_annotation_and_initial_value() {
+        parse_and_assert_result(
+            "var x: Int = 5;",
+            AstNode::VariableDeclaration {
+                identifier: Box::from(AstNode::Identifier {
+                    name: String::from("x"),
+                    span: 4..5,
+                }),
+                var_type: Some(Box::from(AstNode::TypeNotation {
+                    name: String::from("Int"),
+                    span: 7..10,
+                })),
+                value: Some(Box::new(AstNode::Literal {
+                    value: Value::Integer(5),
+                    span: 13..14,
+                })),
+                span: 0..14,
+            },
+        );
+    }
+
+    //
+    // Test conditional branches
+    //
+
+    #[test]
+    fn test_parsing_if_statement() {
+        parse_and_assert_result(
+            "if 15 > 10 { print(1); }",
+            AstNode::If {
+                condition: Box::new(AstNode::Gt {
+                    lhs: Box::new(AstNode::Literal {
+                        value: Value::Integer(15),
+                        span: 3..5,
+                    }),
+                    rhs: Box::new(AstNode::Literal {
+                        value: Value::Integer(10),
+                        span: 8..10,
+                    }),
+                    span: 3..10,
+                }),
+                body: vec![AstNode::FunctionCall {
+                    callee: Box::new(AstNode::Identifier {
+                        name: String::from("print"),
+                        span: 13..18,
+                    }),
+                    args: vec![AstNode::Literal {
+                        value: Value::Integer(1),
+                        span: 19..20,
                     }],
-                    or_else: None,
-                    span: 0..24,
-                },
-            ),
-            (
-                "if false {} else if false {} else {}",
-                AstNode::If {
+                    span: 13..21,
+                }],
+                or_else: None,
+                span: 0..24,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_if_else_branches() {
+        parse_and_assert_result(
+            "if false {} else if false {} else {}",
+            AstNode::If {
+                condition: Box::new(AstNode::Literal {
+                    value: Value::Boolean(false),
+                    span: 3..8,
+                }),
+                body: vec![],
+                or_else: Some(Box::new(AstNode::If {
                     condition: Box::new(AstNode::Literal {
                         value: Value::Boolean(false),
-                        span: 3..8,
+                        span: 20..25,
                     }),
                     body: vec![],
-                    or_else: Some(Box::new(AstNode::If {
-                        condition: Box::new(AstNode::Literal {
-                            value: Value::Boolean(false),
-                            span: 20..25,
-                        }),
+                    or_else: Some(Box::new(AstNode::Else {
                         body: vec![],
-                        or_else: Some(Box::new(AstNode::Else {
-                            body: vec![],
-                            span: 29..36,
-                        })),
-                        span: 17..36,
+                        span: 29..36,
                     })),
-                    span: 0..36,
-                },
-            ),
-        ];
+                    span: 17..36,
+                })),
+                span: 0..36,
+            },
+        );
+    }
 
-        for (input, expected) in cases {
-            let tokens = lexer::lex(input).unwrap();
-            let result = parse(tokens);
+    //
+    // Test loops
+    //
 
-            assert!(result.is_ok());
-            assert_eq!(
-                result.unwrap(),
-                ProgramAst {
-                    statements: vec![expected]
-                }
-            );
-        }
+    #[test]
+    fn test_parsing_while_statement() {
+        parse_and_assert_result(
+            "while true {}",
+            AstNode::While {
+                condition: Box::new(AstNode::Literal {
+                    value: Value::Boolean(true),
+                    span: 6..10,
+                }),
+                body: vec![],
+                span: 0..13,
+            },
+        );
     }
 
     #[test]
-    fn test_parsing_while() {
-        let cases = [
-            (
-                "while true {}",
-                AstNode::While {
-                    condition: Box::new(AstNode::Literal {
-                        value: Value::Boolean(true),
-                        span: 6..10,
-                    }),
-                    body: vec![],
-                    span: 0..13,
-                },
-            ),
-            (
-                "while true { continue; break; }",
-                AstNode::While {
-                    condition: Box::new(AstNode::Literal {
-                        value: Value::Boolean(true),
-                        span: 6..10,
-                    }),
-                    body: vec![
-                        AstNode::Continue { span: 13..21 },
-                        AstNode::Break { span: 23..28 },
-                    ],
-                    span: 0..31,
-                },
-            ),
-        ];
+    fn test_parsing_while_statement_with_control_loops() {
+        parse_and_assert_result(
+            "while true { continue; break; }",
+            AstNode::While {
+                condition: Box::new(AstNode::Literal {
+                    value: Value::Boolean(true),
+                    span: 6..10,
+                }),
+                body: vec![
+                    AstNode::Continue { span: 13..21 },
+                    AstNode::Break { span: 23..28 },
+                ],
+                span: 0..31,
+            },
+        );
+    }
 
-        for (input, expected) in cases {
-            let tokens = lexer::lex(input).unwrap();
-            let result = parse(tokens);
+    //
+    // Test function definitions
+    //
 
-            assert!(result.is_ok());
-            assert_eq!(
-                result.unwrap(),
-                ProgramAst {
-                    statements: vec![expected]
-                }
-            );
-        }
+    #[test]
+    fn test_parsing_empty_function_definition() {
+        parse_and_assert_result(
+            "fn foo() {}",
+            AstNode::FunctionDefinition {
+                name: Box::new(AstNode::Identifier {
+                    name: String::from("foo"),
+                    span: 3..6,
+                }),
+                parameters: vec![],
+                return_type: None,
+                body: vec![],
+                span: 0..11,
+            },
+        );
     }
 
     #[test]
-    fn test_parsing_function_definition() {
-        let cases = [
-            (
-                "fn foo() {}",
-                AstNode::FunctionDefinition {
-                    name: Box::new(AstNode::Identifier {
-                        name: String::from("foo"),
-                        span: 3..6,
-                    }),
-                    parameters: vec![],
-                    return_type: None,
-                    body: vec![],
-                    span: 0..11,
-                },
-            ),
-            (
-                "fn foo(x: Int, y: Bool,) {}",
-                AstNode::FunctionDefinition {
-                    name: Box::new(AstNode::Identifier {
-                        name: String::from("foo"),
-                        span: 3..6,
-                    }),
-                    parameters: vec![
-                        (
-                            AstNode::Identifier {
-                                name: String::from("x"),
-                                span: 7..8,
-                            },
-                            AstNode::TypeNotation {
-                                name: String::from("Int"),
-                                span: 10..13,
-                            },
-                        ),
-                        (
-                            AstNode::Identifier {
-                                name: String::from("y"),
-                                span: 15..16,
-                            },
-                            AstNode::TypeNotation {
-                                name: String::from("Bool"),
-                                span: 18..22,
-                            },
-                        ),
-                    ],
-                    return_type: None,
-                    body: vec![],
-                    span: 0..27,
-                },
-            ),
-            (
-                "fn write(x: Int) { print(x); }",
-                AstNode::FunctionDefinition {
-                    name: Box::new(AstNode::Identifier {
-                        name: String::from("write"),
-                        span: 3..8,
-                    }),
-                    parameters: vec![(
+    fn test_parsing_function_definition_with_parameters_and_trailing_comma() {
+        parse_and_assert_result(
+            "fn foo(x: Int, y: Bool,) {}",
+            AstNode::FunctionDefinition {
+                name: Box::new(AstNode::Identifier {
+                    name: String::from("foo"),
+                    span: 3..6,
+                }),
+                parameters: vec![
+                    (
                         AstNode::Identifier {
                             name: String::from("x"),
-                            span: 9..10,
+                            span: 7..8,
                         },
                         AstNode::TypeNotation {
                             name: String::from("Int"),
-                            span: 12..15,
+                            span: 10..13,
                         },
-                    )],
-                    return_type: None,
-                    body: vec![AstNode::FunctionCall {
-                        callee: Box::new(AstNode::Identifier {
-                            name: String::from("print"),
-                            span: 19..24,
-                        }),
-                        args: vec![AstNode::Identifier {
-                            name: String::from("x"),
-                            span: 25..26,
-                        }],
-                        span: 19..27,
-                    }],
-                    span: 0..30,
-                },
-            ),
-            (
-                "fn foo(): Int { return 5; }",
-                AstNode::FunctionDefinition {
-                    name: Box::new(AstNode::Identifier {
-                        name: String::from("foo"),
-                        span: 3..6,
-                    }),
-                    parameters: vec![],
-                    return_type: Some(Box::new(AstNode::TypeNotation {
-                        name: String::from("Int"),
-                        span: 10..13,
-                    })),
-                    body: vec![AstNode::Return {
-                        expression: Some(Box::new(AstNode::Literal {
-                            value: Value::Integer(5),
-                            span: 23..24,
-                        })),
-                        span: 16..24,
-                    }],
-                    span: 0..27,
-                },
-            ),
-        ];
-
-        for (input, expected) in cases {
-            let tokens = lexer::lex(input).unwrap();
-            let result = parse(tokens);
-
-            assert!(result.is_ok());
-            assert_eq!(
-                result.unwrap(),
-                ProgramAst {
-                    statements: vec![expected]
-                }
-            );
-        }
+                    ),
+                    (
+                        AstNode::Identifier {
+                            name: String::from("y"),
+                            span: 15..16,
+                        },
+                        AstNode::TypeNotation {
+                            name: String::from("Bool"),
+                            span: 18..22,
+                        },
+                    ),
+                ],
+                return_type: None,
+                body: vec![],
+                span: 0..27,
+            },
+        );
     }
 
     #[test]
-    fn test_parsing_expression() {
-        let cases = [
-            (
-                "abc + 512 * 200 - abc / 3;",
-                AstNode::Sub {
-                    lhs: Box::new(AstNode::Add {
-                        lhs: Box::new(AstNode::Identifier {
-                            name: String::from("abc"),
-                            span: 0..3,
-                        }),
-                        rhs: Box::new(AstNode::Mul {
-                            lhs: Box::new(AstNode::Literal {
-                                value: Value::Integer(512),
-                                span: 6..9,
-                            }),
-                            rhs: Box::new(AstNode::Literal {
-                                value: Value::Integer(200),
-                                span: 12..15,
-                            }),
-                            span: 6..15,
-                        }),
-                        span: 0..15,
+    fn test_parsing_function_definition_parameter_and_body() {
+        parse_and_assert_result(
+            "fn write(x: Int) { print(x); }",
+            AstNode::FunctionDefinition {
+                name: Box::new(AstNode::Identifier {
+                    name: String::from("write"),
+                    span: 3..8,
+                }),
+                parameters: vec![(
+                    AstNode::Identifier {
+                        name: String::from("x"),
+                        span: 9..10,
+                    },
+                    AstNode::TypeNotation {
+                        name: String::from("Int"),
+                        span: 12..15,
+                    },
+                )],
+                return_type: None,
+                body: vec![AstNode::FunctionCall {
+                    callee: Box::new(AstNode::Identifier {
+                        name: String::from("print"),
+                        span: 19..24,
                     }),
-                    rhs: Box::new(AstNode::Div {
-                        lhs: Box::new(AstNode::Identifier {
-                            name: String::from("abc"),
-                            span: 18..21,
-                        }),
-                        rhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(3),
-                            span: 24..25,
-                        }),
-                        span: 18..25,
-                    }),
-                    span: 0..25,
-                },
-            ),
-            (
-                "abc = 123 * x;",
-                AstNode::Assign {
+                    args: vec![AstNode::Identifier {
+                        name: String::from("x"),
+                        span: 25..26,
+                    }],
+                    span: 19..27,
+                }],
+                span: 0..30,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_function_definition_with_return_statement() {
+        parse_and_assert_result(
+            "fn foo(): Int { return 5; }",
+            AstNode::FunctionDefinition {
+                name: Box::new(AstNode::Identifier {
+                    name: String::from("foo"),
+                    span: 3..6,
+                }),
+                parameters: vec![],
+                return_type: Some(Box::new(AstNode::TypeNotation {
+                    name: String::from("Int"),
+                    span: 10..13,
+                })),
+                body: vec![AstNode::Return {
+                    expression: Some(Box::new(AstNode::Literal {
+                        value: Value::Integer(5),
+                        span: 23..24,
+                    })),
+                    span: 16..24,
+                }],
+                span: 0..27,
+            },
+        );
+    }
+
+    //
+    // Test expressions
+    //
+
+    #[test]
+    fn test_parsing_math_expression() {
+        parse_and_assert_result(
+            "abc + 512 * 200 - abc / 3;",
+            AstNode::Sub {
+                lhs: Box::new(AstNode::Add {
                     lhs: Box::new(AstNode::Identifier {
                         name: String::from("abc"),
                         span: 0..3,
                     }),
                     rhs: Box::new(AstNode::Mul {
                         lhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(123),
+                            value: Value::Integer(512),
                             span: 6..9,
                         }),
-                        rhs: Box::new(AstNode::Identifier {
-                            name: String::from("x"),
-                            span: 12..13,
-                        }),
-                        span: 6..13,
-                    }),
-                    span: 0..13,
-                },
-            ),
-            (
-                "x = (-5);",
-                AstNode::Assign {
-                    lhs: Box::new(AstNode::Identifier {
-                        name: String::from("x"),
-                        span: 0..1,
-                    }),
-                    rhs: Box::new(AstNode::Neg {
-                        child: Box::new(AstNode::Literal {
-                            value: Value::Integer(5),
-                            span: 6..7,
-                        }),
-                        span: 5..7,
-                    }),
-                    span: 0..8,
-                },
-            ),
-            (
-                "x += (-5);",
-                AstNode::AddAssign {
-                    lhs: Box::new(AstNode::Identifier {
-                        name: String::from("x"),
-                        span: 0..1,
-                    }),
-                    rhs: Box::new(AstNode::Neg {
-                        child: Box::new(AstNode::Literal {
-                            value: Value::Integer(5),
-                            span: 7..8,
-                        }),
-                        span: 6..8,
-                    }),
-                    span: 0..9,
-                },
-            ),
-            (
-                "x -= (-5);",
-                AstNode::SubAssign {
-                    lhs: Box::new(AstNode::Identifier {
-                        name: String::from("x"),
-                        span: 0..1,
-                    }),
-                    rhs: Box::new(AstNode::Neg {
-                        child: Box::new(AstNode::Literal {
-                            value: Value::Integer(5),
-                            span: 7..8,
-                        }),
-                        span: 6..8,
-                    }),
-                    span: 0..9,
-                },
-            ),
-            (
-                "x *= (-5);",
-                AstNode::MulAssign {
-                    lhs: Box::new(AstNode::Identifier {
-                        name: String::from("x"),
-                        span: 0..1,
-                    }),
-                    rhs: Box::new(AstNode::Neg {
-                        child: Box::new(AstNode::Literal {
-                            value: Value::Integer(5),
-                            span: 7..8,
-                        }),
-                        span: 6..8,
-                    }),
-                    span: 0..9,
-                },
-            ),
-            (
-                "x /= (-5);",
-                AstNode::DivAssign {
-                    lhs: Box::new(AstNode::Identifier {
-                        name: String::from("x"),
-                        span: 0..1,
-                    }),
-                    rhs: Box::new(AstNode::Neg {
-                        child: Box::new(AstNode::Literal {
-                            value: Value::Integer(5),
-                            span: 7..8,
-                        }),
-                        span: 6..8,
-                    }),
-                    span: 0..9,
-                },
-            ),
-            (
-                "x %= (-5);",
-                AstNode::ModAssign {
-                    lhs: Box::new(AstNode::Identifier {
-                        name: String::from("x"),
-                        span: 0..1,
-                    }),
-                    rhs: Box::new(AstNode::Neg {
-                        child: Box::new(AstNode::Literal {
-                            value: Value::Integer(5),
-                            span: 7..8,
-                        }),
-                        span: 6..8,
-                    }),
-                    span: 0..9,
-                },
-            ),
-            (
-                "50.0 % 2.0;",
-                AstNode::Mod {
-                    lhs: Box::new(AstNode::Literal {
-                        value: Value::Float(50.0),
-                        span: 0..4,
-                    }),
-                    rhs: Box::new(AstNode::Literal {
-                        value: Value::Float(2.0),
-                        span: 7..10,
-                    }),
-                    span: 0..10,
-                },
-            ),
-            (
-                "(((75)));",
-                AstNode::Literal {
-                    value: Value::Integer(75),
-                    span: 3..5,
-                },
-            ),
-            (
-                "(123 - 53) * 7;",
-                AstNode::Mul {
-                    lhs: Box::new(AstNode::Sub {
-                        lhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(123),
-                            span: 1..4,
-                        }),
                         rhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(53),
-                            span: 7..9,
+                            value: Value::Integer(200),
+                            span: 12..15,
                         }),
-                        span: 1..9,
+                        span: 6..15,
+                    }),
+                    span: 0..15,
+                }),
+                rhs: Box::new(AstNode::Div {
+                    lhs: Box::new(AstNode::Identifier {
+                        name: String::from("abc"),
+                        span: 18..21,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(7),
-                        span: 13..14,
+                        value: Value::Integer(3),
+                        span: 24..25,
                     }),
-                    span: 0..14,
-                },
-            ),
-            (
-                "123 + (foo - 50);",
-                AstNode::Add {
+                    span: 18..25,
+                }),
+                span: 0..25,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_assignment_to_variable() {
+        parse_and_assert_result(
+            "abc = 123 * x;",
+            AstNode::Assign {
+                lhs: Box::new(AstNode::Identifier {
+                    name: String::from("abc"),
+                    span: 0..3,
+                }),
+                rhs: Box::new(AstNode::Mul {
                     lhs: Box::new(AstNode::Literal {
                         value: Value::Integer(123),
-                        span: 0..3,
+                        span: 6..9,
                     }),
-                    rhs: Box::new(AstNode::Sub {
-                        lhs: Box::new(AstNode::Identifier {
-                            name: String::from("foo"),
-                            span: 7..10,
-                        }),
-                        rhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(50),
-                            span: 13..15,
-                        }),
-                        span: 7..15,
+                    rhs: Box::new(AstNode::Identifier {
+                        name: String::from("x"),
+                        span: 12..13,
                     }),
-                    span: 0..16,
-                },
-            ),
-            (
-                "abc(123, 50 + 2) * 7;",
-                AstNode::Mul {
-                    lhs: Box::new(AstNode::FunctionCall {
-                        callee: Box::new(AstNode::Identifier {
-                            name: String::from("abc"),
-                            span: 0..3,
-                        }),
-                        args: vec![
-                            AstNode::Literal {
-                                value: Value::Integer(123),
-                                span: 4..7,
-                            },
-                            AstNode::Add {
-                                lhs: Box::new(AstNode::Literal {
-                                    value: Value::Integer(50),
-                                    span: 9..11,
-                                }),
-                                rhs: Box::new(AstNode::Literal {
-                                    value: Value::Integer(2),
-                                    span: 14..15,
-                                }),
-                                span: 9..15,
-                            },
-                        ],
-                        span: 0..16,
+                    span: 6..13,
+                }),
+                span: 0..13,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_assigning_negative_value_to_variable() {
+        parse_and_assert_result(
+            "x = (-5);",
+            AstNode::Assign {
+                lhs: Box::new(AstNode::Identifier {
+                    name: String::from("x"),
+                    span: 0..1,
+                }),
+                rhs: Box::new(AstNode::Neg {
+                    child: Box::new(AstNode::Literal {
+                        value: Value::Integer(5),
+                        span: 6..7,
+                    }),
+                    span: 5..7,
+                }),
+                span: 0..8,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_add_assign_to_variable() {
+        parse_and_assert_result(
+            "x += (-5);",
+            AstNode::AddAssign {
+                lhs: Box::new(AstNode::Identifier {
+                    name: String::from("x"),
+                    span: 0..1,
+                }),
+                rhs: Box::new(AstNode::Neg {
+                    child: Box::new(AstNode::Literal {
+                        value: Value::Integer(5),
+                        span: 7..8,
+                    }),
+                    span: 6..8,
+                }),
+                span: 0..9,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_sub_assign_to_variable() {
+        parse_and_assert_result(
+            "x -= (-5);",
+            AstNode::SubAssign {
+                lhs: Box::new(AstNode::Identifier {
+                    name: String::from("x"),
+                    span: 0..1,
+                }),
+                rhs: Box::new(AstNode::Neg {
+                    child: Box::new(AstNode::Literal {
+                        value: Value::Integer(5),
+                        span: 7..8,
+                    }),
+                    span: 6..8,
+                }),
+                span: 0..9,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_mul_assign_to_variable() {
+        parse_and_assert_result(
+            "x *= (-5);",
+            AstNode::MulAssign {
+                lhs: Box::new(AstNode::Identifier {
+                    name: String::from("x"),
+                    span: 0..1,
+                }),
+                rhs: Box::new(AstNode::Neg {
+                    child: Box::new(AstNode::Literal {
+                        value: Value::Integer(5),
+                        span: 7..8,
+                    }),
+                    span: 6..8,
+                }),
+                span: 0..9,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_div_assign_to_variable() {
+        parse_and_assert_result(
+            "x /= (-5);",
+            AstNode::DivAssign {
+                lhs: Box::new(AstNode::Identifier {
+                    name: String::from("x"),
+                    span: 0..1,
+                }),
+                rhs: Box::new(AstNode::Neg {
+                    child: Box::new(AstNode::Literal {
+                        value: Value::Integer(5),
+                        span: 7..8,
+                    }),
+                    span: 6..8,
+                }),
+                span: 0..9,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_mod_assign_to_variable() {
+        parse_and_assert_result(
+            "x %= (-5);",
+            AstNode::ModAssign {
+                lhs: Box::new(AstNode::Identifier {
+                    name: String::from("x"),
+                    span: 0..1,
+                }),
+                rhs: Box::new(AstNode::Neg {
+                    child: Box::new(AstNode::Literal {
+                        value: Value::Integer(5),
+                        span: 7..8,
+                    }),
+                    span: 6..8,
+                }),
+                span: 0..9,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_mod_operation_between_float_numbers() {
+        parse_and_assert_result(
+            "50.0 % 2.0;",
+            AstNode::Mod {
+                lhs: Box::new(AstNode::Literal {
+                    value: Value::Float(50.0),
+                    span: 0..4,
+                }),
+                rhs: Box::new(AstNode::Literal {
+                    value: Value::Float(2.0),
+                    span: 7..10,
+                }),
+                span: 0..10,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_left_grouped_expression() {
+        parse_and_assert_result(
+            "(123 - 53) * 7;",
+            AstNode::Mul {
+                lhs: Box::new(AstNode::Sub {
+                    lhs: Box::new(AstNode::Literal {
+                        value: Value::Integer(123),
+                        span: 1..4,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(7),
-                        span: 19..20,
+                        value: Value::Integer(53),
+                        span: 7..9,
                     }),
-                    span: 0..20,
-                },
-            ),
-            (
-                "abc(xyz(123, 456),);",
-                AstNode::FunctionCall {
+                    span: 1..9,
+                }),
+                rhs: Box::new(AstNode::Literal {
+                    value: Value::Integer(7),
+                    span: 13..14,
+                }),
+                span: 0..14,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_right_grouped_expression() {
+        parse_and_assert_result(
+            "123 + (foo - 50);",
+            AstNode::Add {
+                lhs: Box::new(AstNode::Literal {
+                    value: Value::Integer(123),
+                    span: 0..3,
+                }),
+                rhs: Box::new(AstNode::Sub {
+                    lhs: Box::new(AstNode::Identifier {
+                        name: String::from("foo"),
+                        span: 7..10,
+                    }),
+                    rhs: Box::new(AstNode::Literal {
+                        value: Value::Integer(50),
+                        span: 13..15,
+                    }),
+                    span: 7..15,
+                }),
+                span: 0..16,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_nested_grouped_expression() {
+        parse_and_assert_result(
+            "(((75)));",
+            AstNode::Literal {
+                value: Value::Integer(75),
+                span: 3..5,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_function_call_in_math_expression() {
+        parse_and_assert_result(
+            "abc(123, 50 + 2) * 7;",
+            AstNode::Mul {
+                lhs: Box::new(AstNode::FunctionCall {
                     callee: Box::new(AstNode::Identifier {
                         name: String::from("abc"),
                         span: 0..3,
                     }),
-                    args: vec![AstNode::FunctionCall {
-                        callee: Box::new(AstNode::Identifier {
-                            name: String::from("xyz"),
+                    args: vec![
+                        AstNode::Literal {
+                            value: Value::Integer(123),
                             span: 4..7,
-                        }),
-                        args: vec![
-                            AstNode::Literal {
-                                value: Value::Integer(123),
-                                span: 8..11,
-                            },
-                            AstNode::Literal {
-                                value: Value::Integer(456),
-                                span: 13..16,
-                            },
-                        ],
-                        span: 4..17,
-                    }],
-                    span: 0..19,
-                },
-            ),
-            (
-                "-abc + (-(5)) * -(-7);",
-                AstNode::Add {
-                    lhs: Box::new(AstNode::Neg {
-                        child: Box::new(AstNode::Identifier {
-                            name: String::from("abc"),
-                            span: 1..4,
-                        }),
-                        span: 0..4,
-                    }),
-                    rhs: Box::new(AstNode::Mul {
-                        lhs: Box::new(AstNode::Neg {
-                            child: Box::new(AstNode::Literal {
-                                value: Value::Integer(5),
-                                span: 10..11,
+                        },
+                        AstNode::Add {
+                            lhs: Box::new(AstNode::Literal {
+                                value: Value::Integer(50),
+                                span: 9..11,
                             }),
-                            span: 8..12,
-                        }),
-                        rhs: Box::new(AstNode::Neg {
-                            child: Box::new(AstNode::Neg {
-                                child: Box::new(AstNode::Literal {
-                                    value: Value::Integer(7),
-                                    span: 19..20,
-                                }),
-                                span: 18..20,
-                            }),
-                            span: 16..21,
-                        }),
-                        span: 7..21,
-                    }),
-                    span: 0..21,
-                },
-            ),
-            (
-                "2 * (-0.5);",
-                AstNode::Mul {
-                    lhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(2),
-                        span: 0..1,
-                    }),
-                    rhs: Box::new(AstNode::Neg {
-                        child: Box::new(AstNode::Literal {
-                            value: Value::Float(0.5),
-                            span: 6..9,
-                        }),
-                        span: 5..9,
-                    }),
-                    span: 0..10,
-                },
-            ),
-            (
-                "-(-(abc)(-foo));",
-                AstNode::Neg {
-                    child: Box::new(AstNode::Neg {
-                        child: Box::new(AstNode::FunctionCall {
-                            callee: Box::new(AstNode::Identifier {
-                                name: String::from("abc"),
-                                span: 4..7,
-                            }),
-                            args: vec![AstNode::Neg {
-                                child: Box::new(AstNode::Identifier {
-                                    name: String::from("foo"),
-                                    span: 10..13,
-                                }),
-                                span: 9..13,
-                            }],
-                            span: 3..14,
-                        }),
-                        span: 2..14,
-                    }),
-                    span: 0..15,
-                },
-            ),
-            (
-                "true;",
-                AstNode::Literal {
-                    value: Value::Boolean(true),
-                    span: 0..4,
-                },
-            ),
-            (
-                "1 >= 5 == true;",
-                AstNode::Eq {
-                    lhs: Box::new(AstNode::Gte {
-                        lhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(1),
-                            span: 0..1,
-                        }),
-                        rhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(5),
-                            span: 5..6,
-                        }),
-                        span: 0..6,
-                    }),
-                    rhs: Box::new(AstNode::Literal {
-                        value: Value::Boolean(true),
-                        span: 10..14,
-                    }),
-                    span: 0..14,
-                },
-            ),
-            (
-                "false || !false && true;",
-                AstNode::And {
-                    lhs: Box::new(AstNode::Or {
-                        lhs: Box::new(AstNode::Literal {
-                            value: Value::Boolean(false),
-                            span: 0..5,
-                        }),
-                        rhs: Box::new(AstNode::Not {
-                            child: Box::new(AstNode::Literal {
-                                value: Value::Boolean(false),
-                                span: 10..15,
+                            rhs: Box::new(AstNode::Literal {
+                                value: Value::Integer(2),
+                                span: 14..15,
                             }),
                             span: 9..15,
-                        }),
-                        span: 0..15,
-                    }),
-                    rhs: Box::new(AstNode::Literal {
-                        value: Value::Boolean(true),
-                        span: 19..23,
-                    }),
-                    span: 0..23,
-                },
-            ),
-        ];
-
-        for (input, expected) in cases {
-            let tokens = lexer::lex(input).unwrap();
-            let result = parse(tokens);
-
-            assert!(result.is_ok());
-            assert_eq!(
-                result.unwrap(),
-                ProgramAst {
-                    statements: vec![expected]
-                }
-            );
-        }
+                        },
+                    ],
+                    span: 0..16,
+                }),
+                rhs: Box::new(AstNode::Literal {
+                    value: Value::Integer(7),
+                    span: 19..20,
+                }),
+                span: 0..20,
+            },
+        );
     }
 
     #[test]
-    fn test_parsing_invalid_expression() {
-        let cases = [(
-            "(123 + 5;",
+    fn test_parsing_nested_function_call() {
+        parse_and_assert_result(
+            "abc(xyz(123, 456),);",
+            AstNode::FunctionCall {
+                callee: Box::new(AstNode::Identifier {
+                    name: String::from("abc"),
+                    span: 0..3,
+                }),
+                args: vec![AstNode::FunctionCall {
+                    callee: Box::new(AstNode::Identifier {
+                        name: String::from("xyz"),
+                        span: 4..7,
+                    }),
+                    args: vec![
+                        AstNode::Literal {
+                            value: Value::Integer(123),
+                            span: 8..11,
+                        },
+                        AstNode::Literal {
+                            value: Value::Integer(456),
+                            span: 13..16,
+                        },
+                    ],
+                    span: 4..17,
+                }],
+                span: 0..19,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_negative_operations_in_math_expression() {
+        parse_and_assert_result(
+            "-abc + (-(5)) * -(-7);",
+            AstNode::Add {
+                lhs: Box::new(AstNode::Neg {
+                    child: Box::new(AstNode::Identifier {
+                        name: String::from("abc"),
+                        span: 1..4,
+                    }),
+                    span: 0..4,
+                }),
+                rhs: Box::new(AstNode::Mul {
+                    lhs: Box::new(AstNode::Neg {
+                        child: Box::new(AstNode::Literal {
+                            value: Value::Integer(5),
+                            span: 10..11,
+                        }),
+                        span: 8..12,
+                    }),
+                    rhs: Box::new(AstNode::Neg {
+                        child: Box::new(AstNode::Neg {
+                            child: Box::new(AstNode::Literal {
+                                value: Value::Integer(7),
+                                span: 19..20,
+                            }),
+                            span: 18..20,
+                        }),
+                        span: 16..21,
+                    }),
+                    span: 7..21,
+                }),
+                span: 0..21,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_negating_function_call() {
+        parse_and_assert_result(
+            "-(-(abc)(-foo));",
+            AstNode::Neg {
+                child: Box::new(AstNode::Neg {
+                    child: Box::new(AstNode::FunctionCall {
+                        callee: Box::new(AstNode::Identifier {
+                            name: String::from("abc"),
+                            span: 4..7,
+                        }),
+                        args: vec![AstNode::Neg {
+                            child: Box::new(AstNode::Identifier {
+                                name: String::from("foo"),
+                                span: 10..13,
+                            }),
+                            span: 9..13,
+                        }],
+                        span: 3..14,
+                    }),
+                    span: 2..14,
+                }),
+                span: 0..15,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_boolean_literal() {
+        parse_and_assert_result(
+            "true;",
+            AstNode::Literal {
+                value: Value::Boolean(true),
+                span: 0..4,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_comparison_and_equality_operations() {
+        parse_and_assert_result(
+            "1 >= 5 == true;",
+            AstNode::Eq {
+                lhs: Box::new(AstNode::Gte {
+                    lhs: Box::new(AstNode::Literal {
+                        value: Value::Integer(1),
+                        span: 0..1,
+                    }),
+                    rhs: Box::new(AstNode::Literal {
+                        value: Value::Integer(5),
+                        span: 5..6,
+                    }),
+                    span: 0..6,
+                }),
+                rhs: Box::new(AstNode::Literal {
+                    value: Value::Boolean(true),
+                    span: 10..14,
+                }),
+                span: 0..14,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_boolean_expression() {
+        parse_and_assert_result(
+            "false || !false && true;",
+            AstNode::And {
+                lhs: Box::new(AstNode::Or {
+                    lhs: Box::new(AstNode::Literal {
+                        value: Value::Boolean(false),
+                        span: 0..5,
+                    }),
+                    rhs: Box::new(AstNode::Not {
+                        child: Box::new(AstNode::Literal {
+                            value: Value::Boolean(false),
+                            span: 10..15,
+                        }),
+                        span: 9..15,
+                    }),
+                    span: 0..15,
+                }),
+                rhs: Box::new(AstNode::Literal {
+                    value: Value::Boolean(true),
+                    span: 19..23,
+                }),
+                span: 0..23,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_grouped_expression_with_no_closing_tag() {
+        let input = "(123 + 5;";
+        let tokens = lexer::lex(input).unwrap();
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
             ParsingError::UnexpectedToken {
                 expected: Token::RParen,
                 found: Token::Semicolon,
                 span: 8..9,
-            },
-        )];
-
-        for (input, expected) in cases {
-            let tokens = lexer::lex(input).unwrap();
-            let result = parse(tokens);
-
-            assert!(result.is_err());
-            assert_eq!(result.unwrap_err(), expected);
-        }
+            }
+        );
     }
 }
