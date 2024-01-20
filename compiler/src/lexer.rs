@@ -32,14 +32,12 @@ pub fn lex(source_code: &str) -> Result<Vec<RichToken>, LexingError> {
         tokens.push(RichToken {
             kind,
             span: l.span(),
-            value: String::from(l.slice()),
         })
     }
 
     tokens.push(RichToken {
         kind: Token::Eof,
         span: source_code.len()..source_code.len(),
-        value: String::from("<EOF>"),
     });
 
     Ok(tokens)
@@ -52,7 +50,6 @@ pub fn lex(source_code: &str) -> Result<Vec<RichToken>, LexingError> {
 pub struct RichToken {
     pub kind: Token,
     pub span: Span,
-    pub value: String,
 }
 
 /// The list of all tokens that may exists in a valid Kaba
