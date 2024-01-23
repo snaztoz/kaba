@@ -25,10 +25,6 @@ impl Type {
     }
 
     pub fn is_assignable_to(&self, other: &Type) -> bool {
-        if *self == Self::Void || *other == Self::Void {
-            return false;
-        }
-
         self == other
     }
 }

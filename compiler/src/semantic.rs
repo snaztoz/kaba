@@ -863,6 +863,9 @@ mod tests {
         let mut checker = SemanticChecker::new();
         let result = checker.check(&ast.statements);
 
+        if result.is_err() {
+            dbg!(&result);
+        }
         assert!(result.is_ok());
     }
 
@@ -1206,6 +1209,35 @@ mod tests {
                 var result = sum(5, 7);
 
                 print(result);
+            "});
+    }
+
+    #[test]
+    fn test_recursive_fibonacci_function() {
+        check_and_assert_is_ok(indoc! {"
+                fn fibonacci(n: Int): Int {
+                    if n == 0 {
+                        return 0;
+                    } else if n == 1 || n == 2 {
+                        return 1;
+                    }
+                    return fibonacci(n-1) + fibonacci(n-2);
+                }
+            "});
+    }
+
+    #[test]
+    fn test_recursive_functions_with_void_return_type() {
+        check_and_assert_is_ok(indoc! {"
+                fn countToZero(n: Int) {
+                    print(n);
+                    if n == 0 {
+                        return;
+                    }
+                    countToZero(n-1);
+                }
+
+                countToZero(10);
             "});
     }
 
