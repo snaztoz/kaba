@@ -34,7 +34,7 @@ impl Parser {
         let mut statements = vec![];
 
         loop {
-            if self.current_token_is(Token::Eof) {
+            if self.current_token_is(&Token::Eof) {
                 break;
             }
             let statement = self.parse_statement()?;
@@ -48,15 +48,15 @@ impl Parser {
         // Expecting "{"
 
         let start = self.get_current_rich_token().span.start;
-        self.skip(Token::LBrace)?;
+        self.skip(&Token::LBrace)?;
 
         // Expecting 0 >= statements, delimited with "}"
 
         let mut statements = vec![];
         loop {
-            if self.current_token_is(Token::RBrace) {
+            if self.current_token_is(&Token::RBrace) {
                 break;
-            } else if self.current_token_is(Token::Eof) {
+            } else if self.current_token_is(&Token::Eof) {
                 return Err(ParsingError::UnexpectedToken {
                     expected: Token::RBrace,
                     found: Token::Eof,
@@ -71,7 +71,7 @@ impl Parser {
         // Expecting "}"
 
         let end = self.get_current_rich_token().span.end;
-        self.skip(Token::RBrace)?;
+        self.skip(&Token::RBrace)?;
 
         Ok((statements, start..end))
     }
@@ -95,7 +95,7 @@ impl Parser {
 
         // Expecting ";"
 
-        self.skip(Token::Semicolon)?;
+        self.skip(&Token::Semicolon)?;
 
         Ok(expression.unwrap_group())
     }
@@ -104,7 +104,7 @@ impl Parser {
         let start = self.get_current_rich_token().span.start;
         let mut end;
 
-        self.skip(Token::Var)?;
+        self.skip(&Token::Var)?;
 
         // Parse identifier
 
@@ -128,8 +128,8 @@ impl Parser {
 
         // Expecting ":" (optional)
 
-        let var_type = if self.current_token_is(Token::Colon) {
-            self.skip(Token::Colon)?;
+        let var_type = if self.current_token_is(&Token::Colon) {
+            self.skip(&Token::Colon)?;
 
             let vt = self.parse_type_notation()?;
 
@@ -142,8 +142,8 @@ impl Parser {
 
         // Expecting "=" (optional)
 
-        let value = if self.current_token_is(Token::Assign) {
-            self.skip(Token::Assign)?;
+        let value = if self.current_token_is(&Token::Assign) {
+            self.skip(&Token::Assign)?;
 
             let expression = self.parse_expression()?;
             end = expression.get_span().end;
@@ -155,7 +155,7 @@ impl Parser {
 
         // Expecting ";"
 
-        self.skip(Token::Semicolon)?;
+        self.skip(&Token::Semicolon)?;
 
         Ok(AstNode::VariableDeclaration {
             identifier,
@@ -186,7 +186,7 @@ impl Parser {
     fn parse_conditional_branch(&mut self) -> Result<AstNode, ParsingError> {
         let start = self.get_current_rich_token().span.start;
         let mut end;
-        self.skip(Token::If)?;
+        self.skip(&Token::If)?;
 
         // Expecting expression
 
@@ -199,9 +199,9 @@ impl Parser {
 
         // Expecting >= 0 "else if" or 1 "else"
 
-        let or_else = if self.current_token_is(Token::Else) {
+        let or_else = if self.current_token_is(&Token::Else) {
             let else_start = self.get_current_rich_token().span.start;
-            self.skip(Token::Else)?;
+            self.skip(&Token::Else)?;
 
             let token = self.get_current_rich_token();
             match token.kind {
@@ -249,7 +249,7 @@ impl Parser {
 
     fn parse_while(&mut self) -> Result<AstNode, ParsingError> {
         let start = self.get_current_rich_token().span.start;
-        self.skip(Token::While)?;
+        self.skip(&Token::While)?;
 
         // Expecting expression
 
@@ -282,14 +282,14 @@ impl Parser {
 
         // Expecting ";"
 
-        self.skip(Token::Semicolon)?;
+        self.skip(&Token::Semicolon)?;
 
         Ok(control)
     }
 
     fn parse_function_definition(&mut self) -> Result<AstNode, ParsingError> {
         let start = self.get_current_rich_token().span.start;
-        self.skip(Token::Fn)?;
+        self.skip(&Token::Fn)?;
 
         // Expecting identifier
 
@@ -314,12 +314,12 @@ impl Parser {
 
         // Expecting "("
 
-        self.skip(Token::LParen)?;
+        self.skip(&Token::LParen)?;
 
         // Followed by >= 0 function parameter declaration(s)
 
         let mut parameters = vec![];
-        while !self.current_token_is(Token::RParen) {
+        while !self.current_token_is(&Token::RParen) {
             // Expecting identifier
 
             let token = self.get_current_rich_token();
@@ -343,7 +343,7 @@ impl Parser {
 
             // Expecting ":"
 
-            self.skip(Token::Colon)?;
+            self.skip(&Token::Colon)?;
 
             // Expecting type notation
 
@@ -358,7 +358,7 @@ impl Parser {
             let token = self.get_current_rich_token();
             match token.kind {
                 Token::Comma => {
-                    self.skip(Token::Comma)?;
+                    self.skip(&Token::Comma)?;
                     continue;
                 }
 
@@ -376,12 +376,12 @@ impl Parser {
 
         // Expecting ")"
 
-        self.skip(Token::RParen)?;
+        self.skip(&Token::RParen)?;
 
         // Expecting return type notation (optional)
 
-        let return_type = if self.current_token_is(Token::Colon) {
-            self.skip(Token::Colon)?;
+        let return_type = if self.current_token_is(&Token::Colon) {
+            self.skip(&Token::Colon)?;
 
             Some(Box::new(self.parse_type_notation()?))
         } else {
@@ -404,11 +404,11 @@ impl Parser {
     fn parse_return_statement(&mut self) -> Result<AstNode, ParsingError> {
         let start = self.get_current_rich_token().span.start;
         let mut end = self.get_current_rich_token().span.end;
-        self.skip(Token::Return)?;
+        self.skip(&Token::Return)?;
 
         // Expecting expression (optional)
 
-        let expression = if self.current_token_is(Token::Semicolon) {
+        let expression = if self.current_token_is(&Token::Semicolon) {
             None
         } else {
             let expression = self.parse_expression()?;
@@ -418,7 +418,7 @@ impl Parser {
 
         // Expecting ";"
 
-        self.skip(Token::Semicolon)?;
+        self.skip(&Token::Semicolon)?;
 
         Ok(AstNode::Return {
             expression,
@@ -439,7 +439,7 @@ impl Parser {
 
         match self.get_current_token() {
             Token::Assign => {
-                self.skip(Token::Assign)?;
+                self.skip(&Token::Assign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.get_span().start..rhs.get_span().end;
@@ -451,7 +451,7 @@ impl Parser {
                 })
             }
             Token::AddAssign => {
-                self.skip(Token::AddAssign)?;
+                self.skip(&Token::AddAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.get_span().start..rhs.get_span().end;
@@ -463,7 +463,7 @@ impl Parser {
                 })
             }
             Token::SubAssign => {
-                self.skip(Token::SubAssign)?;
+                self.skip(&Token::SubAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.get_span().start..rhs.get_span().end;
@@ -475,7 +475,7 @@ impl Parser {
                 })
             }
             Token::MulAssign => {
-                self.skip(Token::MulAssign)?;
+                self.skip(&Token::MulAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.get_span().start..rhs.get_span().end;
@@ -487,7 +487,7 @@ impl Parser {
                 })
             }
             Token::DivAssign => {
-                self.skip(Token::DivAssign)?;
+                self.skip(&Token::DivAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.get_span().start..rhs.get_span().end;
@@ -499,7 +499,7 @@ impl Parser {
                 })
             }
             Token::ModAssign => {
-                self.skip(Token::ModAssign)?;
+                self.skip(&Token::ModAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.get_span().start..rhs.get_span().end;
@@ -524,7 +524,7 @@ impl Parser {
 
             match self.get_current_token() {
                 Token::Or => {
-                    self.skip(Token::Or)?;
+                    self.skip(&Token::Or)?;
 
                     let rhs = self.parse_equality_expression()?;
                     let span = lhs.get_span().start..rhs.get_span().end;
@@ -536,7 +536,7 @@ impl Parser {
                     };
                 }
                 Token::And => {
-                    self.skip(Token::And)?;
+                    self.skip(&Token::And)?;
 
                     let rhs = self.parse_equality_expression()?;
                     let span = lhs.get_span().start..rhs.get_span().end;
@@ -562,7 +562,7 @@ impl Parser {
 
             match self.get_current_token() {
                 Token::Eq => {
-                    self.skip(Token::Eq)?;
+                    self.skip(&Token::Eq)?;
 
                     let rhs = self.parse_comparison_expression()?;
                     let span = lhs.get_span().start..rhs.get_span().end;
@@ -574,7 +574,7 @@ impl Parser {
                     };
                 }
                 Token::Neq => {
-                    self.skip(Token::Neq)?;
+                    self.skip(&Token::Neq)?;
 
                     let rhs = self.parse_comparison_expression()?;
                     let span = lhs.get_span().start..rhs.get_span().end;
@@ -599,7 +599,7 @@ impl Parser {
 
         match self.get_current_token() {
             Token::Gt => {
-                self.skip(Token::Gt)?;
+                self.skip(&Token::Gt)?;
 
                 let rhs = self.parse_additive_expression()?;
                 let span = lhs.get_span().start..rhs.get_span().end;
@@ -611,7 +611,7 @@ impl Parser {
                 })
             }
             Token::Gte => {
-                self.skip(Token::Gte)?;
+                self.skip(&Token::Gte)?;
 
                 let rhs = self.parse_additive_expression()?;
                 let span = lhs.get_span().start..rhs.get_span().end;
@@ -623,7 +623,7 @@ impl Parser {
                 })
             }
             Token::Lt => {
-                self.skip(Token::Lt)?;
+                self.skip(&Token::Lt)?;
 
                 let rhs = self.parse_additive_expression()?;
                 let span = lhs.get_span().start..rhs.get_span().end;
@@ -635,7 +635,7 @@ impl Parser {
                 })
             }
             Token::Lte => {
-                self.skip(Token::Lte)?;
+                self.skip(&Token::Lte)?;
 
                 let rhs = self.parse_additive_expression()?;
                 let span = lhs.get_span().start..rhs.get_span().end;
@@ -660,7 +660,7 @@ impl Parser {
 
             match self.get_current_token() {
                 Token::Add => {
-                    self.skip(Token::Add)?;
+                    self.skip(&Token::Add)?;
 
                     let rhs = self.parse_multiplicative_expression()?;
                     let span = lhs.get_span().start..rhs.get_span().end;
@@ -672,7 +672,7 @@ impl Parser {
                     };
                 }
                 Token::Sub => {
-                    self.skip(Token::Sub)?;
+                    self.skip(&Token::Sub)?;
 
                     let rhs = self.parse_multiplicative_expression()?;
                     let span = lhs.get_span().start..rhs.get_span().end;
@@ -698,7 +698,7 @@ impl Parser {
 
             match self.get_current_token() {
                 Token::Mul => {
-                    self.skip(Token::Mul)?;
+                    self.skip(&Token::Mul)?;
 
                     let rhs = self.parse_unary_expression()?;
                     let span = lhs.get_span().start..rhs.get_span().end;
@@ -710,7 +710,7 @@ impl Parser {
                     };
                 }
                 Token::Div => {
-                    self.skip(Token::Div)?;
+                    self.skip(&Token::Div)?;
 
                     let rhs = self.parse_unary_expression()?;
                     let span = lhs.get_span().start..rhs.get_span().end;
@@ -722,7 +722,7 @@ impl Parser {
                     };
                 }
                 Token::Mod => {
-                    self.skip(Token::Mod)?;
+                    self.skip(&Token::Mod)?;
 
                     let rhs = self.parse_unary_expression()?;
                     let span = lhs.get_span().start..rhs.get_span().end;
@@ -741,10 +741,10 @@ impl Parser {
     fn parse_unary_expression(&mut self) -> Result<AstNode, ParsingError> {
         //  Prefixed by >= 0 negation or not expression
 
-        if self.current_token_is(Token::Sub) {
-            return self.parse_prefix_expression(Token::Sub);
-        } else if self.current_token_is(Token::Not) {
-            return self.parse_prefix_expression(Token::Not);
+        if self.current_token_is(&Token::Sub) {
+            return self.parse_prefix_expression(&Token::Sub);
+        } else if self.current_token_is(&Token::Not) {
+            return self.parse_prefix_expression(&Token::Not);
         }
 
         // Parse primary expression
@@ -760,12 +760,12 @@ impl Parser {
             match self.get_current_token() {
                 Token::LParen => {
                     let callee_start = child.get_span().start;
-                    self.skip(Token::LParen)?;
+                    self.skip(&Token::LParen)?;
 
                     let args = self.parse_function_call()?;
 
                     let span = callee_start..self.get_current_rich_token().span.end;
-                    self.skip(Token::RParen)?;
+                    self.skip(&Token::RParen)?;
 
                     child = AstNode::FunctionCall {
                         callee: Box::new(child.unwrap_group()),
@@ -781,9 +781,9 @@ impl Parser {
         Ok(child)
     }
 
-    fn parse_prefix_expression(&mut self, token: Token) -> Result<AstNode, ParsingError> {
+    fn parse_prefix_expression(&mut self, token: &Token) -> Result<AstNode, ParsingError> {
         let start = self.get_current_rich_token().span.start;
-        self.skip(token.clone())?;
+        self.skip(token)?;
 
         let child = self.parse_unary_expression()?;
         let span = start..child.get_span().end;
@@ -810,12 +810,12 @@ impl Parser {
                 // Parse group expression
 
                 let lparen_start = token.span.start;
-                self.skip(Token::LParen)?;
+                self.skip(&Token::LParen)?;
 
                 let expression = self.parse_expression()?;
 
                 let span = lparen_start..self.get_current_rich_token().span.end;
-                self.skip(Token::RParen)?;
+                self.skip(&Token::RParen)?;
 
                 AstNode::Group {
                     child: Box::new(expression),
@@ -878,7 +878,7 @@ impl Parser {
         loop {
             // Stop when encounter a closing parentheses
 
-            if self.current_token_is(Token::RParen) {
+            if self.current_token_is(&Token::RParen) {
                 return Ok(args);
             }
 
@@ -892,7 +892,7 @@ impl Parser {
             let token = self.get_current_rich_token();
             match token.kind {
                 Token::Comma => {
-                    self.skip(Token::Comma)?;
+                    self.skip(&Token::Comma)?;
                     continue;
                 }
 
@@ -911,11 +911,11 @@ impl Parser {
         }
     }
 
-    fn expect_current_token(&mut self, expected: Token) -> Result<(), ParsingError> {
+    fn expect_current_token(&mut self, expected: &Token) -> Result<(), ParsingError> {
         let current = self.get_current_rich_token();
-        if current.kind != expected {
+        if &current.kind != expected {
             return Err(ParsingError::UnexpectedToken {
-                expected,
+                expected: expected.clone(),
                 found: current.kind.clone(),
                 span: current.span,
             });
@@ -928,7 +928,7 @@ impl Parser {
         self.cursor += 1;
     }
 
-    fn skip(&mut self, expected_token: Token) -> Result<(), ParsingError> {
+    fn skip(&mut self, expected_token: &Token) -> Result<(), ParsingError> {
         self.expect_current_token(expected_token)?;
         self.advance();
         Ok(())
@@ -942,8 +942,8 @@ impl Parser {
         self.tokens.get(self.cursor).unwrap().kind.clone()
     }
 
-    fn current_token_is(&self, token: Token) -> bool {
-        self.get_current_token() == token
+    fn current_token_is(&self, token: &Token) -> bool {
+        &self.get_current_token() == token
     }
 }
 
