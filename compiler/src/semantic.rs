@@ -863,9 +863,6 @@ mod tests {
         let mut checker = SemanticChecker::new();
         let result = checker.check(&ast.statements);
 
-        if result.is_err() {
-            dbg!(&result);
-        }
         assert!(result.is_ok());
     }
 
