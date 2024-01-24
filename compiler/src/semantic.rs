@@ -1162,6 +1162,16 @@ mod tests {
             "})
     }
 
+    #[test]
+    fn test_using_invalid_statement_after_loop_control() {
+        check_and_assert_is_err(indoc! {"
+                while true {
+                    break;
+                    1 + true; // this should be error
+                }
+            "})
+    }
+
     //
     // Test function definitions
     //
@@ -1294,6 +1304,16 @@ mod tests {
         check_and_assert_is_err(indoc! {"
                 fn sum(x: Int, y: Int): Int {
                     return 5.0;
+                }
+            "});
+    }
+
+    #[test]
+    fn test_using_invalid_statement_after_return() {
+        check_and_assert_is_err(indoc! {"
+                fn getFive(): Int {
+                    return 5;
+                    1 + true; // should be error
                 }
             "});
     }
