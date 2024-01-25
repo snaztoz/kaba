@@ -1347,6 +1347,17 @@ mod tests {
             "});
     }
 
+    #[test]
+    fn test_defining_function_with_missing_return_in_branch() {
+        check_and_assert_is_err(indoc! {"
+                fn foo(): Int {
+                    if false {
+                        return 5;
+                    }
+                }
+            "});
+    }
+
     //
     // Test expressions
     //
