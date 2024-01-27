@@ -19,9 +19,12 @@ mod types;
 /// Provides a quick way to run semantic analysis on a Kaba AST.
 pub fn check(ast: &ProgramAst) -> Result<(), SemanticError> {
     let mut checker = SemanticChecker::new();
-    checker.check(&ast.statements)?;
+    checker.check_body(&ast.statements)?;
     Ok(())
 }
+
+/// Marks whether a block is returning a value or not
+type IsReturningValue = bool;
 
 struct SemanticChecker {
     scopes: Vec<Scope>,
@@ -34,8 +37,10 @@ impl SemanticChecker {
         }
     }
 
-    fn check(&mut self, statements: &[AstNode]) -> Result<(), SemanticError> {
-        for statement in statements {
+    fn check_body(&mut self, body: &[AstNode]) -> Result<IsReturningValue, SemanticError> {
+        let mut body_is_returning_value = false;
+
+        for statement in body {
             match statement {
                 AstNode::VariableDeclaration {
                     identifier,
@@ -54,7 +59,11 @@ impl SemanticChecker {
                     body,
                     or_else,
                     ..
-                } => self.check_conditional_branch(condition, body, &or_else.as_deref())?,
+                } => {
+                    let is_returning_value =
+                        self.check_conditional_branch(condition, body, &or_else.as_deref())?;
+                    body_is_returning_value = body_is_returning_value || is_returning_value;
+                }
 
                 AstNode::While {
                     condition, body, ..
@@ -72,7 +81,10 @@ impl SemanticChecker {
                     ..
                 } => self.check_function_definition(name, parameters, return_type, body)?,
 
-                AstNode::Return { expression, span } => self.check_return(expression, span)?,
+                AstNode::Return { expression, span } => {
+                    self.check_return(expression, span)?;
+                    body_is_returning_value = true;
+                }
 
                 expression => {
                     self.get_expression_type(expression)?;
@@ -80,7 +92,7 @@ impl SemanticChecker {
             }
         }
 
-        Ok(())
+        Ok(body_is_returning_value)
     }
 
     fn check_variable_declaration(
@@ -212,7 +224,7 @@ impl SemanticChecker {
         condition: &AstNode,
         body: &[AstNode],
         or_else: &Option<&AstNode>,
-    ) -> Result<(), SemanticError> {
+    ) -> Result<IsReturningValue, SemanticError> {
         // Expecting boolean type for the condition
 
         if self.get_expression_type(condition)? != Type::Bool {
@@ -224,11 +236,11 @@ impl SemanticChecker {
         // Check all statements inside the body with a new scope
 
         self.scopes.push(Scope::new_conditional_scope());
-        self.check(body)?;
+        let this_branch_is_returning_value = self.check_body(body)?;
         self.scopes.pop();
 
         if or_else.is_none() {
-            return Ok(());
+            return Ok(false);
         }
 
         match or_else.unwrap() {
@@ -238,21 +250,27 @@ impl SemanticChecker {
                 or_else,
                 ..
             } => {
-                self.check_conditional_branch(condition, body, &or_else.as_deref())?;
+                // All conditional branches must returning a value for this whole
+                // statement to be considered as returning value
+
+                let sibling_branch_is_returning_value =
+                    self.check_conditional_branch(condition, body, &or_else.as_deref())?;
+
+                Ok(this_branch_is_returning_value && sibling_branch_is_returning_value)
             }
 
             AstNode::Else { body, .. } => {
                 // Check all statements inside the body with a new scope
 
                 self.scopes.push(Scope::new_conditional_scope());
-                self.check(body)?;
+                let else_branch_is_returning_value = self.check_body(body)?;
                 self.scopes.pop();
+
+                Ok(this_branch_is_returning_value && else_branch_is_returning_value)
             }
 
             _ => unreachable!(),
         }
-
-        Ok(())
     }
 
     fn check_while(&mut self, condition: &AstNode, body: &[AstNode]) -> Result<(), SemanticError> {
@@ -267,7 +285,7 @@ impl SemanticChecker {
         // Check all statements inside the body with a new scope
 
         self.scopes.push(Scope::new_loop_scope());
-        self.check(body)?;
+        self.check_body(body)?;
         self.scopes.pop();
 
         Ok(())
@@ -365,7 +383,7 @@ impl SemanticChecker {
 
         let function_type = Type::Callable {
             parameter_types: parameter_types.clone(),
-            return_type: Box::new(return_type),
+            return_type: Box::new(return_type.clone()),
         };
 
         // Save function information
@@ -396,7 +414,14 @@ impl SemanticChecker {
         // We do this last in order to accommodate features such as
         // recursive function call.
 
-        self.check(body)?;
+        let body_is_returning_value = self.check_body(body)?;
+        if return_type != Type::Void && !body_is_returning_value {
+            return Err(SemanticError::FunctionNotReturningValue {
+                expecting_type: return_type,
+                span: name_span,
+            });
+        }
+
         self.scopes.pop();
 
         Ok(())
@@ -730,6 +755,11 @@ pub enum SemanticError {
         span: Span,
     },
 
+    FunctionNotReturningValue {
+        expecting_type: Type,
+        span: Span,
+    },
+
     ReturnNotInFunctionScope {
         span: Span,
     },
@@ -761,6 +791,7 @@ impl SemanticError {
             | Self::FunctionDefinitionNotInGlobal { span, .. }
             | Self::FunctionVariantAlreadyExist { span, .. }
             | Self::FunctionVariantNotExist { span, .. }
+            | Self::FunctionNotReturningValue { span, .. }
             | Self::ReturnNotInFunctionScope { span, .. }
             | Self::ReturnTypeMismatch { span, .. }
             | Self::LoopControlNotInLoopScope { span } => Some(span.clone()),
@@ -828,6 +859,12 @@ impl Display for SemanticError {
                     args
                 )
             }
+            Self::FunctionNotReturningValue { expecting_type, .. } => {
+                write!(
+                    f,
+                    "expecting function to return a value of type {expecting_type}, but none was returned",
+                )
+            }
             Self::ReturnNotInFunctionScope { .. } => {
                 write!(
                     f,
@@ -861,7 +898,7 @@ mod tests {
         let ast = parser::parse(tokens).unwrap();
 
         let mut checker = SemanticChecker::new();
-        let result = checker.check(&ast.statements);
+        let result = checker.check_body(&ast.statements);
 
         assert!(result.is_ok());
     }
@@ -871,7 +908,7 @@ mod tests {
         let ast = parser::parse(tokens).unwrap();
 
         let mut checker = SemanticChecker::new();
-        let result = checker.check(&ast.statements);
+        let result = checker.check_body(&ast.statements);
 
         assert!(result.is_err());
     }
@@ -885,7 +922,7 @@ mod tests {
         let ast = parser::parse(tokens).unwrap();
 
         let mut checker = SemanticChecker::new();
-        let result = checker.check(&ast.statements);
+        let result = checker.check_body(&ast.statements);
 
         assert!(result.is_ok());
         assert_eq!(
@@ -1249,6 +1286,45 @@ mod tests {
     }
 
     #[test]
+    fn test_function_returning_branches() {
+        check_and_assert_is_ok(indoc! {"
+                fn first(): Int {
+                    return 5;
+                }
+
+                fn second(): Int {
+                    if false {
+                        return 0;
+                    } else {
+                        return 1;
+                    }
+                }
+
+                fn third(): Int {
+                    if false {
+                        return 0;
+                    }
+                    return 1;
+                }
+
+                fn fourth(): Int {
+                    while false {
+                        return 0;
+                    }
+                    return 1;
+                }
+
+                fn fifth(): Int {
+                    return 1;
+
+                    if false {
+                        return 0;
+                    }
+                }
+            "});
+    }
+
+    #[test]
     fn test_defining_function_not_in_global_scope() {
         check_and_assert_is_err(indoc! {"
                 if true {
@@ -1348,11 +1424,35 @@ mod tests {
     }
 
     #[test]
-    fn test_defining_function_with_missing_return_in_branch() {
+    fn test_defining_function_with_missing_return_in_other_branches() {
         check_and_assert_is_err(indoc! {"
                 fn foo(): Int {
                     if false {
                         return 5;
+                    }
+                }
+            "});
+    }
+
+    #[test]
+    fn test_defining_function_with_missing_return_in_else_or_outer_branches() {
+        check_and_assert_is_err(indoc! {"
+                fn foo(): Int {
+                    if false {
+                        return 0;
+                    } else if !true {
+                        return 0;
+                    }
+                }
+            "});
+    }
+
+    #[test]
+    fn test_defining_function_with_missing_return_in_outer_branch_of_while_statement() {
+        check_and_assert_is_err(indoc! {"
+                fn foo(): Int {
+                    while false {
+                        return 0;
                     }
                 }
             "});
