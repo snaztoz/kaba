@@ -21,17 +21,14 @@ pub fn check(ast: &ProgramAst) -> Result<(), SemanticError> {
     Ok(())
 }
 
-/// Marks whether a block is returning a value or not
-type IsReturningValue = bool;
-
 #[derive(Default)]
 struct SemanticChecker {
     context: Context,
 }
 
 impl SemanticChecker {
-    fn check_body(&mut self, body: &[AstNode]) -> Result<IsReturningValue, SemanticError> {
-        let mut body_is_returning_value = false;
+    fn check_body(&mut self, body: &[AstNode]) -> Result<Type, SemanticError> {
+        let mut body_returned_type = Type::Void;
 
         for statement in body {
             match statement {
@@ -53,17 +50,22 @@ impl SemanticChecker {
                     or_else,
                     ..
                 } => {
-                    let is_returning_value =
+                    let returned_type =
                         self.check_conditional_branch(condition, body, &or_else.as_deref())?;
-                    body_is_returning_value = body_is_returning_value || is_returning_value;
+
+                    if body_returned_type.is_void() {
+                        body_returned_type = returned_type
+                    }
                 }
 
                 AstNode::While {
                     condition, body, ..
-                } => self.check_while(condition, body)?,
+                } => {
+                    self.check_while(condition, body)?;
+                }
 
                 AstNode::Break { span } | AstNode::Continue { span } => {
-                    self.check_loop_control(span)?
+                    self.check_loop_control(span)?;
                 }
 
                 AstNode::FunctionDefinition {
@@ -75,8 +77,8 @@ impl SemanticChecker {
                 } => self.check_function_definition(name, parameters, return_type, body)?,
 
                 AstNode::Return { expression, span } => {
-                    self.check_return(expression, span)?;
-                    body_is_returning_value = true;
+                    let returned_type = self.check_return(expression, span)?;
+                    body_returned_type = returned_type;
                 }
 
                 expression => {
@@ -85,7 +87,7 @@ impl SemanticChecker {
             }
         }
 
-        Ok(body_is_returning_value)
+        Ok(body_returned_type)
     }
 
     fn check_variable_declaration(
@@ -214,7 +216,7 @@ impl SemanticChecker {
         condition: &AstNode,
         body: &[AstNode],
         or_else: &Option<&AstNode>,
-    ) -> Result<IsReturningValue, SemanticError> {
+    ) -> Result<Type, SemanticError> {
         // Expecting boolean type for the condition
 
         if self.check_expression(condition)? != Type::Bool {
@@ -226,11 +228,11 @@ impl SemanticChecker {
         // Check all statements inside the body with a new scope
 
         self.context.push_scope(Scope::new_conditional_scope());
-        let this_branch_is_returning_value = self.check_body(body)?;
+        let this_branch_returned_type = self.check_body(body)?;
         self.context.pop_scope();
 
         if or_else.is_none() {
-            return Ok(false);
+            return Ok(Type::Void);
         }
 
         match or_else.unwrap() {
@@ -243,27 +245,39 @@ impl SemanticChecker {
                 // All conditional branches must returning a value for this whole
                 // statement to be considered as returning value
 
-                let sibling_branch_is_returning_value =
+                let sibling_branch_returned_type =
                     self.check_conditional_branch(condition, body, &or_else.as_deref())?;
 
-                Ok(this_branch_is_returning_value && sibling_branch_is_returning_value)
+                if !this_branch_returned_type.is_void() && !sibling_branch_returned_type.is_void() {
+                    Ok(this_branch_returned_type)
+                } else {
+                    Ok(Type::Void)
+                }
             }
 
             AstNode::Else { body, .. } => {
                 // Check all statements inside the body with a new scope
 
                 self.context.push_scope(Scope::new_conditional_scope());
-                let else_branch_is_returning_value = self.check_body(body)?;
+                let else_branch_returned_type = self.check_body(body)?;
                 self.context.pop_scope();
 
-                Ok(this_branch_is_returning_value && else_branch_is_returning_value)
+                if !this_branch_returned_type.is_void() && !else_branch_returned_type.is_void() {
+                    Ok(this_branch_returned_type)
+                } else {
+                    Ok(Type::Void)
+                }
             }
 
             _ => unreachable!(),
         }
     }
 
-    fn check_while(&mut self, condition: &AstNode, body: &[AstNode]) -> Result<(), SemanticError> {
+    fn check_while(
+        &mut self,
+        condition: &AstNode,
+        body: &[AstNode],
+    ) -> Result<Type, SemanticError> {
         // Expecting boolean type for the condition
 
         if self.check_expression(condition)? != Type::Bool {
@@ -275,10 +289,10 @@ impl SemanticChecker {
         // Check all statements inside the body with a new scope
 
         self.context.push_scope(Scope::new_loop_scope());
-        self.check_body(body)?;
+        let body_returned_type = self.check_body(body)?;
         self.context.pop_scope();
 
-        Ok(())
+        Ok(body_returned_type)
     }
 
     fn check_loop_control(&mut self, span: &Span) -> Result<(), SemanticError> {
@@ -391,8 +405,9 @@ impl SemanticChecker {
         // We do this last in order to accommodate features such as
         // recursive function call.
 
-        let body_is_returning_value = self.check_body(body)?;
-        if return_type != Type::Void && !body_is_returning_value {
+        let body_returned_type = self.check_body(body)?;
+
+        if !return_type.is_void() && body_returned_type.is_void() {
             return Err(SemanticError::FunctionNotReturningValue {
                 expecting_type: return_type,
                 span: name_span,
@@ -408,7 +423,7 @@ impl SemanticChecker {
         &self,
         expression: &Option<Box<AstNode>>,
         span: &Span,
-    ) -> Result<(), SemanticError> {
+    ) -> Result<Type, SemanticError> {
         let expression_type = expression
             .as_ref()
             .map(|expr| self.check_expression(expr).unwrap())
@@ -417,12 +432,12 @@ impl SemanticChecker {
         if let Some(return_type) = self.context.get_current_function_return_type() {
             if !expression_type.is_assignable_to(&return_type) {
                 return Err(SemanticError::ReturnTypeMismatch {
-                    expecting: return_type,
+                    expecting: return_type.clone(),
                     get: expression_type,
                     span: span.clone(),
                 });
             }
-            return Ok(());
+            return Ok(return_type);
         }
 
         Err(SemanticError::ReturnNotInFunctionScope { span: span.clone() })

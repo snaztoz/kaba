@@ -27,6 +27,10 @@ impl Type {
     pub fn is_assignable_to(&self, other: &Type) -> bool {
         self == other
     }
+
+    pub fn is_void(&self) -> bool {
+        *self == Self::Void
+    }
 }
 
 impl Display for Type {
