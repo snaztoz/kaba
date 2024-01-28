@@ -5,12 +5,14 @@ use super::{builtin_functions, types::Type};
 use std::collections::HashMap;
 
 pub struct ScopeStack {
-    stack: Vec<Scope>,
+    pub stack: Vec<Scope>,
 }
 
 impl Default for ScopeStack {
     fn default() -> Self {
-        Self { stack: vec![Scope::new_builtin_scope(), Scope::new_global_scope()] }
+        Self {
+            stack: vec![Scope::new_builtin_scope(), Scope::new_global_scope()],
+        }
     }
 }
 
