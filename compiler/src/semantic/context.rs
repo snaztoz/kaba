@@ -9,7 +9,7 @@ use std::cell::RefCell;
 
 #[derive(Default)]
 pub struct Context {
-    pub scope_stack: RefCell<ScopeStack>,
+    scope_stack: RefCell<ScopeStack>,
 }
 
 impl Context {
