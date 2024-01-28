@@ -4,6 +4,16 @@
 use super::{builtin_functions, types::Type};
 use std::collections::HashMap;
 
+pub struct ScopeStack {
+    stack: Vec<Scope>,
+}
+
+impl Default for ScopeStack {
+    fn default() -> Self {
+        Self { stack: vec![Scope::new_builtin_scope(), Scope::new_global_scope()] }
+    }
+}
+
 pub struct Scope {
     pub symbols: HashMap<String, Type>,
     pub scope_type: ScopeType,

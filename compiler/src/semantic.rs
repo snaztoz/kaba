@@ -13,6 +13,7 @@ use logos::Span;
 use std::{fmt::Display, str::FromStr};
 
 mod builtin_functions;
+mod context;
 mod scope;
 mod types;
 
