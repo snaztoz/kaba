@@ -9,6 +9,9 @@
 use logos::Span;
 use std::fmt::Display;
 
+type IdentifierNode = AstNode;
+type TypeNotationNode = AstNode;
+
 /// The root of a Kaba source code's AST.
 #[derive(Debug, PartialEq)]
 pub struct Program {
@@ -53,7 +56,7 @@ pub enum AstNode {
 
     FunctionDefinition {
         name: Box<AstNode>,
-        parameters: Vec<(AstNode, AstNode)>, // (Identifier, TypeNotation)
+        parameters: Vec<(IdentifierNode, TypeNotationNode)>,
         return_type: Option<Box<AstNode>>,
         body: Vec<AstNode>,
         span: Span,
