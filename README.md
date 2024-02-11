@@ -4,7 +4,13 @@ The repository for Kaba programming language.
 
 The languages I took for the inspirations of this project are Java and PHP, but I want to make it with better features, such as no null reference, better type system than PHP, etc.
 
-## Build
+## 📦 Install
+
+You can download the specific version you want to use from our [releases page](https://github.com/snaztoz/kaba/releases), and then unzip it.
+
+## 🛠️ Build
+
+If you want to build the executable from source, follow the following build instructions.
 
 Make sure that Rust and its toolchains (such as Cargo) are installed (see [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install) for installation instructions).
 
@@ -26,24 +32,24 @@ If you want to run all tests, use:
 cargo test --workspace
 ```
 
-## Usage
+## 🚀 Usage
 
 Usage instructions:
 
-0. Follow the build step above.
+1. Install or build Kaba.
 
-1. Create a source code file (the extension **must be** `.kaba`).
+2. Create a source code file (the extension **must be** `.kaba`). Let's say that we name it `count.kaba`.
 
-2. Run:
+3. Run:
   ```bash
-  kaba run <file-name>
+  kaba run count.kaba
   ```
 
-## Features
+## ❓ Features
 
 As this is a really new project, it only has limited features for now:
 
-0. Comments
+* Comments
   ```text
   // This is a single line comment
 
@@ -57,12 +63,12 @@ As this is a really new project, it only has limited features for now:
   */
   ```
 
-1. Variable creation
+* Variable creation
   ```text
   var x = 15;
   ```
 
-2. Support for integer, float and boolean
+* Support for integer, float and boolean
   ```text
   var a = 5;
   var b = 10.7;
@@ -70,7 +76,7 @@ As this is a really new project, it only has limited features for now:
   var d = true;
   ```
 
-3. Value assignments
+* Value assignments
   ```text
   var x = 20;
   x = 999;
@@ -87,7 +93,7 @@ As this is a really new project, it only has limited features for now:
   i = 7;
   ```
 
-4. Support for type notation
+* Support for type notation
   ```text
   var x: Float = 5;
 
@@ -95,14 +101,14 @@ As this is a really new project, it only has limited features for now:
   var i: Int = 5.0;
   ```
 
-5. Basic math operation (division, multiplication, addition, subtraction, and modulo)
+* Basic math operation (division, multiplication, addition, subtraction, and modulo)
   ```text
   23 + 5 * 30 / 2 - 9;
 
   5 % 2;
   ```
 
-6. Equality and comparison operation
+* Equality and comparison operation
   ```text
   50 == 50;
   50 != 10;
@@ -112,26 +118,26 @@ As this is a really new project, it only has limited features for now:
   7 <= 10;
   ```
 
-7. Logical operation
+* Logical operation
   ```text
   false || true;  // true
   false && false; // false
   !false;         // true
   ```
 
-8. Grouped expression
+* Grouped expression
   ```text
   52 * (2 + 3) / 3;
   ```
 
-9. `print` function (there is no other function, and it is not yet supported to create a new one)
+* `print` function (there is no other function, and it is not yet supported to create a new one)
   ```text
   var x = 101;
 
   print(x);
   ```
 
-10. Conditional branch
+* Conditional branch
   ```text
   var condition = 50 > 10;
   var condition2 = 50 > 20;
@@ -146,7 +152,7 @@ As this is a really new project, it only has limited features for now:
   }
   ```
 
-11. Loop
+* Loop
   ```
   var i = 0;
 
@@ -163,9 +169,9 @@ As this is a really new project, it only has limited features for now:
   }
   ```
 
-## Example
+## 🤔 Example
 
-0. Program for variable swapping:
+* Program for variable swapping:
   ```text
   var x = 10;
   var y = 20;
@@ -181,7 +187,7 @@ As this is a really new project, it only has limited features for now:
   print(y);
   ```
 
-1. Program to print all odd numbers below 10:
+* Program to print all odd numbers below 10:
   ```text
   var i = 0;
 
@@ -193,18 +199,19 @@ As this is a really new project, it only has limited features for now:
   }
   ```
 
-## Next Goals
+## 🎯 Next Goals
 
 Current priorities:
 
-0. Better type system.
-1. Support for other data types, such as array and string.
+* Better type system.
+* Support for function definition.
+* Support for other data types, such as array and string.
 
-## Attention
+## ⚠️ Attention
 
-* All statements must be terminated with either a semicolon (`;`) or right brace (`}`) (in case of conditional branch and loop block).
+* All statements must be terminated with either a semicolon (`;`) or right brace (`}`) (in case of body blocks).
 
-## License
+## 📃 License
 
 ```text
 Copyright 2023-2024 Hafidh Muqsithanova Sukarno
@@ -222,7 +229,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## Acknowledgements
+## 🙌 Acknowledgements
 
 > Standing on the shoulders of giants
 
