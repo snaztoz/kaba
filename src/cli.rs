@@ -1,3 +1,6 @@
+// Copyright 2023-2024 Hafidh Muqsithanova Sukarno
+// SPDX-License-Identifier: Apache-2.0
+
 use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
