@@ -56,11 +56,21 @@ impl Context {
         self.scope_stack.borrow().stack.last().unwrap().scope_type == ScopeType::Global
     }
 
-    pub fn push_scope(&self, scope: Scope) {
+    pub fn with_scope<U, F>(&self, scope: Scope, callback: F) -> U
+    where
+        F: FnOnce() -> U,
+    {
+        self.push_scope(scope);
+        let result = callback();
+        self.pop_scope();
+        result
+    }
+
+    fn push_scope(&self, scope: Scope) {
         self.scope_stack.borrow_mut().stack.push(scope);
     }
 
-    pub fn pop_scope(&self) {
+    fn pop_scope(&self) {
         self.scope_stack.borrow_mut().stack.pop();
     }
 
