@@ -222,7 +222,7 @@ pub enum AstNode {
 }
 
 impl AstNode {
-    pub fn get_span(&self) -> Span {
+    pub fn get_span(&self) -> &Span {
         match self {
             Self::VariableDeclaration { span, .. }
             | Self::If { span, .. }
@@ -257,7 +257,7 @@ impl AstNode {
             | Self::Group { span, .. }
             | Self::Identifier { span, .. }
             | Self::TypeNotation { span, .. }
-            | Self::Literal { span, .. } => span.clone(),
+            | Self::Literal { span, .. } => span,
         }
     }
 

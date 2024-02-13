@@ -87,7 +87,7 @@ impl Compiler {
                 file_path: self.file_path,
                 source_code: self.source_code,
                 message: e.to_string(),
-                span: e.get_span(),
+                span: Some(e.get_span().clone()),
             });
         }
 
