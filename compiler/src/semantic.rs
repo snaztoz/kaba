@@ -424,13 +424,8 @@ impl SemanticChecker {
         let lhs_type = self.check_expression(lhs)?;
         let rhs_type = self.check_expression(rhs)?;
 
-        if lhs_type != rhs_type {
-            return Err(SemanticError::UnableToCompareTypeAWithTypeB {
-                type_a: lhs_type,
-                type_b: rhs_type,
-                span: lhs.get_span().start..rhs.get_span().end,
-            });
-        }
+        let span = lhs.get_span().start..rhs.get_span().end;
+        self.assert_is_comparable_between(&lhs_type, &rhs_type, &span)?;
 
         Ok(Type::Bool)
     }
@@ -443,13 +438,8 @@ impl SemanticChecker {
         let lhs_type = self.check_expression(lhs)?;
         let rhs_type = self.check_expression(rhs)?;
 
-        if lhs_type != rhs_type {
-            return Err(SemanticError::UnableToCompareTypeAWithTypeB {
-                type_a: lhs_type,
-                type_b: rhs_type,
-                span: lhs.get_span().start..rhs.get_span().end,
-            });
-        }
+        let span = lhs.get_span().start..rhs.get_span().end;
+        self.assert_is_comparable_between(&lhs_type, &rhs_type, &span)?;
 
         self.assert_is_number(&lhs_type, lhs.get_span())?;
         self.assert_is_number(&rhs_type, rhs.get_span())?;
@@ -604,6 +594,23 @@ impl SemanticChecker {
             Err(SemanticError::UnableToAssignValueType {
                 var_type: to.to_string(),
                 value_type: from.to_string(),
+                span: err_span.clone(),
+            })
+        }
+    }
+
+    fn assert_is_comparable_between(
+        &self,
+        type_a: &Type,
+        type_b: &Type,
+        err_span: &Span,
+    ) -> Result<(), SemanticError> {
+        if type_a == type_b {
+            Ok(())
+        } else {
+            Err(SemanticError::UnableToCompareTypeAWithTypeB {
+                type_a: type_a.clone(),
+                type_b: type_b.clone(),
                 span: err_span.clone(),
             })
         }
