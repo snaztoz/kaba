@@ -7,17 +7,20 @@
 use self::{context::Context, scope::Scope, types::Type};
 use crate::ast::{AstNode, Program as ProgramAst, Value};
 use logos::Span;
-use std::{fmt::Display, str::FromStr};
+use std::{collections::BTreeMap, fmt::Display, str::FromStr};
 
 mod builtin_functions;
 mod context;
 mod scope;
 mod types;
 
+type FunctionParameterList = BTreeMap<String, Type>;
+type FunctionReturnType = Type;
+
 /// Provides a quick way to run semantic analysis on a Kaba AST.
 pub fn check(ast: &ProgramAst) -> Result<(), SemanticError> {
     let checker = SemanticChecker::default();
-    checker.check_body(&ast.statements)?;
+    checker.check_program(ast)?;
     Ok(())
 }
 
@@ -27,6 +30,42 @@ struct SemanticChecker {
 }
 
 impl SemanticChecker {
+    fn check_program(&self, program_ast: &ProgramAst) -> Result<(), SemanticError> {
+        let mut functions = vec![];
+
+        for statement in &program_ast.statements {
+            match statement {
+                AstNode::FunctionDefinition {
+                    name,
+                    parameters,
+                    return_type,
+                    ..
+                } => {
+                    let function =
+                        self.check_function_declaration(name, parameters, return_type)?;
+                    functions.push(function);
+                }
+
+                node => {
+                    return Err(SemanticError::NotExpectingStatementInGlobal {
+                        span: node.get_span().clone(),
+                    });
+                }
+            }
+        }
+
+        for (i, statement) in program_ast.statements.iter().enumerate() {
+            if let AstNode::FunctionDefinition { name, body, .. } = statement {
+                let (parameters, return_type) = &functions[i];
+                self.check_function_definition(name, parameters, return_type, body)?;
+            } else {
+                unreachable!();
+            }
+        }
+
+        Ok(())
+    }
+
     fn check_body(&self, body: &[AstNode]) -> Result<Option<Type>, SemanticError> {
         let mut body_returned_type = None;
 
@@ -68,13 +107,11 @@ impl SemanticChecker {
                     self.check_loop_control(span)?;
                 }
 
-                AstNode::FunctionDefinition {
-                    name,
-                    parameters,
-                    return_type,
-                    body,
-                    ..
-                } => self.check_function_definition(name, parameters, return_type, body)?,
+                AstNode::FunctionDefinition { name, .. } => {
+                    return Err(SemanticError::FunctionDefinitionNotInGlobal {
+                        span: name.get_span().clone(),
+                    })
+                }
 
                 AstNode::Return { expression, span } => {
                     let returned_type = self.check_return(expression, span)?;
@@ -245,75 +282,75 @@ impl SemanticChecker {
         }
     }
 
-    fn check_function_definition(
+    fn check_function_declaration(
         &self,
         name: &AstNode,
         parameters: &[(AstNode, AstNode)],
         return_type: &Option<Box<AstNode>>,
-        body: &[AstNode],
-    ) -> Result<(), SemanticError> {
-        // Can't have function definition to be declared in scope other
-        // than global
-
-        self.assert_current_scope_is_global(name.get_span())?;
-
+    ) -> Result<(FunctionParameterList, FunctionReturnType), SemanticError> {
         // Can't use the name if it's already used by another data type.
         //
         // But if it's also a function, then it should be no problem
         // (function overloading).
-
         self.assert_not_exist_in_current_scope(name)?;
 
-        // Check its return type
+        let mut params = BTreeMap::new();
+        for (parameter, parameter_type) in parameters {
+            let (name, span) = parameter.unwrap_identifier();
+            let parameter_type = self.convert_type_notation_to_type(parameter_type)?;
 
+            // Parameters can't have duplicated name
+            if params.contains_key(&name) {
+                return Err(SemanticError::VariableAlreadyExist { name, span });
+            }
+
+            params.insert(name, parameter_type);
+        }
+
+        let parameter_types = params.values().cloned().collect::<Vec<_>>();
         let return_type = return_type
             .as_ref()
             .map_or(Ok(Type::Void), |tn| self.convert_type_notation_to_type(tn))?;
 
-        // Entering new scope
+        // Save function information
+
+        let function_type = Type::Callable {
+            parameter_types: parameter_types.clone(),
+            return_type: Box::new(return_type.clone()),
+        };
+        let (name, name_span) = name.unwrap_identifier();
+        let function_signature = format!("{name}{function_type}");
+
+        if self.context.global_scope_has_symbol(&function_signature) {
+            return Err(SemanticError::FunctionVariantAlreadyExist {
+                name,
+                args: parameter_types,
+                span: name_span,
+            });
+        }
 
         self.context
+            .save_symbol_to_global_scope(function_signature, function_type);
+
+        Ok((params, return_type))
+    }
+
+    fn check_function_definition(
+        &self,
+        name: &AstNode,
+        parameters: &FunctionParameterList,
+        return_type: &FunctionReturnType,
+        body: &[AstNode],
+    ) -> Result<(), SemanticError> {
+        // Entering new scope
+        self.context
             .with_scope(Scope::new_function_scope(return_type.clone()), || {
-                let mut parameter_types = vec![];
-                for (parameter, parameter_type) in parameters {
-                    // Parameters can't have duplicated name
-
-                    self.assert_not_exist_in_current_scope(parameter)?;
-                    let (parameter_name, _) = parameter.unwrap_identifier();
-
-                    // Check if parameter type is valid
-
-                    let parameter_type = self.convert_type_notation_to_type(parameter_type)?;
-
-                    // Save parameter information
-
-                    self.context
-                        .save_symbol_to_current_scope(parameter_name, parameter_type.clone());
-                    parameter_types.push(parameter_type);
+                for (parameter_name, parameter_type) in parameters {
+                    self.context.save_symbol_to_current_scope(
+                        parameter_name.to_string(),
+                        parameter_type.clone(),
+                    );
                 }
-
-                // Create function type
-
-                let function_type = Type::Callable {
-                    parameter_types: parameter_types.clone(),
-                    return_type: Box::new(return_type.clone()),
-                };
-
-                // Save function information
-
-                let (name, name_span) = name.unwrap_identifier();
-                let function_signature = format!("{name}{function_type}");
-
-                if self.context.global_scope_has_symbol(&function_signature) {
-                    return Err(SemanticError::FunctionVariantAlreadyExist {
-                        name,
-                        args: parameter_types,
-                        span: name_span,
-                    });
-                }
-
-                self.context
-                    .save_symbol_to_global_scope(function_signature, function_type);
 
                 // Check function body
                 //
@@ -324,8 +361,8 @@ impl SemanticChecker {
 
                 if !return_type.is_void() && body_returned_type.is_none() {
                     return Err(SemanticError::FunctionNotReturningValue {
-                        expecting_type: return_type,
-                        span: name_span,
+                        expecting_type: return_type.clone(),
+                        span: name.get_span().clone(),
                     });
                 }
 
@@ -551,16 +588,6 @@ impl SemanticChecker {
         })
     }
 
-    fn assert_current_scope_is_global(&self, err_span: &Span) -> Result<(), SemanticError> {
-        if self.context.current_scope_is_global() {
-            Ok(())
-        } else {
-            Err(SemanticError::FunctionDefinitionNotInGlobal {
-                span: err_span.clone(),
-            })
-        }
-    }
-
     fn assert_not_exist_in_current_scope(&self, identifier: &AstNode) -> Result<(), SemanticError> {
         let (name, span) = identifier.unwrap_identifier();
 
@@ -688,6 +715,10 @@ pub enum SemanticError {
         span: Span,
     },
 
+    NotExpectingStatementInGlobal {
+        span: Span,
+    },
+
     FunctionDefinitionNotInGlobal {
         span: Span,
     },
@@ -736,6 +767,7 @@ impl SemanticError {
             | Self::NotANumber { span, .. }
             | Self::NotABoolean { span, .. }
             | Self::NotAFunction { span, .. }
+            | Self::NotExpectingStatementInGlobal { span }
             | Self::FunctionDefinitionNotInGlobal { span, .. }
             | Self::FunctionVariantAlreadyExist { span, .. }
             | Self::FunctionVariantNotExist { span, .. }
@@ -790,8 +822,11 @@ impl Display for SemanticError {
             Self::NotAFunction { .. } => {
                 write!(f, "not a function")
             }
+            Self::NotExpectingStatementInGlobal { .. } => {
+                write!(f, "expecting only function definitions in global scope")
+            }
             Self::FunctionDefinitionNotInGlobal { .. } => {
-                write!(f, "unable to define functions in non-global scope",)
+                write!(f, "unable to define functions in non-global scope")
             }
             Self::FunctionVariantAlreadyExist { name, args, .. } => {
                 write!(
@@ -846,7 +881,7 @@ mod tests {
         let ast = parser::parse(tokens).unwrap();
 
         let checker = SemanticChecker::default();
-        let result = checker.check_body(&ast.statements);
+        let result = checker.check_program(&ast);
 
         assert!(result.is_ok());
     }
@@ -856,7 +891,7 @@ mod tests {
         let ast = parser::parse(tokens).unwrap();
 
         let checker = SemanticChecker::default();
-        let result = checker.check_body(&ast.statements);
+        let result = checker.check_program(&ast);
 
         assert!(result.is_err());
     }
@@ -865,93 +900,85 @@ mod tests {
     // Test variable declarations
     //
 
-    fn assert_the_type_of_x_is(input: &str, expected: Type) {
-        let tokens = lexer::lex(input).unwrap();
-        let ast = parser::parse(tokens).unwrap();
-
-        let checker = SemanticChecker::default();
-        let result = checker.check_body(&ast.statements);
-
-        assert!(result.is_ok());
-        assert_eq!(checker.context.get_symbol_type("x"), expected);
-    }
-
     #[test]
     fn test_check_variable_declaration_with_type_annotation_and_initial_value() {
-        assert_the_type_of_x_is(
-            indoc! {"
-                var x: Int = 5;
-            "},
-            Type::Int,
-        );
+        check_and_assert_is_ok(indoc! {"
+                fn main() {
+                    var x: Int = 5;
+                }
+            "});
     }
 
     #[test]
     fn test_check_variable_declaration_with_type_annotation_only() {
-        assert_the_type_of_x_is(
-            indoc! {"
-                var x: Int;
-            "},
-            Type::Int,
-        );
+        check_and_assert_is_ok(indoc! {"
+                fn main() {
+                    var x: Int;
+                }
+            "});
     }
 
     #[test]
     fn test_check_variable_declaration_with_initial_value_only() {
-        assert_the_type_of_x_is(
-            indoc! {"
-                var x = 5;
-            "},
-            Type::Int,
-        );
+        check_and_assert_is_ok(indoc! {"
+                fn main() {
+                    var x = 5;
+                }
+            "});
     }
 
     #[test]
     fn test_check_variable_declaration_with_float_literal() {
-        assert_the_type_of_x_is(
-            indoc! {"
-                var x = -0.5;
-            "},
-            Type::Float,
-        );
+        check_and_assert_is_ok(indoc! {"
+                fn main() {
+                    var x = -0.5;
+                }
+            "});
     }
 
     #[test]
     fn test_check_variable_declaration_with_boolean_literal() {
-        assert_the_type_of_x_is(
-            indoc! {"
-                var x = true;
-            "},
-            Type::Bool,
-        );
+        check_and_assert_is_ok(indoc! {"
+                fn main() {
+                    var x = true;
+                }
+            "});
     }
 
     #[test]
     fn test_using_incompatible_types_in_variable_declaration() {
         check_and_assert_is_err(indoc! {"
-                var x: Int = 5.0;
+                fn main() {
+                    var x: Int = 5.0;
+                }
             "})
     }
 
     #[test]
     fn test_using_no_type_annotation_or_initial_value_in_variable_declaration() {
         check_and_assert_is_err(indoc! {"
-                var x;
+                fn main() {
+                    var x;
+                }
             "})
     }
 
     #[test]
     fn test_using_non_existing_type_in_variable_declaration() {
         check_and_assert_is_err(indoc! {"
-                var x: NonExistingType;
+                fn main() {
+                    var x: NonExistingType;
+                }
             "})
     }
 
     #[test]
     fn test_redeclaring_variable_in_the_same_scope() {
         check_and_assert_is_err(indoc! {"
-                var x = 5;
-                var x = 10;
+                fn main() {
+                    var x = 5;
+                    var x = 10;
+                }
             "})
     }
 
@@ -962,78 +989,96 @@ mod tests {
     #[test]
     fn test_check_value_assignments() {
         check_and_assert_is_ok(indoc! {"
-                var x: Int;
-                x = 10;
+                fn main() {
+                    var x: Int;
+                    x = 10;
 
-                var y: Float;
-                y = 5.0;
+                    var y: Float;
+                    y = 5.0;
 
-                var z = false;
-                z = true;
+                    var z = false;
+                    z = true;
+                }
             "})
     }
 
     #[test]
     fn test_check_shorthand_value_assignments() {
         check_and_assert_is_ok(indoc! {"
-                var i = 0;
-                i += 1;
-                i -= 2;
-                i *= 3;
-                i /= 4;
-                i %= 5;
+                fn main() {
+                    var i = 0;
+                    i += 1;
+                    i -= 2;
+                    i *= 3;
+                    i /= 4;
+                    i %= 5;
+                }
             "})
     }
 
     #[test]
     fn test_check_mod_assign_with_float_types() {
         check_and_assert_is_ok(indoc! {"
-                var i = 5.0;
-                i %= 2.5;
+                fn main() {
+                    var i = 5.0;
+                    i %= 2.5;
+                }
             "})
     }
 
     #[test]
     fn test_assigning_value_with_mismatched_types() {
         check_and_assert_is_err(indoc! {"
-                var x: Int;
-                x = 5.0;
+                fn main() {
+                    var x: Int;
+                    x = 5.0;
+                }
             "})
     }
 
     #[test]
     fn test_assigning_value_with_non_existing_variable() {
         check_and_assert_is_err(indoc! {"
-                var x: Float;
-                x = y;
+                fn main() {
+                    var x: Float;
+                    x = y;
+                }
             "})
     }
 
     #[test]
     fn test_using_math_expression_as_lhs_in_value_assignment() {
         check_and_assert_is_err(indoc! {"
-                1 + 1 = 5;
+                fn main() {
+                    1 + 1 = 5;
+                }
             "})
     }
 
     #[test]
     fn test_using_boolean_expression_as_lhs_in_value_assignment() {
         check_and_assert_is_err(indoc! {"
-                true || false = false;
+                fn main() {
+                    true || false = false;
+                }
             "})
     }
 
     #[test]
     fn test_using_integer_grouped_expression_as_lhs_in_value_assignment() {
         check_and_assert_is_err(indoc! {"
-                (50) = true;
+                fn main() {
+                    (50) = true;
+                }
             "})
     }
 
     #[test]
     fn test_using_boolean_type_in_shorthand_value_assignment() {
         check_and_assert_is_err(indoc! {"
-                true += true;
+                fn main() {
+                    true += true;
+                }
             "})
     }
 
@@ -1044,17 +1089,19 @@ mod tests {
     #[test]
     fn test_check_if_else_statements() {
         check_and_assert_is_ok(indoc! {"
-                var condition1 = 5 < 10;
-                var condition2 = 0.5 < 0.75;
+                fn main() {
+                    var condition1 = 5 < 10;
+                    var condition2 = 0.5 < 0.75;
 
-                if condition1 {
-                    print(condition1);
-                    print(1);
-                } else if condition2 {
-                    print(condition2);
-                    print(2);
-                } else {
-                    print(0);
+                    if condition1 {
+                        print(condition1);
+                        print(1);
+                    } else if condition2 {
+                        print(condition2);
+                        print(2);
+                    } else {
+                        print(0);
+                    }
                 }
             "})
     }
@@ -1062,10 +1109,12 @@ mod tests {
     #[test]
     fn test_check_nested_if_statements() {
         check_and_assert_is_ok(indoc! {"
-                if 1 + 1 == 2 {
-                    if 2 + 2 == 4 {
-                        if 3 + 3 == 6 {
-                            print(true);
+                fn main() {
+                    if 1 + 1 == 2 {
+                        if 2 + 2 == 4 {
+                            if 3 + 3 == 6 {
+                                print(true);
+                            }
                         }
                     }
                 }
@@ -1075,20 +1124,24 @@ mod tests {
     #[test]
     fn test_using_variable_after_out_of_conditional_scope() {
         check_and_assert_is_err(indoc! {"
-                if true {
-                    var x = 50;
+                fn main() {
+                    if true {
+                        var x = 50;
+                        print(x);
+                    }
+
                     print(x);
                 }
-
-                print(x);
             "})
     }
 
     #[test]
     fn test_using_math_expression_as_condition_in_if_statement() {
         check_and_assert_is_err(indoc! {"
-                if 1 + 1 {
-                    print(1);
+                fn main() {
+                    if 1 + 1 {
+                        print(1);
+                    }
                 }
             "})
     }
@@ -1096,10 +1149,12 @@ mod tests {
     #[test]
     fn test_using_variable_declared_in_sibling_conditional_scope() {
         check_and_assert_is_err(indoc! {"
-                if true {
-                    var x = 50;
-                } else {
-                    print(x);
+                fn main() {
+                    if true {
+                        var x = 50;
+                    } else {
+                        print(x);
+                    }
                 }
             "})
     }
@@ -1111,16 +1166,18 @@ mod tests {
     #[test]
     fn test_check_loop_statements() {
         check_and_assert_is_ok(indoc! {"
-                while 2 > 5 {
-                    print(1);
-                }
-
-                var a = 5;
-                while true {
-                    if a == 5 {
-                        break;
+                fn main() {
+                    while 2 > 5 {
+                        print(1);
                     }
-                    print(0);
+
+                    var a = 5;
+                    while true {
+                        if a == 5 {
+                            break;
+                        }
+                        print(0);
+                    }
                 }
             "})
     }
@@ -1128,15 +1185,19 @@ mod tests {
     #[test]
     fn test_using_math_expression_as_condition_in_while_statement() {
         check_and_assert_is_err(indoc! {"
-                while 5 + 5 {}
+                fn main() {
+                    while 5 + 5 {}
+                }
             "})
     }
 
     #[test]
     fn test_using_break_statement_not_in_loop_scope() {
         check_and_assert_is_err(indoc! {"
-                if true {
-                    break;
+                fn main() {
+                    if true {
+                        break;
+                    }
                 }
             "})
     }
@@ -1144,9 +1205,11 @@ mod tests {
     #[test]
     fn test_using_invalid_statement_after_loop_control() {
         check_and_assert_is_err(indoc! {"
-                while true {
-                    break;
-                    1 + true; // this should be error
+                fn main() {
+                    while true {
+                        break;
+                        1 + true; // this should be error
+                    }
                 }
             "})
     }
@@ -1195,9 +1258,10 @@ mod tests {
                     return x + y;
                 }
 
-                var result = sum(5, 7);
-
-                print(result);
+                fn main() {
+                    var result = sum(5, 7);
+                    print(result);
+                }
             "});
     }
 
@@ -1226,7 +1290,9 @@ mod tests {
                     countToZero(n-1);
                 }
 
-                countToZero(10);
+                fn main() {
+                    countToZero(10);
+                }
             "});
     }
 
@@ -1270,22 +1336,41 @@ mod tests {
     }
 
     #[test]
+    fn test_defining_functions_not_in_order() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() {
+                    callFoo();
+                }
+
+                fn callFoo() {
+                    callBar();
+                }
+
+                fn callBar() {
+                    print(true);
+                }
+            "})
+    }
+
+    #[test]
     fn test_defining_function_not_in_global_scope() {
         check_and_assert_is_err(indoc! {"
-                if true {
-                    fn foo() {}
+                fn main() {
+                    if true {
+                        fn foo() {}
+                    }
                 }
             "});
     }
 
-    #[test]
-    fn test_defining_function_with_an_already_taken_name_in_the_same_scope() {
-        check_and_assert_is_err(indoc! {"
-                var foo: Int = 0;
+    // #[test]
+    // fn test_defining_function_with_an_already_taken_name_in_the_same_scope() {
+    //     check_and_assert_is_err(indoc! {"
+    //             var foo: Int = 0;
 
-                fn foo() {}
-            "});
-    }
+    //             fn foo() {}
+    //         "});
+    // }
 
     #[test]
     fn test_defining_function_with_an_invalid_return_type() {
@@ -1355,18 +1440,20 @@ mod tests {
                 fn foo(x: Int) {}
                 fn foo(x: Float) {}
 
-                foo(true);
-            "});
-    }
-
-    #[test]
-    fn test_using_return_statement_not_in_function_scope() {
-        check_and_assert_is_err(indoc! {"
-                if true {
-                    return;
+                fn main() {
+                    foo(true);
                 }
             "});
     }
+
+    // #[test]
+    // fn test_using_return_statement_not_in_function_scope() {
+    //     check_and_assert_is_err(indoc! {"
+    //             if true {
+    //                 return;
+    //             }
+    //         "});
+    // }
 
     #[test]
     fn test_defining_function_with_missing_return_in_other_branches() {
@@ -1445,7 +1532,7 @@ mod tests {
         ];
 
         for input in cases {
-            check_and_assert_is_err(input);
+            check_and_assert_is_err(&format!("fn main() {{ {} }}", input));
         }
     }
 }

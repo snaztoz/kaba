@@ -52,10 +52,6 @@ impl Context {
             .any(|scope| scope.scope_type == ScopeType::Loop)
     }
 
-    pub fn current_scope_is_global(&self) -> bool {
-        self.scope_stack.borrow().stack.last().unwrap().scope_type == ScopeType::Global
-    }
-
     pub fn with_scope<U, F>(&self, scope: Scope, callback: F) -> U
     where
         F: FnOnce() -> U,
