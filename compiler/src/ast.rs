@@ -23,7 +23,7 @@ pub struct Program {
 pub enum AstNode {
     VariableDeclaration {
         identifier: Box<AstNode>,
-        var_type: Option<Box<AstNode>>,
+        var_t: Option<Box<AstNode>>,
         value: Option<Box<AstNode>>,
         span: Span,
     },
@@ -57,7 +57,7 @@ pub enum AstNode {
     FunctionDefinition {
         name: Box<AstNode>,
         parameters: Vec<(IdentifierNode, TypeNotationNode)>,
-        return_type: Option<Box<AstNode>>,
+        return_t: Option<Box<AstNode>>,
         body: Vec<AstNode>,
         span: Span,
     },

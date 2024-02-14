@@ -10,8 +10,8 @@ pub enum Type {
     Float,
     Bool,
     Callable {
-        parameter_types: Vec<Type>,
-        return_type: Box<Type>,
+        parameter_ts: Vec<Type>,
+        return_t: Box<Type>,
     },
 }
 
@@ -40,10 +40,8 @@ impl Display for Type {
             Self::Int => write!(f, "Int"),
             Self::Float => write!(f, "Float"),
             Self::Bool => write!(f, "Bool"),
-            Self::Callable {
-                parameter_types, ..
-            } => {
-                let pts: Vec<_> = parameter_types.iter().map(|pt| pt.to_string()).collect();
+            Self::Callable { parameter_ts, .. } => {
+                let pts: Vec<_> = parameter_ts.iter().map(|pt| pt.to_string()).collect();
                 write!(f, "/{}", pts.join(","))
             }
         }

@@ -128,7 +128,7 @@ impl Parser {
 
         // Expecting ":" (optional)
 
-        let var_type = if self.current_token_is(&Token::Colon) {
+        let var_t = if self.current_token_is(&Token::Colon) {
             self.skip(&Token::Colon)?;
 
             let vt = self.parse_type_notation()?;
@@ -159,7 +159,7 @@ impl Parser {
 
         Ok(AstNode::VariableDeclaration {
             identifier,
-            var_type,
+            var_t,
             value,
             span: start..end,
         })
@@ -347,11 +347,11 @@ impl Parser {
 
             // Expecting type notation
 
-            let parameter_type = self.parse_type_notation()?;
+            let parameter_t = self.parse_type_notation()?;
 
             // Add to parameter list
 
-            parameters.push((parameter, parameter_type));
+            parameters.push((parameter, parameter_t));
 
             // Expecting either "," or ")"
 
@@ -380,7 +380,7 @@ impl Parser {
 
         // Expecting return type notation (optional)
 
-        let return_type = if self.current_token_is(&Token::Colon) {
+        let return_t = if self.current_token_is(&Token::Colon) {
             self.skip(&Token::Colon)?;
 
             Some(Box::new(self.parse_type_notation()?))
@@ -395,7 +395,7 @@ impl Parser {
         Ok(AstNode::FunctionDefinition {
             name: Box::new(name),
             parameters,
-            return_type,
+            return_t,
             body,
             span: start..body_span.end,
         })
@@ -1007,7 +1007,7 @@ mod tests {
                     name: String::from("x"),
                     span: 4..5,
                 }),
-                var_type: None,
+                var_t: None,
                 value: None,
                 span: 0..5,
             },
@@ -1015,7 +1015,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parsing_without_type_annotation_but_with_initial_value() {
+    fn test_parsing_without_t_annotation_but_with_initial_value() {
         parse_and_assert_result(
             "var abc = 123 * x;",
             AstNode::VariableDeclaration {
@@ -1023,7 +1023,7 @@ mod tests {
                     name: String::from("abc"),
                     span: 4..7,
                 }),
-                var_type: None,
+                var_t: None,
                 value: Some(Box::new(AstNode::Mul {
                     lhs: Box::new(AstNode::Literal {
                         value: Value::Integer(123),
@@ -1049,7 +1049,7 @@ mod tests {
                     name: String::from("x"),
                     span: 4..5,
                 }),
-                var_type: None,
+                var_t: None,
                 value: Some(Box::new(AstNode::Add {
                     lhs: Box::new(AstNode::Literal {
                         value: Value::Integer(123),
@@ -1075,7 +1075,7 @@ mod tests {
                     name: String::from("x"),
                     span: 4..5,
                 }),
-                var_type: None,
+                var_t: None,
                 value: Some(Box::new(AstNode::Identifier {
                     name: String::from("foo"),
                     span: 12..15,
@@ -1094,7 +1094,7 @@ mod tests {
                     name: String::from("x"),
                     span: 4..5,
                 }),
-                var_type: Some(Box::from(AstNode::TypeNotation {
+                var_t: Some(Box::from(AstNode::TypeNotation {
                     name: String::from("Int"),
                     span: 7..10,
                 })),
@@ -1113,7 +1113,7 @@ mod tests {
                     name: String::from("x"),
                     span: 4..5,
                 }),
-                var_type: Some(Box::from(AstNode::TypeNotation {
+                var_t: Some(Box::from(AstNode::TypeNotation {
                     name: String::from("Int"),
                     span: 7..10,
                 })),
@@ -1241,7 +1241,7 @@ mod tests {
                     span: 3..6,
                 }),
                 parameters: vec![],
-                return_type: None,
+                return_t: None,
                 body: vec![],
                 span: 0..11,
             },
@@ -1279,7 +1279,7 @@ mod tests {
                         },
                     ),
                 ],
-                return_type: None,
+                return_t: None,
                 body: vec![],
                 span: 0..27,
             },
@@ -1305,7 +1305,7 @@ mod tests {
                         span: 12..15,
                     },
                 )],
-                return_type: None,
+                return_t: None,
                 body: vec![AstNode::FunctionCall {
                     callee: Box::new(AstNode::Identifier {
                         name: String::from("print"),
@@ -1332,7 +1332,7 @@ mod tests {
                     span: 3..6,
                 }),
                 parameters: vec![],
-                return_type: Some(Box::new(AstNode::TypeNotation {
+                return_t: Some(Box::new(AstNode::TypeNotation {
                     name: String::from("Int"),
                     span: 10..13,
                 })),

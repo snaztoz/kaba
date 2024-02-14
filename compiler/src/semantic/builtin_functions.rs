@@ -9,22 +9,22 @@ pub fn get_types() -> HashMap<String, Type> {
         (
             String::from("print/Int"),
             Type::Callable {
-                parameter_types: vec![Type::Int],
-                return_type: Box::new(Type::Void),
+                parameter_ts: vec![Type::Int],
+                return_t: Box::new(Type::Void),
             },
         ),
         (
             String::from("print/Float"),
             Type::Callable {
-                parameter_types: vec![Type::Float],
-                return_type: Box::new(Type::Void),
+                parameter_ts: vec![Type::Float],
+                return_t: Box::new(Type::Void),
             },
         ),
         (
             String::from("print/Bool"),
             Type::Callable {
-                parameter_types: vec![Type::Bool],
-                return_type: Box::new(Type::Void),
+                parameter_ts: vec![Type::Bool],
+                return_t: Box::new(Type::Void),
             },
         ),
     ])
