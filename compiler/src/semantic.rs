@@ -380,17 +380,18 @@ impl SemanticChecker {
             .map(|expr| self.check_expression(expr).unwrap())
             .unwrap_or(Type::Void);
 
-        if let Some(return_type) = self.context.get_current_function_return_type() {
-            self.assert_is_assignable(&expression_type, &return_type, span)
-                .map_err(|err| SemanticError::ReturnTypeMismatch {
-                    expecting: return_type.clone(),
-                    get: expression_type,
-                    span: err.get_span().clone(),
-                })
-                .map(|_| return_type)
-        } else {
-            Err(SemanticError::ReturnNotInFunctionScope { span: span.clone() })
-        }
+        let return_type = self
+            .context
+            .get_current_function_return_type()
+            .ok_or_else(|| SemanticError::ReturnNotInFunctionScope { span: span.clone() })?;
+
+        self.assert_is_assignable(&expression_type, &return_type, span)
+            .map_err(|err| SemanticError::ReturnTypeMismatch {
+                expecting: return_type.clone(),
+                get: expression_type,
+                span: err.get_span().clone(),
+            })
+            .map(|_| return_type)
     }
 
     fn check_expression(&self, expression: &AstNode) -> Result<Type, SemanticError> {
