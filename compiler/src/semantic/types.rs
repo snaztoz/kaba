@@ -40,9 +40,12 @@ impl Display for Type {
             Self::Int => write!(f, "Int"),
             Self::Float => write!(f, "Float"),
             Self::Bool => write!(f, "Bool"),
-            Self::Callable { parameter_ts, .. } => {
-                let pts: Vec<_> = parameter_ts.iter().map(|pt| pt.to_string()).collect();
-                write!(f, "/{}", pts.join(","))
+            Self::Callable {
+                parameter_ts,
+                return_t,
+            } => {
+                let param_ts: Vec<_> = parameter_ts.iter().map(|pt| pt.to_string()).collect();
+                write!(f, "({}) -> {}", param_ts.join(","), return_t)
             }
         }
     }

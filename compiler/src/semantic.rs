@@ -35,13 +35,8 @@ impl SemanticChecker {
 
         for statement in &program_ast.statements {
             match statement {
-                AstNode::FunctionDefinition {
-                    name,
-                    parameters,
-                    return_t,
-                    ..
-                } => {
-                    let function = self.check_function_declaration(name, parameters, return_t)?;
+                AstNode::FunctionDefinition { .. } => {
+                    let function = self.check_function_declaration(statement)?;
                     functions.push(function);
                 }
 
@@ -283,55 +278,54 @@ impl SemanticChecker {
 
     fn check_function_declaration(
         &self,
-        name: &AstNode,
-        parameters: &[(AstNode, AstNode)],
-        return_t: &Option<Box<AstNode>>,
+        node: &AstNode,
     ) -> Result<(FunctionParameterList, FunctionReturnType), SemanticError> {
-        // Can't use the name if it's already used by another data type.
-        //
-        // But if it's also a function, then it should be no problem
-        // (function overloading).
-        self.assert_not_exist_in_current_scope(name)?;
-
-        let mut params = BTreeMap::new();
-        for (parameter, parameter_t) in parameters {
-            let (name, span) = parameter.unwrap_identifier();
-            let parameter_t = self.convert_type_notation_to_type(parameter_t)?;
-
-            // Parameters can't have duplicated name
-            if params.contains_key(&name) {
-                return Err(SemanticError::VariableAlreadyExist { name, span });
+        if let AstNode::FunctionDefinition {
+            name,
+            parameters,
+            return_t,
+            ..
+        } = node
+        {
+            let mut params = BTreeMap::new();
+            for (parameter, parameter_t) in parameters {
+                let (name, span) = parameter.unwrap_identifier();
+                let parameter_t = self.convert_type_notation_to_type(parameter_t)?;
+                if params.contains_key(&name) {
+                    return Err(SemanticError::VariableAlreadyExist { name, span });
+                }
+                params.insert(name, parameter_t);
             }
 
-            params.insert(name, parameter_t);
+            let parameter_ts = params.values().cloned().collect::<Vec<_>>();
+            let return_t = return_t
+                .as_ref()
+                .map_or(Ok(Type::Void), |tn| self.convert_type_notation_to_type(tn))?;
+
+            // Save function information
+
+            let function_unique_id = node.unwrap_function_unique_id();
+            let function_t = Type::Callable {
+                parameter_ts: parameter_ts.clone(),
+                return_t: Box::new(return_t.clone()),
+            };
+
+            if self.context.global_scope_has_symbol(&function_unique_id) {
+                let (_, name_span) = name.unwrap_identifier();
+                return Err(SemanticError::FunctionVariantAlreadyExist {
+                    name: function_unique_id.to_string(),
+                    args: parameter_ts,
+                    span: name_span.clone(),
+                });
+            }
+
+            self.context
+                .save_symbol_to_global_scope(function_unique_id, function_t);
+
+            return Ok((params, return_t));
         }
 
-        let parameter_ts = params.values().cloned().collect::<Vec<_>>();
-        let return_t = return_t
-            .as_ref()
-            .map_or(Ok(Type::Void), |tn| self.convert_type_notation_to_type(tn))?;
-
-        // Save function information
-
-        let function_t = Type::Callable {
-            parameter_ts: parameter_ts.clone(),
-            return_t: Box::new(return_t.clone()),
-        };
-        let (name, name_span) = name.unwrap_identifier();
-        let function_signature = format!("{name}{function_t}");
-
-        if self.context.global_scope_has_symbol(&function_signature) {
-            return Err(SemanticError::FunctionVariantAlreadyExist {
-                name,
-                args: parameter_ts,
-                span: name_span,
-            });
-        }
-
-        self.context
-            .save_symbol_to_global_scope(function_signature, function_t);
-
-        Ok((params, return_t))
+        unreachable!()
     }
 
     fn check_function_definition(

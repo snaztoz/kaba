@@ -287,6 +287,25 @@ impl AstNode {
         }
     }
 
+    pub fn unwrap_function_unique_id(&self) -> String {
+        if let AstNode::FunctionDefinition {
+            name, parameters, ..
+        } = self
+        {
+            let (identifier, _) = name.unwrap_identifier();
+            let param_ts: Vec<_> = parameters
+                .iter()
+                .map(|(_, pt)| pt.unwrap_type_notation().0)
+                .collect();
+            format!("{identifier}/{}", param_ts.join(","))
+        } else {
+            panic!(
+                "calling `unwrap_function_unique_id` on non-function definition AstNode: {:?}",
+                self
+            )
+        }
+    }
+
     pub fn unwrap_group(self) -> AstNode {
         if let AstNode::Group { child, .. } = self {
             // unwrap recursively
