@@ -5,7 +5,7 @@
 //! stage of the compiler.
 
 use self::{context::Context, scope::Scope, types::Type};
-use crate::ast::{AstNode, Program as ProgramAst, Value};
+use crate::ast::{AstNode, IdentifierNode, Program as ProgramAst, TypeNotationNode, Value};
 use logos::Span;
 use std::{collections::BTreeMap, fmt::Display, str::FromStr};
 
@@ -16,9 +16,10 @@ mod types;
 
 type FunctionParameterList = BTreeMap<String, Type>;
 type FunctionReturnType = Type;
+type Result<T> = std::result::Result<T, SemanticError>;
 
 /// Provides a quick way to run semantic analysis on a Kaba AST.
-pub fn check(ast: &ProgramAst) -> Result<(), SemanticError> {
+pub fn check(ast: &ProgramAst) -> Result<()> {
     let checker = SemanticChecker::default();
     checker.check_program(ast)?;
     Ok(())
@@ -30,7 +31,7 @@ struct SemanticChecker {
 }
 
 impl SemanticChecker {
-    fn check_program(&self, program_ast: &ProgramAst) -> Result<(), SemanticError> {
+    fn check_program(&self, program_ast: &ProgramAst) -> Result<()> {
         let mut functions = vec![];
 
         for statement in &program_ast.statements {
@@ -60,7 +61,7 @@ impl SemanticChecker {
         Ok(())
     }
 
-    fn check_body(&self, body: &[AstNode]) -> Result<Option<Type>, SemanticError> {
+    fn check_body(&self, body: &[AstNode]) -> Result<Option<Type>> {
         let mut body_returned_t = None;
 
         for statement in body {
@@ -127,7 +128,7 @@ impl SemanticChecker {
         var_t: &Option<&AstNode>,
         value: &Option<&AstNode>,
         span: &Span,
-    ) -> Result<(), SemanticError> {
+    ) -> Result<()> {
         let (var_name, _) = identifier.unwrap_identifier();
 
         // Can't have the same variable be declared multiple times
@@ -163,12 +164,7 @@ impl SemanticChecker {
         Ok(())
     }
 
-    fn check_assignment(
-        &self,
-        lhs: &AstNode,
-        rhs: &AstNode,
-        span: &Span,
-    ) -> Result<Type, SemanticError> {
+    fn check_assignment(&self, lhs: &AstNode, rhs: &AstNode, span: &Span) -> Result<Type> {
         let lhs_t = self.check_expression(lhs)?;
         let rhs_t = self.check_expression(rhs)?;
 
@@ -183,7 +179,7 @@ impl SemanticChecker {
         lhs: &AstNode,
         rhs: &AstNode,
         span: &Span,
-    ) -> Result<Type, SemanticError> {
+    ) -> Result<Type> {
         let lhs_t = self.check_expression(lhs)?;
         let rhs_t = self.check_expression(rhs)?;
 
@@ -198,7 +194,7 @@ impl SemanticChecker {
         condition: &AstNode,
         body: &[AstNode],
         or_else: &Option<&AstNode>,
-    ) -> Result<Option<Type>, SemanticError> {
+    ) -> Result<Option<Type>> {
         // Expecting boolean type for the condition
 
         let condition_t = self.check_expression(condition)?;
@@ -252,11 +248,7 @@ impl SemanticChecker {
         }
     }
 
-    fn check_while(
-        &self,
-        condition: &AstNode,
-        body: &[AstNode],
-    ) -> Result<Option<Type>, SemanticError> {
+    fn check_while(&self, condition: &AstNode, body: &[AstNode]) -> Result<Option<Type>> {
         // Expecting boolean type for the condition
 
         let condition_t = self.check_expression(condition)?;
@@ -268,7 +260,7 @@ impl SemanticChecker {
             .with_scope(Scope::new_loop_scope(), || self.check_body(body))
     }
 
-    fn check_loop_control(&self, span: &Span) -> Result<(), SemanticError> {
+    fn check_loop_control(&self, span: &Span) -> Result<()> {
         if self.context.current_scope_is_inside_loop() {
             Ok(())
         } else {
@@ -279,7 +271,7 @@ impl SemanticChecker {
     fn check_function_declaration(
         &self,
         node: &AstNode,
-    ) -> Result<(FunctionParameterList, FunctionReturnType), SemanticError> {
+    ) -> Result<(FunctionParameterList, FunctionReturnType)> {
         if let AstNode::FunctionDefinition {
             name,
             parameters,
@@ -287,15 +279,7 @@ impl SemanticChecker {
             ..
         } = node
         {
-            let mut params = BTreeMap::new();
-            for (parameter, parameter_t) in parameters {
-                let (name, span) = parameter.unwrap_identifier();
-                let parameter_t = self.convert_type_notation_to_type(parameter_t)?;
-                if params.contains_key(&name) {
-                    return Err(SemanticError::VariableAlreadyExist { name, span });
-                }
-                params.insert(name, parameter_t);
-            }
+            let params = self.convert_function_parameters_to_name_and_types(parameters)?;
 
             let parameter_ts = params.values().cloned().collect::<Vec<_>>();
             let return_t = return_t
@@ -305,22 +289,23 @@ impl SemanticChecker {
             // Save function information
 
             let function_unique_id = node.unwrap_function_unique_id();
-            let function_t = Type::Callable {
-                parameter_ts: parameter_ts.clone(),
-                return_t: Box::new(return_t.clone()),
-            };
 
-            if self.context.global_scope_has_symbol(&function_unique_id) {
-                let (_, name_span) = name.unwrap_identifier();
-                return Err(SemanticError::FunctionVariantAlreadyExist {
-                    name: function_unique_id.to_string(),
-                    args: parameter_ts,
+            self.assert_function_is_not_exist_or(&function_unique_id, || {
+                let (name, name_span) = name.unwrap_identifier();
+                Err(SemanticError::FunctionVariantAlreadyExist {
+                    name,
+                    args: parameter_ts.clone(),
                     span: name_span.clone(),
-                });
-            }
+                })
+            })?;
 
-            self.context
-                .save_symbol_to_global_scope(function_unique_id, function_t);
+            self.context.save_symbol_to_global_scope(
+                function_unique_id,
+                Type::Callable {
+                    parameter_ts,
+                    return_t: Box::new(return_t.clone()),
+                },
+            );
 
             return Ok((params, return_t));
         }
@@ -334,7 +319,7 @@ impl SemanticChecker {
         parameters: &FunctionParameterList,
         return_t: &FunctionReturnType,
         body: &[AstNode],
-    ) -> Result<(), SemanticError> {
+    ) -> Result<()> {
         // Entering new scope
         self.context
             .with_scope(Scope::new_function_scope(return_t.clone()), || {
@@ -363,11 +348,7 @@ impl SemanticChecker {
             })
     }
 
-    fn check_return(
-        &self,
-        expression: &Option<Box<AstNode>>,
-        span: &Span,
-    ) -> Result<Type, SemanticError> {
+    fn check_return(&self, expression: &Option<Box<AstNode>>, span: &Span) -> Result<Type> {
         let expression_t = expression
             .as_ref()
             .map(|expr| self.check_expression(expr).unwrap())
@@ -387,7 +368,7 @@ impl SemanticChecker {
             .map(|_| return_t)
     }
 
-    fn check_expression(&self, expression: &AstNode) -> Result<Type, SemanticError> {
+    fn check_expression(&self, expression: &AstNode) -> Result<Type> {
         match expression {
             AstNode::Assign { lhs, rhs, span } => self.check_assignment(lhs, rhs, span),
 
@@ -433,11 +414,7 @@ impl SemanticChecker {
         }
     }
 
-    fn check_logical_and_or_operation(
-        &self,
-        lhs: &AstNode,
-        rhs: &AstNode,
-    ) -> Result<Type, SemanticError> {
+    fn check_logical_and_or_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
         let lhs_t = self.check_expression(lhs)?;
         let rhs_t = self.check_expression(rhs)?;
 
@@ -447,11 +424,7 @@ impl SemanticChecker {
         Ok(Type::Bool)
     }
 
-    fn check_equality_operation(
-        &self,
-        lhs: &AstNode,
-        rhs: &AstNode,
-    ) -> Result<Type, SemanticError> {
+    fn check_equality_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
         let lhs_t = self.check_expression(lhs)?;
         let rhs_t = self.check_expression(rhs)?;
 
@@ -461,11 +434,7 @@ impl SemanticChecker {
         Ok(Type::Bool)
     }
 
-    fn check_comparison_operation(
-        &self,
-        lhs: &AstNode,
-        rhs: &AstNode,
-    ) -> Result<Type, SemanticError> {
+    fn check_comparison_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
         let lhs_t = self.check_expression(lhs)?;
         let rhs_t = self.check_expression(rhs)?;
 
@@ -478,11 +447,7 @@ impl SemanticChecker {
         Ok(Type::Bool)
     }
 
-    fn check_math_binary_operation(
-        &self,
-        lhs: &AstNode,
-        rhs: &AstNode,
-    ) -> Result<Type, SemanticError> {
+    fn check_math_binary_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
         let lhs_t = self.check_expression(lhs)?;
         let rhs_t = self.check_expression(rhs)?;
 
@@ -496,24 +461,19 @@ impl SemanticChecker {
         }
     }
 
-    fn check_logical_not_operation(&self, child: &AstNode) -> Result<Type, SemanticError> {
+    fn check_logical_not_operation(&self, child: &AstNode) -> Result<Type> {
         let child_t = self.check_expression(child)?;
         self.assert_is_boolean(&child_t, child.get_span())?;
         Ok(Type::Bool)
     }
 
-    fn check_neg_operation(&self, child: &AstNode) -> Result<Type, SemanticError> {
+    fn check_neg_operation(&self, child: &AstNode) -> Result<Type> {
         let child_t = self.check_expression(child)?;
         self.assert_is_number(&child_t, child.get_span())?;
         Ok(child_t)
     }
 
-    fn check_function_call(
-        &self,
-        callee: &AstNode,
-        args: &[AstNode],
-        span: &Span,
-    ) -> Result<Type, SemanticError> {
+    fn check_function_call(&self, callee: &AstNode, args: &[AstNode], span: &Span) -> Result<Type> {
         // transform the arguments into their respective type
         let mut arg_ts = vec![];
         for arg in args {
@@ -550,7 +510,7 @@ impl SemanticChecker {
         }
     }
 
-    fn get_identifier_type(&self, name: &str, err_span: &Span) -> Result<Type, SemanticError> {
+    fn get_identifier_type(&self, name: &str, err_span: &Span) -> Result<Type> {
         if self.context.has_symbol(name) {
             Ok(self.context.get_symbol_type(name))
         } else {
@@ -561,7 +521,7 @@ impl SemanticChecker {
         }
     }
 
-    fn get_literal_type(&self, literal_value: &Value) -> Result<Type, SemanticError> {
+    fn get_literal_type(&self, literal_value: &Value) -> Result<Type> {
         match literal_value {
             Value::Void => Ok(Type::Void),
             Value::Integer(_) => Ok(Type::Int),
@@ -570,10 +530,7 @@ impl SemanticChecker {
         }
     }
 
-    fn convert_type_notation_to_type(
-        &self,
-        type_notation: &AstNode,
-    ) -> Result<Type, SemanticError> {
+    fn convert_type_notation_to_type(&self, type_notation: &AstNode) -> Result<Type> {
         let (type_name, type_span) = type_notation.unwrap_type_notation();
         Type::from_str(&type_name).map_err(|_| SemanticError::TypeNotExist {
             name: type_name,
@@ -581,7 +538,23 @@ impl SemanticChecker {
         })
     }
 
-    fn assert_not_exist_in_current_scope(&self, identifier: &AstNode) -> Result<(), SemanticError> {
+    fn convert_function_parameters_to_name_and_types(
+        &self,
+        parameters: &[(IdentifierNode, TypeNotationNode)],
+    ) -> Result<FunctionParameterList> {
+        let mut params = BTreeMap::new();
+        for (parameter, parameter_t) in parameters {
+            let (name, span) = parameter.unwrap_identifier();
+            let parameter_t = self.convert_type_notation_to_type(parameter_t)?;
+            if params.contains_key(&name) {
+                return Err(SemanticError::VariableAlreadyExist { name, span });
+            }
+            params.insert(name, parameter_t);
+        }
+        Ok(params)
+    }
+
+    fn assert_not_exist_in_current_scope(&self, identifier: &AstNode) -> Result<()> {
         let (name, span) = identifier.unwrap_identifier();
 
         if !self.context.current_scope_has_symbol(&name) {
@@ -591,7 +564,18 @@ impl SemanticChecker {
         }
     }
 
-    fn assert_can_act_as_assignment_lhs(&self, node: &AstNode) -> Result<(), SemanticError> {
+    fn assert_function_is_not_exist_or<F>(&self, function_id: &str, callback: F) -> Result<()>
+    where
+        F: FnOnce() -> Result<()>,
+    {
+        if !self.context.global_scope_has_symbol(function_id) {
+            Ok(())
+        } else {
+            callback()
+        }
+    }
+
+    fn assert_can_act_as_assignment_lhs(&self, node: &AstNode) -> Result<()> {
         if node.can_be_assignment_lhs() {
             Ok(())
         } else {
@@ -602,12 +586,7 @@ impl SemanticChecker {
         }
     }
 
-    fn assert_is_assignable(
-        &self,
-        from: &Type,
-        to: &Type,
-        err_span: &Span,
-    ) -> Result<(), SemanticError> {
+    fn assert_is_assignable(&self, from: &Type, to: &Type, err_span: &Span) -> Result<()> {
         if from.is_assignable_to(to) {
             Ok(())
         } else {
@@ -624,7 +603,7 @@ impl SemanticChecker {
         type_a: &Type,
         type_b: &Type,
         err_span: &Span,
-    ) -> Result<(), SemanticError> {
+    ) -> Result<()> {
         if type_a == type_b {
             Ok(())
         } else {
@@ -636,7 +615,7 @@ impl SemanticChecker {
         }
     }
 
-    fn assert_is_number(&self, t: &Type, err_span: &Span) -> Result<(), SemanticError> {
+    fn assert_is_number(&self, t: &Type, err_span: &Span) -> Result<()> {
         if t.is_number() {
             Ok(())
         } else {
@@ -646,7 +625,7 @@ impl SemanticChecker {
         }
     }
 
-    fn assert_is_boolean(&self, t: &Type, err_span: &Span) -> Result<(), SemanticError> {
+    fn assert_is_boolean(&self, t: &Type, err_span: &Span) -> Result<()> {
         if t.is_boolean() {
             Ok(())
         } else {

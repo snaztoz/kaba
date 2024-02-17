@@ -9,8 +9,8 @@
 use logos::Span;
 use std::fmt::Display;
 
-type IdentifierNode = AstNode;
-type TypeNotationNode = AstNode;
+pub type IdentifierNode = AstNode;
+pub type TypeNotationNode = AstNode;
 
 /// The root of a Kaba source code's AST.
 #[derive(Debug, PartialEq)]
