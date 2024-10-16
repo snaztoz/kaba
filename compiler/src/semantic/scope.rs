@@ -18,7 +18,7 @@ impl Default for ScopeStack {
 
 pub struct Scope {
     pub symbols: HashMap<String, Type>,
-    pub scope_type: ScopeType,
+    pub scope_t: ScopeType,
 }
 
 impl Scope {
@@ -27,35 +27,35 @@ impl Scope {
 
         Self {
             symbols,
-            scope_type: ScopeType::Builtin,
+            scope_t: ScopeType::Builtin,
         }
     }
 
     pub fn new_global_scope() -> Self {
         Self {
             symbols: HashMap::new(),
-            scope_type: ScopeType::Global,
+            scope_t: ScopeType::Global,
         }
     }
 
     pub fn new_conditional_scope() -> Self {
         Self {
             symbols: HashMap::new(),
-            scope_type: ScopeType::Conditional,
+            scope_t: ScopeType::Conditional,
         }
     }
 
     pub fn new_loop_scope() -> Self {
         Self {
             symbols: HashMap::new(),
-            scope_type: ScopeType::Loop,
+            scope_t: ScopeType::Loop,
         }
     }
 
-    pub fn new_function_scope(return_type: Type) -> Self {
+    pub fn new_function_scope(return_t: Type) -> Self {
         Self {
             symbols: HashMap::new(),
-            scope_type: ScopeType::Function { return_type },
+            scope_t: ScopeType::Function { return_t },
         }
     }
 }
@@ -66,5 +66,5 @@ pub enum ScopeType {
     Global,
     Conditional,
     Loop,
-    Function { return_type: Type },
+    Function { return_t: Type },
 }

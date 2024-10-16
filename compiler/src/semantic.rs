@@ -29,7 +29,7 @@ pub fn check(ast: &ProgramAst) -> Result<()> {
 
 #[derive(Default)]
 struct SemanticChecker {
-    context: Context,
+    ctx: Context,
 }
 
 impl SemanticChecker {
@@ -124,12 +124,7 @@ impl SemanticChecker {
         val: &Option<&AstNode>,
         span: &Span,
     ) -> Result<()> {
-        // Can't have the same variable be declared multiple times
-        // in the same scope
-        self.assert_not_exist_in_current_scope(id)?;
-
         let (id, _) = id.unwrap_identifier();
-
         let var_t = tn.map(Type::from_type_notation_node).transpose()?;
         let val_t = val
             .map(|expression| self.check_expression(expression))
@@ -149,18 +144,27 @@ impl SemanticChecker {
             Type::assert_assignable(val_t, var_t, || span.clone())?;
         }
 
-        // Save variable information
-        self.context
-            .save_symbol_to_current_scope(id, var_t.or(val_t).unwrap());
+        let t = var_t.or(val_t).unwrap();
+        self.ctx
+            .save_symbol_or_else(&id, t, || Error::VariableAlreadyExist {
+                id: id.clone(),
+                span: span.clone(),
+            })?;
 
         Ok(())
     }
 
     fn check_assignment(&self, lhs: &AstNode, rhs: &AstNode, span: &Span) -> Result<Type> {
+        if !lhs.is_assignable() {
+            return Err(Error::InvalidAssignmentLhs {
+                lhs: lhs.to_string(),
+                span: lhs.span().clone(),
+            });
+        }
+
         let lhs_t = self.check_expression(lhs)?;
         let rhs_t = self.check_expression(rhs)?;
 
-        self.assert_can_act_as_assignment_lhs(lhs)?;
         Type::assert_assignable(&rhs_t, &lhs_t, || span.clone())?;
 
         Ok(Type::Void)
@@ -194,8 +198,8 @@ impl SemanticChecker {
 
         // Check all statements inside the body with a new scope
 
-        let this_branch_returned_t = self
-            .context
+        let return_t = self
+            .ctx
             .with_scope(Scope::new_conditional_scope(), || self.check_body(body))?;
 
         if or_else.is_none() {
@@ -212,11 +216,11 @@ impl SemanticChecker {
                 // All conditional branches must returning a value for this whole
                 // statement to be considered as returning value
 
-                let sibling_branch_returned_t =
+                let branch_return_t =
                     self.check_conditional_branch(cond, body, &or_else.as_deref())?;
 
-                if this_branch_returned_t.is_some() && sibling_branch_returned_t.is_some() {
-                    Ok(this_branch_returned_t)
+                if return_t.is_some() && branch_return_t.is_some() {
+                    Ok(return_t)
                 } else {
                     Ok(None)
                 }
@@ -225,12 +229,12 @@ impl SemanticChecker {
             AstNode::Else { body, .. } => {
                 // Check all statements inside the body with a new scope
 
-                let else_branch_returned_t = self
-                    .context
+                let branch_return_t = self
+                    .ctx
                     .with_scope(Scope::new_conditional_scope(), || self.check_body(body))?;
 
-                if this_branch_returned_t.is_some() && else_branch_returned_t.is_some() {
-                    Ok(this_branch_returned_t)
+                if return_t.is_some() && branch_return_t.is_some() {
+                    Ok(return_t)
                 } else {
                     Ok(None)
                 }
@@ -248,12 +252,12 @@ impl SemanticChecker {
 
         // Check all statements inside the body with a new scope
 
-        self.context
+        self.ctx
             .with_scope(Scope::new_loop_scope(), || self.check_body(body))
     }
 
     fn check_loop_control(&self, span: &Span) -> Result<()> {
-        if self.context.current_scope_is_inside_loop() {
+        if self.ctx.is_inside_loop() {
             Ok(())
         } else {
             Err(Error::LoopControlNotInLoopScope { span: span.clone() })
@@ -268,27 +272,23 @@ impl SemanticChecker {
             ..
         } = node
         {
-            let (id, id_span) = id.unwrap_identifier();
-            self.assert_function_is_not_exist_or(&id, || {
-                Err(Error::FunctionAlreadyExist {
-                    id: id.clone(),
-                    span: id_span.clone(),
-                })
-            })?;
-
             let params = CallableParameters::from_ast_node_pairs(params)?;
-
             let return_t = return_t
                 .as_ref()
                 .map_or(Ok(Type::Void), |tn| Type::from_type_notation_node(tn))?;
 
-            self.context.save_symbol_to_global_scope(
-                id,
+            let (id, id_span) = id.unwrap_identifier();
+            self.ctx.save_symbol_or_else(
+                &id,
                 Type::Callable {
                     params: params.clone(),
                     return_t: Box::new(return_t.clone()),
                 },
-            );
+                || Error::FunctionAlreadyExist {
+                    id: id.clone(),
+                    span: id_span.clone(),
+                },
+            )?;
 
             return Ok((params, return_t));
         }
@@ -305,11 +305,12 @@ impl SemanticChecker {
         let (params, return_t) = signature;
 
         // Entering new scope
-        self.context
+        self.ctx
             .with_scope(Scope::new_function_scope(return_t.clone()), || {
                 for (i, t) in params.pairs() {
-                    self.context
-                        .save_symbol_to_current_scope(i.to_string(), t.clone());
+                    self.ctx
+                        .save_symbol_or_else(&i, t.clone(), || unreachable!())
+                        .unwrap();
                 }
 
                 // Check function body
@@ -337,7 +338,7 @@ impl SemanticChecker {
             .unwrap_or(Type::Void);
 
         let return_t = self
-            .context
+            .ctx
             .get_current_function_return_type()
             .ok_or_else(|| Error::ReturnNotInFunctionScope { span: span.clone() })?;
 
@@ -384,7 +385,14 @@ impl SemanticChecker {
             AstNode::Not { child, .. } => self.check_logical_not_operation(child),
             AstNode::Neg { child, .. } => self.check_neg_operation(child),
 
-            AstNode::Identifier { name, span } => self.get_identifier_type(name, span),
+            AstNode::Identifier { name, span } => {
+                self.ctx
+                    .get_symbol_type(name)
+                    .ok_or_else(|| Error::VariableNotExist {
+                        id: String::from(name),
+                        span: span.clone(),
+                    })
+            }
 
             AstNode::Literal { value, .. } => Type::from_value(value),
 
@@ -464,7 +472,12 @@ impl SemanticChecker {
         let t = match callee {
             AstNode::Identifier { name, span } => {
                 id = name;
-                self.get_identifier_type(name, span)?
+                self.ctx
+                    .get_symbol_type(name)
+                    .ok_or_else(|| Error::VariableNotExist {
+                        id: String::from(id),
+                        span: span.clone(),
+                    })?
             }
 
             _ => todo!(),
@@ -489,49 +502,6 @@ impl SemanticChecker {
         } else {
             Err(Error::NotAFunction {
                 span: callee.span().clone(),
-            })
-        }
-    }
-
-    fn get_identifier_type(&self, id: &str, err_span: &Span) -> Result<Type> {
-        if self.context.has_symbol(id) {
-            Ok(self.context.get_symbol_type(id))
-        } else {
-            Err(Error::VariableNotExist {
-                id: String::from(id),
-                span: err_span.clone(),
-            })
-        }
-    }
-
-    fn assert_not_exist_in_current_scope(&self, id: &AstNode) -> Result<()> {
-        let (id, span) = id.unwrap_identifier();
-
-        if !self.context.current_scope_has_symbol(&id) {
-            Ok(())
-        } else {
-            Err(Error::VariableAlreadyExist { id, span })
-        }
-    }
-
-    fn assert_function_is_not_exist_or<F>(&self, id: &str, callback: F) -> Result<()>
-    where
-        F: FnOnce() -> Result<()>,
-    {
-        if !self.context.global_scope_has_symbol(id) {
-            Ok(())
-        } else {
-            callback()
-        }
-    }
-
-    fn assert_can_act_as_assignment_lhs(&self, node: &AstNode) -> Result<()> {
-        if node.can_be_assignment_lhs() {
-            Ok(())
-        } else {
-            Err(Error::InvalidAssignmentLhs {
-                lhs: node.to_string(),
-                span: node.span().clone(),
             })
         }
     }

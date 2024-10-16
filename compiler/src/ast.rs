@@ -262,7 +262,7 @@ impl AstNode {
         }
     }
 
-    pub fn can_be_assignment_lhs(&self) -> bool {
+    pub fn is_assignable(&self) -> bool {
         matches!(self, Self::Identifier { .. })
     }
 
