@@ -27,7 +27,7 @@ impl Context {
             .borrow()
             .stack
             .last()
-            .unwrap() // at least builtin and global scope is always exist
+            .unwrap() // at least builtin and global scope will always exist
             .symbols
             .contains_key(name)
     }

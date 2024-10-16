@@ -1,31 +1,15 @@
 // Copyright 2023-2024 Hafidh Muqsithanova Sukarno
 // SPDX-License-Identifier: Apache-2.0
 
-use super::types::Type;
-use std::collections::HashMap;
+use super::types::{CallableParameters, Type};
+use std::collections::{BTreeMap, HashMap};
 
 pub fn get_types() -> HashMap<String, Type> {
-    HashMap::from([
-        (
-            String::from("print/Int"),
-            Type::Callable {
-                parameter_ts: vec![Type::Int],
-                return_t: Box::new(Type::Void),
-            },
-        ),
-        (
-            String::from("print/Float"),
-            Type::Callable {
-                parameter_ts: vec![Type::Float],
-                return_t: Box::new(Type::Void),
-            },
-        ),
-        (
-            String::from("print/Bool"),
-            Type::Callable {
-                parameter_ts: vec![Type::Bool],
-                return_t: Box::new(Type::Void),
-            },
-        ),
-    ])
+    HashMap::from([(
+        String::from("print"),
+        Type::Callable {
+            params: CallableParameters::from_btree_map(BTreeMap::new()),
+            return_t: Box::new(Type::Void),
+        },
+    )])
 }

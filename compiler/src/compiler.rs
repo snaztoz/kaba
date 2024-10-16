@@ -68,7 +68,7 @@ impl Compiler {
                 file_path: self.file_path,
                 source_code: String::from(&self.source_code),
                 message: e.to_string(),
-                span: e.get_span(),
+                span: e.span(),
             });
         }
 
@@ -78,7 +78,7 @@ impl Compiler {
                 file_path: self.file_path,
                 source_code: self.source_code,
                 message: e.to_string(),
-                span: e.get_span(),
+                span: e.span(),
             });
         }
 
@@ -87,7 +87,7 @@ impl Compiler {
                 file_path: self.file_path,
                 source_code: self.source_code,
                 message: e.to_string(),
-                span: Some(e.get_span().clone()),
+                span: Some(e.span().clone()),
             });
         }
 

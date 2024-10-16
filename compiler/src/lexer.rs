@@ -261,7 +261,7 @@ pub enum LexingError {
 }
 
 impl LexingError {
-    pub fn get_span(&self) -> Option<Span> {
+    pub fn span(&self) -> Option<Span> {
         match self {
             Self::IdentifierStartsWithNumber { span, .. } => Some(span.clone()),
             Self::MissingCommentClosingTag { span } => Some(span.clone()),

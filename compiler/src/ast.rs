@@ -15,21 +15,21 @@ pub type TypeNotationNode = AstNode;
 /// The root of a Kaba source code's AST.
 #[derive(Debug, PartialEq)]
 pub struct Program {
-    pub statements: Vec<AstNode>,
+    pub stmts: Vec<AstNode>,
 }
 
 /// The representation of each node that make up a whole Kaba AST.
 #[derive(Debug, PartialEq)]
 pub enum AstNode {
     VariableDeclaration {
-        identifier: Box<AstNode>,
-        var_t: Option<Box<AstNode>>,
-        value: Option<Box<AstNode>>,
+        id: Box<AstNode>,
+        tn: Option<Box<AstNode>>,
+        val: Option<Box<AstNode>>,
         span: Span,
     },
 
     If {
-        condition: Box<AstNode>,
+        cond: Box<AstNode>,
         body: Vec<AstNode>,
         or_else: Option<Box<AstNode>>,
         span: Span,
@@ -41,7 +41,7 @@ pub enum AstNode {
     },
 
     While {
-        condition: Box<AstNode>,
+        cond: Box<AstNode>,
         body: Vec<AstNode>,
         span: Span,
     },
@@ -55,8 +55,8 @@ pub enum AstNode {
     },
 
     FunctionDefinition {
-        name: Box<AstNode>,
-        parameters: Vec<(IdentifierNode, TypeNotationNode)>,
+        id: Box<AstNode>,
+        params: Vec<(IdentifierNode, TypeNotationNode)>,
         return_t: Option<Box<AstNode>>,
         body: Vec<AstNode>,
         span: Span,
@@ -211,7 +211,8 @@ pub enum AstNode {
     },
 
     TypeNotation {
-        name: String,
+        // TODO: change this into Identifier
+        identifier: Box<AstNode>,
         span: Span,
     },
 
@@ -222,7 +223,7 @@ pub enum AstNode {
 }
 
 impl AstNode {
-    pub fn get_span(&self) -> &Span {
+    pub fn span(&self) -> &Span {
         match self {
             Self::VariableDeclaration { span, .. }
             | Self::If { span, .. }
@@ -277,30 +278,11 @@ impl AstNode {
     }
 
     pub fn unwrap_type_notation(&self) -> (String, Span) {
-        if let AstNode::TypeNotation { name, span } = self {
-            (name.clone(), span.clone())
+        if let AstNode::TypeNotation { identifier, span } = self {
+            (identifier.unwrap_identifier().0, span.clone())
         } else {
             panic!(
                 "calling `unwrap_type_notation` on non-type notation AstNode: {:?}",
-                self
-            )
-        }
-    }
-
-    pub fn unwrap_function_unique_id(&self) -> String {
-        if let AstNode::FunctionDefinition {
-            name, parameters, ..
-        } = self
-        {
-            let (identifier, _) = name.unwrap_identifier();
-            let param_ts: Vec<_> = parameters
-                .iter()
-                .map(|(_, pt)| pt.unwrap_type_notation().0)
-                .collect();
-            format!("{identifier}/{}", param_ts.join(","))
-        } else {
-            panic!(
-                "calling `unwrap_function_unique_id` on non-function definition AstNode: {:?}",
                 self
             )
         }

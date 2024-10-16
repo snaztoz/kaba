@@ -4,19 +4,21 @@
 //! This module contains the implementation for semantic analysis
 //! stage of the compiler.
 
-use self::{context::Context, scope::Scope, types::Type};
-use crate::ast::{AstNode, IdentifierNode, Program as ProgramAst, TypeNotationNode, Value};
+use self::{
+    context::Context,
+    error::{Error, Result},
+    scope::Scope,
+    types::{CallableParameters, Type},
+};
+use crate::ast::{AstNode, Program as ProgramAst};
 use logos::Span;
-use std::{collections::BTreeMap, fmt::Display, str::FromStr};
+use types::CallableSignature;
 
 mod builtin_functions;
 mod context;
+mod error;
 mod scope;
 mod types;
-
-type FunctionParameterList = BTreeMap<String, Type>;
-type FunctionReturnType = Type;
-type Result<T> = std::result::Result<T, SemanticError>;
 
 /// Provides a quick way to run semantic analysis on a Kaba AST.
 pub fn check(ast: &ProgramAst) -> Result<()> {
@@ -32,29 +34,32 @@ struct SemanticChecker {
 
 impl SemanticChecker {
     fn check_program(&self, program_ast: &ProgramAst) -> Result<()> {
+        // We are expecting that in global scope, statements (currently) are
+        // consisted of function definitions only. So other statements are
+        // rejected in this scope.
+        //
+        // TODO: review other statements for possibilities to be applied here
+
         let mut functions = vec![];
 
-        for statement in &program_ast.statements {
-            match statement {
+        for stmt in &program_ast.stmts {
+            match stmt {
                 AstNode::FunctionDefinition { .. } => {
-                    let function = self.check_function_declaration(statement)?;
-                    functions.push(function);
+                    let f = self.check_function_declaration(stmt)?;
+                    functions.push(f);
                 }
 
                 node => {
-                    return Err(SemanticError::NotExpectingStatementInGlobal {
-                        span: node.get_span().clone(),
+                    return Err(Error::NotExpectingStatementInGlobal {
+                        span: node.span().clone(),
                     });
                 }
             }
         }
 
-        for (i, statement) in program_ast.statements.iter().enumerate() {
-            if let AstNode::FunctionDefinition { name, body, .. } = statement {
-                let (parameters, return_t) = &functions[i];
-                self.check_function_definition(name, parameters, return_t, body)?;
-            } else {
-                unreachable!();
+        for (i, stmt) in program_ast.stmts.iter().enumerate() {
+            if let AstNode::FunctionDefinition { id, body, .. } = stmt {
+                self.check_function_definition(id, &functions[i], body)?;
             }
         }
 
@@ -62,55 +67,45 @@ impl SemanticChecker {
     }
 
     fn check_body(&self, body: &[AstNode]) -> Result<Option<Type>> {
-        let mut body_returned_t = None;
+        // Body may have a type if it contains a "return" statement
+        let mut body_t = None;
 
         for statement in body {
             match statement {
-                AstNode::VariableDeclaration {
-                    identifier,
-                    var_t,
-                    value,
-                    span,
-                } => self.check_variable_declaration(
-                    identifier,
-                    &var_t.as_deref(),
-                    &value.as_deref(),
-                    span,
-                )?,
+                AstNode::VariableDeclaration { id, tn, val, span } => {
+                    self.check_variable_declaration(id, &tn.as_deref(), &val.as_deref(), span)?
+                }
 
                 AstNode::If {
-                    condition,
+                    cond,
                     body,
                     or_else,
                     ..
                 } => {
-                    let returned_t =
-                        self.check_conditional_branch(condition, body, &or_else.as_deref())?;
+                    let t = self.check_conditional_branch(cond, body, &or_else.as_deref())?;
 
-                    if body_returned_t.is_none() {
-                        body_returned_t = returned_t;
+                    if body_t.is_none() {
+                        body_t = t;
                     }
                 }
 
-                AstNode::While {
-                    condition, body, ..
-                } => {
-                    self.check_while(condition, body)?;
+                AstNode::While { cond, body, .. } => {
+                    self.check_while(cond, body)?;
                 }
 
                 AstNode::Break { span } | AstNode::Continue { span } => {
                     self.check_loop_control(span)?;
                 }
 
-                AstNode::FunctionDefinition { name, .. } => {
-                    return Err(SemanticError::FunctionDefinitionNotInGlobal {
-                        span: name.get_span().clone(),
+                AstNode::FunctionDefinition { id, .. } => {
+                    return Err(Error::FunctionDefinitionNotInGlobal {
+                        span: id.span().clone(),
                     })
                 }
 
                 AstNode::Return { expression, span } => {
-                    let returned_t = self.check_return(expression, span)?;
-                    body_returned_t = Some(returned_t);
+                    let t = self.check_return(expression, span)?;
+                    body_t = Some(t);
                 }
 
                 expression => {
@@ -119,47 +114,44 @@ impl SemanticChecker {
             }
         }
 
-        Ok(body_returned_t)
+        Ok(body_t)
     }
 
     fn check_variable_declaration(
         &self,
-        identifier: &AstNode,
-        var_t: &Option<&AstNode>,
-        value: &Option<&AstNode>,
+        id: &AstNode,
+        tn: &Option<&AstNode>,
+        val: &Option<&AstNode>,
         span: &Span,
     ) -> Result<()> {
-        let (var_name, _) = identifier.unwrap_identifier();
-
         // Can't have the same variable be declared multiple times
         // in the same scope
-        self.assert_not_exist_in_current_scope(identifier)?;
+        self.assert_not_exist_in_current_scope(id)?;
 
-        let var_t = var_t
-            .map(|vt| self.convert_type_notation_to_type(vt))
-            .transpose()?;
+        let (id, _) = id.unwrap_identifier();
 
-        let value_t = value
+        let var_t = tn.map(Type::from_type_notation_node).transpose()?;
+        let val_t = val
             .map(|expression| self.check_expression(expression))
             .transpose()?;
 
         // Either variable's or value's type must be present
-        if var_t.is_none() && value_t.is_none() {
-            return Err(SemanticError::UnableToInferVariableType {
-                name: var_name,
+        if var_t.is_none() && val_t.is_none() {
+            return Err(Error::UnableToInferVariableType {
+                id,
                 span: span.clone(),
             });
         }
 
         // If both present, check if value's type is compatible with
         // the variable's
-        if let (Some(var_t), Some(value_t)) = (&var_t, &value_t) {
-            self.assert_is_assignable(value_t, var_t, span)?;
+        if let (Some(var_t), Some(val_t)) = (&var_t, &val_t) {
+            Type::assert_assignable(val_t, var_t, || span.clone())?;
         }
 
         // Save variable information
         self.context
-            .save_symbol_to_current_scope(var_name, var_t.or(value_t).unwrap());
+            .save_symbol_to_current_scope(id, var_t.or(val_t).unwrap());
 
         Ok(())
     }
@@ -169,7 +161,7 @@ impl SemanticChecker {
         let rhs_t = self.check_expression(rhs)?;
 
         self.assert_can_act_as_assignment_lhs(lhs)?;
-        self.assert_is_assignable(&rhs_t, &lhs_t, span)?;
+        Type::assert_assignable(&rhs_t, &lhs_t, || span.clone())?;
 
         Ok(Type::Void)
     }
@@ -183,22 +175,22 @@ impl SemanticChecker {
         let lhs_t = self.check_expression(lhs)?;
         let rhs_t = self.check_expression(rhs)?;
 
-        self.assert_is_number(&lhs_t, lhs.get_span())?;
-        self.assert_is_number(&rhs_t, rhs.get_span())?;
+        Type::assert_number(&lhs_t, || lhs.span().clone())?;
+        Type::assert_number(&rhs_t, || rhs.span().clone())?;
 
         self.check_assignment(lhs, rhs, span)
     }
 
     fn check_conditional_branch(
         &self,
-        condition: &AstNode,
+        cond: &AstNode,
         body: &[AstNode],
         or_else: &Option<&AstNode>,
     ) -> Result<Option<Type>> {
         // Expecting boolean type for the condition
 
-        let condition_t = self.check_expression(condition)?;
-        self.assert_is_boolean(&condition_t, condition.get_span())?;
+        let cond_t = self.check_expression(cond)?;
+        Type::assert_boolean(&cond_t, || cond.span().clone())?;
 
         // Check all statements inside the body with a new scope
 
@@ -212,7 +204,7 @@ impl SemanticChecker {
 
         match or_else.unwrap() {
             AstNode::If {
-                condition,
+                cond,
                 body,
                 or_else,
                 ..
@@ -221,7 +213,7 @@ impl SemanticChecker {
                 // statement to be considered as returning value
 
                 let sibling_branch_returned_t =
-                    self.check_conditional_branch(condition, body, &or_else.as_deref())?;
+                    self.check_conditional_branch(cond, body, &or_else.as_deref())?;
 
                 if this_branch_returned_t.is_some() && sibling_branch_returned_t.is_some() {
                     Ok(this_branch_returned_t)
@@ -251,8 +243,8 @@ impl SemanticChecker {
     fn check_while(&self, condition: &AstNode, body: &[AstNode]) -> Result<Option<Type>> {
         // Expecting boolean type for the condition
 
-        let condition_t = self.check_expression(condition)?;
-        self.assert_is_boolean(&condition_t, condition.get_span())?;
+        let cond_t = self.check_expression(condition)?;
+        Type::assert_boolean(&cond_t, || condition.span().clone())?;
 
         // Check all statements inside the body with a new scope
 
@@ -264,45 +256,36 @@ impl SemanticChecker {
         if self.context.current_scope_is_inside_loop() {
             Ok(())
         } else {
-            Err(SemanticError::LoopControlNotInLoopScope { span: span.clone() })
+            Err(Error::LoopControlNotInLoopScope { span: span.clone() })
         }
     }
 
-    fn check_function_declaration(
-        &self,
-        node: &AstNode,
-    ) -> Result<(FunctionParameterList, FunctionReturnType)> {
+    fn check_function_declaration(&self, node: &AstNode) -> Result<CallableSignature> {
         if let AstNode::FunctionDefinition {
-            name,
-            parameters,
+            id,
+            params,
             return_t,
             ..
         } = node
         {
-            let params = self.convert_function_parameters_to_name_and_types(parameters)?;
-
-            let parameter_ts = params.values().cloned().collect::<Vec<_>>();
-            let return_t = return_t
-                .as_ref()
-                .map_or(Ok(Type::Void), |tn| self.convert_type_notation_to_type(tn))?;
-
-            // Save function information
-
-            let function_unique_id = node.unwrap_function_unique_id();
-
-            self.assert_function_is_not_exist_or(&function_unique_id, || {
-                let (name, name_span) = name.unwrap_identifier();
-                Err(SemanticError::FunctionVariantAlreadyExist {
-                    name,
-                    args: parameter_ts.clone(),
-                    span: name_span.clone(),
+            let (id, id_span) = id.unwrap_identifier();
+            self.assert_function_is_not_exist_or(&id, || {
+                Err(Error::FunctionAlreadyExist {
+                    id: id.clone(),
+                    span: id_span.clone(),
                 })
             })?;
 
+            let params = CallableParameters::from_ast_node_pairs(params)?;
+
+            let return_t = return_t
+                .as_ref()
+                .map_or(Ok(Type::Void), |tn| Type::from_type_notation_node(tn))?;
+
             self.context.save_symbol_to_global_scope(
-                function_unique_id,
+                id,
                 Type::Callable {
-                    parameter_ts,
+                    params: params.clone(),
                     return_t: Box::new(return_t.clone()),
                 },
             );
@@ -315,19 +298,18 @@ impl SemanticChecker {
 
     fn check_function_definition(
         &self,
-        name: &AstNode,
-        parameters: &FunctionParameterList,
-        return_t: &FunctionReturnType,
+        id: &AstNode,
+        signature: &CallableSignature,
         body: &[AstNode],
     ) -> Result<()> {
+        let (params, return_t) = signature;
+
         // Entering new scope
         self.context
             .with_scope(Scope::new_function_scope(return_t.clone()), || {
-                for (parameter_name, parameter_t) in parameters {
-                    self.context.save_symbol_to_current_scope(
-                        parameter_name.to_string(),
-                        parameter_t.clone(),
-                    );
+                for (i, t) in params.pairs() {
+                    self.context
+                        .save_symbol_to_current_scope(i.to_string(), t.clone());
                 }
 
                 // Check function body
@@ -335,12 +317,12 @@ impl SemanticChecker {
                 // We do this last in order to accommodate features such as
                 // recursive function call.
 
-                let body_returned_t = self.check_body(body)?;
+                let body_t = self.check_body(body)?;
 
-                if !return_t.is_void() && body_returned_t.is_none() {
-                    return Err(SemanticError::FunctionNotReturningValue {
-                        expecting_t: return_t.clone(),
-                        span: name.get_span().clone(),
+                if !return_t.is_void() && body_t.is_none() {
+                    return Err(Error::FunctionNotReturningValue {
+                        expect: return_t.clone(),
+                        span: id.span().clone(),
                     });
                 }
 
@@ -348,8 +330,8 @@ impl SemanticChecker {
             })
     }
 
-    fn check_return(&self, expression: &Option<Box<AstNode>>, span: &Span) -> Result<Type> {
-        let expression_t = expression
+    fn check_return(&self, expr: &Option<Box<AstNode>>, span: &Span) -> Result<Type> {
+        let expr_t = expr
             .as_ref()
             .map(|expr| self.check_expression(expr).unwrap())
             .unwrap_or(Type::Void);
@@ -357,19 +339,19 @@ impl SemanticChecker {
         let return_t = self
             .context
             .get_current_function_return_type()
-            .ok_or_else(|| SemanticError::ReturnNotInFunctionScope { span: span.clone() })?;
+            .ok_or_else(|| Error::ReturnNotInFunctionScope { span: span.clone() })?;
 
-        self.assert_is_assignable(&expression_t, &return_t, span)
-            .map_err(|err| SemanticError::ReturnTypeMismatch {
-                expecting: return_t.clone(),
-                get: expression_t,
-                span: err.get_span().clone(),
+        Type::assert_assignable(&expr_t, &return_t, || span.clone())
+            .map_err(|err| Error::ReturnTypeMismatch {
+                expect: return_t.clone(),
+                get: expr_t,
+                span: err.span().clone(),
             })
             .map(|_| return_t)
     }
 
-    fn check_expression(&self, expression: &AstNode) -> Result<Type> {
-        match expression {
+    fn check_expression(&self, expr: &AstNode) -> Result<Type> {
+        match expr {
             AstNode::Assign { lhs, rhs, span } => self.check_assignment(lhs, rhs, span),
 
             AstNode::AddAssign { lhs, rhs, span }
@@ -404,7 +386,7 @@ impl SemanticChecker {
 
             AstNode::Identifier { name, span } => self.get_identifier_type(name, span),
 
-            AstNode::Literal { value, .. } => self.get_literal_type(value),
+            AstNode::Literal { value, .. } => Type::from_value(value),
 
             AstNode::FunctionCall { callee, args, span } => {
                 self.check_function_call(callee, args, span)
@@ -418,8 +400,8 @@ impl SemanticChecker {
         let lhs_t = self.check_expression(lhs)?;
         let rhs_t = self.check_expression(rhs)?;
 
-        self.assert_is_boolean(&lhs_t, lhs.get_span())?;
-        self.assert_is_boolean(&rhs_t, rhs.get_span())?;
+        Type::assert_boolean(&lhs_t, || lhs.span().clone())?;
+        Type::assert_boolean(&rhs_t, || rhs.span().clone())?;
 
         Ok(Type::Bool)
     }
@@ -428,8 +410,7 @@ impl SemanticChecker {
         let lhs_t = self.check_expression(lhs)?;
         let rhs_t = self.check_expression(rhs)?;
 
-        let span = lhs.get_span().start..rhs.get_span().end;
-        self.assert_is_comparable_between(&lhs_t, &rhs_t, &span)?;
+        Type::assert_comparable(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
         Ok(Type::Bool)
     }
@@ -438,11 +419,10 @@ impl SemanticChecker {
         let lhs_t = self.check_expression(lhs)?;
         let rhs_t = self.check_expression(rhs)?;
 
-        let span = lhs.get_span().start..rhs.get_span().end;
-        self.assert_is_comparable_between(&lhs_t, &rhs_t, &span)?;
+        Type::assert_comparable(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
-        self.assert_is_number(&lhs_t, lhs.get_span())?;
-        self.assert_is_number(&rhs_t, rhs.get_span())?;
+        Type::assert_number(&lhs_t, || lhs.span().clone())?;
+        Type::assert_number(&rhs_t, || rhs.span().clone())?;
 
         Ok(Type::Bool)
     }
@@ -451,8 +431,8 @@ impl SemanticChecker {
         let lhs_t = self.check_expression(lhs)?;
         let rhs_t = self.check_expression(rhs)?;
 
-        self.assert_is_number(&lhs_t, lhs.get_span())?;
-        self.assert_is_number(&rhs_t, rhs.get_span())?;
+        Type::assert_number(&lhs_t, || lhs.span().clone())?;
+        Type::assert_number(&rhs_t, || rhs.span().clone())?;
 
         if lhs_t == Type::Int && rhs_t == Type::Int {
             Ok(Type::Int)
@@ -463,112 +443,82 @@ impl SemanticChecker {
 
     fn check_logical_not_operation(&self, child: &AstNode) -> Result<Type> {
         let child_t = self.check_expression(child)?;
-        self.assert_is_boolean(&child_t, child.get_span())?;
+        Type::assert_boolean(&child_t, || child.span().clone())?;
         Ok(Type::Bool)
     }
 
     fn check_neg_operation(&self, child: &AstNode) -> Result<Type> {
         let child_t = self.check_expression(child)?;
-        self.assert_is_number(&child_t, child.get_span())?;
+        Type::assert_number(&child_t, || child.span().clone())?;
         Ok(child_t)
     }
 
     fn check_function_call(&self, callee: &AstNode, args: &[AstNode], span: &Span) -> Result<Type> {
         // transform the arguments into their respective type
-        let mut arg_ts = vec![];
+        let mut args_t = vec![];
         for arg in args {
-            arg_ts.push(self.check_expression(arg)?)
+            args_t.push(self.check_expression(arg)?)
         }
 
+        let id: &str;
         let t = match callee {
             AstNode::Identifier { name, span } => {
-                let arg_ts: Vec<_> = arg_ts.iter().map(|arg| arg.to_string()).collect();
-                let function_signature = format!("{name}/{}", arg_ts.join(","));
-                self.get_identifier_type(&function_signature, span)?
+                id = name;
+                self.get_identifier_type(name, span)?
             }
 
             _ => todo!(),
         };
 
-        if let Type::Callable {
-            parameter_ts,
-            return_t,
-        } = &t
-        {
-            if parameter_ts != &arg_ts {
-                return Err(SemanticError::FunctionVariantNotExist {
-                    args: arg_ts,
+        if let Type::Callable { params, return_t } = &t {
+            // Bypass "print" function
+            //
+            // TODO: This is only a temporary workaround
+            if id == "print" {
+                return Ok(*return_t.clone());
+            }
+
+            if params.types() != args_t {
+                return Err(Error::InvalidFunctionCallArgument {
+                    args: args_t,
                     span: span.clone(),
                 });
             }
 
             Ok(*return_t.clone())
         } else {
-            Err(SemanticError::NotAFunction {
-                span: callee.get_span().clone(),
+            Err(Error::NotAFunction {
+                span: callee.span().clone(),
             })
         }
     }
 
-    fn get_identifier_type(&self, name: &str, err_span: &Span) -> Result<Type> {
-        if self.context.has_symbol(name) {
-            Ok(self.context.get_symbol_type(name))
+    fn get_identifier_type(&self, id: &str, err_span: &Span) -> Result<Type> {
+        if self.context.has_symbol(id) {
+            Ok(self.context.get_symbol_type(id))
         } else {
-            Err(SemanticError::VariableNotExist {
-                name: String::from(name),
+            Err(Error::VariableNotExist {
+                id: String::from(id),
                 span: err_span.clone(),
             })
         }
     }
 
-    fn get_literal_type(&self, literal_value: &Value) -> Result<Type> {
-        match literal_value {
-            Value::Void => Ok(Type::Void),
-            Value::Integer(_) => Ok(Type::Int),
-            Value::Float(_) => Ok(Type::Float),
-            Value::Boolean(_) => Ok(Type::Bool),
-        }
-    }
+    fn assert_not_exist_in_current_scope(&self, id: &AstNode) -> Result<()> {
+        let (id, span) = id.unwrap_identifier();
 
-    fn convert_type_notation_to_type(&self, type_notation: &AstNode) -> Result<Type> {
-        let (type_name, type_span) = type_notation.unwrap_type_notation();
-        Type::from_str(&type_name).map_err(|_| SemanticError::TypeNotExist {
-            name: type_name,
-            span: type_span,
-        })
-    }
-
-    fn convert_function_parameters_to_name_and_types(
-        &self,
-        parameters: &[(IdentifierNode, TypeNotationNode)],
-    ) -> Result<FunctionParameterList> {
-        let mut params = BTreeMap::new();
-        for (parameter, parameter_t) in parameters {
-            let (name, span) = parameter.unwrap_identifier();
-            let parameter_t = self.convert_type_notation_to_type(parameter_t)?;
-            if params.contains_key(&name) {
-                return Err(SemanticError::VariableAlreadyExist { name, span });
-            }
-            params.insert(name, parameter_t);
-        }
-        Ok(params)
-    }
-
-    fn assert_not_exist_in_current_scope(&self, identifier: &AstNode) -> Result<()> {
-        let (name, span) = identifier.unwrap_identifier();
-
-        if !self.context.current_scope_has_symbol(&name) {
+        if !self.context.current_scope_has_symbol(&id) {
             Ok(())
         } else {
-            Err(SemanticError::VariableAlreadyExist { name, span })
+            Err(Error::VariableAlreadyExist { id, span })
         }
     }
 
-    fn assert_function_is_not_exist_or<F>(&self, function_id: &str, callback: F) -> Result<()>
+    fn assert_function_is_not_exist_or<F>(&self, id: &str, callback: F) -> Result<()>
     where
         F: FnOnce() -> Result<()>,
     {
-        if !self.context.global_scope_has_symbol(function_id) {
+        if !self.context.global_scope_has_symbol(id) {
             Ok(())
         } else {
             callback()
@@ -579,261 +529,10 @@ impl SemanticChecker {
         if node.can_be_assignment_lhs() {
             Ok(())
         } else {
-            Err(SemanticError::InvalidAssignmentLhs {
+            Err(Error::InvalidAssignmentLhs {
                 lhs: node.to_string(),
-                span: node.get_span().clone(),
+                span: node.span().clone(),
             })
-        }
-    }
-
-    fn assert_is_assignable(&self, from: &Type, to: &Type, err_span: &Span) -> Result<()> {
-        if from.is_assignable_to(to) {
-            Ok(())
-        } else {
-            Err(SemanticError::UnableToAssignValueType {
-                var_t: to.to_string(),
-                value_t: from.to_string(),
-                span: err_span.clone(),
-            })
-        }
-    }
-
-    fn assert_is_comparable_between(
-        &self,
-        type_a: &Type,
-        type_b: &Type,
-        err_span: &Span,
-    ) -> Result<()> {
-        if type_a == type_b {
-            Ok(())
-        } else {
-            Err(SemanticError::UnableToCompareTypeAWithTypeB {
-                type_a: type_a.clone(),
-                type_b: type_b.clone(),
-                span: err_span.clone(),
-            })
-        }
-    }
-
-    fn assert_is_number(&self, t: &Type, err_span: &Span) -> Result<()> {
-        if t.is_number() {
-            Ok(())
-        } else {
-            Err(SemanticError::NotANumber {
-                span: err_span.clone(),
-            })
-        }
-    }
-
-    fn assert_is_boolean(&self, t: &Type, err_span: &Span) -> Result<()> {
-        if t.is_boolean() {
-            Ok(())
-        } else {
-            Err(SemanticError::NotABoolean {
-                span: err_span.clone(),
-            })
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum SemanticError {
-    UnableToInferVariableType {
-        name: String,
-        span: Span,
-    },
-
-    UnableToAssignValueType {
-        var_t: String,
-        value_t: String,
-        span: Span,
-    },
-
-    InvalidAssignmentLhs {
-        lhs: String,
-        span: Span,
-    },
-
-    UnableToCompareTypeAWithTypeB {
-        type_a: Type,
-        type_b: Type,
-        span: Span,
-    },
-
-    VariableAlreadyExist {
-        name: String,
-        span: Span,
-    },
-
-    VariableNotExist {
-        name: String,
-        span: Span,
-    },
-
-    TypeNotExist {
-        name: String,
-        span: Span,
-    },
-
-    NotANumber {
-        span: Span,
-    },
-
-    NotABoolean {
-        span: Span,
-    },
-
-    NotAFunction {
-        span: Span,
-    },
-
-    NotExpectingStatementInGlobal {
-        span: Span,
-    },
-
-    FunctionDefinitionNotInGlobal {
-        span: Span,
-    },
-
-    FunctionVariantAlreadyExist {
-        name: String,
-        args: Vec<Type>,
-        span: Span,
-    },
-
-    FunctionVariantNotExist {
-        args: Vec<Type>,
-        span: Span,
-    },
-
-    FunctionNotReturningValue {
-        expecting_t: Type,
-        span: Span,
-    },
-
-    ReturnNotInFunctionScope {
-        span: Span,
-    },
-
-    ReturnTypeMismatch {
-        expecting: Type,
-        get: Type,
-        span: Span,
-    },
-
-    LoopControlNotInLoopScope {
-        span: Span,
-    },
-}
-
-impl SemanticError {
-    pub fn get_span(&self) -> &Span {
-        match self {
-            Self::UnableToInferVariableType { span, .. }
-            | Self::UnableToAssignValueType { span, .. }
-            | Self::InvalidAssignmentLhs { span, .. }
-            | Self::UnableToCompareTypeAWithTypeB { span, .. }
-            | Self::VariableNotExist { span, .. }
-            | Self::VariableAlreadyExist { span, .. }
-            | Self::TypeNotExist { span, .. }
-            | Self::NotANumber { span, .. }
-            | Self::NotABoolean { span, .. }
-            | Self::NotAFunction { span, .. }
-            | Self::NotExpectingStatementInGlobal { span }
-            | Self::FunctionDefinitionNotInGlobal { span, .. }
-            | Self::FunctionVariantAlreadyExist { span, .. }
-            | Self::FunctionVariantNotExist { span, .. }
-            | Self::FunctionNotReturningValue { span, .. }
-            | Self::ReturnNotInFunctionScope { span, .. }
-            | Self::ReturnTypeMismatch { span, .. }
-            | Self::LoopControlNotInLoopScope { span } => span,
-        }
-    }
-}
-
-impl Display for SemanticError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::UnableToInferVariableType { name, .. } => {
-                write!(f, "unable to infer the type of variable `{name}` because of no type or initial value were provided")
-            }
-            Self::UnableToAssignValueType { var_t, value_t, .. } => {
-                write!(
-                    f,
-                    "unable to assign value of type `{value_t}` to type `{var_t}`"
-                )
-            }
-            Self::InvalidAssignmentLhs { lhs, .. } => {
-                write!(f, "{lhs} can not be an assignment's lhs")
-            }
-            Self::UnableToCompareTypeAWithTypeB { type_a, type_b, .. } => {
-                write!(
-                    f,
-                    "unable to compare the value of type `{type_a}` with type `{type_b}`"
-                )
-            }
-            Self::VariableAlreadyExist { name, .. } => {
-                write!(f, "variable `{name}` already exists in current scope")
-            }
-            Self::VariableNotExist { name, .. } => {
-                write!(f, "variable `{name}` is not exist in current scope")
-            }
-            Self::TypeNotExist { name, .. } => {
-                write!(f, "type `{name}` is not exist")
-            }
-            Self::NotANumber { .. } => {
-                write!(f, "not a number")
-            }
-            Self::NotABoolean { .. } => {
-                write!(f, "not a boolean")
-            }
-            Self::NotAFunction { .. } => {
-                write!(f, "not a function")
-            }
-            Self::NotExpectingStatementInGlobal { .. } => {
-                write!(f, "expecting only function definitions in global scope")
-            }
-            Self::FunctionDefinitionNotInGlobal { .. } => {
-                write!(f, "unable to define functions in non-global scope")
-            }
-            Self::FunctionVariantAlreadyExist { name, args, .. } => {
-                write!(
-                    f,
-                    "function `{name}` with variant of `{:?}` is already exists",
-                    args
-                )
-            }
-            Self::FunctionVariantNotExist { args, .. } => {
-                write!(
-                    f,
-                    "unable to call function with argument(s) of type {:?}",
-                    args
-                )
-            }
-            Self::FunctionNotReturningValue { expecting_t, .. } => {
-                write!(
-                    f,
-                    "expecting function to return a value of type {expecting_t}, but none was returned",
-                )
-            }
-            Self::ReturnNotInFunctionScope { .. } => {
-                write!(
-                    f,
-                    "the usage of `return` statement must be within a function body",
-                )
-            }
-            Self::ReturnTypeMismatch { expecting, get, .. } => {
-                write!(
-                    f,
-                    "expecting to returning value of type `{expecting}`, but get `{get}` instead",
-                )
-            }
-            Self::LoopControlNotInLoopScope { .. } => {
-                write!(
-                    f,
-                    "the usage of `break` and `continue` statements must be within a loop"
-                )
-            }
         }
     }
 }
@@ -1194,8 +893,8 @@ mod tests {
     }
 
     #[test]
-    fn test_defining_function_overloading() {
-        check_and_assert_is_ok(indoc! {"
+    fn test_defining_duplicated_function() {
+        check_and_assert_is_err(indoc! {"
                 fn printSumOf(a: Int, b: Int,) {
                     print(a + b);
                 }
@@ -1211,24 +910,6 @@ mod tests {
         check_and_assert_is_ok(indoc! {"
                 fn sum(x: Int, y: Int): Int {
                     return x + y;
-                }
-            "});
-    }
-
-    #[test]
-    fn test_calling_overloaded_functions_with_one_of_its_variants() {
-        check_and_assert_is_ok(indoc! {"
-                fn sum(x: Int, y: Int): Int {
-                    return x + y;
-                }
-
-                fn sum(x: Float, y: Float): Float {
-                    return x + y;
-                }
-
-                fn main() {
-                    var result = sum(5, 7);
-                    print(result);
                 }
             "});
     }
@@ -1331,15 +1012,6 @@ mod tests {
             "});
     }
 
-    // #[test]
-    // fn test_defining_function_with_an_already_taken_name_in_the_same_scope() {
-    //     check_and_assert_is_err(indoc! {"
-    //             var foo: Int = 0;
-
-    //             fn foo() {}
-    //         "});
-    // }
-
     #[test]
     fn test_defining_function_with_an_invalid_return_type() {
         check_and_assert_is_err(indoc! {"
@@ -1388,40 +1060,6 @@ mod tests {
                 }
             "});
     }
-
-    #[test]
-    fn test_defining_overloaded_functions_with_duplicated_parameters() {
-        check_and_assert_is_err(indoc! {"
-                fn sum(x: Int, y: Int): Int {
-                    return x + y;
-                }
-
-                fn sum(x: Int, y: Int): Float {
-                    return x + y;
-                }
-            "});
-    }
-
-    #[test]
-    fn test_calling_overloaded_function_with_a_non_existing_variant() {
-        check_and_assert_is_err(indoc! {"
-                fn foo(x: Int) {}
-                fn foo(x: Float) {}
-
-                fn main() {
-                    foo(true);
-                }
-            "});
-    }
-
-    // #[test]
-    // fn test_using_return_statement_not_in_function_scope() {
-    //     check_and_assert_is_err(indoc! {"
-    //             if true {
-    //                 return;
-    //             }
-    //         "});
-    // }
 
     #[test]
     fn test_defining_function_with_missing_return_in_other_branches() {
@@ -1478,7 +1116,7 @@ mod tests {
             let ast = parser::parse(tokens).unwrap();
 
             let checker = SemanticChecker::default();
-            let result = checker.check_expression(&ast.statements[0]);
+            let result = checker.check_expression(&ast.stmts[0]);
 
             assert!(result.is_ok());
             assert_eq!(result.unwrap(), expected);

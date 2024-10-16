@@ -31,17 +31,17 @@ impl Parser {
     }
 
     fn parse(&mut self) -> Result<ProgramAst, ParsingError> {
-        let mut statements = vec![];
+        let mut stmts = vec![];
 
         loop {
             if self.current_token_is(&Token::Eof) {
                 break;
             }
-            let statement = self.parse_statement()?;
-            statements.push(statement)
+            let stmt = self.parse_statement()?;
+            stmts.push(stmt)
         }
 
-        Ok(ProgramAst { statements })
+        Ok(ProgramAst { stmts })
     }
 
     fn parse_block(&mut self) -> Result<(Vec<AstNode>, Span), ParsingError> {
@@ -109,7 +109,7 @@ impl Parser {
         // Parse identifier
 
         let token = self.get_current_rich_token();
-        let identifier = match token.kind {
+        let id = match token.kind {
             Token::Identifier(name) => Box::new(AstNode::Identifier {
                 name,
                 span: token.span.clone(),
@@ -128,12 +128,12 @@ impl Parser {
 
         // Expecting ":" (optional)
 
-        let var_t = if self.current_token_is(&Token::Colon) {
+        let tn = if self.current_token_is(&Token::Colon) {
             self.skip(&Token::Colon)?;
 
             let vt = self.parse_type_notation()?;
 
-            end = vt.get_span().end;
+            end = vt.span().end;
 
             Some(Box::new(vt))
         } else {
@@ -142,11 +142,11 @@ impl Parser {
 
         // Expecting "=" (optional)
 
-        let value = if self.current_token_is(&Token::Assign) {
+        let val = if self.current_token_is(&Token::Assign) {
             self.skip(&Token::Assign)?;
 
             let expression = self.parse_expression()?;
-            end = expression.get_span().end;
+            end = expression.span().end;
 
             Some(Box::new(expression.unwrap_group()))
         } else {
@@ -158,9 +158,9 @@ impl Parser {
         self.skip(&Token::Semicolon)?;
 
         Ok(AstNode::VariableDeclaration {
-            identifier,
-            var_t,
-            value,
+            id,
+            tn,
+            val,
             span: start..end,
         })
     }
@@ -171,7 +171,10 @@ impl Parser {
             Token::Identifier(name) => {
                 self.advance();
                 Ok(AstNode::TypeNotation {
-                    name,
+                    identifier: Box::new(AstNode::Identifier {
+                        name,
+                        span: token.span.clone(),
+                    }),
                     span: token.span.clone(),
                 })
             }
@@ -190,7 +193,7 @@ impl Parser {
 
         // Expecting expression
 
-        let condition = self.parse_expression()?;
+        let cond = self.parse_expression()?;
 
         // Expecting block
 
@@ -209,7 +212,7 @@ impl Parser {
                     // Expecting "else if ..." statement
 
                     let alt = self.parse_conditional_branch()?;
-                    end = alt.get_span().end;
+                    end = alt.span().end;
 
                     Some(Box::new(alt))
                 }
@@ -240,7 +243,7 @@ impl Parser {
         };
 
         Ok(AstNode::If {
-            condition: Box::new(condition),
+            cond: Box::new(cond),
             body: block_statements,
             or_else,
             span: start..end,
@@ -253,7 +256,7 @@ impl Parser {
 
         // Expecting expression
 
-        let condition = self.parse_expression()?;
+        let cond = self.parse_expression()?;
 
         // Expecting block
 
@@ -261,7 +264,7 @@ impl Parser {
         let end = block_span.end;
 
         Ok(AstNode::While {
-            condition: Box::new(condition),
+            cond: Box::new(cond),
             body: block_statements,
             span: start..end,
         })
@@ -318,7 +321,7 @@ impl Parser {
 
         // Followed by >= 0 function parameter declaration(s)
 
-        let mut parameters = vec![];
+        let mut params = vec![];
         while !self.current_token_is(&Token::RParen) {
             // Expecting identifier
 
@@ -351,7 +354,7 @@ impl Parser {
 
             // Add to parameter list
 
-            parameters.push((parameter, parameter_t));
+            params.push((parameter, parameter_t));
 
             // Expecting either "," or ")"
 
@@ -393,8 +396,8 @@ impl Parser {
         let (body, body_span) = self.parse_block()?;
 
         Ok(AstNode::FunctionDefinition {
-            name: Box::new(name),
-            parameters,
+            id: Box::new(name),
+            params,
             return_t,
             body,
             span: start..body_span.end,
@@ -412,7 +415,7 @@ impl Parser {
             None
         } else {
             let expression = self.parse_expression()?;
-            end = expression.get_span().end;
+            end = expression.span().end;
             Some(Box::new(expression))
         };
 
@@ -442,7 +445,7 @@ impl Parser {
                 self.skip(&Token::Assign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
-                let span = lhs.get_span().start..rhs.get_span().end;
+                let span = lhs.span().start..rhs.span().end;
 
                 Ok(AstNode::Assign {
                     lhs: Box::new(lhs.unwrap_group()),
@@ -454,7 +457,7 @@ impl Parser {
                 self.skip(&Token::AddAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
-                let span = lhs.get_span().start..rhs.get_span().end;
+                let span = lhs.span().start..rhs.span().end;
 
                 Ok(AstNode::AddAssign {
                     lhs: Box::new(lhs.unwrap_group()),
@@ -466,7 +469,7 @@ impl Parser {
                 self.skip(&Token::SubAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
-                let span = lhs.get_span().start..rhs.get_span().end;
+                let span = lhs.span().start..rhs.span().end;
 
                 Ok(AstNode::SubAssign {
                     lhs: Box::new(lhs.unwrap_group()),
@@ -478,7 +481,7 @@ impl Parser {
                 self.skip(&Token::MulAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
-                let span = lhs.get_span().start..rhs.get_span().end;
+                let span = lhs.span().start..rhs.span().end;
 
                 Ok(AstNode::MulAssign {
                     lhs: Box::new(lhs.unwrap_group()),
@@ -490,7 +493,7 @@ impl Parser {
                 self.skip(&Token::DivAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
-                let span = lhs.get_span().start..rhs.get_span().end;
+                let span = lhs.span().start..rhs.span().end;
 
                 Ok(AstNode::DivAssign {
                     lhs: Box::new(lhs.unwrap_group()),
@@ -502,7 +505,7 @@ impl Parser {
                 self.skip(&Token::ModAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
-                let span = lhs.get_span().start..rhs.get_span().end;
+                let span = lhs.span().start..rhs.span().end;
 
                 Ok(AstNode::ModAssign {
                     lhs: Box::new(lhs.unwrap_group()),
@@ -527,7 +530,7 @@ impl Parser {
                     self.skip(&Token::Or)?;
 
                     let rhs = self.parse_equality_expression()?;
-                    let span = lhs.get_span().start..rhs.get_span().end;
+                    let span = lhs.span().start..rhs.span().end;
 
                     lhs = AstNode::Or {
                         lhs: Box::new(lhs.unwrap_group()),
@@ -539,7 +542,7 @@ impl Parser {
                     self.skip(&Token::And)?;
 
                     let rhs = self.parse_equality_expression()?;
-                    let span = lhs.get_span().start..rhs.get_span().end;
+                    let span = lhs.span().start..rhs.span().end;
 
                     lhs = AstNode::And {
                         lhs: Box::new(lhs.unwrap_group()),
@@ -565,7 +568,7 @@ impl Parser {
                     self.skip(&Token::Eq)?;
 
                     let rhs = self.parse_comparison_expression()?;
-                    let span = lhs.get_span().start..rhs.get_span().end;
+                    let span = lhs.span().start..rhs.span().end;
 
                     lhs = AstNode::Eq {
                         lhs: Box::new(lhs.unwrap_group()),
@@ -577,7 +580,7 @@ impl Parser {
                     self.skip(&Token::Neq)?;
 
                     let rhs = self.parse_comparison_expression()?;
-                    let span = lhs.get_span().start..rhs.get_span().end;
+                    let span = lhs.span().start..rhs.span().end;
 
                     lhs = AstNode::Neq {
                         lhs: Box::new(lhs.unwrap_group()),
@@ -602,7 +605,7 @@ impl Parser {
                 self.skip(&Token::Gt)?;
 
                 let rhs = self.parse_additive_expression()?;
-                let span = lhs.get_span().start..rhs.get_span().end;
+                let span = lhs.span().start..rhs.span().end;
 
                 Ok(AstNode::Gt {
                     lhs: Box::new(lhs.unwrap_group()),
@@ -614,7 +617,7 @@ impl Parser {
                 self.skip(&Token::Gte)?;
 
                 let rhs = self.parse_additive_expression()?;
-                let span = lhs.get_span().start..rhs.get_span().end;
+                let span = lhs.span().start..rhs.span().end;
 
                 Ok(AstNode::Gte {
                     lhs: Box::new(lhs.unwrap_group()),
@@ -626,7 +629,7 @@ impl Parser {
                 self.skip(&Token::Lt)?;
 
                 let rhs = self.parse_additive_expression()?;
-                let span = lhs.get_span().start..rhs.get_span().end;
+                let span = lhs.span().start..rhs.span().end;
 
                 Ok(AstNode::Lt {
                     lhs: Box::new(lhs.unwrap_group()),
@@ -638,7 +641,7 @@ impl Parser {
                 self.skip(&Token::Lte)?;
 
                 let rhs = self.parse_additive_expression()?;
-                let span = lhs.get_span().start..rhs.get_span().end;
+                let span = lhs.span().start..rhs.span().end;
 
                 Ok(AstNode::Lte {
                     lhs: Box::new(lhs.unwrap_group()),
@@ -663,7 +666,7 @@ impl Parser {
                     self.skip(&Token::Add)?;
 
                     let rhs = self.parse_multiplicative_expression()?;
-                    let span = lhs.get_span().start..rhs.get_span().end;
+                    let span = lhs.span().start..rhs.span().end;
 
                     lhs = AstNode::Add {
                         lhs: Box::new(lhs.unwrap_group()),
@@ -675,7 +678,7 @@ impl Parser {
                     self.skip(&Token::Sub)?;
 
                     let rhs = self.parse_multiplicative_expression()?;
-                    let span = lhs.get_span().start..rhs.get_span().end;
+                    let span = lhs.span().start..rhs.span().end;
 
                     lhs = AstNode::Sub {
                         lhs: Box::new(lhs.unwrap_group()),
@@ -701,7 +704,7 @@ impl Parser {
                     self.skip(&Token::Mul)?;
 
                     let rhs = self.parse_unary_expression()?;
-                    let span = lhs.get_span().start..rhs.get_span().end;
+                    let span = lhs.span().start..rhs.span().end;
 
                     lhs = AstNode::Mul {
                         lhs: Box::new(lhs.unwrap_group()),
@@ -713,7 +716,7 @@ impl Parser {
                     self.skip(&Token::Div)?;
 
                     let rhs = self.parse_unary_expression()?;
-                    let span = lhs.get_span().start..rhs.get_span().end;
+                    let span = lhs.span().start..rhs.span().end;
 
                     lhs = AstNode::Div {
                         lhs: Box::new(lhs.unwrap_group()),
@@ -725,7 +728,7 @@ impl Parser {
                     self.skip(&Token::Mod)?;
 
                     let rhs = self.parse_unary_expression()?;
-                    let span = lhs.get_span().start..rhs.get_span().end;
+                    let span = lhs.span().start..rhs.span().end;
 
                     lhs = AstNode::Mod {
                         lhs: Box::new(lhs.unwrap_group()),
@@ -759,7 +762,7 @@ impl Parser {
         loop {
             match self.get_current_token() {
                 Token::LParen => {
-                    let callee_start = child.get_span().start;
+                    let callee_start = child.span().start;
                     self.skip(&Token::LParen)?;
 
                     let args = self.parse_function_call()?;
@@ -786,7 +789,7 @@ impl Parser {
         self.skip(token)?;
 
         let child = self.parse_unary_expression()?;
-        let span = start..child.get_span().end;
+        let span = start..child.span().end;
 
         match token {
             Token::Sub => Ok(AstNode::Neg {
@@ -957,7 +960,7 @@ pub enum ParsingError {
 }
 
 impl ParsingError {
-    pub fn get_span(&self) -> Option<Span> {
+    pub fn span(&self) -> Option<Span> {
         match self {
             Self::UnexpectedToken { span, .. } => Some(span.clone()),
         }
@@ -989,7 +992,7 @@ mod tests {
         assert_eq!(
             result.unwrap(),
             ProgramAst {
-                statements: vec![expected]
+                stmts: vec![expected]
             }
         );
     }
@@ -1003,12 +1006,12 @@ mod tests {
         parse_and_assert_result(
             "var x;",
             AstNode::VariableDeclaration {
-                identifier: Box::from(AstNode::Identifier {
+                id: Box::from(AstNode::Identifier {
                     name: String::from("x"),
                     span: 4..5,
                 }),
-                var_t: None,
-                value: None,
+                tn: None,
+                val: None,
                 span: 0..5,
             },
         );
@@ -1019,12 +1022,12 @@ mod tests {
         parse_and_assert_result(
             "var abc = 123 * x;",
             AstNode::VariableDeclaration {
-                identifier: Box::from(AstNode::Identifier {
+                id: Box::from(AstNode::Identifier {
                     name: String::from("abc"),
                     span: 4..7,
                 }),
-                var_t: None,
-                value: Some(Box::new(AstNode::Mul {
+                tn: None,
+                val: Some(Box::new(AstNode::Mul {
                     lhs: Box::new(AstNode::Literal {
                         value: Value::Integer(123),
                         span: 10..13,
@@ -1045,12 +1048,12 @@ mod tests {
         parse_and_assert_result(
             "var x = (123 + 50);",
             AstNode::VariableDeclaration {
-                identifier: Box::from(AstNode::Identifier {
+                id: Box::from(AstNode::Identifier {
                     name: String::from("x"),
                     span: 4..5,
                 }),
-                var_t: None,
-                value: Some(Box::new(AstNode::Add {
+                tn: None,
+                val: Some(Box::new(AstNode::Add {
                     lhs: Box::new(AstNode::Literal {
                         value: Value::Integer(123),
                         span: 9..12,
@@ -1071,12 +1074,12 @@ mod tests {
         parse_and_assert_result(
             "var x = ((((foo))));",
             AstNode::VariableDeclaration {
-                identifier: Box::from(AstNode::Identifier {
+                id: Box::from(AstNode::Identifier {
                     name: String::from("x"),
                     span: 4..5,
                 }),
-                var_t: None,
-                value: Some(Box::new(AstNode::Identifier {
+                tn: None,
+                val: Some(Box::new(AstNode::Identifier {
                     name: String::from("foo"),
                     span: 12..15,
                 })),
@@ -1090,15 +1093,18 @@ mod tests {
         parse_and_assert_result(
             "var x: Int;",
             AstNode::VariableDeclaration {
-                identifier: Box::from(AstNode::Identifier {
+                id: Box::from(AstNode::Identifier {
                     name: String::from("x"),
                     span: 4..5,
                 }),
-                var_t: Some(Box::from(AstNode::TypeNotation {
-                    name: String::from("Int"),
+                tn: Some(Box::from(AstNode::TypeNotation {
+                    identifier: Box::from(AstNode::Identifier {
+                        name: String::from("Int"),
+                        span: 7..10,
+                    }),
                     span: 7..10,
                 })),
-                value: None,
+                val: None,
                 span: 0..10,
             },
         );
@@ -1109,15 +1115,18 @@ mod tests {
         parse_and_assert_result(
             "var x: Int = 5;",
             AstNode::VariableDeclaration {
-                identifier: Box::from(AstNode::Identifier {
+                id: Box::from(AstNode::Identifier {
                     name: String::from("x"),
                     span: 4..5,
                 }),
-                var_t: Some(Box::from(AstNode::TypeNotation {
-                    name: String::from("Int"),
+                tn: Some(Box::from(AstNode::TypeNotation {
+                    identifier: Box::from(AstNode::Identifier {
+                        name: String::from("Int"),
+                        span: 7..10,
+                    }),
                     span: 7..10,
                 })),
-                value: Some(Box::new(AstNode::Literal {
+                val: Some(Box::new(AstNode::Literal {
                     value: Value::Integer(5),
                     span: 13..14,
                 })),
@@ -1135,7 +1144,7 @@ mod tests {
         parse_and_assert_result(
             "if 15 > 10 { print(1); }",
             AstNode::If {
-                condition: Box::new(AstNode::Gt {
+                cond: Box::new(AstNode::Gt {
                     lhs: Box::new(AstNode::Literal {
                         value: Value::Integer(15),
                         span: 3..5,
@@ -1168,13 +1177,13 @@ mod tests {
         parse_and_assert_result(
             "if false {} else if false {} else {}",
             AstNode::If {
-                condition: Box::new(AstNode::Literal {
+                cond: Box::new(AstNode::Literal {
                     value: Value::Boolean(false),
                     span: 3..8,
                 }),
                 body: vec![],
                 or_else: Some(Box::new(AstNode::If {
-                    condition: Box::new(AstNode::Literal {
+                    cond: Box::new(AstNode::Literal {
                         value: Value::Boolean(false),
                         span: 20..25,
                     }),
@@ -1199,7 +1208,7 @@ mod tests {
         parse_and_assert_result(
             "while true {}",
             AstNode::While {
-                condition: Box::new(AstNode::Literal {
+                cond: Box::new(AstNode::Literal {
                     value: Value::Boolean(true),
                     span: 6..10,
                 }),
@@ -1214,7 +1223,7 @@ mod tests {
         parse_and_assert_result(
             "while true { continue; break; }",
             AstNode::While {
-                condition: Box::new(AstNode::Literal {
+                cond: Box::new(AstNode::Literal {
                     value: Value::Boolean(true),
                     span: 6..10,
                 }),
@@ -1236,11 +1245,11 @@ mod tests {
         parse_and_assert_result(
             "fn foo() {}",
             AstNode::FunctionDefinition {
-                name: Box::new(AstNode::Identifier {
+                id: Box::new(AstNode::Identifier {
                     name: String::from("foo"),
                     span: 3..6,
                 }),
-                parameters: vec![],
+                params: vec![],
                 return_t: None,
                 body: vec![],
                 span: 0..11,
@@ -1253,18 +1262,21 @@ mod tests {
         parse_and_assert_result(
             "fn foo(x: Int, y: Bool,) {}",
             AstNode::FunctionDefinition {
-                name: Box::new(AstNode::Identifier {
+                id: Box::new(AstNode::Identifier {
                     name: String::from("foo"),
                     span: 3..6,
                 }),
-                parameters: vec![
+                params: vec![
                     (
                         AstNode::Identifier {
                             name: String::from("x"),
                             span: 7..8,
                         },
                         AstNode::TypeNotation {
-                            name: String::from("Int"),
+                            identifier: Box::new(AstNode::Identifier {
+                                name: String::from("Int"),
+                                span: 10..13,
+                            }),
                             span: 10..13,
                         },
                     ),
@@ -1274,7 +1286,10 @@ mod tests {
                             span: 15..16,
                         },
                         AstNode::TypeNotation {
-                            name: String::from("Bool"),
+                            identifier: Box::new(AstNode::Identifier {
+                                name: String::from("Bool"),
+                                span: 18..22,
+                            }),
                             span: 18..22,
                         },
                     ),
@@ -1291,17 +1306,20 @@ mod tests {
         parse_and_assert_result(
             "fn write(x: Int) { print(x); }",
             AstNode::FunctionDefinition {
-                name: Box::new(AstNode::Identifier {
+                id: Box::new(AstNode::Identifier {
                     name: String::from("write"),
                     span: 3..8,
                 }),
-                parameters: vec![(
+                params: vec![(
                     AstNode::Identifier {
                         name: String::from("x"),
                         span: 9..10,
                     },
                     AstNode::TypeNotation {
-                        name: String::from("Int"),
+                        identifier: Box::new(AstNode::Identifier {
+                            name: String::from("Int"),
+                            span: 12..15,
+                        }),
                         span: 12..15,
                     },
                 )],
@@ -1327,13 +1345,16 @@ mod tests {
         parse_and_assert_result(
             "fn foo(): Int { return 5; }",
             AstNode::FunctionDefinition {
-                name: Box::new(AstNode::Identifier {
+                id: Box::new(AstNode::Identifier {
                     name: String::from("foo"),
                     span: 3..6,
                 }),
-                parameters: vec![],
+                params: vec![],
                 return_t: Some(Box::new(AstNode::TypeNotation {
-                    name: String::from("Int"),
+                    identifier: Box::new(AstNode::Identifier {
+                        name: String::from("Int"),
+                        span: 10..13,
+                    }),
                     span: 10..13,
                 })),
                 body: vec![AstNode::Return {
