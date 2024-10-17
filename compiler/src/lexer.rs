@@ -10,10 +10,10 @@ use std::fmt::Display;
 /// Provide a quick way to lex a Kaba program's source code, without the
 /// needs to setting up and running the lexer manually.
 ///
-/// Produces a vector of [`RichToken`] that contains additional
+/// Produces a vector of [`Token`] that contains additional
 /// information of a token.
-pub fn lex(source_code: &str) -> Result<Vec<RichToken>, LexingError> {
-    let mut l = Token::lexer(source_code);
+pub fn lex(source_code: &str) -> Result<Vec<Token>, LexingError> {
+    let mut l = TokenKind::lexer(source_code);
     let mut tokens = vec![];
 
     while let Some(token) = l.next() {
@@ -29,46 +29,46 @@ pub fn lex(source_code: &str) -> Result<Vec<RichToken>, LexingError> {
             continue;
         }
 
-        tokens.push(RichToken {
+        tokens.push(Token {
             kind,
             span: l.span(),
         })
     }
 
-    tokens.push(RichToken {
-        kind: Token::Eof,
+    tokens.push(Token {
+        kind: TokenKind::Eof,
         span: source_code.len()..source_code.len(),
     });
 
     Ok(tokens)
 }
 
-/// A wrapper around raw [`Token`] that also store the metadata
+/// A wrapper around raw [`TokenKind`] that also store the metadata
 /// information of a token, such as its actual position inside
 /// the source code.
 #[derive(Clone, Debug, PartialEq)]
-pub struct RichToken {
-    pub kind: Token,
+pub struct Token {
+    pub kind: TokenKind,
     pub span: Span,
 }
 
-/// The list of all tokens that may exists in a valid Kaba
+/// The list of all token kinds that may exists in a valid Kaba
 /// source code.
 #[derive(Logos, Clone, Debug, PartialEq)]
 #[logos(skip r"[ \t\r\n\f]+", error = LexingError)]
 #[rustfmt::skip]
-pub enum Token {
-    #[regex("[a-zA-Z0-9_]+", identifier)]
+pub enum TokenKind {
+    #[regex("[a-zA-Z0-9_]+", lex_identifier)]
     Identifier(String),
 
     //
     // Literals
     //
 
-    #[regex("[0-9]+", priority = 2, callback = integer)]
+    #[regex("[0-9]+", priority = 2, callback = lex_integer)]
     Integer(i32),
 
-    #[regex(r"[0-9]+\.[0-9]+", callback = float)]
+    #[regex(r"[0-9]+\.[0-9]+", callback = lex_float)]
     Float(f64),
 
     #[token("true")]
@@ -128,7 +128,7 @@ pub enum Token {
 
     // Comments
 
-    #[token("#", callback = comment)]
+    #[token("#", callback = lex_comment)]
     Comment(String),
 
     // This will always be appended as the last token
@@ -136,13 +136,13 @@ pub enum Token {
     Eof,
 }
 
-impl Token {
+impl TokenKind {
     fn is_comment(&self) -> bool {
-        matches!(self, Token::Comment(_))
+        matches!(self, Self::Comment(_))
     }
 }
 
-impl Display for Token {
+impl Display for TokenKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Identifier(_) => write!(f, "identifier"),
@@ -195,7 +195,7 @@ impl Display for Token {
     }
 }
 
-fn identifier(lex: &mut Lexer<Token>) -> Result<String, LexingError> {
+fn lex_identifier(lex: &mut Lexer<TokenKind>) -> Result<String, LexingError> {
     let value = lex.slice();
     if value.chars().next().unwrap().is_numeric() {
         return Err(LexingError::IdentifierStartsWithNumber {
@@ -206,15 +206,15 @@ fn identifier(lex: &mut Lexer<Token>) -> Result<String, LexingError> {
     Ok(String::from(value))
 }
 
-fn integer(lex: &mut Lexer<Token>) -> i32 {
+fn lex_integer(lex: &mut Lexer<TokenKind>) -> i32 {
     lex.slice().parse().unwrap()
 }
 
-fn float(lex: &mut Lexer<Token>) -> f64 {
+fn lex_float(lex: &mut Lexer<TokenKind>) -> f64 {
     lex.slice().parse().unwrap()
 }
 
-fn comment(lex: &mut Lexer<Token>) -> String {
+fn lex_comment(lex: &mut Lexer<TokenKind>) -> String {
     let remainder = lex.remainder();
     if let Some(newline_index) = remainder.find('\n') {
         lex.bump(newline_index + 1);
@@ -269,7 +269,7 @@ mod tests {
     use super::*;
     use indoc::indoc;
 
-    fn lex_and_assert_result(input: &str, expected: Token) {
+    fn lex_and_assert_result(input: &str, expected: TokenKind) {
         let result = lex(input);
         assert!(result.is_ok());
 
@@ -290,25 +290,25 @@ mod tests {
     #[test]
     fn test_lexing_normal_identifier() {
         let input = "abc";
-        lex_and_assert_result(input, Token::Identifier(String::from(input)));
+        lex_and_assert_result(input, TokenKind::Identifier(String::from(input)));
     }
 
     #[test]
     fn test_lexing_identifier_with_mixed_characters() {
         let input = "_d768a7ABC_adsf";
-        lex_and_assert_result(input, Token::Identifier(String::from(input)));
+        lex_and_assert_result(input, TokenKind::Identifier(String::from(input)));
     }
 
     #[test]
     fn test_lexing_identifier_that_only_a_single_underline() {
         let input = "_";
-        lex_and_assert_result(input, Token::Identifier(String::from(input)));
+        lex_and_assert_result(input, TokenKind::Identifier(String::from(input)));
     }
 
     #[test]
     fn test_lexing_identifier_without_alphabets() {
         let input = "_123";
-        lex_and_assert_result(input, Token::Identifier(String::from(input)));
+        lex_and_assert_result(input, TokenKind::Identifier(String::from(input)));
     }
 
     #[test]
@@ -324,19 +324,19 @@ mod tests {
     #[test]
     fn test_lexing_an_integer_literal() {
         let input = "123";
-        lex_and_assert_result(input, Token::Integer(input.parse().unwrap()));
+        lex_and_assert_result(input, TokenKind::Integer(input.parse().unwrap()));
     }
 
     #[test]
     fn test_lexing_a_zero_literal() {
         let input = "0";
-        lex_and_assert_result(input, Token::Integer(input.parse().unwrap()));
+        lex_and_assert_result(input, TokenKind::Integer(input.parse().unwrap()));
     }
 
     #[test]
     fn test_lexing_a_big_integer_literal() {
         let input = "2147483647";
-        lex_and_assert_result(input, Token::Integer(input.parse().unwrap()));
+        lex_and_assert_result(input, TokenKind::Integer(input.parse().unwrap()));
     }
 
     //
@@ -346,13 +346,13 @@ mod tests {
     #[test]
     fn test_lexing_a_float_literal() {
         let input = "123.5";
-        lex_and_assert_result(input, Token::Float(input.parse().unwrap()));
+        lex_and_assert_result(input, TokenKind::Float(input.parse().unwrap()));
     }
 
     #[test]
     fn test_lexing_a_small_float_literal() {
         let input = "0.0723";
-        lex_and_assert_result(input, Token::Float(input.parse().unwrap()));
+        lex_and_assert_result(input, TokenKind::Float(input.parse().unwrap()));
     }
 
     //
@@ -364,7 +364,9 @@ mod tests {
         assert!(result.is_ok());
 
         let tokens = result.unwrap();
-        assert!(!tokens.iter().any(|t| matches!(t.kind, Token::Comment(_))))
+        assert!(!tokens
+            .iter()
+            .any(|t| matches!(t.kind, TokenKind::Comment(_))))
     }
 
     #[test]
