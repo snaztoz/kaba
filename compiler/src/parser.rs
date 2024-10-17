@@ -141,6 +141,7 @@ impl Parser {
             TokenKind::Break | TokenKind::Continue => return self.parse_loop_control(),
             TokenKind::Fn => return self.parse_function_definition(),
             TokenKind::Return => return self.parse_return_statement(),
+            TokenKind::Debug => return self.parse_debug_statement(),
             _ => (),
         }
 
@@ -478,6 +479,25 @@ impl Parser {
         self.skip(&TokenKind::Semicolon)?;
 
         Ok(AstNode::Return {
+            expr,
+            span: start..end,
+        })
+    }
+
+    fn parse_debug_statement(&mut self) -> Result<AstNode, ParsingError> {
+        let start = self.get_current_token().span.start;
+        self.skip(&TokenKind::Debug)?;
+
+        // Expecting expression
+
+        let expr = Box::new(self.parse_expression()?);
+        let end = expr.span().end;
+
+        // Expecting ";"
+
+        self.skip(&TokenKind::Semicolon)?;
+
+        Ok(AstNode::Debug {
             expr,
             span: start..end,
         })
@@ -1418,6 +1438,38 @@ mod tests {
                 span: 0..30,
             },
         );
+    }
+
+    //
+    // Test debug
+    //
+
+    #[test]
+    fn test_parsing_debug_statement() {
+        parse_and_assert_result(
+            "debug 5 + 5 * 7;",
+            AstNode::Debug {
+                expr: Box::new(AstNode::Add {
+                    lhs: Box::new(AstNode::Literal {
+                        value: Value::Integer(5),
+                        span: 6..7,
+                    }),
+                    rhs: Box::new(AstNode::Mul {
+                        lhs: Box::new(AstNode::Literal {
+                            value: Value::Integer(5),
+                            span: 10..11,
+                        }),
+                        rhs: Box::new(AstNode::Literal {
+                            value: Value::Integer(7),
+                            span: 14..15,
+                        }),
+                        span: 10..15,
+                    }),
+                    span: 6..15,
+                }),
+                span: 0..15,
+            },
+        )
     }
 
     //

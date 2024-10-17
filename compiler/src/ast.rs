@@ -67,6 +67,11 @@ pub enum AstNode {
         span: Span,
     },
 
+    Debug {
+        expr: Box<AstNode>,
+        span: Span,
+    },
+
     Assign {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
@@ -233,6 +238,7 @@ impl AstNode {
             | Self::Continue { span }
             | Self::FunctionDefinition { span, .. }
             | Self::Return { span, .. }
+            | Self::Debug { span, .. }
             | Self::Assign { span, .. }
             | Self::AddAssign { span, .. }
             | Self::SubAssign { span, .. }

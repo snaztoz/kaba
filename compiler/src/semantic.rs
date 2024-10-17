@@ -108,6 +108,10 @@ impl SemanticChecker {
                     body_t = Some(t);
                 }
 
+                AstNode::Debug { expr, .. } => {
+                    self.check_debug(expr)?;
+                }
+
                 expr => {
                     self.check_expression(expr)?;
                 }
@@ -349,6 +353,11 @@ impl SemanticChecker {
                 span: err.span().clone(),
             })
             .map(|_| return_t)
+    }
+
+    fn check_debug(&self, expr: &AstNode) -> Result<()> {
+        self.check_expression(expr)?;
+        Ok(())
     }
 
     fn check_expression(&self, expr: &AstNode) -> Result<Type> {
@@ -1062,6 +1071,19 @@ mod tests {
                     while false do
                         return 0;
                     end
+                end
+            "});
+    }
+
+    //
+    // Test debug statement
+    //
+
+    #[test]
+    fn test_debug_statement() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    debug 17 * 5;
                 end
             "});
     }

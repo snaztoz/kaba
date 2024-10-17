@@ -91,6 +91,7 @@ pub enum TokenKind {
     #[token("return")]   Return,
     #[token("do")]       Do,
     #[token("end")]      End,
+    #[token("debug")]    Debug,
 
     //
     // Symbols
@@ -161,6 +162,7 @@ impl Display for TokenKind {
             Self::Return => write!(f, "`return` keyword"),
             Self::Do => write!(f, "`do` keyword"),
             Self::End => write!(f, "`end` keyword"),
+            Self::Debug => write!(f, "`debug` keyword"),
 
             Self::Add => write!(f, "addition operator (`+`)"),
             Self::Sub => write!(f, "subtraction operator (`-`)"),
