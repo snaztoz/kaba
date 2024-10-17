@@ -476,14 +476,12 @@ impl SemanticChecker {
             args_t.push(self.check_expression(arg)?)
         }
 
-        let id: &str;
         let t = match callee {
             AstNode::Identifier { name, span } => {
-                id = name;
                 self.ctx
                     .get_symbol_type(name)
                     .ok_or_else(|| Error::VariableNotExist {
-                        id: String::from(id),
+                        id: String::from(name),
                         span: span.clone(),
                     })?
             }
@@ -492,20 +490,12 @@ impl SemanticChecker {
         };
 
         if let Type::Callable { params, return_t } = &t {
-            // Bypass "print" function
-            //
-            // TODO: This is only a temporary workaround
-            if id == "print" {
-                return Ok(*return_t.clone());
-            }
-
             if params.types() != args_t {
                 return Err(Error::InvalidFunctionCallArgument {
                     args: args_t,
                     span: span.clone(),
                 });
             }
-
             Ok(*return_t.clone())
         } else {
             Err(Error::NotAFunction {
