@@ -51,16 +51,9 @@ As this is a really new project, it only has limited features for now:
 
 * Comments
   ```text
-  // This is a single line comment
-
-  /*
-    This
-    is
-    a
-    multi-
-    line
-    comment
-  */
+  # This is a comment.
+  #
+  # It will be ignored.
   ```
 
 * Variable creation
@@ -81,14 +74,14 @@ As this is a really new project, it only has limited features for now:
   var x = 20;
   x = 999;
 
-  // Shorthands are also supported:
+  # Shorthands are also supported:
   x += 1;
   x -= 0;
   x *= 2;
   x /= 4;
   x %= 2;
 
-  // This will trigger error due to the types are being incompatible:
+  # This will trigger error due to the types are being incompatible:
   var i = 5.0;
   i = 7;
   ```
@@ -97,7 +90,7 @@ As this is a really new project, it only has limited features for now:
   ```text
   var x: Float = 5;
 
-  // This will trigger error
+  # This will trigger error
   var i: Int = 5.0;
   ```
 
@@ -120,9 +113,9 @@ As this is a really new project, it only has limited features for now:
 
 * Logical operation
   ```text
-  false || true;  // true
-  false && false; // false
-  !false;         // true
+  false || true;  # true
+  false && false; # false
+  !false;         # true
   ```
 
 * Grouped expression
@@ -163,7 +156,7 @@ As this is a really new project, it only has limited features for now:
     i += 1;
   }
 
-  // `Break` and `continue` statements are also supported
+  # `Break` and `continue` statements are also supported
   while true {
     break;
   }

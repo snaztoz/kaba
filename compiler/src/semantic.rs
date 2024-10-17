@@ -845,7 +845,7 @@ mod tests {
                 fn main() {
                     while true {
                         break;
-                        1 + true; // this should be error
+                        1 + true; # this should be error
                     }
                 }
             "})
@@ -1026,7 +1026,7 @@ mod tests {
         check_and_assert_is_err(indoc! {"
                 fn getFive(): Int {
                     return 5;
-                    1 + true; // should be error
+                    1 + true; # should be error
                 }
             "});
     }

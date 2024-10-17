@@ -128,11 +128,8 @@ pub enum Token {
 
     // Comments
 
-    #[token("//", callback = single_line_comment)]
-    SingleLineComment(String),
-
-    #[token("/*", callback = multi_line_comment)]
-    MultiLineComment(String),
+    #[token("#", callback = comment)]
+    Comment(String),
 
     // This will always be appended as the last token
     // inside token list
@@ -141,7 +138,7 @@ pub enum Token {
 
 impl Token {
     fn is_comment(&self) -> bool {
-        matches!(self, Token::SingleLineComment(_)) || matches!(self, Token::MultiLineComment(_))
+        matches!(self, Token::Comment(_))
     }
 }
 
@@ -191,8 +188,7 @@ impl Display for Token {
             Self::And => write!(f, "logical and operator (`&&`)"),
             Self::Not => write!(f, "logical not operator (`!`)"),
 
-            Self::SingleLineComment(_) => write!(f, "single line comment"),
-            Self::MultiLineComment(_) => write!(f, "multi line comment"),
+            Self::Comment(_) => write!(f, "comment"),
 
             Self::Eof => write!(f, "end-of-file (EOF)"),
         }
@@ -218,7 +214,7 @@ fn float(lex: &mut Lexer<Token>) -> f64 {
     lex.slice().parse().unwrap()
 }
 
-fn single_line_comment(lex: &mut Lexer<Token>) -> String {
+fn comment(lex: &mut Lexer<Token>) -> String {
     let remainder = lex.remainder();
     if let Some(newline_index) = remainder.find('\n') {
         lex.bump(newline_index + 1);
@@ -229,26 +225,10 @@ fn single_line_comment(lex: &mut Lexer<Token>) -> String {
     }
 }
 
-fn multi_line_comment(lex: &mut Lexer<Token>) -> Result<String, LexingError> {
-    let remainder = lex.remainder();
-    if let Some(comment_closing_index) = remainder.find("*/") {
-        lex.bump(comment_closing_index + 2);
-        Ok(String::from(&remainder[..comment_closing_index]))
-    } else {
-        let source_len = lex.source().len();
-        Err(LexingError::MissingCommentClosingTag {
-            span: source_len..source_len,
-        })
-    }
-}
-
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum LexingError {
     IdentifierStartsWithNumber {
         token: String,
-        span: Span,
-    },
-    MissingCommentClosingTag {
         span: Span,
     },
     UnknownToken {
@@ -264,7 +244,6 @@ impl LexingError {
     pub fn span(&self) -> Option<Span> {
         match self {
             Self::IdentifierStartsWithNumber { span, .. } => Some(span.clone()),
-            Self::MissingCommentClosingTag { span } => Some(span.clone()),
             Self::UnknownToken { span, .. } => Some(span.clone()),
             _ => None,
         }
@@ -276,9 +255,6 @@ impl Display for LexingError {
         match self {
             Self::IdentifierStartsWithNumber { token, .. } => {
                 write!(f, "identifier can't start with number: `{token}`")
-            }
-            Self::MissingCommentClosingTag { .. } => {
-                write!(f, "missing comment closing tag (`*/`)")
             }
             Self::UnknownToken { token, .. } => {
                 write!(f, "unknown token `{token}`")
@@ -383,108 +359,44 @@ mod tests {
     // Test comment literals
     //
 
-    fn lex_and_assert_contains_single_line_comment(input: &str) {
+    fn lex_and_assert_comments_are_skipped(input: &str) {
         let result = lex(input);
         assert!(result.is_ok());
 
         let tokens = result.unwrap();
-        assert!(!tokens
-            .iter()
-            .any(|t| matches!(t.kind, Token::SingleLineComment(_))))
-    }
-
-    fn lex_and_assert_contains_multi_line_comment(input: &str) {
-        let result = lex(input);
-        assert!(result.is_ok());
-
-        let tokens = result.unwrap();
-        assert!(!tokens
-            .iter()
-            .any(|t| matches!(t.kind, Token::MultiLineComment(_))))
+        assert!(!tokens.iter().any(|t| matches!(t.kind, Token::Comment(_))))
     }
 
     #[test]
-    fn test_lexing_a_single_line_comment_above_code() {
+    fn test_lexing_comment_above_code() {
         let input = indoc! {"
-            // This is a single line comment
+            # This is a single line comment
             var x = 5;
         "};
-        lex_and_assert_contains_single_line_comment(input);
+        lex_and_assert_comments_are_skipped(input);
     }
 
     #[test]
-    fn test_lexing_a_single_line_comment_after_code() {
+    fn test_lexing_comment_after_code() {
         let input = indoc! {"
             var x = 10;
-            print(x); // this should works too!
+            print(x); # this should works too!
         "};
-        lex_and_assert_contains_single_line_comment(input);
+        lex_and_assert_comments_are_skipped(input);
     }
 
     #[test]
-    fn test_lexing_a_single_line_comment_that_commenting_out_a_code() {
+    fn test_lexing_a_comment_that_commenting_out_a_code() {
         let input = indoc! {"
-            // print(y);
+            # print(y);
         "};
-        lex_and_assert_contains_single_line_comment(input);
+        lex_and_assert_comments_are_skipped(input);
     }
 
     #[test]
-    fn test_lexing_a_single_line_comment_spans_until_eof() {
+    fn test_lexing_comment_that_spans_until_eof() {
         let input = indoc! {"
-        // A single line comment that spans to EOF"};
-        lex_and_assert_contains_single_line_comment(input);
-    }
-
-    #[test]
-    fn test_lexing_a_multi_line_comment_above_code() {
-        let input = indoc! {"
-            /**
-             * This is a multi line comment
-             */
-            var x = 5;
-        "};
-        lex_and_assert_contains_multi_line_comment(input);
-    }
-
-    #[test]
-    fn test_lexing_a_multi_line_comment_before_code() {
-        let input = indoc! {"
-            /* no problem */ var x = 5;
-        "};
-        lex_and_assert_contains_multi_line_comment(input);
-    }
-
-    #[test]
-    fn test_lexing_a_multi_line_comment_after_code() {
-        let input = indoc! {"
-            var x = 5; /* also no problem */
-        "};
-        lex_and_assert_contains_multi_line_comment(input);
-    }
-
-    #[test]
-    fn test_lexing_a_multi_line_comment_that_commenting_out_a_code() {
-        let input = indoc! {"
-            /**
-             * All good
-             */
-
-            /**
-             * print(y);
-             *       ^
-             *      A non existing variable
-             */
-        "};
-        lex_and_assert_contains_single_line_comment(input);
-    }
-
-    #[test]
-    fn test_lexing_a_multi_line_comment_that_has_no_closing_tag() {
-        let input = indoc! {"
-            /* No closing tag
-            print(0);
-        "};
-        assert!(lex(input).is_err());
+        # A single line comment that spans to EOF"};
+        lex_and_assert_comments_are_skipped(input);
     }
 }
