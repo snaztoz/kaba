@@ -44,21 +44,44 @@ impl Parser {
         Ok(ProgramAst { stmts })
     }
 
+    /// Parse a code block.
+    ///
+    /// Block is an area of code between `do` and `end` keywords and may
+    /// contains statements. All symbols defined inside a block are stored
+    /// in a dedicated scope. Below is an example of a loop block:
+    ///
+    /// ```text
+    /// while true do
+    ///   print(true)
+    /// end
+    /// ```
+    ///
+    /// Block may also ended by another token (`possible_delimiter`). For
+    /// example, in a conditional `if ... else ...` block, it would look
+    /// like this:
+    ///
+    /// ```text
+    /// if false do
+    ///   print(false)
+    /// else do     # note that there is no `end` before `else` keyword
+    ///   print(true)
+    /// end
+    /// ```
     fn parse_block(
         &mut self,
-        additional_delimiter: Option<TokenKind>,
+        possible_delimiter: Option<TokenKind>,
     ) -> Result<(Vec<AstNode>, Span), ParsingError> {
         // Expecting "do"
 
         let start = self.get_current_token().span.start;
         self.skip(&TokenKind::Do)?;
 
-        // Expecting 0 >= statements, delimited with
-        // "end" or "additional_delimiter"
+        // Expecting 0 >= statements, delimited with "end" or
+        // "additional_delimiter"
 
-        let mut statements = vec![];
+        let mut stmts = vec![];
         loop {
-            if let Some(tok) = &additional_delimiter {
+            if let Some(tok) = &possible_delimiter {
                 if self.current_token_is(tok) {
                     break;
                 }
@@ -68,28 +91,46 @@ impl Parser {
                 break;
             } else if self.current_token_is(&TokenKind::Eof) {
                 return Err(ParsingError::UnexpectedToken {
-                    expected: TokenKind::End,
+                    expect: TokenKind::End,
                     found: TokenKind::Eof,
                     span: self.get_current_token().span,
                 });
             }
 
-            let statement = self.parse_statement()?;
-            statements.push(statement);
+            let stmt = self.parse_statement()?;
+            stmts.push(stmt);
         }
 
         // Expecting "end" or "additional delimiter"
 
         let end = self.get_current_token().span.end;
 
-        // don't skip if delimiter is not "end"
+        // skip *only if* delimiter is not "end"
         if self.current_token_is(&TokenKind::End) {
             self.skip(&TokenKind::End)?;
         }
 
-        Ok((statements, start..end))
+        Ok((stmts, start..end))
     }
 
+    /// Parse a statement.
+    ///
+    /// Statement is a piece of code that ended with a semicolon ";"
+    /// symbol or ended with a block.
+    ///
+    /// 1. Example of a statement that ended with semicolon:
+    ///
+    /// ```text
+    /// var x = 5;
+    /// ```
+    ///
+    /// 2. Example of a statement that ended with a block:
+    ///
+    /// ```text
+    /// if true do
+    ///   # this is a block
+    /// end
+    /// ```
     fn parse_statement(&mut self) -> Result<AstNode, ParsingError> {
         // Check if statement starts with a keyword
 
@@ -105,13 +146,13 @@ impl Parser {
 
         // Expecting expression
 
-        let expression = self.parse_expression()?;
+        let expr = self.parse_expression()?;
 
         // Expecting ";"
 
         self.skip(&TokenKind::Semicolon)?;
 
-        Ok(expression.unwrap_group())
+        Ok(expr.unwrap_group())
     }
 
     fn parse_variable_declaration(&mut self) -> Result<AstNode, ParsingError> {
@@ -130,7 +171,7 @@ impl Parser {
             }),
             _ => {
                 return Err(ParsingError::UnexpectedToken {
-                    expected: TokenKind::Identifier(String::from("foo")),
+                    expect: TokenKind::Identifier(String::from("foo")),
                     found: token.kind.clone(),
                     span: token.span,
                 });
@@ -145,11 +186,10 @@ impl Parser {
         let tn = if self.current_token_is(&TokenKind::Colon) {
             self.skip(&TokenKind::Colon)?;
 
-            let vt = self.parse_type_notation()?;
+            let tn = self.parse_type_notation()?;
+            end = tn.span().end;
 
-            end = vt.span().end;
-
-            Some(Box::new(vt))
+            Some(Box::new(tn))
         } else {
             None
         };
@@ -159,10 +199,10 @@ impl Parser {
         let val = if self.current_token_is(&TokenKind::Assign) {
             self.skip(&TokenKind::Assign)?;
 
-            let expression = self.parse_expression()?;
-            end = expression.span().end;
+            let expr = self.parse_expression()?;
+            end = expr.span().end;
 
-            Some(Box::new(expression.unwrap_group()))
+            Some(Box::new(expr.unwrap_group()))
         } else {
             None
         };
@@ -193,7 +233,7 @@ impl Parser {
                 })
             }
             _ => Err(ParsingError::UnexpectedToken {
-                expected: TokenKind::Identifier(String::from("foo")),
+                expect: TokenKind::Identifier(String::from("foo")),
                 found: token.kind.clone(),
                 span: token.span,
             }),
@@ -207,11 +247,11 @@ impl Parser {
 
         // Expecting expression
 
-        let cond = self.parse_expression()?;
+        let cond = Box::new(self.parse_expression()?);
 
         // Expecting block
 
-        let (block_statements, block_span) = self.parse_block(Some(TokenKind::Else))?;
+        let (body, block_span) = self.parse_block(Some(TokenKind::Else))?;
         end = block_span.end;
 
         // Expecting >= 0 "else if" or 1 "else"
@@ -234,19 +274,19 @@ impl Parser {
                 TokenKind::Do => {
                     // Expecting block
 
-                    let (block_statements, block_span) = self.parse_block(Some(TokenKind::Else))?;
+                    let (body, block_span) = self.parse_block(Some(TokenKind::Else))?;
                     let else_end = block_span.end;
                     end = else_end;
 
                     Some(Box::new(AstNode::Else {
-                        body: block_statements,
+                        body,
                         span: else_start..else_end,
                     }))
                 }
 
                 kind => {
                     return Err(ParsingError::UnexpectedToken {
-                        expected: TokenKind::Else,
+                        expect: TokenKind::Else,
                         found: kind.clone(),
                         span: token.span,
                     });
@@ -257,8 +297,8 @@ impl Parser {
         };
 
         Ok(AstNode::If {
-            cond: Box::new(cond),
-            body: block_statements,
+            cond,
+            body,
             or_else,
             span: start..end,
         })
@@ -270,16 +310,16 @@ impl Parser {
 
         // Expecting expression
 
-        let cond = self.parse_expression()?;
+        let cond = Box::new(self.parse_expression()?);
 
         // Expecting block
 
-        let (block_statements, block_span) = self.parse_block(None)?;
+        let (body, block_span) = self.parse_block(None)?;
         let end = block_span.end;
 
         Ok(AstNode::While {
-            cond: Box::new(cond),
-            body: block_statements,
+            cond,
+            body,
             span: start..end,
         })
     }
@@ -311,18 +351,18 @@ impl Parser {
         // Expecting identifier
 
         let token = self.get_current_token();
-        let name = match token.kind {
+        let id = match token.kind {
             TokenKind::Identifier(name) => {
                 self.advance();
-                AstNode::Identifier {
+                Box::new(AstNode::Identifier {
                     name,
                     span: token.span,
-                }
+                })
             }
 
             kind => {
                 return Err(ParsingError::UnexpectedToken {
-                    expected: TokenKind::Identifier(String::from("function_name")),
+                    expect: TokenKind::Identifier(String::from("function_name")),
                     found: kind.clone(),
                     span: token.span,
                 });
@@ -340,7 +380,7 @@ impl Parser {
             // Expecting identifier
 
             let token = self.get_current_token();
-            let parameter = match token.kind {
+            let param = match token.kind {
                 TokenKind::Identifier(name) => {
                     self.advance();
                     AstNode::Identifier {
@@ -351,7 +391,7 @@ impl Parser {
 
                 kind => {
                     return Err(ParsingError::UnexpectedToken {
-                        expected: TokenKind::Identifier(String::from("function_name")),
+                        expect: TokenKind::Identifier(String::from("function_name")),
                         found: kind.clone(),
                         span: token.span,
                     });
@@ -364,11 +404,11 @@ impl Parser {
 
             // Expecting type notation
 
-            let parameter_t = self.parse_type_notation()?;
+            let param_t = self.parse_type_notation()?;
 
             // Add to parameter list
 
-            params.push((parameter, parameter_t));
+            params.push((param, param_t));
 
             // Expecting either "," or ")"
 
@@ -383,7 +423,7 @@ impl Parser {
 
                 kind => {
                     return Err(ParsingError::UnexpectedToken {
-                        expected: TokenKind::RParen,
+                        expect: TokenKind::RParen,
                         found: kind.clone(),
                         span: token.span,
                     });
@@ -410,7 +450,7 @@ impl Parser {
         let (body, body_span) = self.parse_block(None)?;
 
         Ok(AstNode::FunctionDefinition {
-            id: Box::new(name),
+            id,
             params,
             return_t,
             body,
@@ -425,12 +465,12 @@ impl Parser {
 
         // Expecting expression (optional)
 
-        let expression = if self.current_token_is(&TokenKind::Semicolon) {
+        let expr = if self.current_token_is(&TokenKind::Semicolon) {
             None
         } else {
-            let expression = self.parse_expression()?;
-            end = expression.span().end;
-            Some(Box::new(expression))
+            let expr = self.parse_expression()?;
+            end = expr.span().end;
+            Some(Box::new(expr))
         };
 
         // Expecting ";"
@@ -438,7 +478,7 @@ impl Parser {
         self.skip(&TokenKind::Semicolon)?;
 
         Ok(AstNode::Return {
-            expression,
+            expr,
             span: start..end,
         })
     }
@@ -879,7 +919,7 @@ impl Parser {
 
             kind => {
                 return Err(ParsingError::UnexpectedToken {
-                    expected: TokenKind::Identifier(String::from("foo")),
+                    expect: TokenKind::Identifier(String::from("foo")),
                     found: kind.clone(),
                     span: token.span,
                 });
@@ -901,8 +941,7 @@ impl Parser {
 
             // Parse argument
 
-            let expression = self.parse_expression()?;
-            args.push(expression);
+            args.push(self.parse_expression()?);
 
             // Continue if encounter "," or break out of loop if encounter ")"
 
@@ -919,7 +958,7 @@ impl Parser {
                     // Error if encountering neither "," or ")"
 
                     return Err(ParsingError::UnexpectedToken {
-                        expected: TokenKind::RParen,
+                        expect: TokenKind::RParen,
                         found: kind.clone(),
                         span: token.span,
                     });
@@ -928,11 +967,11 @@ impl Parser {
         }
     }
 
-    fn expect_current_token(&mut self, expected: &TokenKind) -> Result<(), ParsingError> {
+    fn expect_current_token(&mut self, expect: &TokenKind) -> Result<(), ParsingError> {
         let current = self.get_current_token();
-        if &current.kind != expected {
+        if &current.kind != expect {
             return Err(ParsingError::UnexpectedToken {
-                expected: expected.clone(),
+                expect: expect.clone(),
                 found: current.kind.clone(),
                 span: current.span,
             });
@@ -967,7 +1006,7 @@ impl Parser {
 #[derive(Clone, Debug, PartialEq)]
 pub enum ParsingError {
     UnexpectedToken {
-        expected: TokenKind,
+        expect: TokenKind,
         found: TokenKind,
         span: Span,
     },
@@ -984,10 +1023,8 @@ impl ParsingError {
 impl Display for ParsingError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::UnexpectedToken {
-                expected, found, ..
-            } => {
-                write!(f, "expecting to find {expected} but get {found} instead",)
+            Self::UnexpectedToken { expect, found, .. } => {
+                write!(f, "expecting to find {expect} but get {found} instead",)
             }
         }
     }
@@ -998,7 +1035,7 @@ mod tests {
     use super::*;
     use crate::lexer;
 
-    fn parse_and_assert_result(input: &str, expected: AstNode) {
+    fn parse_and_assert_result(input: &str, expect: AstNode) {
         let tokens = lexer::lex(input).unwrap();
         let result = parse(tokens);
 
@@ -1006,7 +1043,7 @@ mod tests {
         assert_eq!(
             result.unwrap(),
             ProgramAst {
-                stmts: vec![expected]
+                stmts: vec![expect]
             }
         );
     }
@@ -1372,7 +1409,7 @@ mod tests {
                     span: 10..13,
                 })),
                 body: vec![AstNode::Return {
-                    expression: Some(Box::new(AstNode::Literal {
+                    expr: Some(Box::new(AstNode::Literal {
                         value: Value::Integer(5),
                         span: 24..25,
                     })),
@@ -1863,7 +1900,7 @@ mod tests {
         assert_eq!(
             result.unwrap_err(),
             ParsingError::UnexpectedToken {
-                expected: TokenKind::RParen,
+                expect: TokenKind::RParen,
                 found: TokenKind::Semicolon,
                 span: 8..9,
             }

@@ -103,13 +103,13 @@ impl SemanticChecker {
                     })
                 }
 
-                AstNode::Return { expression, span } => {
-                    let t = self.check_return(expression, span)?;
+                AstNode::Return { expr, span } => {
+                    let t = self.check_return(expr, span)?;
                     body_t = Some(t);
                 }
 
-                expression => {
-                    self.check_expression(expression)?;
+                expr => {
+                    self.check_expression(expr)?;
                 }
             }
         }

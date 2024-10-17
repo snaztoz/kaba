@@ -63,7 +63,7 @@ pub enum AstNode {
     },
 
     Return {
-        expression: Option<Box<AstNode>>,
+        expr: Option<Box<AstNode>>,
         span: Span,
     },
 
