@@ -202,7 +202,7 @@ Current priorities:
 
 ## ⚠️ Attention
 
-* All statements must be terminated with either a semicolon (`;`) or right brace (`}`) (in case of body blocks).
+* All statements must be terminated with either a semicolon (`;`) or right brace (`end`) (in case of body blocks).
 
 ## 📃 License
 
