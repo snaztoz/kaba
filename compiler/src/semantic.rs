@@ -14,7 +14,6 @@ use crate::ast::{AstNode, Program as ProgramAst};
 use logos::Span;
 use types::CallableSignature;
 
-mod builtin_functions;
 mod context;
 mod error;
 mod scope;
@@ -740,13 +739,13 @@ mod tests {
                     var condition2 = 0.5 < 0.75;
 
                     if condition1 do
-                        print(condition1);
-                        print(1);
+                        debug condition1;
+                        debug 1;
                     else if condition2 do
-                        print(condition2);
-                        print(2);
+                        debug condition2;
+                        debug 2;
                     else do
-                        print(0);
+                        debug 0;
                     end
                 end
             "})
@@ -759,7 +758,7 @@ mod tests {
                     if 1 + 1 == 2 do
                         if 2 + 2 == 4 do
                             if 3 + 3 == 6 do
-                                print(true);
+                                debug true;
                             end
                         end
                     end
@@ -773,10 +772,10 @@ mod tests {
                 fn main() do
                     if true do
                         var x = 50;
-                        print(x);
+                        debug x;
                     end
 
-                    print(x);
+                    debug x;
                 end
             "})
     }
@@ -786,7 +785,7 @@ mod tests {
         check_and_assert_is_err(indoc! {"
                 fn main() do
                     if 1 + 1 do
-                        print(1);
+                        debug 1;
                     end
                 end
             "})
@@ -799,7 +798,7 @@ mod tests {
                     if true do
                         var x = 50;
                     else do
-                        print(x);
+                        debug x;
                     end
                 end
             "})
@@ -814,7 +813,7 @@ mod tests {
         check_and_assert_is_ok(indoc! {"
                 fn main() do
                     while 2 > 5 do
-                        print(1);
+                        debug 1;
                     end
 
                     var a = 5;
@@ -822,7 +821,7 @@ mod tests {
                         if a == 5 do
                             break;
                         end
-                        print(0);
+                        debug 0;
                     end
                 end
             "})
@@ -875,11 +874,11 @@ mod tests {
     fn test_defining_duplicated_function() {
         check_and_assert_is_err(indoc! {"
                 fn printSumOf(a: Int, b: Int,) do
-                    print(a + b);
+                    debug a + b;
                 end
 
                 fn printSumOf(a: Float, b: Float) do
-                    print(a + b);
+                    debug a + b;
                 end
             "});
     }
@@ -911,7 +910,7 @@ mod tests {
     fn test_recursive_functions_with_void_return_type() {
         check_and_assert_is_ok(indoc! {"
                 fn countToZero(n: Int) do
-                    print(n);
+                    debug n;
                     if n == 0 do
                         return;
                     end
@@ -975,7 +974,7 @@ mod tests {
                 end
 
                 fn callBar() do
-                    print(true);
+                    debug true;
                 end
             "})
     }
@@ -1098,7 +1097,6 @@ mod tests {
             ("-5 + 50 * 200 / 7 - 999;", Type::Int),
             ("-5 + -0.25;", Type::Float),
             ("99.9 % 0.1;", Type::Float),
-            ("print(703 + 5 - 90 * 100 / 86 * 0.5);", Type::Void),
             ("767 >= 900 == (45 < 67);", Type::Bool),
             ("false || !false && 50 > 0;", Type::Bool),
         ];
@@ -1118,8 +1116,6 @@ mod tests {
     #[test]
     fn test_invalid_expression() {
         let cases = [
-            "50 * print(73);",
-            "print(50 + print(90));",
             "100 - notExist;",
             "-(print);",
             "-true;",

@@ -19,8 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Auto-casting behaviour in number types is disabled.
 - `Any` type is removed.
-- Operator for writing comments is changed to `#`
 - Operators for indicating blocks are changed to `do ... end`
+- Use `#` to write comments.
+
+### Removed
+
+- Multi-line comments.
+- `//` operator.
+- Built-in `print` function.
 
 ## [0.2.2] - 2024-01-11
 

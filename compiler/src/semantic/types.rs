@@ -145,10 +145,6 @@ pub struct CallableParameters {
 }
 
 impl CallableParameters {
-    pub fn from_btree_map(m: BTreeMap<String, Type>) -> Self {
-        Self { ps: m }
-    }
-
     pub fn from_ast_node_pairs(pairs: &[(AstNode, AstNode)]) -> Result<Self> {
         let mut ps = BTreeMap::new();
 

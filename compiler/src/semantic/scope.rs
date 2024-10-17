@@ -1,7 +1,7 @@
 // Copyright 2023-2024 Hafidh Muqsithanova Sukarno
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{builtin_functions, types::Type};
+use super::types::Type;
 use std::collections::HashMap;
 
 pub struct ScopeStack {
@@ -23,10 +23,8 @@ pub struct Scope {
 
 impl Scope {
     pub fn new_builtin_scope() -> Self {
-        let symbols = builtin_functions::get_types();
-
         Self {
-            symbols,
+            symbols: HashMap::new(),
             scope_t: ScopeType::Builtin,
         }
     }

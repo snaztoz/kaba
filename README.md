@@ -123,11 +123,11 @@ As this is a really new project, it only has limited features for now:
   52 * (2 + 3) / 3;
   ```
 
-* `print` function (there is no other function, and it is not yet supported to create a new one)
+* `debug` statement to output value to console
   ```text
   var x = 101;
 
-  print(x);
+  debug x;
   ```
 
 * Conditional branch
@@ -136,12 +136,12 @@ As this is a really new project, it only has limited features for now:
   var condition2 = 50 > 20;
 
   if condition do
-    print(1);
+    debug 1;
     if condition2 do
-      print(2);
+      debug 2;
     end
   else do
-    print(0);
+    debug 0;
   end
   ```
 
@@ -151,7 +151,7 @@ As this is a really new project, it only has limited features for now:
 
   while i < 10 do
     if i % 2 == 0 do
-      print(i);
+      debug i;
     end
     i += 1;
   end
@@ -169,15 +169,15 @@ As this is a really new project, it only has limited features for now:
   var x = 10;
   var y = 20;
 
-  print(x);
-  print(y);
+  debug x;
+  debug y;
 
   var temp = x;
   x = y;
   y = temp;
 
-  print(x);
-  print(y);
+  debug x;
+  debug y;
   ```
 
 * Program to print all odd numbers below 10:
@@ -186,7 +186,7 @@ As this is a really new project, it only has limited features for now:
 
   while i < 10 do
     if i % 2 == 1 do
-      print(i);
+      debug i;
     end
     i += 1;
   end
