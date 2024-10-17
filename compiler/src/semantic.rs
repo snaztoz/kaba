@@ -873,11 +873,11 @@ mod tests {
     #[test]
     fn test_defining_duplicated_function() {
         check_and_assert_is_err(indoc! {"
-                fn printSumOf(a: Int, b: Int,) do
+                fn print_sum_of(a: Int, b: Int,) do
                     debug a + b;
                 end
 
-                fn printSumOf(a: Float, b: Float) do
+                fn print_sum_of(a: Float, b: Float) do
                     debug a + b;
                 end
             "});
@@ -909,16 +909,16 @@ mod tests {
     #[test]
     fn test_recursive_functions_with_void_return_type() {
         check_and_assert_is_ok(indoc! {"
-                fn countToZero(n: Int) do
+                fn count_to_zero(n: Int) do
                     debug n;
                     if n == 0 do
                         return;
                     end
-                    countToZero(n-1);
+                    count_to_zero(n-1);
                 end
 
                 fn main() do
-                    countToZero(10);
+                    count_to_zero(10);
                 end
             "});
     }
@@ -966,14 +966,14 @@ mod tests {
     fn test_defining_functions_not_in_order() {
         check_and_assert_is_ok(indoc! {"
                 fn main() do
-                    callFoo();
+                    call_foo();
                 end
 
-                fn callFoo() do
-                    callBar();
+                fn call_foo() do
+                    call_bar();
                 end
 
-                fn callBar() do
+                fn call_bar() do
                     debug true;
                 end
             "})
@@ -1000,7 +1000,7 @@ mod tests {
     #[test]
     fn test_defining_function_with_duplicated_parameter_name() {
         check_and_assert_is_err(indoc! {"
-                fn addSumOf(x: Int, x: Int) do end
+                fn add_sum_of(x: Int, x: Int) do end
             "});
     }
 
@@ -1032,7 +1032,7 @@ mod tests {
     #[test]
     fn test_using_invalid_statement_after_return() {
         check_and_assert_is_err(indoc! {"
-                fn getFive(): Int do
+                fn get_five(): Int do
                     return 5;
                     1 + true; # should be error
                 end
@@ -1116,7 +1116,7 @@ mod tests {
     #[test]
     fn test_invalid_expression() {
         let cases = [
-            "100 - notExist;",
+            "100 - not_exist;",
             "-(print);",
             "-true;",
             "true > false;",
