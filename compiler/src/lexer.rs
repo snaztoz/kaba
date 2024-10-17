@@ -89,6 +89,8 @@ pub enum Token {
     #[token("continue")] Continue,
     #[token("fn")]       Fn,
     #[token("return")]   Return,
+    #[token("do")]       Do,
+    #[token("end")]      End,
 
     //
     // Symbols
@@ -105,8 +107,6 @@ pub enum Token {
     #[token(",")] Comma,
     #[token("(")] LParen,
     #[token(")")] RParen,
-    #[token("{")] LBrace,
-    #[token("}")] RBrace,
 
     #[token("=")]  Assign,
     #[token("+=")] AddAssign,
@@ -159,6 +159,8 @@ impl Display for Token {
             Self::Continue => write!(f, "`continue` keyword"),
             Self::Fn => write!(f, "`fn` keyword"),
             Self::Return => write!(f, "`return` keyword"),
+            Self::Do => write!(f, "`do` keyword"),
+            Self::End => write!(f, "`end` keyword"),
 
             Self::Add => write!(f, "addition operator (`+`)"),
             Self::Sub => write!(f, "subtraction operator (`-`)"),
@@ -170,8 +172,6 @@ impl Display for Token {
             Self::Comma => write!(f, "comma (`,`)"),
             Self::LParen => write!(f, "left parentheses (`(`)"),
             Self::RParen => write!(f, "right parentheses (`)`)"),
-            Self::LBrace => write!(f, "left brace (`{{`)"),
-            Self::RBrace => write!(f, "right brace (`}}`)"),
             Self::Assign => write!(f, "assign operator (`=`)"),
             Self::AddAssign => write!(f, "add assign operator (`+=`)"),
             Self::SubAssign => write!(f, "sub assign operator (`-=`)"),

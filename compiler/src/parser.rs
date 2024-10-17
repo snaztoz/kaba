@@ -44,21 +44,31 @@ impl Parser {
         Ok(ProgramAst { stmts })
     }
 
-    fn parse_block(&mut self) -> Result<(Vec<AstNode>, Span), ParsingError> {
-        // Expecting "{"
+    fn parse_block(
+        &mut self,
+        additional_delimiter: Option<Token>,
+    ) -> Result<(Vec<AstNode>, Span), ParsingError> {
+        // Expecting "do"
 
         let start = self.get_current_rich_token().span.start;
-        self.skip(&Token::LBrace)?;
+        self.skip(&Token::Do)?;
 
-        // Expecting 0 >= statements, delimited with "}"
+        // Expecting 0 >= statements, delimited with
+        // "end" or "additional_delimiter"
 
         let mut statements = vec![];
         loop {
-            if self.current_token_is(&Token::RBrace) {
+            if let Some(tok) = &additional_delimiter {
+                if self.current_token_is(tok) {
+                    break;
+                }
+            }
+
+            if self.current_token_is(&Token::End) {
                 break;
             } else if self.current_token_is(&Token::Eof) {
                 return Err(ParsingError::UnexpectedToken {
-                    expected: Token::RBrace,
+                    expected: Token::End,
                     found: Token::Eof,
                     span: self.get_current_rich_token().span,
                 });
@@ -68,10 +78,14 @@ impl Parser {
             statements.push(statement);
         }
 
-        // Expecting "}"
+        // Expecting "end" or "additional delimiter"
 
         let end = self.get_current_rich_token().span.end;
-        self.skip(&Token::RBrace)?;
+
+        // don't skip if delimiter is not "end"
+        if self.current_token_is(&Token::End) {
+            self.skip(&Token::End)?;
+        }
 
         Ok((statements, start..end))
     }
@@ -197,7 +211,7 @@ impl Parser {
 
         // Expecting block
 
-        let (block_statements, block_span) = self.parse_block()?;
+        let (block_statements, block_span) = self.parse_block(Some(Token::Else))?;
         end = block_span.end;
 
         // Expecting >= 0 "else if" or 1 "else"
@@ -217,10 +231,10 @@ impl Parser {
                     Some(Box::new(alt))
                 }
 
-                Token::LBrace => {
+                Token::Do => {
                     // Expecting block
 
-                    let (block_statements, block_span) = self.parse_block()?;
+                    let (block_statements, block_span) = self.parse_block(Some(Token::Else))?;
                     let else_end = block_span.end;
                     end = else_end;
 
@@ -260,7 +274,7 @@ impl Parser {
 
         // Expecting block
 
-        let (block_statements, block_span) = self.parse_block()?;
+        let (block_statements, block_span) = self.parse_block(None)?;
         let end = block_span.end;
 
         Ok(AstNode::While {
@@ -393,7 +407,7 @@ impl Parser {
 
         // Expecting function body
 
-        let (body, body_span) = self.parse_block()?;
+        let (body, body_span) = self.parse_block(None)?;
 
         Ok(AstNode::FunctionDefinition {
             id: Box::new(name),
@@ -1142,7 +1156,7 @@ mod tests {
     #[test]
     fn test_parsing_if_statement() {
         parse_and_assert_result(
-            "if 15 > 10 { print(1); }",
+            "if 15 > 10 do print(1); end",
             AstNode::If {
                 cond: Box::new(AstNode::Gt {
                     lhs: Box::new(AstNode::Literal {
@@ -1158,16 +1172,16 @@ mod tests {
                 body: vec![AstNode::FunctionCall {
                     callee: Box::new(AstNode::Identifier {
                         name: String::from("print"),
-                        span: 13..18,
+                        span: 14..19,
                     }),
                     args: vec![AstNode::Literal {
                         value: Value::Integer(1),
-                        span: 19..20,
+                        span: 20..21,
                     }],
-                    span: 13..21,
+                    span: 14..22,
                 }],
                 or_else: None,
-                span: 0..24,
+                span: 0..27,
             },
         );
     }
@@ -1175,7 +1189,7 @@ mod tests {
     #[test]
     fn test_parsing_if_else_branches() {
         parse_and_assert_result(
-            "if false {} else if false {} else {}",
+            "if false do else if false do else do end",
             AstNode::If {
                 cond: Box::new(AstNode::Literal {
                     value: Value::Boolean(false),
@@ -1190,11 +1204,11 @@ mod tests {
                     body: vec![],
                     or_else: Some(Box::new(AstNode::Else {
                         body: vec![],
-                        span: 29..36,
+                        span: 29..40,
                     })),
-                    span: 17..36,
+                    span: 17..40,
                 })),
-                span: 0..36,
+                span: 0..40,
             },
         );
     }
@@ -1206,14 +1220,14 @@ mod tests {
     #[test]
     fn test_parsing_while_statement() {
         parse_and_assert_result(
-            "while true {}",
+            "while true do end",
             AstNode::While {
                 cond: Box::new(AstNode::Literal {
                     value: Value::Boolean(true),
                     span: 6..10,
                 }),
                 body: vec![],
-                span: 0..13,
+                span: 0..17,
             },
         );
     }
@@ -1221,17 +1235,17 @@ mod tests {
     #[test]
     fn test_parsing_while_statement_with_control_loops() {
         parse_and_assert_result(
-            "while true { continue; break; }",
+            "while true do continue; break; end",
             AstNode::While {
                 cond: Box::new(AstNode::Literal {
                     value: Value::Boolean(true),
                     span: 6..10,
                 }),
                 body: vec![
-                    AstNode::Continue { span: 13..21 },
-                    AstNode::Break { span: 23..28 },
+                    AstNode::Continue { span: 14..22 },
+                    AstNode::Break { span: 24..29 },
                 ],
-                span: 0..31,
+                span: 0..34,
             },
         );
     }
@@ -1243,7 +1257,7 @@ mod tests {
     #[test]
     fn test_parsing_empty_function_definition() {
         parse_and_assert_result(
-            "fn foo() {}",
+            "fn foo() do end",
             AstNode::FunctionDefinition {
                 id: Box::new(AstNode::Identifier {
                     name: String::from("foo"),
@@ -1252,7 +1266,7 @@ mod tests {
                 params: vec![],
                 return_t: None,
                 body: vec![],
-                span: 0..11,
+                span: 0..15,
             },
         );
     }
@@ -1260,7 +1274,7 @@ mod tests {
     #[test]
     fn test_parsing_function_definition_with_parameters_and_trailing_comma() {
         parse_and_assert_result(
-            "fn foo(x: Int, y: Bool,) {}",
+            "fn foo(x: Int, y: Bool,) do end",
             AstNode::FunctionDefinition {
                 id: Box::new(AstNode::Identifier {
                     name: String::from("foo"),
@@ -1296,7 +1310,7 @@ mod tests {
                 ],
                 return_t: None,
                 body: vec![],
-                span: 0..27,
+                span: 0..31,
             },
         );
     }
@@ -1304,7 +1318,7 @@ mod tests {
     #[test]
     fn test_parsing_function_definition_parameter_and_body() {
         parse_and_assert_result(
-            "fn write(x: Int) { print(x); }",
+            "fn write(x: Int) do print(x); end",
             AstNode::FunctionDefinition {
                 id: Box::new(AstNode::Identifier {
                     name: String::from("write"),
@@ -1327,15 +1341,15 @@ mod tests {
                 body: vec![AstNode::FunctionCall {
                     callee: Box::new(AstNode::Identifier {
                         name: String::from("print"),
-                        span: 19..24,
+                        span: 20..25,
                     }),
                     args: vec![AstNode::Identifier {
                         name: String::from("x"),
-                        span: 25..26,
+                        span: 26..27,
                     }],
-                    span: 19..27,
+                    span: 20..28,
                 }],
-                span: 0..30,
+                span: 0..33,
             },
         );
     }
@@ -1343,7 +1357,7 @@ mod tests {
     #[test]
     fn test_parsing_function_definition_with_return_statement() {
         parse_and_assert_result(
-            "fn foo(): Int { return 5; }",
+            "fn foo(): Int do return 5; end",
             AstNode::FunctionDefinition {
                 id: Box::new(AstNode::Identifier {
                     name: String::from("foo"),
@@ -1360,11 +1374,11 @@ mod tests {
                 body: vec![AstNode::Return {
                     expression: Some(Box::new(AstNode::Literal {
                         value: Value::Integer(5),
-                        span: 23..24,
+                        span: 24..25,
                     })),
-                    span: 16..24,
+                    span: 17..25,
                 }],
-                span: 0..27,
+                span: 0..30,
             },
         );
     }

@@ -540,82 +540,82 @@ mod tests {
     #[test]
     fn test_check_variable_declaration_with_type_annotation_and_initial_value() {
         check_and_assert_is_ok(indoc! {"
-                fn main() {
+                fn main() do
                     var x: Int = 5;
-                }
+                end
             "});
     }
 
     #[test]
     fn test_check_variable_declaration_with_type_annotation_only() {
         check_and_assert_is_ok(indoc! {"
-                fn main() {
+                fn main() do
                     var x: Int;
-                }
+                end
             "});
     }
 
     #[test]
     fn test_check_variable_declaration_with_initial_value_only() {
         check_and_assert_is_ok(indoc! {"
-                fn main() {
+                fn main() do
                     var x = 5;
-                }
+                end
             "});
     }
 
     #[test]
     fn test_check_variable_declaration_with_float_literal() {
         check_and_assert_is_ok(indoc! {"
-                fn main() {
+                fn main() do
                     var x = -0.5;
-                }
+                end
             "});
     }
 
     #[test]
     fn test_check_variable_declaration_with_boolean_literal() {
         check_and_assert_is_ok(indoc! {"
-                fn main() {
+                fn main() do
                     var x = true;
-                }
+                end
             "});
     }
 
     #[test]
     fn test_using_incompatible_types_in_variable_declaration() {
         check_and_assert_is_err(indoc! {"
-                fn main() {
+                fn main() do
                     var x: Int = 5.0;
-                }
+                end
             "})
     }
 
     #[test]
     fn test_using_no_type_annotation_or_initial_value_in_variable_declaration() {
         check_and_assert_is_err(indoc! {"
-                fn main() {
+                fn main() do
                     var x;
-                }
+                end
             "})
     }
 
     #[test]
     fn test_using_non_existing_type_in_variable_declaration() {
         check_and_assert_is_err(indoc! {"
-                fn main() {
+                fn main() do
                     var x: NonExistingType;
-                }
+                end
             "})
     }
 
     #[test]
     fn test_redeclaring_variable_in_the_same_scope() {
         check_and_assert_is_err(indoc! {"
-                fn main() {
+                fn main() do
                     var x = 5;
                     var x = 10;
-                }
+                end
             "})
     }
 
@@ -626,7 +626,7 @@ mod tests {
     #[test]
     fn test_check_value_assignments() {
         check_and_assert_is_ok(indoc! {"
-                fn main() {
+                fn main() do
                     var x: Int;
                     x = 10;
 
@@ -635,87 +635,87 @@ mod tests {
 
                     var z = false;
                     z = true;
-                }
+                end
             "})
     }
 
     #[test]
     fn test_check_shorthand_value_assignments() {
         check_and_assert_is_ok(indoc! {"
-                fn main() {
+                fn main() do
                     var i = 0;
                     i += 1;
                     i -= 2;
                     i *= 3;
                     i /= 4;
                     i %= 5;
-                }
+                end
             "})
     }
 
     #[test]
     fn test_check_mod_assign_with_float_types() {
         check_and_assert_is_ok(indoc! {"
-                fn main() {
+                fn main() do
                     var i = 5.0;
                     i %= 2.5;
-                }
+                end
             "})
     }
 
     #[test]
     fn test_assigning_value_with_mismatched_types() {
         check_and_assert_is_err(indoc! {"
-                fn main() {
+                fn main() do
                     var x: Int;
                     x = 5.0;
-                }
+                end
             "})
     }
 
     #[test]
     fn test_assigning_value_with_non_existing_variable() {
         check_and_assert_is_err(indoc! {"
-                fn main() {
+                fn main() do
                     var x: Float;
                     x = y;
-                }
+                end
             "})
     }
 
     #[test]
     fn test_using_math_expression_as_lhs_in_value_assignment() {
         check_and_assert_is_err(indoc! {"
-                fn main() {
+                fn main() do
                     1 + 1 = 5;
-                }
+                end
             "})
     }
 
     #[test]
     fn test_using_boolean_expression_as_lhs_in_value_assignment() {
         check_and_assert_is_err(indoc! {"
-                fn main() {
+                fn main() do
                     true || false = false;
-                }
+                end
             "})
     }
 
     #[test]
     fn test_using_integer_grouped_expression_as_lhs_in_value_assignment() {
         check_and_assert_is_err(indoc! {"
-                fn main() {
+                fn main() do
                     (50) = true;
-                }
+                end
             "})
     }
 
     #[test]
     fn test_using_boolean_type_in_shorthand_value_assignment() {
         check_and_assert_is_err(indoc! {"
-                fn main() {
+                fn main() do
                     true += true;
-                }
+                end
             "})
     }
 
@@ -726,73 +726,73 @@ mod tests {
     #[test]
     fn test_check_if_else_statements() {
         check_and_assert_is_ok(indoc! {"
-                fn main() {
+                fn main() do
                     var condition1 = 5 < 10;
                     var condition2 = 0.5 < 0.75;
 
-                    if condition1 {
+                    if condition1 do
                         print(condition1);
                         print(1);
-                    } else if condition2 {
+                    else if condition2 do
                         print(condition2);
                         print(2);
-                    } else {
+                    else do
                         print(0);
-                    }
-                }
+                    end
+                end
             "})
     }
 
     #[test]
     fn test_check_nested_if_statements() {
         check_and_assert_is_ok(indoc! {"
-                fn main() {
-                    if 1 + 1 == 2 {
-                        if 2 + 2 == 4 {
-                            if 3 + 3 == 6 {
+                fn main() do
+                    if 1 + 1 == 2 do
+                        if 2 + 2 == 4 do
+                            if 3 + 3 == 6 do
                                 print(true);
-                            }
-                        }
-                    }
-                }
+                            end
+                        end
+                    end
+                end
             "})
     }
 
     #[test]
     fn test_using_variable_after_out_of_conditional_scope() {
         check_and_assert_is_err(indoc! {"
-                fn main() {
-                    if true {
+                fn main() do
+                    if true do
                         var x = 50;
                         print(x);
-                    }
+                    end
 
                     print(x);
-                }
+                end
             "})
     }
 
     #[test]
     fn test_using_math_expression_as_condition_in_if_statement() {
         check_and_assert_is_err(indoc! {"
-                fn main() {
-                    if 1 + 1 {
+                fn main() do
+                    if 1 + 1 do
                         print(1);
-                    }
-                }
+                    end
+                end
             "})
     }
 
     #[test]
     fn test_using_variable_declared_in_sibling_conditional_scope() {
         check_and_assert_is_err(indoc! {"
-                fn main() {
-                    if true {
+                fn main() do
+                    if true do
                         var x = 50;
-                    } else {
+                    else do
                         print(x);
-                    }
-                }
+                    end
+                end
             "})
     }
 
@@ -803,51 +803,51 @@ mod tests {
     #[test]
     fn test_check_loop_statements() {
         check_and_assert_is_ok(indoc! {"
-                fn main() {
-                    while 2 > 5 {
+                fn main() do
+                    while 2 > 5 do
                         print(1);
-                    }
+                    end
 
                     var a = 5;
-                    while true {
-                        if a == 5 {
+                    while true do
+                        if a == 5 do
                             break;
-                        }
+                        end
                         print(0);
-                    }
-                }
+                    end
+                end
             "})
     }
 
     #[test]
     fn test_using_math_expression_as_condition_in_while_statement() {
         check_and_assert_is_err(indoc! {"
-                fn main() {
-                    while 5 + 5 {}
-                }
+                fn main() do
+                    while 5 + 5 do end
+                end
             "})
     }
 
     #[test]
     fn test_using_break_statement_not_in_loop_scope() {
         check_and_assert_is_err(indoc! {"
-                fn main() {
-                    if true {
+                fn main() do
+                    if true do
                         break;
-                    }
-                }
+                    end
+                end
             "})
     }
 
     #[test]
     fn test_using_invalid_statement_after_loop_control() {
         check_and_assert_is_err(indoc! {"
-                fn main() {
-                    while true {
+                fn main() do
+                    while true do
                         break;
                         1 + true; # this should be error
-                    }
-                }
+                    end
+                end
             "})
     }
 
@@ -858,211 +858,211 @@ mod tests {
     #[test]
     fn test_defining_function_without_parameter_or_return_type() {
         check_and_assert_is_ok(indoc! {"
-                fn add() {}
+                fn add() do end
             "});
     }
 
     #[test]
     fn test_defining_duplicated_function() {
         check_and_assert_is_err(indoc! {"
-                fn printSumOf(a: Int, b: Int,) {
+                fn printSumOf(a: Int, b: Int,) do
                     print(a + b);
-                }
+                end
 
-                fn printSumOf(a: Float, b: Float) {
+                fn printSumOf(a: Float, b: Float) do
                     print(a + b);
-                }
+                end
             "});
     }
 
     #[test]
     fn test_defining_functions_both_with_parameters_and_return_type() {
         check_and_assert_is_ok(indoc! {"
-                fn sum(x: Int, y: Int): Int {
+                fn sum(x: Int, y: Int): Int do
                     return x + y;
-                }
+                end
             "});
     }
 
     #[test]
     fn test_recursive_fibonacci_function() {
         check_and_assert_is_ok(indoc! {"
-                fn fibonacci(n: Int): Int {
-                    if n == 0 {
+                fn fibonacci(n: Int): Int do
+                    if n == 0 do
                         return 0;
-                    } else if n == 1 || n == 2 {
+                    else if n == 1 || n == 2 do
                         return 1;
-                    }
+                    end
                     return fibonacci(n-1) + fibonacci(n-2);
-                }
+                end
             "});
     }
 
     #[test]
     fn test_recursive_functions_with_void_return_type() {
         check_and_assert_is_ok(indoc! {"
-                fn countToZero(n: Int) {
+                fn countToZero(n: Int) do
                     print(n);
-                    if n == 0 {
+                    if n == 0 do
                         return;
-                    }
+                    end
                     countToZero(n-1);
-                }
+                end
 
-                fn main() {
+                fn main() do
                     countToZero(10);
-                }
+                end
             "});
     }
 
     #[test]
     fn test_function_returning_branches() {
         check_and_assert_is_ok(indoc! {"
-                fn first(): Int {
+                fn first(): Int do
                     return 5;
-                }
+                end
 
-                fn second(): Int {
-                    if false {
+                fn second(): Int do
+                    if false do
                         return 0;
-                    } else {
+                    else do
                         return 1;
-                    }
-                }
+                    end
+                end
 
-                fn third(): Int {
-                    if false {
+                fn third(): Int do
+                    if false do
                         return 0;
-                    }
+                    end
                     return 1;
-                }
+                end
 
-                fn fourth(): Int {
-                    while false {
+                fn fourth(): Int do
+                    while false do
                         return 0;
-                    }
+                    end
                     return 1;
-                }
+                end
 
-                fn fifth(): Int {
+                fn fifth(): Int do
                     return 1;
 
-                    if false {
+                    if false do
                         return 0;
-                    }
-                }
+                    end
+                end
             "});
     }
 
     #[test]
     fn test_defining_functions_not_in_order() {
         check_and_assert_is_ok(indoc! {"
-                fn main() {
+                fn main() do
                     callFoo();
-                }
+                end
 
-                fn callFoo() {
+                fn callFoo() do
                     callBar();
-                }
+                end
 
-                fn callBar() {
+                fn callBar() do
                     print(true);
-                }
+                end
             "})
     }
 
     #[test]
     fn test_defining_function_not_in_global_scope() {
         check_and_assert_is_err(indoc! {"
-                fn main() {
-                    if true {
-                        fn foo() {}
-                    }
-                }
+                fn main() do
+                    if true do
+                        fn foo() do end
+                    end
+                end
             "});
     }
 
     #[test]
     fn test_defining_function_with_an_invalid_return_type() {
         check_and_assert_is_err(indoc! {"
-                fn foo(): NonExistingType {}
+                fn foo(): NonExistingType do end
             "});
     }
 
     #[test]
     fn test_defining_function_with_duplicated_parameter_name() {
         check_and_assert_is_err(indoc! {"
-                fn addSumOf(x: Int, x: Int) {}
+                fn addSumOf(x: Int, x: Int) do end
             "});
     }
 
     #[test]
     fn test_defining_function_with_an_invalid_parameter_type() {
         check_and_assert_is_err(indoc! {"
-                fn foo(x: NonExistingType) {}
+                fn foo(x: NonExistingType) do end
             "});
     }
 
     #[test]
     fn test_returning_value_from_function_with_void_return_type() {
         check_and_assert_is_err(indoc! {"
-                fn foo() {
+                fn foo() do
                     return 5;
-                }
+                end
             "});
     }
 
     #[test]
     fn test_returning_value_from_function_with_mismatched_return_type() {
         check_and_assert_is_err(indoc! {"
-                fn sum(x: Int, y: Int): Int {
+                fn sum(x: Int, y: Int): Int do
                     return 5.0;
-                }
+                end
             "});
     }
 
     #[test]
     fn test_using_invalid_statement_after_return() {
         check_and_assert_is_err(indoc! {"
-                fn getFive(): Int {
+                fn getFive(): Int do
                     return 5;
                     1 + true; # should be error
-                }
+                end
             "});
     }
 
     #[test]
     fn test_defining_function_with_missing_return_in_other_branches() {
         check_and_assert_is_err(indoc! {"
-                fn foo(): Int {
-                    if false {
+                fn foo(): Int do
+                    if false do
                         return 5;
-                    }
-                }
+                    end
+                end
             "});
     }
 
     #[test]
     fn test_defining_function_with_missing_return_in_else_or_outer_branches() {
         check_and_assert_is_err(indoc! {"
-                fn foo(): Int {
-                    if false {
+                fn foo(): Int do
+                    if false do
                         return 0;
-                    } else if !true {
+                    else if !true do
                         return 0;
-                    }
-                }
+                    end
+                end
             "});
     }
 
     #[test]
     fn test_defining_function_with_missing_return_in_outer_branch_of_while_statement() {
         check_and_assert_is_err(indoc! {"
-                fn foo(): Int {
-                    while false {
+                fn foo(): Int do
+                    while false do
                         return 0;
-                    }
-                }
+                    end
+                end
             "});
     }
 
@@ -1108,7 +1108,7 @@ mod tests {
         ];
 
         for input in cases {
-            check_and_assert_is_err(&format!("fn main() {{ {} }}", input));
+            check_and_assert_is_err(&format!("fn main() do {input} end"));
         }
     }
 }

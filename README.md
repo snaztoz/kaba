@@ -135,31 +135,31 @@ As this is a really new project, it only has limited features for now:
   var condition = 50 > 10;
   var condition2 = 50 > 20;
 
-  if condition {
+  if condition do
     print(1);
-    if condition2 {
+    if condition2 do
       print(2);
-    }
-  } else {
+    end
+  else do
     print(0);
-  }
+  end
   ```
 
 * Loop
   ```
   var i = 0;
 
-  while i < 10 {
-    if i % 2 == 0 {
+  while i < 10 do
+    if i % 2 == 0 do
       print(i);
-    }
+    end
     i += 1;
-  }
+  end
 
   # `Break` and `continue` statements are also supported
-  while true {
+  while true do
     break;
-  }
+  end
   ```
 
 ## 🤔 Example
@@ -184,12 +184,12 @@ As this is a really new project, it only has limited features for now:
   ```text
   var i = 0;
 
-  while i < 10 {
-    if i % 2 == 1 {
+  while i < 10 do
+    if i % 2 == 1 do
       print(i);
-    }
+    end
     i += 1;
-  }
+  end
   ```
 
 ## 🎯 Next Goals
