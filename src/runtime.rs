@@ -3,10 +3,10 @@
 
 //! A temporary prototype of the runtime that currently being used.
 //!
-//! It accept the raw AST as is and will be replaced by a real runtime
-//! that operates on bytecodes.
+//! It accept the raw AST as is and should be replaced by a real
+//! runtime that operates on bytecodes (TODO).
 
-use self::{error::RuntimeError, flags::RuntimeFlags, stream::RuntimeStream, value::RuntimeValue};
+use self::{error::RuntimeError, state::RuntimeState, stream::RuntimeStream, value::RuntimeValue};
 use compiler::ast::{AstNode, Program as ProgramAst};
 use std::{cell::RefCell, collections::HashMap};
 
@@ -14,17 +14,15 @@ type Result<T> = std::result::Result<T, RuntimeError>;
 type Scope = HashMap<String, RuntimeValue>;
 
 mod error;
-mod flags;
+mod state;
 pub mod stream;
 mod value;
 
 pub struct Runtime<'a> {
     ast: Option<ProgramAst>,
     scopes: RefCell<Vec<Scope>>,
-    pub error: Option<String>,
-
-    streams: RefCell<RuntimeStream<'a>>,
-    flags: RefCell<RuntimeFlags>,
+    streams: RuntimeStream<'a>,
+    state: RuntimeState,
 }
 
 impl<'a> Runtime<'a> {
@@ -37,9 +35,8 @@ impl<'a> Runtime<'a> {
         Self {
             ast: Some(ast),
             scopes: RefCell::new(scopes),
-            error: None,
-            streams: RefCell::new(streams),
-            flags: RefCell::new(RuntimeFlags::new()),
+            streams,
+            state: RuntimeState::new(),
         }
     }
 
@@ -66,7 +63,7 @@ impl<'a> Runtime<'a> {
 
     fn run_statements(&self, stmts: &[AstNode]) -> Result<RuntimeValue> {
         for stmt in stmts {
-            if self.flags.borrow().stop_exec {
+            if self.state.is_stop_executing() {
                 return Ok(RuntimeValue::Void);
             }
 
@@ -90,12 +87,12 @@ impl<'a> Runtime<'a> {
                 AstNode::While { cond, body, .. } => self.run_while(cond, body)?,
 
                 AstNode::Break { .. } => {
-                    self.flags.borrow_mut().stop_exec = true;
-                    self.flags.borrow_mut().exit_loop = true;
+                    self.state.stop_execution();
+                    self.state.exit_loop();
                 }
 
                 AstNode::Continue { .. } => {
-                    self.flags.borrow_mut().stop_exec = true;
+                    self.state.stop_execution();
                 }
 
                 AstNode::Return { expr, .. } => {
@@ -258,12 +255,12 @@ impl<'a> Runtime<'a> {
                 self.run_statements(body)?;
                 self.scopes.borrow_mut().pop();
 
-                if self.flags.borrow().stop_exec {
-                    self.flags.borrow_mut().stop_exec = false;
+                if self.state.is_stop_executing() {
+                    self.state.resume_execution();
                 }
 
-                if self.flags.borrow().exit_loop {
-                    self.flags.borrow_mut().exit_loop = false;
+                if self.state.is_exiting_loop() {
+                    self.state.reset_loop_state();
                     break;
                 }
             } else {
@@ -276,7 +273,7 @@ impl<'a> Runtime<'a> {
 
     fn run_debug_statement(&self, expr: &AstNode) -> Result<()> {
         let val = self.run_expression(expr)?;
-        writeln!(self.streams.borrow_mut().out_stream, "{}", val).unwrap();
+        writeln!(self.streams.output(), "{}", val).unwrap();
         Ok(())
     }
 
