@@ -6,32 +6,28 @@
 //! It accept the raw AST as is and will be replaced by a real runtime
 //! that operates on bytecodes.
 
-use compiler::ast::{AstNode, Program as ProgramAst, Value};
-use std::{cell::RefCell, collections::HashMap, fmt::Display, io::Write};
+use self::{error::RuntimeError, flags::RuntimeFlags, stream::RuntimeStream, value::RuntimeValue};
+use compiler::ast::{AstNode, Program as ProgramAst};
+use std::{cell::RefCell, collections::HashMap};
 
-pub type WriteStream<'a> = &'a mut dyn Write;
-type Scope = HashMap<String, Value>;
+type Scope = HashMap<String, RuntimeValue>;
+
+mod error;
+mod flags;
+pub mod stream;
+mod value;
 
 pub struct Runtime<'a> {
     ast: Option<ProgramAst>,
     scopes: RefCell<Vec<Scope>>,
     pub error: Option<String>,
 
-    // IO streams
-    output_stream: RefCell<WriteStream<'a>>,
-    _error_stream: RefCell<WriteStream<'a>>,
-
-    // Internal state flags
-    stop_execution: bool,
-    should_break_loop: bool,
+    streams: RefCell<RuntimeStream<'a>>,
+    flags: RefCell<RuntimeFlags>,
 }
 
 impl<'a> Runtime<'a> {
-    pub fn new(
-        ast: ProgramAst,
-        output_stream: WriteStream<'a>,
-        error_stream: WriteStream<'a>,
-    ) -> Self {
+    pub fn new(ast: ProgramAst, streams: RuntimeStream<'a>) -> Self {
         let scopes = vec![
             HashMap::new(), // built-in
             HashMap::new(), // global
@@ -41,51 +37,76 @@ impl<'a> Runtime<'a> {
             ast: Some(ast),
             scopes: RefCell::new(scopes),
             error: None,
-            output_stream: RefCell::new(output_stream),
-            _error_stream: RefCell::new(error_stream),
-            stop_execution: false,
-            should_break_loop: false,
+            streams: RefCell::new(streams),
+            flags: RefCell::new(RuntimeFlags::new()),
         }
     }
 
-    pub fn run(&mut self) -> Result<(), RuntimeError> {
-        let statements = self.ast.take().unwrap().statements;
-        self.run_statements(&statements)
+    pub fn run(&self) -> Result<(), RuntimeError> {
+        let stmts = &self.ast.as_ref().unwrap().stmts;
+        self.register_globals(stmts);
+
+        let main = self.get_variable_value("main")?;
+        self.run_function_ptr_call(main, &[])?;
+
+        Ok(())
     }
 
-    fn run_statements(&mut self, statements: &[AstNode]) -> Result<(), RuntimeError> {
-        for statement in statements {
-            if self.stop_execution {
-                return Ok(());
+    fn register_globals(&self, stmts: &[AstNode]) {
+        for (i, stmt) in stmts.iter().enumerate() {
+            if let AstNode::FunctionDefinition { id, .. } = stmt {
+                let (id, _) = id.unwrap_identifier();
+                self.create_variable(&id, RuntimeValue::Function(i));
+            } else {
+                unreachable!()
+            }
+        }
+    }
+
+    fn run_statements(&self, stmts: &[AstNode]) -> Result<RuntimeValue, RuntimeError> {
+        for stmt in stmts {
+            if self.flags.borrow().stop_exec {
+                return Ok(RuntimeValue::Void);
             }
 
-            match statement {
-                AstNode::VariableDeclaration {
-                    identifier, value, ..
-                } => {
-                    let name = identifier.unwrap_identifier().0;
-                    self.create_variable(&name, value.as_deref())?
+            match stmt {
+                AstNode::VariableDeclaration { id, val, .. } => {
+                    let name = id.unwrap_identifier().0;
+                    let val = match val.as_deref() {
+                        Some(v) => self.run_expression(v)?,
+                        None => RuntimeValue::Integer(0),
+                    };
+                    self.create_variable(&name, val);
                 }
 
                 AstNode::If {
-                    condition,
+                    cond,
                     body,
                     or_else,
                     ..
-                } => self.run_conditional_branch(condition, body, or_else.as_deref())?,
+                } => self.run_conditional_branch(cond, body, or_else.as_deref())?,
 
-                AstNode::While {
-                    condition, body, ..
-                } => self.run_while(condition, body)?,
+                AstNode::While { cond, body, .. } => self.run_while(cond, body)?,
 
                 AstNode::Break { .. } => {
-                    self.stop_execution = true;
-                    self.should_break_loop = true;
+                    self.flags.borrow_mut().stop_exec = true;
+                    self.flags.borrow_mut().exit_loop = true;
                 }
 
                 AstNode::Continue { .. } => {
-                    self.stop_execution = true;
+                    self.flags.borrow_mut().stop_exec = true;
                 }
+
+                AstNode::Return { expr, .. } => {
+                    if let Some(expr) = expr {
+                        let val = self.run_expression(expr)?;
+                        return Ok(val);
+                    } else {
+                        return Ok(RuntimeValue::Void);
+                    }
+                }
+
+                AstNode::Debug { expr, .. } => self.run_debug_statement(expr)?,
 
                 node => {
                     self.run_expression(node)?;
@@ -93,142 +114,123 @@ impl<'a> Runtime<'a> {
             };
         }
 
-        Ok(())
+        Ok(RuntimeValue::Void)
     }
 
-    fn create_variable(
-        &mut self,
-        identifier: &str,
-        value: Option<&AstNode>,
-    ) -> Result<(), RuntimeError> {
-        if self.is_current_scope_has_variable(identifier) {
-            return Err(RuntimeError::VariableAlreadyExist(String::from(identifier)));
-        }
-
-        let value = match value {
-            Some(expression) => self.run_expression(expression)?,
-            None => Value::Integer(0),
-        };
-
-        self.create_variable_in_current_scope(identifier, value);
-
-        Ok(())
-    }
-
-    fn assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Value, RuntimeError> {
+    fn assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue, RuntimeError> {
         match lhs {
             AstNode::Identifier { name, .. } => {
-                let value = self.run_expression(rhs)?;
-                self.update_variable_value(name, value)?;
+                let val = self.run_expression(rhs)?;
+                self.update_variable_value(name, val)?;
             }
             _ => todo!("more expression for value assignment"),
         }
-        Ok(Value::Void)
+        Ok(RuntimeValue::Void)
     }
 
-    fn add_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Value, RuntimeError> {
+    fn add_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue, RuntimeError> {
         let (name, _) = lhs.unwrap_identifier();
-        let old_value = self.get_variable_value(&name)?;
-        let value = self.run_expression(rhs)?;
-        let new_value = self.math_add(&old_value, &value);
+        let old_val = self.get_variable_value(&name)?;
+        let val = self.run_expression(rhs)?;
+        let new_val = self.math_add(&old_val, &val);
 
         match lhs {
             AstNode::Identifier { name, .. } => {
-                self.update_variable_value(name, new_value)?;
+                self.update_variable_value(name, new_val)?;
             }
             _ => todo!("more expression for value assignment"),
         }
 
-        Ok(Value::Void)
+        Ok(RuntimeValue::Void)
     }
 
-    fn sub_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Value, RuntimeError> {
+    fn sub_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue, RuntimeError> {
         let (name, _) = lhs.unwrap_identifier();
-        let old_value = self.get_variable_value(&name)?;
-        let value = self.run_expression(rhs)?;
-        let new_value = self.math_sub(&old_value, &value);
+        let old_val = self.get_variable_value(&name)?;
+        let val = self.run_expression(rhs)?;
+        let new_val = self.math_sub(&old_val, &val);
 
         match lhs {
             AstNode::Identifier { name, .. } => {
-                self.update_variable_value(name, new_value)?;
+                self.update_variable_value(name, new_val)?;
             }
             _ => todo!("more expression for value assignment"),
         }
 
-        Ok(Value::Void)
+        Ok(RuntimeValue::Void)
     }
 
-    fn mul_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Value, RuntimeError> {
+    fn mul_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue, RuntimeError> {
         let (name, _) = lhs.unwrap_identifier();
-        let old_value = self.get_variable_value(&name)?;
-        let value = self.run_expression(rhs)?;
-        let new_value = self.math_mul(&old_value, &value);
+        let old_val = self.get_variable_value(&name)?;
+        let val = self.run_expression(rhs)?;
+        let new_val = self.math_mul(&old_val, &val);
 
         match lhs {
             AstNode::Identifier { name, .. } => {
-                self.update_variable_value(name, new_value)?;
+                self.update_variable_value(name, new_val)?;
             }
             _ => todo!("more expression for value assignment"),
         }
 
-        Ok(Value::Void)
+        Ok(RuntimeValue::Void)
     }
 
-    fn div_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Value, RuntimeError> {
+    fn div_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue, RuntimeError> {
         let (name, _) = lhs.unwrap_identifier();
-        let old_value = self.get_variable_value(&name)?;
-        let value = self.run_expression(rhs)?;
-        let new_value = self.math_div(&old_value, &value);
+        let old_val = self.get_variable_value(&name)?;
+        let val = self.run_expression(rhs)?;
+        let new_val = self.math_div(&old_val, &val);
 
         match lhs {
             AstNode::Identifier { name, .. } => {
-                self.update_variable_value(name, new_value)?;
+                self.update_variable_value(name, new_val)?;
             }
             _ => todo!("more expression for value assignment"),
         }
 
-        Ok(Value::Void)
+        Ok(RuntimeValue::Void)
     }
 
-    fn mod_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Value, RuntimeError> {
+    fn mod_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue, RuntimeError> {
         let (name, _) = lhs.unwrap_identifier();
-        let old_value = self.get_variable_value(&name)?;
-        let value = self.run_expression(rhs)?;
-        let new_value = self.math_mod(&old_value, &value);
+        let old_val = self.get_variable_value(&name)?;
+        let val = self.run_expression(rhs)?;
+        let new_val = self.math_mod(&old_val, &val);
 
         match lhs {
             AstNode::Identifier { name, .. } => {
-                self.update_variable_value(name, new_value)?;
+                self.update_variable_value(name, new_val)?;
             }
             _ => todo!("more expression for value assignment"),
         }
 
-        Ok(Value::Void)
+        Ok(RuntimeValue::Void)
     }
 
     fn run_conditional_branch(
-        &mut self,
-        condition: &AstNode,
+        &self,
+        cond: &AstNode,
         body: &[AstNode],
         or_else: Option<&AstNode>,
     ) -> Result<(), RuntimeError> {
-        let should_execute = match self.run_expression(condition)? {
-            Value::Boolean(b) => b,
+        let should_exec = match self.run_expression(cond)? {
+            RuntimeValue::Boolean(b) => b,
             _ => unreachable!(),
         };
 
-        if should_execute {
+        if should_exec {
             self.scopes.borrow_mut().push(HashMap::new());
             self.run_statements(body)?;
             self.scopes.borrow_mut().pop();
         } else if let Some(alt) = or_else {
             match alt {
                 AstNode::If {
-                    condition,
+                    cond,
                     body,
                     or_else,
                     ..
-                } => self.run_conditional_branch(condition, body, or_else.as_deref())?,
+                } => self.run_conditional_branch(cond, body, or_else.as_deref())?,
 
                 AstNode::Else { body, .. } => {
                     self.scopes.borrow_mut().push(HashMap::new());
@@ -243,24 +245,24 @@ impl<'a> Runtime<'a> {
         Ok(())
     }
 
-    fn run_while(&mut self, condition: &AstNode, body: &[AstNode]) -> Result<(), RuntimeError> {
+    fn run_while(&self, cond: &AstNode, body: &[AstNode]) -> Result<(), RuntimeError> {
         loop {
-            let should_execute = match self.run_expression(condition)? {
-                Value::Boolean(b) => b,
+            let should_exec = match self.run_expression(cond)? {
+                RuntimeValue::Boolean(b) => b,
                 _ => unreachable!(),
             };
 
-            if should_execute {
+            if should_exec {
                 self.scopes.borrow_mut().push(HashMap::new());
                 self.run_statements(body)?;
                 self.scopes.borrow_mut().pop();
 
-                if self.stop_execution {
-                    self.stop_execution = false;
+                if self.flags.borrow().stop_exec {
+                    self.flags.borrow_mut().stop_exec = false;
                 }
 
-                if self.should_break_loop {
-                    self.should_break_loop = false;
+                if self.flags.borrow().exit_loop {
+                    self.flags.borrow_mut().exit_loop = false;
                     break;
                 }
             } else {
@@ -271,8 +273,14 @@ impl<'a> Runtime<'a> {
         Ok(())
     }
 
-    fn run_expression(&self, expression: &AstNode) -> Result<Value, RuntimeError> {
-        match expression {
+    fn run_debug_statement(&self, expr: &AstNode) -> Result<(), RuntimeError> {
+        let val = self.run_expression(expr)?;
+        writeln!(self.streams.borrow_mut().out_stream, "{}", val).unwrap();
+        Ok(())
+    }
+
+    fn run_expression(&self, expr: &AstNode) -> Result<RuntimeValue, RuntimeError> {
+        match expr {
             AstNode::Assign { lhs, rhs, .. } => self.assign(lhs, rhs),
 
             AstNode::AddAssign { lhs, rhs, .. } => self.add_assign(lhs, rhs),
@@ -322,210 +330,205 @@ impl<'a> Runtime<'a> {
             AstNode::FunctionCall { callee, args, .. } => self.run_function_call(callee, args),
 
             AstNode::Identifier { name, .. } => self.get_variable_value(name),
-            AstNode::Literal { value, .. } => Ok(*value),
+            AstNode::Literal { value, .. } => Ok(RuntimeValue::from(*value)),
 
             _ => unreachable!(),
         }
     }
 
-    fn run_or(&self, lhs: &AstNode, rhs: &AstNode) -> Value {
+    fn run_or(&self, lhs: &AstNode, rhs: &AstNode) -> RuntimeValue {
         // Use short-circuiting
 
-        if let Ok(Value::Boolean(b)) = self.run_expression(lhs) {
+        if let Ok(RuntimeValue::Boolean(b)) = self.run_expression(lhs) {
             if b {
-                return Value::Boolean(true);
+                return RuntimeValue::Boolean(true);
             }
         }
-        if let Ok(Value::Boolean(b)) = self.run_expression(rhs) {
+        if let Ok(RuntimeValue::Boolean(b)) = self.run_expression(rhs) {
             if b {
-                return Value::Boolean(true);
+                return RuntimeValue::Boolean(true);
             }
         }
 
-        Value::Boolean(false)
+        RuntimeValue::Boolean(false)
     }
 
-    fn run_and(&self, lhs: &AstNode, rhs: &AstNode) -> Value {
+    fn run_and(&self, lhs: &AstNode, rhs: &AstNode) -> RuntimeValue {
         // Use short-circuiting
 
-        if let Ok(Value::Boolean(b_lhs)) = self.run_expression(lhs) {
+        if let Ok(RuntimeValue::Boolean(b_lhs)) = self.run_expression(lhs) {
             if b_lhs {
-                if let Ok(Value::Boolean(b_rhs)) = self.run_expression(rhs) {
+                if let Ok(RuntimeValue::Boolean(b_rhs)) = self.run_expression(rhs) {
                     if b_rhs {
-                        return Value::Boolean(true);
+                        return RuntimeValue::Boolean(true);
                     }
                 }
             }
         }
 
-        Value::Boolean(false)
+        RuntimeValue::Boolean(false)
     }
 
-    fn run_eq(&self, lhs: &Value, rhs: &Value) -> Value {
+    fn run_eq(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
         if lhs == rhs {
-            Value::Boolean(true)
+            RuntimeValue::Boolean(true)
         } else {
-            Value::Boolean(false)
+            RuntimeValue::Boolean(false)
         }
     }
 
-    fn run_neq(&self, lhs: &Value, rhs: &Value) -> Value {
+    fn run_neq(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
         if lhs != rhs {
-            Value::Boolean(true)
+            RuntimeValue::Boolean(true)
         } else {
-            Value::Boolean(false)
+            RuntimeValue::Boolean(false)
         }
     }
 
-    fn run_gt(&self, lhs: &Value, rhs: &Value) -> Value {
+    fn run_gt(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
         if lhs > rhs {
-            Value::Boolean(true)
+            RuntimeValue::Boolean(true)
         } else {
-            Value::Boolean(false)
+            RuntimeValue::Boolean(false)
         }
     }
 
-    fn run_gte(&self, lhs: &Value, rhs: &Value) -> Value {
+    fn run_gte(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
         if lhs >= rhs {
-            Value::Boolean(true)
+            RuntimeValue::Boolean(true)
         } else {
-            Value::Boolean(false)
+            RuntimeValue::Boolean(false)
         }
     }
 
-    fn run_lt(&self, lhs: &Value, rhs: &Value) -> Value {
+    fn run_lt(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
         if lhs < rhs {
-            Value::Boolean(true)
+            RuntimeValue::Boolean(true)
         } else {
-            Value::Boolean(false)
+            RuntimeValue::Boolean(false)
         }
     }
 
-    fn run_lte(&self, lhs: &Value, rhs: &Value) -> Value {
+    fn run_lte(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
         if lhs <= rhs {
-            Value::Boolean(true)
+            RuntimeValue::Boolean(true)
         } else {
-            Value::Boolean(false)
+            RuntimeValue::Boolean(false)
         }
     }
 
-    fn math_add(&self, lhs: &Value, rhs: &Value) -> Value {
+    fn math_add(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
         match lhs {
-            Value::Integer(l) => match rhs {
-                Value::Integer(r) => Value::Integer(l + r),
-                Value::Float(r) => Value::Float(f64::from(*l) + r),
+            RuntimeValue::Integer(l) => match rhs {
+                RuntimeValue::Integer(r) => RuntimeValue::Integer(l + r),
+                RuntimeValue::Float(r) => RuntimeValue::Float(f64::from(*l) + r),
                 _ => unreachable!(),
             },
-            Value::Float(l) => match rhs {
-                Value::Integer(r) => Value::Float(l + f64::from(*r)),
-                Value::Float(r) => Value::Float(l + r),
+            RuntimeValue::Float(l) => match rhs {
+                RuntimeValue::Integer(r) => RuntimeValue::Float(l + f64::from(*r)),
+                RuntimeValue::Float(r) => RuntimeValue::Float(l + r),
                 _ => unreachable!(),
             },
             _ => unreachable!(),
         }
     }
 
-    fn math_sub(&self, lhs: &Value, rhs: &Value) -> Value {
+    fn math_sub(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
         match lhs {
-            Value::Integer(l) => match rhs {
-                Value::Integer(r) => Value::Integer(l - r),
-                Value::Float(r) => Value::Float(f64::from(*l) - r),
+            RuntimeValue::Integer(l) => match rhs {
+                RuntimeValue::Integer(r) => RuntimeValue::Integer(l - r),
+                RuntimeValue::Float(r) => RuntimeValue::Float(f64::from(*l) - r),
                 _ => unreachable!(),
             },
-            Value::Float(l) => match rhs {
-                Value::Integer(r) => Value::Float(l - f64::from(*r)),
-                Value::Float(r) => Value::Float(l - r),
+            RuntimeValue::Float(l) => match rhs {
+                RuntimeValue::Integer(r) => RuntimeValue::Float(l - f64::from(*r)),
+                RuntimeValue::Float(r) => RuntimeValue::Float(l - r),
                 _ => unreachable!(),
             },
             _ => unreachable!(),
         }
     }
 
-    fn math_mul(&self, lhs: &Value, rhs: &Value) -> Value {
+    fn math_mul(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
         match lhs {
-            Value::Integer(l) => match rhs {
-                Value::Integer(r) => Value::Integer(l * r),
-                Value::Float(r) => Value::Float(f64::from(*l) * r),
+            RuntimeValue::Integer(l) => match rhs {
+                RuntimeValue::Integer(r) => RuntimeValue::Integer(l * r),
+                RuntimeValue::Float(r) => RuntimeValue::Float(f64::from(*l) * r),
                 _ => unreachable!(),
             },
-            Value::Float(l) => match rhs {
-                Value::Integer(r) => Value::Float(l * f64::from(*r)),
-                Value::Float(r) => Value::Float(l * r),
+            RuntimeValue::Float(l) => match rhs {
+                RuntimeValue::Integer(r) => RuntimeValue::Float(l * f64::from(*r)),
+                RuntimeValue::Float(r) => RuntimeValue::Float(l * r),
                 _ => unreachable!(),
             },
             _ => unreachable!(),
         }
     }
 
-    fn math_div(&self, lhs: &Value, rhs: &Value) -> Value {
+    fn math_div(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
         match lhs {
-            Value::Integer(l) => match rhs {
-                Value::Integer(r) => Value::Integer(l / r),
-                Value::Float(r) => Value::Float(f64::from(*l) / r),
+            RuntimeValue::Integer(l) => match rhs {
+                RuntimeValue::Integer(r) => RuntimeValue::Integer(l / r),
+                RuntimeValue::Float(r) => RuntimeValue::Float(f64::from(*l) / r),
                 _ => unreachable!(),
             },
-            Value::Float(l) => match rhs {
-                Value::Integer(r) => Value::Float(l / f64::from(*r)),
-                Value::Float(r) => Value::Float(l / r),
+            RuntimeValue::Float(l) => match rhs {
+                RuntimeValue::Integer(r) => RuntimeValue::Float(l / f64::from(*r)),
+                RuntimeValue::Float(r) => RuntimeValue::Float(l / r),
                 _ => unreachable!(),
             },
             _ => unreachable!(),
         }
     }
 
-    fn math_mod(&self, lhs: &Value, rhs: &Value) -> Value {
+    fn math_mod(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
         match lhs {
-            Value::Integer(l) => match rhs {
-                Value::Integer(r) => Value::Integer(l % r),
-                Value::Float(r) => Value::Float(f64::from(*l) % r),
+            RuntimeValue::Integer(l) => match rhs {
+                RuntimeValue::Integer(r) => RuntimeValue::Integer(l % r),
+                RuntimeValue::Float(r) => RuntimeValue::Float(f64::from(*l) % r),
                 _ => unreachable!(),
             },
-            Value::Float(l) => match rhs {
-                Value::Integer(r) => Value::Float(l % f64::from(*r)),
-                Value::Float(r) => Value::Float(l % r),
+            RuntimeValue::Float(l) => match rhs {
+                RuntimeValue::Integer(r) => RuntimeValue::Float(l % f64::from(*r)),
+                RuntimeValue::Float(r) => RuntimeValue::Float(l % r),
                 _ => unreachable!(),
             },
             _ => unreachable!(),
         }
     }
 
-    fn run_not(&self, child: &Value) -> Value {
+    fn run_not(&self, child: &RuntimeValue) -> RuntimeValue {
         match child {
-            Value::Boolean(b) => Value::Boolean(!b),
+            RuntimeValue::Boolean(b) => RuntimeValue::Boolean(!b),
             _ => unreachable!(),
         }
     }
 
-    fn math_neg(&self, child: &Value) -> Value {
+    fn math_neg(&self, child: &RuntimeValue) -> RuntimeValue {
         match child {
-            Value::Integer(n) => Value::Integer(-n),
-            Value::Float(n) => Value::Float(-n),
+            RuntimeValue::Integer(n) => RuntimeValue::Integer(-n),
+            RuntimeValue::Float(n) => RuntimeValue::Float(-n),
             _ => unreachable!(),
         }
     }
 
-    fn is_current_scope_has_variable(&self, name: &str) -> bool {
-        let last_index = self.scopes.borrow().len() - 1;
-        self.scopes.borrow()[last_index].contains_key(name)
+    fn create_variable(&self, name: &str, val: RuntimeValue) {
+        let last_i = self.scopes.borrow().len() - 1;
+        self.scopes.borrow_mut()[last_i].insert(String::from(name), val);
     }
 
-    fn create_variable_in_current_scope(&mut self, name: &str, value: Value) {
-        let last_index = self.scopes.borrow().len() - 1;
-        self.scopes.borrow_mut()[last_index].insert(String::from(name), value);
-    }
-
-    fn update_variable_value(&self, name: &str, value: Value) -> Result<(), RuntimeError> {
+    fn update_variable_value(&self, name: &str, val: RuntimeValue) -> Result<(), RuntimeError> {
         let mut scopes = self.scopes.borrow_mut();
         let scope = scopes
             .iter_mut()
             .rev()
             .find(|scope| scope.contains_key(name))
             .unwrap();
-        *scope.get_mut(name).unwrap() = value;
+        *scope.get_mut(name).unwrap() = val;
         Ok(())
     }
 
-    fn get_variable_value(&self, name: &str) -> Result<Value, RuntimeError> {
+    fn get_variable_value(&self, name: &str) -> Result<RuntimeValue, RuntimeError> {
         Ok(self
             .scopes
             .borrow()
@@ -538,55 +541,50 @@ impl<'a> Runtime<'a> {
             .unwrap())
     }
 
-    fn run_function_call(&self, callee: &AstNode, args: &[AstNode]) -> Result<Value, RuntimeError> {
+    fn run_function_call(
+        &self,
+        callee: &AstNode,
+        args: &[AstNode],
+    ) -> Result<RuntimeValue, RuntimeError> {
         let callee = match callee {
             AstNode::Identifier { name, .. } => name,
             _ => todo!("function callee"),
         };
 
-        let mut evaluated_args: Vec<Value> = vec![];
+        let mut evaluated_args: Vec<RuntimeValue> = vec![];
         for arg in args {
             evaluated_args.push(self.run_expression(arg)?);
         }
 
-        match callee.as_str() {
-            "print" => {
-                if evaluated_args.len() != 1 {
-                    return Err(RuntimeError::WrongNumberOfArguments {
-                        expected: 1,
-                        provided: evaluated_args.len(),
-                    });
-                }
-                writeln!(self.output_stream.borrow_mut(), "{}", evaluated_args[0]).unwrap();
-            }
+        let f_ptr = self.get_variable_value(callee).unwrap();
 
-            _ => todo!("other function"),
-        }
-
-        Ok(Value::Integer(0))
+        self.run_function_ptr_call(f_ptr, &evaluated_args)
     }
-}
 
-#[derive(Debug, PartialEq)]
-pub enum RuntimeError {
-    VariableAlreadyExist(String),
-    VariableNotExist(String),
-    IdentifierNotExist(String),
-    WrongNumberOfArguments { expected: usize, provided: usize },
-}
+    fn run_function_ptr_call(
+        &self,
+        f_ptr: RuntimeValue,
+        args: &[RuntimeValue],
+    ) -> Result<RuntimeValue, RuntimeError> {
+        if let RuntimeValue::Function(ptr) = f_ptr {
+            self.scopes.borrow_mut().push(HashMap::new());
 
-impl Display for RuntimeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::VariableAlreadyExist(name) => writeln!(f, "variable `{name}` already exist"),
-            Self::VariableNotExist(name) => writeln!(f, "variable `{name}` is not exist"),
-            Self::IdentifierNotExist(name) => writeln!(f, "identifier `{name}` is not exist"),
-            Self::WrongNumberOfArguments { expected, provided } => writeln!(
-                f,
-                "expecting {} number of argument(s), get {} instead",
-                expected, provided
-            ),
+            if let AstNode::FunctionDefinition { params, body, .. } =
+                self.ast.as_ref().unwrap().stmts.get(ptr).unwrap()
+            {
+                for (i, (id, _)) in params.iter().enumerate() {
+                    let (id, _) = id.unwrap_identifier();
+                    let val = args[i];
+                    self.create_variable(&id, val);
+                }
+
+                let val = self.run_statements(body)?;
+                self.scopes.borrow_mut().pop();
+                return Ok(val);
+            }
         }
+
+        unreachable!();
     }
 }
 
@@ -596,215 +594,215 @@ mod tests {
     use compiler::Compiler;
     use indoc::indoc;
 
-    #[test]
-    fn test_creating_variable() {
-        let cases = [
-            // (statement, variable name, expected value)
-            ("var x = 10 * 20;", "x", Value::Integer(200)),
-            ("var abc = 2 * 0.5;", "abc", Value::Float(1.0)),
-        ];
+    fn assert_output_equal(input: &str, expect: &[u8]) {
+        let mut out_stream = vec![];
+        let mut err_stream = vec![];
 
-        let mut unused_output_stream = vec![];
-        let mut unused_error_stream = vec![];
+        let ast = Compiler::from_source_code(input).compile().unwrap();
 
-        for (statement, variable_name, expected) in cases {
-            let ast = Compiler::from_source_code(statement).compile().unwrap();
-            let mut runtime =
-                Runtime::new(ast, &mut unused_output_stream, &mut unused_error_stream);
+        let streams = RuntimeStream::new(&mut out_stream, &mut err_stream);
+        let runtime = Runtime::new(ast, streams);
+        let result = runtime.run();
 
-            let result = runtime.run();
-
-            assert!(result.is_ok());
-            assert!(runtime.is_current_scope_has_variable(variable_name));
-            assert_eq!(runtime.get_variable_value(variable_name).unwrap(), expected);
-        }
+        assert!(result.is_ok());
+        assert_eq!(expect, &out_stream);
     }
 
     #[test]
-    fn test_assigning_value() {
-        let cases = [(
+    fn test_simple_outputting() {
+        assert_output_equal(
             indoc! {"
-                var x = 50;
-                var y = 100;
-
-                x = x * y;
+                fn main() do
+                    var x = 10;
+                    debug x;
+                end
             "},
-            "x",
-            Value::Integer(5000),
-        )];
-
-        let mut unused_output_stream = vec![];
-        let mut unused_error_stream = vec![];
-
-        for (statement, lhs, expected) in cases {
-            let ast = Compiler::from_source_code(statement).compile().unwrap();
-            let mut runtime =
-                Runtime::new(ast, &mut unused_output_stream, &mut unused_error_stream);
-
-            let result = runtime.run();
-
-            assert!(result.is_ok());
-            assert!(runtime.is_current_scope_has_variable(lhs));
-            assert_eq!(runtime.get_variable_value(lhs).unwrap(), expected);
-        }
+            "10\n".as_bytes(),
+        );
     }
 
     #[test]
-    fn test_print_value() {
-        let cases = [
-            // (input program, expected output stream content)
-            (
-                indoc! {"
-                    var x = 10;
-
-                    print(x);
-                "},
-                "10\n".as_bytes(),
-            ),
-            (
-                indoc! {"
+    fn test_multiplication_result() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
                     var x = 5;
                     var y = 10;
 
-                    print(x * y);
-                "},
-                "50\n".as_bytes(),
-            ),
-            (
-                indoc! {"
+                    debug x * y;
+                end
+            "},
+            "50\n".as_bytes(),
+        );
+    }
+
+    #[test]
+    fn test_changing_value() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
                     var x = 2048;
-                    print(x);
+                    debug x;
 
                     x = 1024;
-                    print(x);
-                "},
-                "2048\n1024\n".as_bytes(),
-            ),
-            (
-                indoc! {"
+                    debug x;
+                end
+            "},
+            "2048\n1024\n".as_bytes(),
+        );
+    }
+
+    #[test]
+    fn test_conditional_branch() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
                     var x = 2048;
-                    if true {
+                    if true do
                         var x = 1024;
-                        print(x);
-                    }
-                    print(x);
-                "},
-                "1024\n2048\n".as_bytes(),
-            ),
-            (
-                indoc! {"
+                        debug x;
+                    end
+                    debug x;
+                end
+            "},
+            "1024\n2048\n".as_bytes(),
+        );
+    }
+
+    #[test]
+    fn test_multiple_conditional_branches() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
                     var x = 2048;
-                    if true {
+                    if false do
                         x = 1024;
-                        print(x);
-                    }
-                    print(x);
-                "},
-                "1024\n1024\n".as_bytes(),
-            ),
-            (
-                indoc! {"
-                    var x = 2048;
-                    if false {
-                        x = 1024;
-                    } else if false {
+                    else if false do
                         x = 512;
-                    } else {
+                    else do
                         x = 256;
-                    }
-                    print(x);
-                "},
-                "256\n".as_bytes(),
-            ),
-            (
-                indoc! {"
-                    if false && true {
-                        print(1);
-                    }
-                    if false || true {
-                        print(2);
-                    }
-                    if !false {
-                        print(3);
-                    }
-                "},
-                "2\n3\n".as_bytes(),
-            ),
-            (
-                indoc! {"
+                    end
+                    debug x;
+                end
+            "},
+            "256\n".as_bytes(),
+        );
+    }
+
+    #[test]
+    fn test_loop() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
                     var x = 0;
-
-                    while true {
-                        print(x);
-
-                        if x == 5 {
+                    while true do
+                        debug x;
+                        if x == 5 do
                             break;
-                        }
-
+                        end
                         x = x + 1;
-                    }
-                "},
-                "0\n1\n2\n3\n4\n5\n".as_bytes(),
-            ),
-            (
-                indoc! {"
+                    end
+                end
+            "},
+            "0\n1\n2\n3\n4\n5\n".as_bytes(),
+        );
+    }
+
+    #[test]
+    fn test_boolean_logic_operators() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
+                    if false && true do
+                        debug 1;
+                    end
+                    if false || true do
+                        debug 2;
+                    end
+                    if !false do
+                        debug 3;
+                    end
+                end
+            "},
+            "2\n3\n".as_bytes(),
+        );
+    }
+
+    #[test]
+    fn test_loop_with_conditional_branches() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
                     var x = 0;
-
-                    while true {
+                    while true do
                         x = x + 1;
-
-                        if x == 2 {
+                        if x == 2 do
                             continue;
-                        } else if x == 5 {
+                        else if x == 5 do
                             break;
-                        }
+                        end
+                        debug x;
+                    end
+                end
+            "},
+            "1\n3\n4\n".as_bytes(),
+        );
+    }
 
-                        print(x);
-                    }
-                "},
-                "1\n3\n4\n".as_bytes(),
-            ),
-            (
-                indoc! {"
-                    var i = 0;
-                    while i < 10 {
-                        if i % 2 == 0 {
-                            print(i);
-                        }
-                        i = i + 1;
-                    }
-                "},
-                "0\n2\n4\n6\n8\n".as_bytes(),
-            ),
-            (
-                indoc! {"
+    #[test]
+    fn test_shorthand_operators() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
                     var x = 5;
                     x += 5;
-                    print(x);
+                    debug x;
                     x -= 2;
-                    print(x);
+                    debug x;
                     x *= 2;
-                    print(x);
+                    debug x;
                     x /= 4;
-                    print(x);
+                    debug x;
                     x %= 3;
-                    print(x);
-                "},
-                "10\n8\n16\n4\n1\n".as_bytes(),
-            ),
-        ];
-
-        for (source_code, output_content) in cases {
-            let mut output_stream = vec![];
-            let mut error_stream = vec![];
-
-            let ast = Compiler::from_source_code(source_code).compile().unwrap();
-
-            let mut runtime = Runtime::new(ast, &mut output_stream, &mut error_stream);
-            let result = runtime.run();
-
-            assert!(result.is_ok());
-            assert_eq!(output_content, &output_stream);
-        }
+                    debug x;
+                end
+            "},
+            "10\n8\n16\n4\n1\n".as_bytes(),
+        );
     }
+
+    #[test]
+    fn test_function_call() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
+                    debug add_two(5);
+                end
+
+                fn add_two(n: Int): Int do
+                    return n + 2;
+                end
+            "},
+            "7\n".as_bytes(),
+        );
+    }
+
+    // #[test]
+    // fn test_recursion() {
+    //     assert_output_equal(
+    //         indoc! {"
+    //             fn main() do
+    //                 debug fibonacci(3);
+    //             end
+
+    //             fn fibonacci(n: Int): Int do
+    //                 if n == 1 || n == 2 do
+    //                     return 1;
+    //                 end
+    //                 return fibonacci(n-1) + fibonacci(n-2);
+    //             end
+    //         "},
+    //         "3\n".as_bytes(),
+    //     );
+    // }
 }
