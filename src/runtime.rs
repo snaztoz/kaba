@@ -10,6 +10,7 @@ use self::{error::RuntimeError, flags::RuntimeFlags, stream::RuntimeStream, valu
 use compiler::ast::{AstNode, Program as ProgramAst};
 use std::{cell::RefCell, collections::HashMap};
 
+type Result<T> = std::result::Result<T, RuntimeError>;
 type Scope = HashMap<String, RuntimeValue>;
 
 mod error;
@@ -42,7 +43,7 @@ impl<'a> Runtime<'a> {
         }
     }
 
-    pub fn run(&self) -> Result<(), RuntimeError> {
+    pub fn run(&self) -> Result<()> {
         let stmts = &self.ast.as_ref().unwrap().stmts;
         self.register_globals(stmts);
 
@@ -63,7 +64,7 @@ impl<'a> Runtime<'a> {
         }
     }
 
-    fn run_statements(&self, stmts: &[AstNode]) -> Result<RuntimeValue, RuntimeError> {
+    fn run_statements(&self, stmts: &[AstNode]) -> Result<RuntimeValue> {
         for stmt in stmts {
             if self.flags.borrow().stop_exec {
                 return Ok(RuntimeValue::Void);
@@ -117,7 +118,7 @@ impl<'a> Runtime<'a> {
         Ok(RuntimeValue::Void)
     }
 
-    fn assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue, RuntimeError> {
+    fn assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue> {
         match lhs {
             AstNode::Identifier { name, .. } => {
                 let val = self.run_expression(rhs)?;
@@ -128,7 +129,7 @@ impl<'a> Runtime<'a> {
         Ok(RuntimeValue::Void)
     }
 
-    fn add_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue, RuntimeError> {
+    fn add_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue> {
         let (name, _) = lhs.unwrap_identifier();
         let old_val = self.get_variable_value(&name)?;
         let val = self.run_expression(rhs)?;
@@ -144,7 +145,7 @@ impl<'a> Runtime<'a> {
         Ok(RuntimeValue::Void)
     }
 
-    fn sub_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue, RuntimeError> {
+    fn sub_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue> {
         let (name, _) = lhs.unwrap_identifier();
         let old_val = self.get_variable_value(&name)?;
         let val = self.run_expression(rhs)?;
@@ -160,7 +161,7 @@ impl<'a> Runtime<'a> {
         Ok(RuntimeValue::Void)
     }
 
-    fn mul_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue, RuntimeError> {
+    fn mul_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue> {
         let (name, _) = lhs.unwrap_identifier();
         let old_val = self.get_variable_value(&name)?;
         let val = self.run_expression(rhs)?;
@@ -176,7 +177,7 @@ impl<'a> Runtime<'a> {
         Ok(RuntimeValue::Void)
     }
 
-    fn div_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue, RuntimeError> {
+    fn div_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue> {
         let (name, _) = lhs.unwrap_identifier();
         let old_val = self.get_variable_value(&name)?;
         let val = self.run_expression(rhs)?;
@@ -192,7 +193,7 @@ impl<'a> Runtime<'a> {
         Ok(RuntimeValue::Void)
     }
 
-    fn mod_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue, RuntimeError> {
+    fn mod_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue> {
         let (name, _) = lhs.unwrap_identifier();
         let old_val = self.get_variable_value(&name)?;
         let val = self.run_expression(rhs)?;
@@ -213,7 +214,7 @@ impl<'a> Runtime<'a> {
         cond: &AstNode,
         body: &[AstNode],
         or_else: Option<&AstNode>,
-    ) -> Result<(), RuntimeError> {
+    ) -> Result<()> {
         let should_exec = match self.run_expression(cond)? {
             RuntimeValue::Boolean(b) => b,
             _ => unreachable!(),
@@ -245,7 +246,7 @@ impl<'a> Runtime<'a> {
         Ok(())
     }
 
-    fn run_while(&self, cond: &AstNode, body: &[AstNode]) -> Result<(), RuntimeError> {
+    fn run_while(&self, cond: &AstNode, body: &[AstNode]) -> Result<()> {
         loop {
             let should_exec = match self.run_expression(cond)? {
                 RuntimeValue::Boolean(b) => b,
@@ -273,13 +274,13 @@ impl<'a> Runtime<'a> {
         Ok(())
     }
 
-    fn run_debug_statement(&self, expr: &AstNode) -> Result<(), RuntimeError> {
+    fn run_debug_statement(&self, expr: &AstNode) -> Result<()> {
         let val = self.run_expression(expr)?;
         writeln!(self.streams.borrow_mut().out_stream, "{}", val).unwrap();
         Ok(())
     }
 
-    fn run_expression(&self, expr: &AstNode) -> Result<RuntimeValue, RuntimeError> {
+    fn run_expression(&self, expr: &AstNode) -> Result<RuntimeValue> {
         match expr {
             AstNode::Assign { lhs, rhs, .. } => self.assign(lhs, rhs),
 
@@ -517,7 +518,7 @@ impl<'a> Runtime<'a> {
         self.scopes.borrow_mut()[last_i].insert(String::from(name), val);
     }
 
-    fn update_variable_value(&self, name: &str, val: RuntimeValue) -> Result<(), RuntimeError> {
+    fn update_variable_value(&self, name: &str, val: RuntimeValue) -> Result<()> {
         let mut scopes = self.scopes.borrow_mut();
         let scope = scopes
             .iter_mut()
@@ -528,7 +529,7 @@ impl<'a> Runtime<'a> {
         Ok(())
     }
 
-    fn get_variable_value(&self, name: &str) -> Result<RuntimeValue, RuntimeError> {
+    fn get_variable_value(&self, name: &str) -> Result<RuntimeValue> {
         Ok(self
             .scopes
             .borrow()
@@ -541,11 +542,7 @@ impl<'a> Runtime<'a> {
             .unwrap())
     }
 
-    fn run_function_call(
-        &self,
-        callee: &AstNode,
-        args: &[AstNode],
-    ) -> Result<RuntimeValue, RuntimeError> {
+    fn run_function_call(&self, callee: &AstNode, args: &[AstNode]) -> Result<RuntimeValue> {
         let callee = match callee {
             AstNode::Identifier { name, .. } => name,
             _ => todo!("function callee"),
@@ -565,7 +562,7 @@ impl<'a> Runtime<'a> {
         &self,
         f_ptr: RuntimeValue,
         args: &[RuntimeValue],
-    ) -> Result<RuntimeValue, RuntimeError> {
+    ) -> Result<RuntimeValue> {
         if let RuntimeValue::Function(ptr) = f_ptr {
             self.scopes.borrow_mut().push(HashMap::new());
 
@@ -780,7 +777,11 @@ mod tests {
                 end
 
                 fn add_two(n: Int): Int do
-                    return n + 2;
+                    return n + get_two();
+                end
+
+                fn get_two(): Int do
+                    return 2;
                 end
             "},
             "7\n".as_bytes(),
