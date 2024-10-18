@@ -47,7 +47,7 @@ impl<'a> Runtime<'a> {
         let stmts = &self.ast.as_ref().unwrap().stmts;
         self.register_globals(stmts);
 
-        let main = self.get_variable_value("main")?;
+        let main = self.get_value("main")?;
         self.run_function_ptr_call(main, &[])?;
 
         Ok(())
@@ -57,7 +57,7 @@ impl<'a> Runtime<'a> {
         for (i, stmt) in stmts.iter().enumerate() {
             if let AstNode::FunctionDefinition { id, .. } = stmt {
                 let (id, _) = id.unwrap_identifier();
-                self.create_variable(&id, RuntimeValue::Function(i));
+                self.store_value(&id, RuntimeValue::Function(i));
             } else {
                 unreachable!()
             }
@@ -77,7 +77,7 @@ impl<'a> Runtime<'a> {
                         Some(v) => self.run_expression(v)?,
                         None => RuntimeValue::Integer(0),
                     };
-                    self.create_variable(&name, val);
+                    self.store_value(&name, val);
                 }
 
                 AstNode::If {
@@ -122,7 +122,7 @@ impl<'a> Runtime<'a> {
         match lhs {
             AstNode::Identifier { name, .. } => {
                 let val = self.run_expression(rhs)?;
-                self.update_variable_value(name, val)?;
+                self.update_value(name, val)?;
             }
             _ => todo!("more expression for value assignment"),
         }
@@ -131,13 +131,13 @@ impl<'a> Runtime<'a> {
 
     fn add_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue> {
         let (name, _) = lhs.unwrap_identifier();
-        let old_val = self.get_variable_value(&name)?;
+        let old_val = self.get_value(&name)?;
         let val = self.run_expression(rhs)?;
         let new_val = self.math_add(&old_val, &val);
 
         match lhs {
             AstNode::Identifier { name, .. } => {
-                self.update_variable_value(name, new_val)?;
+                self.update_value(name, new_val)?;
             }
             _ => todo!("more expression for value assignment"),
         }
@@ -147,13 +147,13 @@ impl<'a> Runtime<'a> {
 
     fn sub_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue> {
         let (name, _) = lhs.unwrap_identifier();
-        let old_val = self.get_variable_value(&name)?;
+        let old_val = self.get_value(&name)?;
         let val = self.run_expression(rhs)?;
         let new_val = self.math_sub(&old_val, &val);
 
         match lhs {
             AstNode::Identifier { name, .. } => {
-                self.update_variable_value(name, new_val)?;
+                self.update_value(name, new_val)?;
             }
             _ => todo!("more expression for value assignment"),
         }
@@ -163,13 +163,13 @@ impl<'a> Runtime<'a> {
 
     fn mul_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue> {
         let (name, _) = lhs.unwrap_identifier();
-        let old_val = self.get_variable_value(&name)?;
+        let old_val = self.get_value(&name)?;
         let val = self.run_expression(rhs)?;
         let new_val = self.math_mul(&old_val, &val);
 
         match lhs {
             AstNode::Identifier { name, .. } => {
-                self.update_variable_value(name, new_val)?;
+                self.update_value(name, new_val)?;
             }
             _ => todo!("more expression for value assignment"),
         }
@@ -179,13 +179,13 @@ impl<'a> Runtime<'a> {
 
     fn div_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue> {
         let (name, _) = lhs.unwrap_identifier();
-        let old_val = self.get_variable_value(&name)?;
+        let old_val = self.get_value(&name)?;
         let val = self.run_expression(rhs)?;
         let new_val = self.math_div(&old_val, &val);
 
         match lhs {
             AstNode::Identifier { name, .. } => {
-                self.update_variable_value(name, new_val)?;
+                self.update_value(name, new_val)?;
             }
             _ => todo!("more expression for value assignment"),
         }
@@ -195,13 +195,13 @@ impl<'a> Runtime<'a> {
 
     fn mod_assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue> {
         let (name, _) = lhs.unwrap_identifier();
-        let old_val = self.get_variable_value(&name)?;
+        let old_val = self.get_value(&name)?;
         let val = self.run_expression(rhs)?;
         let new_val = self.math_mod(&old_val, &val);
 
         match lhs {
             AstNode::Identifier { name, .. } => {
-                self.update_variable_value(name, new_val)?;
+                self.update_value(name, new_val)?;
             }
             _ => todo!("more expression for value assignment"),
         }
@@ -330,7 +330,7 @@ impl<'a> Runtime<'a> {
             AstNode::Neg { child, .. } => Ok(self.math_neg(&self.run_expression(child)?)),
             AstNode::FunctionCall { callee, args, .. } => self.run_function_call(callee, args),
 
-            AstNode::Identifier { name, .. } => self.get_variable_value(name),
+            AstNode::Identifier { name, .. } => self.get_value(name),
             AstNode::Literal { value, .. } => Ok(RuntimeValue::from(*value)),
 
             _ => unreachable!(),
@@ -368,6 +368,13 @@ impl<'a> Runtime<'a> {
         }
 
         RuntimeValue::Boolean(false)
+    }
+
+    fn run_not(&self, child: &RuntimeValue) -> RuntimeValue {
+        match child {
+            RuntimeValue::Boolean(b) => RuntimeValue::Boolean(!b),
+            _ => unreachable!(),
+        }
     }
 
     fn run_eq(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
@@ -416,6 +423,48 @@ impl<'a> Runtime<'a> {
         } else {
             RuntimeValue::Boolean(false)
         }
+    }
+
+    fn run_function_call(&self, callee: &AstNode, args: &[AstNode]) -> Result<RuntimeValue> {
+        let callee = match callee {
+            AstNode::Identifier { name, .. } => name,
+            _ => todo!("function callee"),
+        };
+
+        let mut evaluated_args: Vec<RuntimeValue> = vec![];
+        for arg in args {
+            evaluated_args.push(self.run_expression(arg)?);
+        }
+
+        let f_ptr = self.get_value(callee).unwrap();
+
+        self.run_function_ptr_call(f_ptr, &evaluated_args)
+    }
+
+    fn run_function_ptr_call(
+        &self,
+        f_ptr: RuntimeValue,
+        args: &[RuntimeValue],
+    ) -> Result<RuntimeValue> {
+        if let RuntimeValue::Function(ptr) = f_ptr {
+            self.scopes.borrow_mut().push(HashMap::new());
+
+            if let AstNode::FunctionDefinition { params, body, .. } =
+                self.ast.as_ref().unwrap().stmts.get(ptr).unwrap()
+            {
+                for (i, (id, _)) in params.iter().enumerate() {
+                    let (id, _) = id.unwrap_identifier();
+                    let val = args[i];
+                    self.store_value(&id, val);
+                }
+
+                let val = self.run_statements(body)?;
+                self.scopes.borrow_mut().pop();
+                return Ok(val);
+            }
+        }
+
+        unreachable!();
     }
 
     fn math_add(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
@@ -498,13 +547,6 @@ impl<'a> Runtime<'a> {
         }
     }
 
-    fn run_not(&self, child: &RuntimeValue) -> RuntimeValue {
-        match child {
-            RuntimeValue::Boolean(b) => RuntimeValue::Boolean(!b),
-            _ => unreachable!(),
-        }
-    }
-
     fn math_neg(&self, child: &RuntimeValue) -> RuntimeValue {
         match child {
             RuntimeValue::Integer(n) => RuntimeValue::Integer(-n),
@@ -513,75 +555,33 @@ impl<'a> Runtime<'a> {
         }
     }
 
-    fn create_variable(&self, name: &str, val: RuntimeValue) {
+    fn store_value(&self, id: &str, val: RuntimeValue) {
         let last_i = self.scopes.borrow().len() - 1;
-        self.scopes.borrow_mut()[last_i].insert(String::from(name), val);
+        self.scopes.borrow_mut()[last_i].insert(String::from(id), val);
     }
 
-    fn update_variable_value(&self, name: &str, val: RuntimeValue) -> Result<()> {
+    fn update_value(&self, id: &str, val: RuntimeValue) -> Result<()> {
         let mut scopes = self.scopes.borrow_mut();
         let scope = scopes
             .iter_mut()
             .rev()
-            .find(|scope| scope.contains_key(name))
+            .find(|scope| scope.contains_key(id))
             .unwrap();
-        *scope.get_mut(name).unwrap() = val;
+        *scope.get_mut(id).unwrap() = val;
         Ok(())
     }
 
-    fn get_variable_value(&self, name: &str) -> Result<RuntimeValue> {
+    fn get_value(&self, id: &str) -> Result<RuntimeValue> {
         Ok(self
             .scopes
             .borrow()
             .iter()
             .rev()
-            .find(|scope| scope.contains_key(name))
+            .find(|scope| scope.contains_key(id))
             .unwrap()
-            .get(name)
+            .get(id)
             .copied()
             .unwrap())
-    }
-
-    fn run_function_call(&self, callee: &AstNode, args: &[AstNode]) -> Result<RuntimeValue> {
-        let callee = match callee {
-            AstNode::Identifier { name, .. } => name,
-            _ => todo!("function callee"),
-        };
-
-        let mut evaluated_args: Vec<RuntimeValue> = vec![];
-        for arg in args {
-            evaluated_args.push(self.run_expression(arg)?);
-        }
-
-        let f_ptr = self.get_variable_value(callee).unwrap();
-
-        self.run_function_ptr_call(f_ptr, &evaluated_args)
-    }
-
-    fn run_function_ptr_call(
-        &self,
-        f_ptr: RuntimeValue,
-        args: &[RuntimeValue],
-    ) -> Result<RuntimeValue> {
-        if let RuntimeValue::Function(ptr) = f_ptr {
-            self.scopes.borrow_mut().push(HashMap::new());
-
-            if let AstNode::FunctionDefinition { params, body, .. } =
-                self.ast.as_ref().unwrap().stmts.get(ptr).unwrap()
-            {
-                for (i, (id, _)) in params.iter().enumerate() {
-                    let (id, _) = id.unwrap_identifier();
-                    let val = args[i];
-                    self.create_variable(&id, val);
-                }
-
-                let val = self.run_statements(body)?;
-                self.scopes.borrow_mut().pop();
-                return Ok(val);
-            }
-        }
-
-        unreachable!();
     }
 }
 
@@ -788,6 +788,23 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_calling_function_with_variable_argument() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
+                    var x = 10;
+                    dbg(x);
+                end
+
+                fn dbg(n: Int) do
+                    debug n;
+                end
+            "},
+            "10\n".as_bytes(),
+        );
+    }
+
     // #[test]
     // fn test_recursion() {
     //     assert_output_equal(
@@ -803,7 +820,7 @@ mod tests {
     //                 return fibonacci(n-1) + fibonacci(n-2);
     //             end
     //         "},
-    //         "3\n".as_bytes(),
+    //         "2\n".as_bytes(),
     //     );
     // }
 }
