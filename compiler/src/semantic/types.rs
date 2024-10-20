@@ -1,10 +1,9 @@
 // Copyright 2023-2024 Hafidh Muqsithanova Sukarno
 // SPDX-License-Identifier: Apache-2.0
 
-use logos::Span;
-
 use super::{error::Error, Result};
 use crate::ast::{AstNode, Value};
+use logos::Span;
 use std::{collections::BTreeMap, fmt::Display, str::FromStr};
 
 pub type CallableSignature = (CallableParameters, Type);

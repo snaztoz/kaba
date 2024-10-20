@@ -1,17 +1,60 @@
 // Copyright 2023-2024 Hafidh Muqsithanova Sukarno
 // SPDX-License-Identifier: Apache-2.0
 
-use super::types::Type;
-use std::collections::HashMap;
+use super::{error::Result, types::Type};
+use std::{cell::RefCell, collections::HashMap};
 
 pub struct ScopeStack {
-    pub stack: Vec<Scope>,
+    stack: RefCell<Vec<Scope>>,
+}
+
+impl ScopeStack {
+    pub fn find_reversed<U, F>(&self, finder: F) -> Option<U>
+    where
+        F: FnMut(&Scope) -> Option<U>,
+    {
+        self.stack.borrow().iter().rev().find_map(finder)
+    }
+
+    pub fn any_reversed<F>(&self, cond: F) -> bool
+    where
+        F: FnMut(&Scope) -> bool,
+    {
+        self.stack.borrow().iter().rev().any(cond)
+    }
+
+    pub fn with_last_scope<F>(&self, action: F) -> Result<()>
+    where
+        F: FnOnce(&mut Scope) -> Result<()>,
+    {
+        let mut stack = self.stack.borrow_mut();
+        let s = stack.last_mut().unwrap();
+        action(s)
+    }
+
+    pub fn with_scope<U, F>(&self, scope: Scope, callback: F) -> U
+    where
+        F: FnOnce() -> U,
+    {
+        self.push_scope(scope);
+        let result = callback();
+        self.pop_scope();
+        result
+    }
+
+    fn push_scope(&self, scope: Scope) {
+        self.stack.borrow_mut().push(scope);
+    }
+
+    fn pop_scope(&self) {
+        self.stack.borrow_mut().pop();
+    }
 }
 
 impl Default for ScopeStack {
     fn default() -> Self {
         Self {
-            stack: vec![Scope::new_builtin_scope(), Scope::new_global_scope()],
+            stack: RefCell::new(vec![Scope::new_global_scope()]),
         }
     }
 }
@@ -22,13 +65,6 @@ pub struct Scope {
 }
 
 impl Scope {
-    pub fn new_builtin_scope() -> Self {
-        Self {
-            symbols: HashMap::new(),
-            scope_t: ScopeType::Builtin,
-        }
-    }
-
     pub fn new_global_scope() -> Self {
         Self {
             symbols: HashMap::new(),
@@ -60,7 +96,6 @@ impl Scope {
 
 #[derive(Debug, PartialEq)]
 pub enum ScopeType {
-    Builtin,
     Global,
     Conditional,
     Loop,
