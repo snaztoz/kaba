@@ -1,6 +1,3 @@
-// Copyright 2023-2024 Hafidh Muqsithanova Sukarno
-// SPDX-License-Identifier: Apache-2.0
-
 use super::{error::Result, types::Type};
 use std::{cell::RefCell, collections::HashMap};
 

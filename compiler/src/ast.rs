@@ -1,6 +1,3 @@
-// Copyright 2023-2024 Hafidh Muqsithanova Sukarno
-// SPDX-License-Identifier: Apache-2.0
-
 //! This module contains representation of the AST of Kaba program.
 //!
 //! Root of the tree will always be the [`Program`] that may contains

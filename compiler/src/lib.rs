@@ -1,6 +1,3 @@
-// Copyright 2023-2024 Hafidh Muqsithanova Sukarno
-// SPDX-License-Identifier: Apache-2.0
-
 #![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/README.md"))]
 
 use std::path::Path;

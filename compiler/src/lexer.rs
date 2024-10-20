@@ -1,6 +1,3 @@
-// Copyright 2023-2024 Hafidh Muqsithanova Sukarno
-// SPDX-License-Identifier: Apache-2.0
-
 //! This module contains the required logic operations during the
 //! lexing/tokenizing stage of a Kaba source code.
 
