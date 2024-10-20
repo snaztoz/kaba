@@ -47,7 +47,20 @@ Usage instructions:
 
 ## ❓ Features
 
-As this is a really new project, it only has limited features for now:
+Currently, Kaba only has the limited features for now:
+
+* Defining functions
+  ```text
+  fn main() do
+    debug return_two();
+  end
+
+  fn return_two(): Int do
+    return 2;
+  end
+  ```
+
+(The next examples are assumed to be reside inside `main()` function)
 
 * Comments
   ```text
@@ -166,29 +179,49 @@ As this is a really new project, it only has limited features for now:
 
 * Program for variable swapping:
   ```text
-  var x = 10;
-  var y = 20;
+  fn main() do
+    var x = 10;
+    var y = 20;
 
-  debug x;
-  debug y;
+    debug x;
+    debug y;
 
-  var temp = x;
-  x = y;
-  y = temp;
+    var temp = x;
+    x = y;
+    y = temp;
 
-  debug x;
-  debug y;
+    debug x;
+    debug y;
+  end
   ```
 
 * Program to print all odd numbers below 10:
   ```text
-  var i = 0;
+  fn main() do
+    var i = 0;
 
-  while i < 10 do
-    if i % 2 == 1 do
-      debug i;
+    while i < 10 do
+      if i % 2 == 1 do
+        debug i;
+      end
+      i += 1;
     end
-    i += 1;
+  end
+  ```
+
+* Simple fibonacci
+  ```text
+  fn main() do
+    debug fibonacci(6); # This should print "8"
+  end
+
+  fn fibonacci(n: Int): Int do
+    if n <= 0 do
+      return 0;
+    else if n == 1 || n == 2 do
+      return 1;
+    end
+    return fibonacci(n-1) + fibonacci(n-2);
   end
   ```
 
@@ -196,13 +229,11 @@ As this is a really new project, it only has limited features for now:
 
 Current priorities:
 
-* Better type system.
-* Support for function definition.
 * Support for other data types, such as array and string.
 
 ## ⚠️ Attention
 
-* All statements must be terminated with either a semicolon (`;`) or right brace (`end`) (in case of body blocks).
+* All statements must be terminated with either a semicolon (`;`) or `end` keyword (in case of body blocks).
 
 ## 📃 License
 
