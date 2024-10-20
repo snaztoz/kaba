@@ -94,6 +94,10 @@ pub enum Error {
     LoopControlNotInLoopScope {
         span: Span,
     },
+
+    DebugVoid {
+        span: Span,
+    },
 }
 
 impl Error {
@@ -116,7 +120,8 @@ impl Error {
             | Self::FunctionNotReturningValue { span, .. }
             | Self::ReturnNotInFunctionScope { span, .. }
             | Self::ReturnTypeMismatch { span, .. }
-            | Self::LoopControlNotInLoopScope { span } => span,
+            | Self::LoopControlNotInLoopScope { span }
+            | Self::DebugVoid { span } => span,
         }
     }
 }
@@ -199,6 +204,9 @@ impl Display for Error {
                     f,
                     "the usage of `break` and `continue` statements must be within a loop"
                 )
+            }
+            Self::DebugVoid { .. } => {
+                write!(f, "unable to debug expressions that has `void` type")
             }
         }
     }

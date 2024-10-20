@@ -107,8 +107,8 @@ impl SemanticChecker {
                     body_t = Some(t);
                 }
 
-                AstNode::Debug { expr, .. } => {
-                    self.check_debug(expr)?;
+                AstNode::Debug { expr, span } => {
+                    self.check_debug(expr, span)?;
                 }
 
                 expr => {
@@ -354,8 +354,11 @@ impl SemanticChecker {
             .map(|_| return_t)
     }
 
-    fn check_debug(&self, expr: &AstNode) -> Result<()> {
-        self.check_expression(expr)?;
+    fn check_debug(&self, expr: &AstNode, span: &Span) -> Result<()> {
+        let expr_t = self.check_expression(expr)?;
+        if matches!(expr_t, Type::Void) {
+            return Err(Error::DebugVoid { span: span.clone() });
+        }
         Ok(())
     }
 
@@ -1069,10 +1072,22 @@ mod tests {
     //
 
     #[test]
-    fn test_debug_statement() {
+    fn test_debug_expression() {
         check_and_assert_is_ok(indoc! {"
                 fn main() do
                     debug 17 * 5;
+                end
+            "});
+    }
+
+    #[test]
+    fn test_debug_expression_that_returns_void() {
+        check_and_assert_is_err(indoc! {"
+                fn main() do
+                    debug this_is_void();
+                end
+
+                fn this_is_void() do
                 end
             "});
     }
