@@ -7,9 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Add assignment operators.
-- Change `print` function behaviour.
-- Change auto-casting behaviour in number types.
+## [0.3.0] - 2024-10-20
+
+### Added
+
+- Support for defining custom functions.
+- Shorthand assignment operators.
+- Debug statement.
+
+### Changed
+
+- Auto-casting behaviour in number types is disabled.
+- `Any` type is removed.
+- Operators for indicating blocks are changed to `do ... end`
+- Use `#` to write comments.
+
+### Removed
+
+- Multi-line comments.
+- `//` operator.
+- Built-in `print` function.
 
 ## [0.2.2] - 2024-01-11
 

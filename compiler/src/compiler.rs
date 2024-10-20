@@ -1,6 +1,3 @@
-// Copyright 2023 Hafidh Muqsithanova Sukarno
-// SPDX-License-Identifier: Apache-2.0
-
 //! This module contains the high-level utility for the source
 //! code compilation procedure.
 
@@ -68,7 +65,7 @@ impl Compiler {
                 file_path: self.file_path,
                 source_code: String::from(&self.source_code),
                 message: e.to_string(),
-                span: e.get_span(),
+                span: e.span(),
             });
         }
 
@@ -78,7 +75,7 @@ impl Compiler {
                 file_path: self.file_path,
                 source_code: self.source_code,
                 message: e.to_string(),
-                span: e.get_span(),
+                span: e.span(),
             });
         }
 
@@ -87,7 +84,7 @@ impl Compiler {
                 file_path: self.file_path,
                 source_code: self.source_code,
                 message: e.to_string(),
-                span: e.get_span(),
+                span: Some(e.span().clone()),
             });
         }
 
@@ -107,17 +104,13 @@ enum SourceCodeError {
 
 impl Display for SourceCodeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::WrongExtension => {
-                    "Kaba source code file must have '.kaba' extension".to_string()
-                }
-                Self::FileNotExist { path } => {
-                    format!("file '{}' is not exist", path.display())
-                }
+        match self {
+            Self::WrongExtension => {
+                write!(f, "Kaba source code file must have '.kaba' extension")
             }
-        )
+            Self::FileNotExist { path } => {
+                write!(f, "file '{}' is not exist", path.display())
+            }
+        }
     }
 }

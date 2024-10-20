@@ -1,6 +1,3 @@
-// Copyright 2023 Hafidh Muqsithanova Sukarno
-// SPDX-License-Identifier: Apache-2.0
-
 //! This module contains the required logic operations during the
 //! lexing/tokenizing stage of a Kaba source code.
 
@@ -10,10 +7,10 @@ use std::fmt::Display;
 /// Provide a quick way to lex a Kaba program's source code, without the
 /// needs to setting up and running the lexer manually.
 ///
-/// Produces a vector of [`RichToken`] that contains additional
+/// Produces a vector of [`Token`] that contains additional
 /// information of a token.
-pub fn lex(source_code: &str) -> Result<Vec<RichToken>, LexingError> {
-    let mut l = Token::lexer(source_code);
+pub fn lex(source_code: &str) -> Result<Vec<Token>, LexingError> {
+    let mut l = TokenKind::lexer(source_code);
     let mut tokens = vec![];
 
     while let Some(token) = l.next() {
@@ -29,49 +26,46 @@ pub fn lex(source_code: &str) -> Result<Vec<RichToken>, LexingError> {
             continue;
         }
 
-        tokens.push(RichToken {
+        tokens.push(Token {
             kind,
             span: l.span(),
-            value: String::from(l.slice()),
         })
     }
 
-    tokens.push(RichToken {
-        kind: Token::Eof,
+    tokens.push(Token {
+        kind: TokenKind::Eof,
         span: source_code.len()..source_code.len(),
-        value: String::from("<EOF>"),
     });
 
     Ok(tokens)
 }
 
-/// A wrapper around raw [`Token`] that also store the metadata
+/// A wrapper around raw [`TokenKind`] that also store the metadata
 /// information of a token, such as its actual position inside
 /// the source code.
 #[derive(Clone, Debug, PartialEq)]
-pub struct RichToken {
-    pub kind: Token,
+pub struct Token {
+    pub kind: TokenKind,
     pub span: Span,
-    pub value: String,
 }
 
-/// The list of all tokens that may exists in a valid Kaba
+/// The list of all token kinds that may exists in a valid Kaba
 /// source code.
 #[derive(Logos, Clone, Debug, PartialEq)]
 #[logos(skip r"[ \t\r\n\f]+", error = LexingError)]
 #[rustfmt::skip]
-pub enum Token {
-    #[regex("[a-zA-Z0-9_]+", identifier)]
+pub enum TokenKind {
+    #[regex("[a-zA-Z0-9_]+", lex_identifier)]
     Identifier(String),
 
     //
     // Literals
     //
 
-    #[regex("[0-9]+", priority = 2, callback = integer)]
+    #[regex("[0-9]+", priority = 2, callback = lex_integer)]
     Integer(i32),
 
-    #[regex(r"[0-9]+\.[0-9]+", callback = float)]
+    #[regex(r"[0-9]+\.[0-9]+", callback = lex_float)]
     Float(f64),
 
     #[token("true")]
@@ -90,6 +84,11 @@ pub enum Token {
     #[token("while")]    While,
     #[token("break")]    Break,
     #[token("continue")] Continue,
+    #[token("fn")]       Fn,
+    #[token("return")]   Return,
+    #[token("do")]       Do,
+    #[token("end")]      End,
+    #[token("debug")]    Debug,
 
     //
     // Symbols
@@ -104,11 +103,15 @@ pub enum Token {
     #[token(":")] Colon,
     #[token(";")] Semicolon,
     #[token(",")] Comma,
-    #[token("=")] Assign,
     #[token("(")] LParen,
     #[token(")")] RParen,
-    #[token("{")] LBrace,
-    #[token("}")] RBrace,
+
+    #[token("=")]  Assign,
+    #[token("+=")] AddAssign,
+    #[token("-=")] SubAssign,
+    #[token("*=")] MulAssign,
+    #[token("/=")] DivAssign,
+    #[token("%=")] ModAssign,
 
     #[token("==")] Eq,
     #[token("!=")] Neq,
@@ -123,24 +126,21 @@ pub enum Token {
 
     // Comments
 
-    #[token("//", callback = single_line_comment)]
-    SingleLineComment(String),
-
-    #[token("/*", callback = multi_line_comment)]
-    MultiLineComment(String),
+    #[token("#", callback = lex_comment)]
+    Comment(String),
 
     // This will always be appended as the last token
     // inside token list
     Eof,
 }
 
-impl Token {
+impl TokenKind {
     fn is_comment(&self) -> bool {
-        matches!(self, Token::SingleLineComment(_)) || matches!(self, Token::MultiLineComment(_))
+        matches!(self, Self::Comment(_))
     }
 }
 
-impl Display for Token {
+impl Display for TokenKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Identifier(_) => write!(f, "identifier"),
@@ -148,12 +148,19 @@ impl Display for Token {
             Self::Float(_) => write!(f, "float"),
             Self::BooleanTrue => write!(f, "true"),
             Self::BooleanFalse => write!(f, "false"),
+
             Self::Var => write!(f, "`var` keyword"),
             Self::If => write!(f, "`if` keyword"),
             Self::Else => write!(f, "`else` keyword"),
             Self::While => write!(f, "`while` keyword"),
             Self::Break => write!(f, "`break` keyword"),
             Self::Continue => write!(f, "`continue` keyword"),
+            Self::Fn => write!(f, "`fn` keyword"),
+            Self::Return => write!(f, "`return` keyword"),
+            Self::Do => write!(f, "`do` keyword"),
+            Self::End => write!(f, "`end` keyword"),
+            Self::Debug => write!(f, "`debug` keyword"),
+
             Self::Add => write!(f, "addition operator (`+`)"),
             Self::Sub => write!(f, "subtraction operator (`-`)"),
             Self::Mul => write!(f, "multiplication operator (`*`)"),
@@ -162,11 +169,14 @@ impl Display for Token {
             Self::Colon => write!(f, "colon (`:`)"),
             Self::Semicolon => write!(f, "semicolon (`;`)"),
             Self::Comma => write!(f, "comma (`,`)"),
-            Self::Assign => write!(f, "assignment (`=`)"),
             Self::LParen => write!(f, "left parentheses (`(`)"),
             Self::RParen => write!(f, "right parentheses (`)`)"),
-            Self::LBrace => write!(f, "left brace (`{{`)"),
-            Self::RBrace => write!(f, "right brace (`}}`)"),
+            Self::Assign => write!(f, "assign operator (`=`)"),
+            Self::AddAssign => write!(f, "add assign operator (`+=`)"),
+            Self::SubAssign => write!(f, "sub assign operator (`-=`)"),
+            Self::MulAssign => write!(f, "mul assign operator (`*=`)"),
+            Self::DivAssign => write!(f, "div assign operator (`/=`)"),
+            Self::ModAssign => write!(f, "mod assign operator (`%=`)"),
             Self::Eq => write!(f, "equal operator (`==`)"),
             Self::Neq => write!(f, "not equal operator (`!=`)"),
             Self::Gt => write!(f, "greater than operator (`>`)"),
@@ -177,15 +187,14 @@ impl Display for Token {
             Self::And => write!(f, "logical and operator (`&&`)"),
             Self::Not => write!(f, "logical not operator (`!`)"),
 
-            Self::SingleLineComment(_) => write!(f, "single line comment"),
-            Self::MultiLineComment(_) => write!(f, "multi line comment"),
+            Self::Comment(_) => write!(f, "comment"),
 
             Self::Eof => write!(f, "end-of-file (EOF)"),
         }
     }
 }
 
-fn identifier(lex: &mut Lexer<Token>) -> Result<String, LexingError> {
+fn lex_identifier(lex: &mut Lexer<TokenKind>) -> Result<String, LexingError> {
     let value = lex.slice();
     if value.chars().next().unwrap().is_numeric() {
         return Err(LexingError::IdentifierStartsWithNumber {
@@ -196,15 +205,15 @@ fn identifier(lex: &mut Lexer<Token>) -> Result<String, LexingError> {
     Ok(String::from(value))
 }
 
-fn integer(lex: &mut Lexer<Token>) -> i32 {
+fn lex_integer(lex: &mut Lexer<TokenKind>) -> i32 {
     lex.slice().parse().unwrap()
 }
 
-fn float(lex: &mut Lexer<Token>) -> f64 {
+fn lex_float(lex: &mut Lexer<TokenKind>) -> f64 {
     lex.slice().parse().unwrap()
 }
 
-fn single_line_comment(lex: &mut Lexer<Token>) -> String {
+fn lex_comment(lex: &mut Lexer<TokenKind>) -> String {
     let remainder = lex.remainder();
     if let Some(newline_index) = remainder.find('\n') {
         lex.bump(newline_index + 1);
@@ -215,26 +224,10 @@ fn single_line_comment(lex: &mut Lexer<Token>) -> String {
     }
 }
 
-fn multi_line_comment(lex: &mut Lexer<Token>) -> Result<String, LexingError> {
-    let remainder = lex.remainder();
-    if let Some(comment_closing_index) = remainder.find("*/") {
-        lex.bump(comment_closing_index + 2);
-        Ok(String::from(&remainder[..comment_closing_index]))
-    } else {
-        let source_len = lex.source().len();
-        Err(LexingError::MissingCommentClosingTag {
-            span: source_len..source_len,
-        })
-    }
-}
-
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum LexingError {
     IdentifierStartsWithNumber {
         token: String,
-        span: Span,
-    },
-    MissingCommentClosingTag {
         span: Span,
     },
     UnknownToken {
@@ -247,10 +240,9 @@ pub enum LexingError {
 }
 
 impl LexingError {
-    pub fn get_span(&self) -> Option<Span> {
+    pub fn span(&self) -> Option<Span> {
         match self {
             Self::IdentifierStartsWithNumber { span, .. } => Some(span.clone()),
-            Self::MissingCommentClosingTag { span } => Some(span.clone()),
             Self::UnknownToken { span, .. } => Some(span.clone()),
             _ => None,
         }
@@ -259,22 +251,15 @@ impl LexingError {
 
 impl Display for LexingError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::IdentifierStartsWithNumber { token, .. } => {
-                    format!("identifier can't start with number: `{token}`")
-                }
-                Self::MissingCommentClosingTag { .. } => {
-                    "missing comment closing tag (`*/`)".to_string()
-                }
-                Self::UnknownToken { token, .. } => {
-                    format!("unknown token `{token}`")
-                }
-                _ => unreachable!(),
+        match self {
+            Self::IdentifierStartsWithNumber { token, .. } => {
+                write!(f, "identifier can't start with number: `{token}`")
             }
-        )
+            Self::UnknownToken { token, .. } => {
+                write!(f, "unknown token `{token}`")
+            }
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -283,146 +268,136 @@ mod tests {
     use super::*;
     use indoc::indoc;
 
+    fn lex_and_assert_result(input: &str, expected: TokenKind) {
+        let result = lex(input);
+        assert!(result.is_ok());
+
+        let tokens = result.unwrap();
+        assert!(tokens.len() == 2);
+        assert_eq!(tokens[0].kind, expected);
+    }
+
+    fn lex_and_assert_err(input: &str) {
+        let result = lex(input);
+        assert!(result.is_err());
+    }
+
+    //
+    // Test identifiers
+    //
+
     #[test]
-    fn test_lexing_identifier() {
-        let cases = ["abc", "_d768a7ABC_adsf", "_", "_123"];
-
-        for c in cases {
-            let lex_result = lex(c);
-
-            assert!(lex_result.is_ok());
-
-            let tokens = lex_result.unwrap();
-
-            assert!(tokens.len() == 2);
-            assert_eq!(tokens[0].kind, Token::Identifier(String::from(c)));
-        }
+    fn test_lexing_normal_identifier() {
+        let input = "abc";
+        lex_and_assert_result(input, TokenKind::Identifier(String::from(input)));
     }
 
     #[test]
-    fn test_lexing_invalid_identifier() {
-        let cases = ["123abc"];
-
-        for c in cases {
-            let lex_result = lex(c);
-
-            assert!(lex_result.is_err());
-        }
+    fn test_lexing_identifier_with_mixed_characters() {
+        let input = "_d768a7ABC_adsf";
+        lex_and_assert_result(input, TokenKind::Identifier(String::from(input)));
     }
 
     #[test]
-    fn test_lexing_integer() {
-        let cases = ["123", "0"];
-
-        for c in cases {
-            let lex_result = lex(c);
-
-            assert!(lex_result.is_ok());
-
-            let tokens = lex_result.unwrap();
-
-            assert!(tokens.len() == 2);
-            assert_eq!(tokens[0].kind, Token::Integer(c.parse().unwrap()));
-        }
+    fn test_lexing_identifier_that_only_a_single_underline() {
+        let input = "_";
+        lex_and_assert_result(input, TokenKind::Identifier(String::from(input)));
     }
 
     #[test]
-    fn test_lexing_float() {
-        let cases = ["123.5", "0.0723"];
-
-        for c in cases {
-            let lex_result = lex(c);
-
-            assert!(lex_result.is_ok());
-
-            let tokens = lex_result.unwrap();
-
-            assert!(tokens.len() == 2);
-            assert_eq!(tokens[0].kind, Token::Float(c.parse().unwrap()));
-        }
+    fn test_lexing_identifier_without_alphabets() {
+        let input = "_123";
+        lex_and_assert_result(input, TokenKind::Identifier(String::from(input)));
     }
 
     #[test]
-    fn test_lexing_single_line_comment() {
-        let cases = [
-            indoc! {"
-                // This is a single line comment
-                var x = 5;
-            "},
-            indoc! {"
-                var x = 10;
+    fn test_lexing_identifier_that_starts_with_number() {
+        let input = "123abc";
+        lex_and_assert_err(input);
+    }
 
-                print(x); // this should works too!
-            "},
-            indoc! {"
-                // print(y);
-            "},
-            indoc! {"
-            // A single line comment that spans to EOF"},
-        ];
+    //
+    // Test integer literals
+    //
 
-        for c in cases {
-            let lex_result = lex(c);
-
-            assert!(lex_result.is_ok());
-
-            let tokens = lex_result.unwrap();
-
-            assert!(!tokens
-                .iter()
-                .any(|t| matches!(t.kind, Token::SingleLineComment(_))))
-        }
+    #[test]
+    fn test_lexing_an_integer_literal() {
+        let input = "123";
+        lex_and_assert_result(input, TokenKind::Integer(input.parse().unwrap()));
     }
 
     #[test]
-    fn test_lexing_multi_line_comment() {
-        let cases = [
-            indoc! {"
-                /**
-                 * This is a multi line comment
-                 */
-                var x = 5;
-            "},
-            indoc! {"
-                var x = 5; /* no problem */
-            "},
-            indoc! {"
-                /**
-                 * No problem too
-                 */
-
-                /**
-                 * print(y);
-                 *       ^
-                 *      A non existing variable
-                 */
-            "},
-        ];
-
-        for c in cases {
-            let lex_result = lex(c);
-
-            assert!(lex_result.is_ok());
-
-            let tokens = lex_result.unwrap();
-
-            assert!(!tokens
-                .iter()
-                .any(|t| matches!(t.kind, Token::MultiLineComment(_))))
-        }
+    fn test_lexing_a_zero_literal() {
+        let input = "0";
+        lex_and_assert_result(input, TokenKind::Integer(input.parse().unwrap()));
     }
 
     #[test]
-    fn test_lexing_invalid_comment() {
-        let cases = [indoc! {"
-                /* No closing tag
-                print(0);
-            "}];
+    fn test_lexing_a_big_integer_literal() {
+        let input = "2147483647";
+        lex_and_assert_result(input, TokenKind::Integer(input.parse().unwrap()));
+    }
 
-        for c in cases {
-            let lex_result = lex(c);
+    //
+    // Test float literals
+    //
 
-            assert!(lex_result.is_err());
-        }
+    #[test]
+    fn test_lexing_a_float_literal() {
+        let input = "123.5";
+        lex_and_assert_result(input, TokenKind::Float(input.parse().unwrap()));
+    }
+
+    #[test]
+    fn test_lexing_a_small_float_literal() {
+        let input = "0.0723";
+        lex_and_assert_result(input, TokenKind::Float(input.parse().unwrap()));
+    }
+
+    //
+    // Test comment literals
+    //
+
+    fn lex_and_assert_comments_are_skipped(input: &str) {
+        let result = lex(input);
+        assert!(result.is_ok());
+
+        let tokens = result.unwrap();
+        assert!(!tokens
+            .iter()
+            .any(|t| matches!(t.kind, TokenKind::Comment(_))))
+    }
+
+    #[test]
+    fn test_lexing_comment_above_code() {
+        let input = indoc! {"
+            # This is a single line comment
+            var x = 5;
+        "};
+        lex_and_assert_comments_are_skipped(input);
+    }
+
+    #[test]
+    fn test_lexing_comment_after_code() {
+        let input = indoc! {"
+            var x = 10;
+            print(x); # this should works too!
+        "};
+        lex_and_assert_comments_are_skipped(input);
+    }
+
+    #[test]
+    fn test_lexing_a_comment_that_commenting_out_a_code() {
+        let input = indoc! {"
+            # print(y);
+        "};
+        lex_and_assert_comments_are_skipped(input);
+    }
+
+    #[test]
+    fn test_lexing_comment_that_spans_until_eof() {
+        let input = indoc! {"
+        # A single line comment that spans to EOF"};
+        lex_and_assert_comments_are_skipped(input);
     }
 }

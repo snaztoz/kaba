@@ -1,6 +1,3 @@
-// Copyright 2023 Hafidh Muqsithanova Sukarno
-// SPDX-License-Identifier: Apache-2.0
-
 //! This module contains representation of the AST of Kaba program.
 //!
 //! Root of the tree will always be the [`Program`] that may contains
@@ -9,47 +6,102 @@
 use logos::Span;
 use std::fmt::Display;
 
+pub type IdentifierNode = AstNode;
+pub type TypeNotationNode = AstNode;
+
 /// The root of a Kaba source code's AST.
 #[derive(Debug, PartialEq)]
 pub struct Program {
-    pub statements: Vec<AstNode>,
+    pub stmts: Vec<AstNode>,
 }
 
 /// The representation of each node that make up a whole Kaba AST.
 #[derive(Debug, PartialEq)]
 pub enum AstNode {
     VariableDeclaration {
-        identifier: Box<AstNode>,
-        var_type: Option<Box<AstNode>>,
-        value: Option<Box<AstNode>>,
-        span: Span,
-    },
-    ValueAssignment {
-        lhs: Box<AstNode>,
-        value: Box<AstNode>,
+        id: Box<AstNode>,
+        tn: Option<Box<AstNode>>,
+        val: Option<Box<AstNode>>,
         span: Span,
     },
 
     If {
-        condition: Box<AstNode>,
+        cond: Box<AstNode>,
         body: Vec<AstNode>,
         or_else: Option<Box<AstNode>>,
         span: Span,
     },
+
     Else {
         body: Vec<AstNode>,
         span: Span,
     },
 
     While {
-        condition: Box<AstNode>,
+        cond: Box<AstNode>,
         body: Vec<AstNode>,
         span: Span,
     },
+
     Break {
         span: Span,
     },
+
     Continue {
+        span: Span,
+    },
+
+    FunctionDefinition {
+        id: Box<AstNode>,
+        params: Vec<(IdentifierNode, TypeNotationNode)>,
+        return_t: Option<Box<AstNode>>,
+        body: Vec<AstNode>,
+        span: Span,
+    },
+
+    Return {
+        expr: Option<Box<AstNode>>,
+        span: Span,
+    },
+
+    Debug {
+        expr: Box<AstNode>,
+        span: Span,
+    },
+
+    Assign {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+
+    AddAssign {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+
+    SubAssign {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+
+    MulAssign {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+
+    DivAssign {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
+        span: Span,
+    },
+
+    ModAssign {
+        lhs: Box<AstNode>,
+        rhs: Box<AstNode>,
         span: Span,
     },
 
@@ -58,6 +110,7 @@ pub enum AstNode {
         rhs: Box<AstNode>,
         span: Span,
     },
+
     And {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
@@ -69,26 +122,31 @@ pub enum AstNode {
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Neq {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Gt {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Gte {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Lt {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Lte {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
@@ -100,21 +158,25 @@ pub enum AstNode {
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Sub {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Mul {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Div {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
         span: Span,
     },
+
     Mod {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
@@ -125,10 +187,12 @@ pub enum AstNode {
         child: Box<AstNode>,
         span: Span,
     },
+
     Neg {
         child: Box<AstNode>,
         span: Span,
     },
+
     FunctionCall {
         callee: Box<AstNode>,
         args: Vec<AstNode>,
@@ -149,7 +213,8 @@ pub enum AstNode {
     },
 
     TypeNotation {
-        name: String,
+        // TODO: change this into Identifier
+        identifier: Box<AstNode>,
         span: Span,
     },
 
@@ -160,15 +225,23 @@ pub enum AstNode {
 }
 
 impl AstNode {
-    pub fn get_span(&self) -> Span {
+    pub fn span(&self) -> &Span {
         match self {
             Self::VariableDeclaration { span, .. }
-            | Self::ValueAssignment { span, .. }
             | Self::If { span, .. }
             | Self::Else { span, .. }
             | Self::While { span, .. }
             | Self::Break { span }
             | Self::Continue { span }
+            | Self::FunctionDefinition { span, .. }
+            | Self::Return { span, .. }
+            | Self::Debug { span, .. }
+            | Self::Assign { span, .. }
+            | Self::AddAssign { span, .. }
+            | Self::SubAssign { span, .. }
+            | Self::MulAssign { span, .. }
+            | Self::DivAssign { span, .. }
+            | Self::ModAssign { span, .. }
             | Self::Or { span, .. }
             | Self::And { span, .. }
             | Self::Eq { span, .. }
@@ -188,8 +261,12 @@ impl AstNode {
             | Self::Group { span, .. }
             | Self::Identifier { span, .. }
             | Self::TypeNotation { span, .. }
-            | Self::Literal { span, .. } => span.clone(),
+            | Self::Literal { span, .. } => span,
         }
+    }
+
+    pub fn is_assignable(&self) -> bool {
+        matches!(self, Self::Identifier { .. })
     }
 
     pub fn unwrap_identifier(&self) -> (String, Span) {
@@ -204,8 +281,8 @@ impl AstNode {
     }
 
     pub fn unwrap_type_notation(&self) -> (String, Span) {
-        if let AstNode::TypeNotation { name, span } = self {
-            (name.clone(), span.clone())
+        if let AstNode::TypeNotation { identifier, span } = self {
+            (identifier.unwrap_identifier().0, span.clone())
         } else {
             panic!(
                 "calling `unwrap_type_notation` on non-type notation AstNode: {:?}",
@@ -224,10 +301,116 @@ impl AstNode {
     }
 }
 
+impl Display for AstNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::VariableDeclaration { .. } => {
+                write!(f, "variable declaration")
+            }
+            Self::If { .. } => {
+                write!(f, "`if` statement")
+            }
+            Self::Else { .. } => {
+                write!(f, "`else` statement")
+            }
+            Self::While { .. } => {
+                write!(f, "`while` statement")
+            }
+            Self::Break { .. } => {
+                write!(f, "`break` statement")
+            }
+            Self::Continue { .. } => {
+                write!(f, "`continue` statement")
+            }
+            Self::Assign { .. } => {
+                write!(f, "`assign` expression")
+            }
+            Self::AddAssign { .. } => {
+                write!(f, "`add assign` expression")
+            }
+            Self::SubAssign { .. } => {
+                write!(f, "`sub assign` expression")
+            }
+            Self::MulAssign { .. } => {
+                write!(f, "`mul assign` expression")
+            }
+            Self::DivAssign { .. } => {
+                write!(f, "`div assign` expression")
+            }
+            Self::ModAssign { .. } => {
+                write!(f, "`mod assign` expression")
+            }
+            Self::Or { .. } => {
+                write!(f, "`or` expression")
+            }
+            Self::And { .. } => {
+                write!(f, "`and` expression")
+            }
+            Self::Eq { .. } => {
+                write!(f, "`equal` expression")
+            }
+            Self::Neq { .. } => {
+                write!(f, "`not equal` expression")
+            }
+            Self::Gt { .. } => {
+                write!(f, "`greater than` expression")
+            }
+            Self::Gte { .. } => {
+                write!(f, "`greater than or equal` expression")
+            }
+            Self::Lt { .. } => {
+                write!(f, "`less than` expression")
+            }
+            Self::Lte { .. } => {
+                write!(f, "`less than or equal` expression")
+            }
+            Self::Add { .. } => {
+                write!(f, "`addition` expression")
+            }
+            Self::Sub { .. } => {
+                write!(f, "`subtraction` expression")
+            }
+            Self::Mul { .. } => {
+                write!(f, "`multiplication` expression")
+            }
+            Self::Div { .. } => {
+                write!(f, "`division` expression")
+            }
+            Self::Mod { .. } => {
+                write!(f, "`modulo` expression")
+            }
+            Self::Not { .. } => {
+                write!(f, "`not` expression")
+            }
+            Self::Neg { .. } => {
+                write!(f, "`negation` expression")
+            }
+            Self::FunctionCall { .. } => {
+                write!(f, "function call expression")
+            }
+            Self::Identifier { .. } => {
+                write!(f, "identifier")
+            }
+            Self::TypeNotation { .. } => {
+                write!(f, "type notation")
+            }
+            Self::Literal { .. } => {
+                write!(f, "value literal")
+            }
+
+            _ => unreachable!(),
+        }
+    }
+}
+
 /// The representation of each value that may exists in a Kaba
 /// source code, such as integer or string.
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub enum Value {
+    // A temporary value while the runtime is still using
+    // a tree-walk interpreter mode
+    Void,
+
     Integer(i32),
     Float(f64),
     Boolean(bool),
@@ -235,14 +418,11 @@ pub enum Value {
 
 impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Value::Integer(n) => format!("{n}"),
-                Value::Float(n) => format!("{n}"),
-                Value::Boolean(b) => format!("{b}"),
-            }
-        )
+        match self {
+            Value::Void => write!(f, "void"),
+            Value::Integer(n) => write!(f, "{n}"),
+            Value::Float(n) => write!(f, "{n}"),
+            Value::Boolean(b) => write!(f, "{b}"),
+        }
     }
 }
