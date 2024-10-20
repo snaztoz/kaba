@@ -1,6 +1,3 @@
-// Copyright 2023-2024 Hafidh Muqsithanova Sukarno
-// SPDX-License-Identifier: Apache-2.0
-
 //! A temporary prototype of the runtime that currently being used.
 //!
 //! It accept the raw AST as is and should be replaced by a real
