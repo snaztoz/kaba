@@ -27,14 +27,11 @@ pub struct Runtime<'a> {
 
 impl<'a> Runtime<'a> {
     pub fn new(ast: ProgramAst, streams: RuntimeStream<'a>) -> Self {
-        let scopes = vec![
-            HashMap::new(), // built-in
-            HashMap::new(), // global
-        ];
-
         Self {
             ast: Some(ast),
-            scopes: RefCell::new(scopes),
+            scopes: RefCell::new(vec![
+                HashMap::new(), // global scope
+            ]),
             streams,
             state: RuntimeState::new(),
         }
@@ -61,10 +58,10 @@ impl<'a> Runtime<'a> {
         }
     }
 
-    fn run_statements(&self, stmts: &[AstNode]) -> Result<RuntimeValue> {
+    fn run_statements(&self, stmts: &[AstNode]) -> Result<()> {
         for stmt in stmts {
             if self.state.is_stop_executing() {
-                return Ok(RuntimeValue::Void);
+                break;
             }
 
             match stmt {
@@ -98,10 +95,9 @@ impl<'a> Runtime<'a> {
                 AstNode::Return { expr, .. } => {
                     if let Some(expr) = expr {
                         let val = self.run_expression(expr)?;
-                        return Ok(val);
-                    } else {
-                        return Ok(RuntimeValue::Void);
-                    }
+                        self.state.set_return_value(val);
+                    };
+                    self.state.stop_execution();
                 }
 
                 AstNode::Debug { expr, .. } => self.run_debug_statement(expr)?,
@@ -112,7 +108,7 @@ impl<'a> Runtime<'a> {
             };
         }
 
-        Ok(RuntimeValue::Void)
+        Ok(())
     }
 
     fn assign(&self, lhs: &AstNode, rhs: &AstNode) -> Result<RuntimeValue> {
@@ -444,19 +440,24 @@ impl<'a> Runtime<'a> {
         args: &[RuntimeValue],
     ) -> Result<RuntimeValue> {
         if let RuntimeValue::Function(ptr) = f_ptr {
-            self.scopes.borrow_mut().push(HashMap::new());
+            let globals = &self.ast.as_ref().unwrap().stmts;
+            let f = globals.get(ptr).unwrap();
 
-            if let AstNode::FunctionDefinition { params, body, .. } =
-                self.ast.as_ref().unwrap().stmts.get(ptr).unwrap()
-            {
+            if let AstNode::FunctionDefinition { params, body, .. } = f {
+                self.scopes.borrow_mut().push(HashMap::new());
+
                 for (i, (id, _)) in params.iter().enumerate() {
                     let (id, _) = id.unwrap_identifier();
                     let val = args[i];
                     self.store_value(&id, val);
                 }
 
-                let val = self.run_statements(body)?;
+                self.state.resume_execution();
+                self.run_statements(body)?;
+
+                let val = self.state.return_value();
                 self.scopes.borrow_mut().pop();
+
                 return Ok(val);
             }
         }
@@ -599,7 +600,7 @@ mod tests {
         let result = runtime.run();
 
         assert!(result.is_ok());
-        assert_eq!(expect, &out_stream);
+        assert_eq!(&out_stream, expect);
     }
 
     #[test]
@@ -802,22 +803,62 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn test_recursion() {
-    //     assert_output_equal(
-    //         indoc! {"
-    //             fn main() do
-    //                 debug fibonacci(3);
-    //             end
+    #[test]
+    fn test_doing_math_on_function_call_results() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
+                    debug one() + two();
+                end
 
-    //             fn fibonacci(n: Int): Int do
-    //                 if n == 1 || n == 2 do
-    //                     return 1;
-    //                 end
-    //                 return fibonacci(n-1) + fibonacci(n-2);
-    //             end
-    //         "},
-    //         "2\n".as_bytes(),
-    //     );
-    // }
+                fn one(): Int do
+                    return 1;
+                end
+
+                fn two(): Int do
+                    return 2;
+                end
+            "},
+            "3\n".as_bytes(),
+        );
+    }
+
+    #[test]
+    fn test_recursion() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
+                    debug fibonacci(3);
+                end
+
+                fn fibonacci(n: Int): Int do
+                    if n == 1 || n == 2 do
+                        return 1;
+                    end
+                    return fibonacci(n-1) + fibonacci(n-2);
+                end
+            "},
+            "2\n".as_bytes(),
+        );
+    }
+
+    #[test]
+    fn test_recursive_counter() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
+                    count_to_zero(5);
+                end
+
+                fn count_to_zero(n: Int) do
+                    if n < 0 do
+                        return;
+                    end
+                    debug n;
+                    count_to_zero(n-1);
+                end
+            "},
+            "5\n4\n3\n2\n1\n0\n".as_bytes(),
+        );
+    }
 }

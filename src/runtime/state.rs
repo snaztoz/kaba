@@ -1,8 +1,10 @@
+use super::value::RuntimeValue;
 use std::cell::RefCell;
 
 pub struct RuntimeState {
     stop_exec: RefCell<bool>,
     exit_loop: RefCell<bool>,
+    return_val: RefCell<RuntimeValue>,
 }
 
 impl RuntimeState {
@@ -10,6 +12,7 @@ impl RuntimeState {
         Self {
             stop_exec: RefCell::new(false),
             exit_loop: RefCell::new(false),
+            return_val: RefCell::new(RuntimeValue::Void),
         }
     }
 
@@ -35,5 +38,13 @@ impl RuntimeState {
 
     pub fn reset_loop_state(&self) {
         *self.exit_loop.borrow_mut() = false;
+    }
+
+    pub fn return_value(&self) -> RuntimeValue {
+        *self.return_val.borrow()
+    }
+
+    pub fn set_return_value(&self, val: RuntimeValue) {
+        *self.return_val.borrow_mut() = val;
     }
 }

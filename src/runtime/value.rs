@@ -1,7 +1,7 @@
 use compiler::ast::Value;
 use std::{convert::From, fmt::Display};
 
-#[derive(Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub enum RuntimeValue {
     Void,
     Integer(i32),
