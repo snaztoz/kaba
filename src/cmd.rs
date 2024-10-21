@@ -1,9 +1,11 @@
 use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
+pub mod run;
+
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
-pub struct Cli {
+pub struct Cmd {
     #[command(subcommand)]
     pub command: Commands,
 }
