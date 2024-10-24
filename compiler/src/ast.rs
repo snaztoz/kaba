@@ -213,8 +213,7 @@ pub enum AstNode {
     },
 
     TypeNotation {
-        // TODO: change this into Identifier
-        identifier: Box<AstNode>,
+        tn: TypeNotation,
         span: Span,
     },
 
@@ -281,8 +280,8 @@ impl AstNode {
     }
 
     pub fn unwrap_type_notation(&self) -> (String, Span) {
-        if let AstNode::TypeNotation { identifier, span } = self {
-            (identifier.unwrap_identifier().0, span.clone())
+        if let AstNode::TypeNotation { tn, span } = self {
+            (tn.to_string(), span.clone())
         } else {
             panic!(
                 "calling `unwrap_type_notation` on non-type notation AstNode: {:?}",
@@ -399,6 +398,35 @@ impl Display for AstNode {
             }
 
             _ => unreachable!(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum TypeNotation {
+    Identifier(String),
+    Function {
+        params_tn: Vec<TypeNotationNode>,
+        return_tn: Box<TypeNotationNode>,
+    },
+}
+
+impl Display for TypeNotation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Identifier(id) => write!(f, "{id}"),
+
+            Self::Function {
+                params_tn,
+                return_tn,
+            } => {
+                let joined = params_tn
+                    .iter()
+                    .map(|tn| tn.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "({joined}) -> {return_tn}")
+            }
         }
     }
 }

@@ -2,7 +2,7 @@
 //! parsing stage of a Kaba tokens.
 
 use crate::{
-    ast::{AstNode, Program as ProgramAst, Value},
+    ast::{AstNode, Program as ProgramAst, TypeNotation, Value},
     lexer::{Token, TokenKind},
 };
 use logos::Span;
@@ -223,13 +223,63 @@ impl Parser {
             TokenKind::Identifier(name) => {
                 self.advance();
                 Ok(AstNode::TypeNotation {
-                    identifier: Box::new(AstNode::Identifier {
-                        name,
-                        span: token.span.clone(),
-                    }),
+                    tn: TypeNotation::Identifier(name),
                     span: token.span.clone(),
                 })
             }
+
+            TokenKind::LParen => {
+                let start = token.span.start;
+                self.advance();
+
+                // Expecting >= 0 parameter type notation(s)
+
+                let mut params_tn = vec![];
+                while !self.current_token_is(&TokenKind::RParen) {
+                    // Expecting type notation
+
+                    let tn = self.parse_type_notation()?;
+                    params_tn.push(tn);
+
+                    let token = self.get_current_token();
+                    match token.kind {
+                        TokenKind::Comma => {
+                            self.skip(&TokenKind::Comma)?;
+                            continue;
+                        }
+                        TokenKind::RParen => continue,
+                        k => {
+                            return Err(ParsingError::UnexpectedToken {
+                                expect: TokenKind::RParen,
+                                found: k.clone(),
+                                span: token.span,
+                            });
+                        }
+                    }
+                }
+
+                // Expecting ")"
+
+                self.skip(&TokenKind::RParen)?;
+
+                // Expecting "->"
+
+                self.skip(&TokenKind::RightPoint)?;
+
+                // Expecting return type notation
+
+                let return_tn = Box::new(self.parse_type_notation()?);
+                let end = return_tn.span().end;
+
+                Ok(AstNode::TypeNotation {
+                    tn: TypeNotation::Function {
+                        params_tn,
+                        return_tn,
+                    },
+                    span: start..end,
+                })
+            }
+
             _ => Err(ParsingError::UnexpectedToken {
                 expect: TokenKind::Identifier(String::from("foo")),
                 found: token.kind.clone(),
@@ -437,7 +487,6 @@ impl Parser {
 
         let return_t = if self.current_token_is(&TokenKind::Colon) {
             self.skip(&TokenKind::Colon)?;
-
             Some(Box::new(self.parse_type_notation()?))
         } else {
             None
@@ -1070,7 +1119,7 @@ mod tests {
     //
 
     #[test]
-    fn test_parsing_without_type_annotation_and_initial_value() {
+    fn test_parsing_without_type_notation_and_initial_value() {
         parse_and_assert_result(
             "var x;",
             AstNode::VariableDeclaration {
@@ -1086,7 +1135,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parsing_without_t_annotation_but_with_initial_value() {
+    fn test_parsing_without_type_notation_but_with_initial_value() {
         parse_and_assert_result(
             "var abc = 123 * x;",
             AstNode::VariableDeclaration {
@@ -1157,7 +1206,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parsing_with_type_annotation_but_without_initial_value() {
+    fn test_parsing_with_type_notation_but_without_initial_value() {
         parse_and_assert_result(
             "var x: Int;",
             AstNode::VariableDeclaration {
@@ -1166,10 +1215,7 @@ mod tests {
                     span: 4..5,
                 }),
                 tn: Some(Box::from(AstNode::TypeNotation {
-                    identifier: Box::from(AstNode::Identifier {
-                        name: String::from("Int"),
-                        span: 7..10,
-                    }),
+                    tn: TypeNotation::Identifier(String::from("Int")),
                     span: 7..10,
                 })),
                 val: None,
@@ -1179,7 +1225,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parsing_with_both_type_annotation_and_initial_value() {
+    fn test_parsing_with_both_type_notation_and_initial_value() {
         parse_and_assert_result(
             "var x: Int = 5;",
             AstNode::VariableDeclaration {
@@ -1188,10 +1234,7 @@ mod tests {
                     span: 4..5,
                 }),
                 tn: Some(Box::from(AstNode::TypeNotation {
-                    identifier: Box::from(AstNode::Identifier {
-                        name: String::from("Int"),
-                        span: 7..10,
-                    }),
+                    tn: TypeNotation::Identifier(String::from("Int")),
                     span: 7..10,
                 })),
                 val: Some(Box::new(AstNode::Literal {
@@ -1199,6 +1242,83 @@ mod tests {
                     span: 13..14,
                 })),
                 span: 0..14,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_function_type_notation() {
+        parse_and_assert_result(
+            "var x: (Int) -> Void = foo;",
+            AstNode::VariableDeclaration {
+                id: Box::from(AstNode::Identifier {
+                    name: String::from("x"),
+                    span: 4..5,
+                }),
+                tn: Some(Box::from(AstNode::TypeNotation {
+                    tn: TypeNotation::Function {
+                        params_tn: vec![AstNode::TypeNotation {
+                            tn: TypeNotation::Identifier(String::from("Int")),
+                            span: 8..11,
+                        }],
+                        return_tn: Box::new(AstNode::TypeNotation {
+                            tn: TypeNotation::Identifier(String::from("Void")),
+                            span: 16..20,
+                        }),
+                    },
+                    span: 7..20,
+                })),
+                val: Some(Box::new(AstNode::Identifier {
+                    name: String::from("foo"),
+                    span: 23..26,
+                })),
+                span: 0..26,
+            },
+        );
+    }
+
+    #[test]
+    fn test_parsing_nested_function_type_notation() {
+        parse_and_assert_result(
+            "var x: (Int, Bool) -> (Int,) -> Void = foo;",
+            AstNode::VariableDeclaration {
+                id: Box::from(AstNode::Identifier {
+                    name: String::from("x"),
+                    span: 4..5,
+                }),
+                tn: Some(Box::from(AstNode::TypeNotation {
+                    tn: TypeNotation::Function {
+                        params_tn: vec![
+                            AstNode::TypeNotation {
+                                tn: TypeNotation::Identifier(String::from("Int")),
+                                span: 8..11,
+                            },
+                            AstNode::TypeNotation {
+                                tn: TypeNotation::Identifier(String::from("Bool")),
+                                span: 13..17,
+                            },
+                        ],
+                        return_tn: Box::new(AstNode::TypeNotation {
+                            tn: TypeNotation::Function {
+                                params_tn: vec![AstNode::TypeNotation {
+                                    tn: TypeNotation::Identifier(String::from("Int")),
+                                    span: 23..26,
+                                }],
+                                return_tn: Box::new(AstNode::TypeNotation {
+                                    tn: TypeNotation::Identifier(String::from("Void")),
+                                    span: 32..36,
+                                }),
+                            },
+                            span: 22..36,
+                        }),
+                    },
+                    span: 7..36,
+                })),
+                val: Some(Box::new(AstNode::Identifier {
+                    name: String::from("foo"),
+                    span: 39..42,
+                })),
+                span: 0..42,
             },
         );
     }
@@ -1341,10 +1461,7 @@ mod tests {
                             span: 7..8,
                         },
                         AstNode::TypeNotation {
-                            identifier: Box::new(AstNode::Identifier {
-                                name: String::from("Int"),
-                                span: 10..13,
-                            }),
+                            tn: TypeNotation::Identifier(String::from("Int")),
                             span: 10..13,
                         },
                     ),
@@ -1354,10 +1471,7 @@ mod tests {
                             span: 15..16,
                         },
                         AstNode::TypeNotation {
-                            identifier: Box::new(AstNode::Identifier {
-                                name: String::from("Bool"),
-                                span: 18..22,
-                            }),
+                            tn: TypeNotation::Identifier(String::from("Bool")),
                             span: 18..22,
                         },
                     ),
@@ -1384,10 +1498,7 @@ mod tests {
                         span: 9..10,
                     },
                     AstNode::TypeNotation {
-                        identifier: Box::new(AstNode::Identifier {
-                            name: String::from("Int"),
-                            span: 12..15,
-                        }),
+                        tn: TypeNotation::Identifier(String::from("Int")),
                         span: 12..15,
                     },
                 )],
@@ -1419,10 +1530,7 @@ mod tests {
                 }),
                 params: vec![],
                 return_t: Some(Box::new(AstNode::TypeNotation {
-                    identifier: Box::new(AstNode::Identifier {
-                        name: String::from("Int"),
-                        span: 10..13,
-                    }),
+                    tn: TypeNotation::Identifier(String::from("Int")),
                     span: 10..13,
                 })),
                 body: vec![AstNode::Return {

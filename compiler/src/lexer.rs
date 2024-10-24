@@ -124,6 +124,8 @@ pub enum TokenKind {
     #[token("&&")] And,
     #[token("!")]  Not,
 
+    #[token("->")] RightPoint,
+
     // Comments
 
     #[token("#", callback = lex_comment)]
@@ -186,6 +188,8 @@ impl Display for TokenKind {
             Self::Or => write!(f, "logical or operator (`||`)"),
             Self::And => write!(f, "logical and operator (`&&`)"),
             Self::Not => write!(f, "logical not operator (`!`)"),
+
+            Self::RightPoint => write!(f, "right pointing operator (`->`)"),
 
             Self::Comment(_) => write!(f, "comment"),
 
