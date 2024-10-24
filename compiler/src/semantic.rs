@@ -970,6 +970,21 @@ mod tests {
     }
 
     #[test]
+    fn test_aliasing_function_identifier() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    var aliased = return_two;
+
+                    debug aliased();
+                end
+
+                fn return_two(): Int do
+                    return 2;
+                end
+            "});
+    }
+
+    #[test]
     fn test_defining_function_not_in_global_scope() {
         check_and_assert_is_err(indoc! {"
                 fn main() do
