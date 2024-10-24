@@ -15,8 +15,8 @@ type Col = usize;
 /// file path and the source code itself.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Error {
-    pub file_path: Option<PathBuf>,
-    pub source_code: String,
+    pub path: Option<PathBuf>,
+    pub src: String,
     pub message: String,
     pub span: Option<Span>,
 }
@@ -24,8 +24,8 @@ pub struct Error {
 impl Error {
     fn get_position(&self) -> Option<(Line, Row, Col)> {
         let span = self.span.as_ref().unwrap();
-        let left_of_selected = &self.source_code[..span.start];
-        let right_of_selected = &self.source_code[span.end..];
+        let left_of_selected = &self.src[..span.start];
+        let right_of_selected = &self.src[span.end..];
 
         let line_start = left_of_selected
             .rfind('\n')
@@ -35,8 +35,8 @@ impl Error {
         let next_newline = right_of_selected.find('\n').map(|pos| span.end + pos); // offset
 
         let line = match next_newline {
-            Some(newline) => &self.source_code[line_start..newline],
-            None => &self.source_code[line_start..],
+            Some(newline) => &self.src[line_start..newline],
+            None => &self.src[line_start..],
         };
 
         let row = left_of_selected.matches('\n').count() + 1;
@@ -68,7 +68,7 @@ impl fmt::Display for Error {
         };
 
         if let Some((line, row, col)) = position {
-            let file_path = self.file_path.as_ref().unwrap().display();
+            let file_path = self.path.as_ref().unwrap().display();
             let position_information = format!("{file_path} ({row}:{col})");
 
             let row_number_pad = self.pad_white_spaces(row.to_string().len());
@@ -116,7 +116,7 @@ mod tests {
 
         for (span, expected_line, expected_row, expected_col) in cases {
             let error = Error {
-                source_code: String::from(input),
+                src: String::from(input),
                 span: Some(span),
                 ..Error::default()
             };

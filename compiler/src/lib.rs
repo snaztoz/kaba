@@ -31,7 +31,7 @@ type Result<T> = std::result::Result<T, Error>;
 /// assert!(result.is_ok());
 /// ```
 ///
-pub fn compile(file_path: &Path) -> Result<Program> {
-    let compiler = Compiler::from_source_code_file(file_path)?;
+pub fn compile(path: &Path) -> Result<Program> {
+    let compiler = Compiler::from_file(path)?;
     compiler.compile()
 }

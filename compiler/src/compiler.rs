@@ -11,47 +11,49 @@ use std::{
 /// Compiler instance that will handle the overall compilation
 /// process of a Kaba source code.
 pub struct Compiler {
-    file_path: Option<PathBuf>,
-    source_code: String,
+    path: Option<PathBuf>,
+    src: String,
 }
 
 impl Compiler {
     /// Construct a compiler instance straight from a source code
     /// and without file path.
-    pub fn from_source_code(source_code: &str) -> Self {
+    pub fn from_src(src: &str) -> Self {
         Self {
-            file_path: None,
-            source_code: String::from(source_code),
+            path: None,
+            src: String::from(src),
         }
     }
 
     /// Construct a compiler instance from a source code file path.
-    pub fn from_source_code_file(file_path: &Path) -> Result<Self> {
-        let extension = file_path.extension().and_then(|e| e.to_str());
-        if !matches!(extension, Some("kaba")) {
+    pub fn from_file(path: &Path) -> Result<Self> {
+        let ext = path.extension().and_then(|e| e.to_str());
+        if !matches!(ext, Some("kaba")) {
             return Err(Error {
-                file_path: Some(PathBuf::from(file_path)),
-                source_code: String::new(),
+                path: Some(PathBuf::from(path)),
+                src: String::new(),
                 message: SourceCodeError::WrongExtension.to_string(),
                 span: None,
             });
-        } else if !file_path.exists() {
+        }
+
+        if !path.exists() {
             let error = SourceCodeError::FileNotExist {
-                path: PathBuf::from(file_path),
+                path: PathBuf::from(path),
             };
             return Err(Error {
-                file_path: Some(PathBuf::from(file_path)),
-                source_code: String::new(),
+                path: Some(PathBuf::from(path)),
+                src: String::new(),
                 message: error.to_string(),
                 span: None,
             });
         }
 
-        let source_code = fs::read_to_string(file_path).unwrap();
+        let src = fs::read_to_string(path).unwrap();
 
         Ok(Self {
-            file_path: Some(PathBuf::from(file_path)),
-            source_code,
+            path: Some(PathBuf::from(path)),
+            src,
         })
     }
 
@@ -59,11 +61,11 @@ impl Compiler {
     pub fn compile(mut self) -> Result<ProgramAst> {
         self.normalize_newlines();
 
-        let tokens = lexer::lex(&self.source_code);
+        let tokens = lexer::lex(&self.src);
         if let Err(e) = &tokens {
             return Err(Error {
-                file_path: self.file_path,
-                source_code: String::from(&self.source_code),
+                path: self.path,
+                src: String::from(&self.src),
                 message: e.to_string(),
                 span: e.span(),
             });
@@ -72,8 +74,8 @@ impl Compiler {
         let ast = parser::parse(tokens.unwrap());
         if let Err(e) = &ast {
             return Err(Error {
-                file_path: self.file_path,
-                source_code: self.source_code,
+                path: self.path,
+                src: self.src,
                 message: e.to_string(),
                 span: e.span(),
             });
@@ -81,8 +83,8 @@ impl Compiler {
 
         if let Err(e) = semantic::check(ast.as_ref().unwrap()) {
             return Err(Error {
-                file_path: self.file_path,
-                source_code: self.source_code,
+                path: self.path,
+                src: self.src,
                 message: e.to_string(),
                 span: Some(e.span().clone()),
             });
@@ -93,7 +95,7 @@ impl Compiler {
 
     // Normalize all newline characters to LF
     fn normalize_newlines(&mut self) {
-        self.source_code = self.source_code.replace("\r\n", "\n").replace('\r', "\n");
+        self.src = self.src.replace("\r\n", "\n").replace('\r', "\n");
     }
 }
 

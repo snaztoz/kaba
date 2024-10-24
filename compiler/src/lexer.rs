@@ -9,8 +9,8 @@ use std::fmt::Display;
 ///
 /// Produces a vector of [`Token`] that contains additional
 /// information of a token.
-pub fn lex(source_code: &str) -> Result<Vec<Token>, LexingError> {
-    let mut l = TokenKind::lexer(source_code);
+pub fn lex(src: &str) -> Result<Vec<Token>, LexingError> {
+    let mut l = TokenKind::lexer(src);
     let mut tokens = vec![];
 
     while let Some(token) = l.next() {
@@ -34,7 +34,7 @@ pub fn lex(source_code: &str) -> Result<Vec<Token>, LexingError> {
 
     tokens.push(Token {
         kind: TokenKind::Eof,
-        span: source_code.len()..source_code.len(),
+        span: src.len()..src.len(),
     });
 
     Ok(tokens)
