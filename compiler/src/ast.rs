@@ -405,7 +405,7 @@ impl Display for AstNode {
 #[derive(Debug, PartialEq)]
 pub enum TypeNotation {
     Identifier(String),
-    Function {
+    Callable {
         params_tn: Vec<TypeNotationNode>,
         return_tn: Box<TypeNotationNode>,
     },
@@ -416,7 +416,7 @@ impl Display for TypeNotation {
         match self {
             Self::Identifier(id) => write!(f, "{id}"),
 
-            Self::Function {
+            Self::Callable {
                 params_tn,
                 return_tn,
             } => {

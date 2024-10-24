@@ -272,7 +272,7 @@ impl Parser {
                 let end = return_tn.span().end;
 
                 Ok(AstNode::TypeNotation {
-                    tn: TypeNotation::Function {
+                    tn: TypeNotation::Callable {
                         params_tn,
                         return_tn,
                     },
@@ -1256,7 +1256,7 @@ mod tests {
                     span: 4..5,
                 }),
                 tn: Some(Box::from(AstNode::TypeNotation {
-                    tn: TypeNotation::Function {
+                    tn: TypeNotation::Callable {
                         params_tn: vec![AstNode::TypeNotation {
                             tn: TypeNotation::Identifier(String::from("Int")),
                             span: 8..11,
@@ -1287,7 +1287,7 @@ mod tests {
                     span: 4..5,
                 }),
                 tn: Some(Box::from(AstNode::TypeNotation {
-                    tn: TypeNotation::Function {
+                    tn: TypeNotation::Callable {
                         params_tn: vec![
                             AstNode::TypeNotation {
                                 tn: TypeNotation::Identifier(String::from("Int")),
@@ -1299,7 +1299,7 @@ mod tests {
                             },
                         ],
                         return_tn: Box::new(AstNode::TypeNotation {
-                            tn: TypeNotation::Function {
+                            tn: TypeNotation::Callable {
                                 params_tn: vec![AstNode::TypeNotation {
                                     tn: TypeNotation::Identifier(String::from("Int")),
                                     span: 23..26,
