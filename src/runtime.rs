@@ -858,4 +858,25 @@ mod tests {
             "5\n4\n3\n2\n1\n0\n".as_bytes(),
         );
     }
+
+    #[test]
+    fn test_function_as_argument_to_function_call() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
+                    print(produce);
+                end
+
+                fn print(producer: () -> Int) do
+                    var gen = producer;
+                    debug gen();
+                end
+
+                fn produce(): Int do
+                    return 5;
+                end
+            "},
+            "5\n".as_bytes(),
+        );
+    }
 }
