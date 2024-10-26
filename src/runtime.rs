@@ -449,8 +449,8 @@ impl<'a> Runtime<'a> {
                     self.store_value(&id, val);
                 }
 
-                self.state.resume_execution();
                 self.run_statements(body)?;
+                self.state.resume_execution();
 
                 let val = self.state.return_value();
                 self.scopes.borrow_mut().pop();
@@ -868,15 +868,18 @@ mod tests {
                 end
 
                 fn print(producer: () -> Int) do
-                    var gen = producer;
-                    debug gen();
+                    var x: () -> Int = producer;
+                    debug x();
+
+                    var y = producer;
+                    debug y();
                 end
 
                 fn produce(): Int do
                     return 5;
                 end
             "},
-            "5\n".as_bytes(),
+            "5\n5\n".as_bytes(),
         );
     }
 }
