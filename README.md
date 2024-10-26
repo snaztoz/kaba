@@ -107,6 +107,24 @@ Currently, Kaba only has the limited features for now:
   var i: Int = 5.0;
   ```
 
+* Support for function type notation
+  ```text
+  # Let's say that `foo` is something like:
+  #
+  #   fn foo(): Int do
+  #     return 20;
+  #   end
+  #
+
+  var x: () -> Int = foo;
+  debug x();
+
+  # Or, it can be automatically inferred as well:
+
+  var y = foo;
+  debug y();
+  ```
+
 * Basic math operation (division, multiplication, addition, subtraction, and modulo)
   ```text
   23 + 5 * 30 / 2 - 9;
