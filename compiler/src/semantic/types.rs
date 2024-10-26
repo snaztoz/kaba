@@ -1,9 +1,7 @@
 use super::{error::Error, Result};
-use crate::ast::{AstNode, Value};
+use crate::ast::{AstNode, TypeNotation, Value};
 use logos::Span;
-use std::{collections::BTreeMap, fmt::Display, str::FromStr};
-
-pub type CallableSignature = (CallableParameters, Type);
+use std::fmt::Display;
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Type {
@@ -12,7 +10,7 @@ pub enum Type {
     Float,
     Bool,
     Callable {
-        params: CallableParameters,
+        params_t: Vec<Type>,
         return_t: Box<Type>,
     },
 }
@@ -27,9 +25,35 @@ impl Type {
         }
     }
 
-    pub fn from_type_notation_node(tn: &AstNode) -> Result<Self> {
-        let (id, span) = tn.unwrap_type_notation();
-        Type::from_str(&id).map_err(|_| Error::TypeNotExist { id, span })
+    pub fn from_type_notation(tn: &AstNode) -> Result<Self> {
+        if let AstNode::TypeNotation { tn, span } = tn {
+            match tn {
+                TypeNotation::Identifier(id) if id == "Void" => Ok(Self::Void),
+                TypeNotation::Identifier(id) if id == "Int" => Ok(Self::Int),
+                TypeNotation::Identifier(id) if id == "Float" => Ok(Self::Float),
+                TypeNotation::Identifier(id) if id == "Bool" => Ok(Self::Bool),
+
+                TypeNotation::Callable {
+                    params_tn,
+                    return_tn,
+                } => {
+                    let mut params_t = vec![];
+                    for tn in params_tn {
+                        params_t.push(Self::from_type_notation(tn)?);
+                    }
+                    let return_t = Box::new(Self::from_type_notation(return_tn)?);
+                    Ok(Self::Callable { params_t, return_t })
+                }
+
+                // TODO: Custom Type
+                TypeNotation::Identifier(id) => Err(Error::TypeNotExist {
+                    id: id.clone(),
+                    span: span.clone(),
+                }),
+            }
+        } else {
+            unreachable!()
+        }
     }
 
     pub fn assert_number<F>(t: &Self, err_span: F) -> Result<()>
@@ -108,9 +132,8 @@ impl Display for Type {
             Self::Int => write!(f, "Int"),
             Self::Float => write!(f, "Float"),
             Self::Bool => write!(f, "Bool"),
-            Self::Callable { params, return_t } => {
-                let params_t = params
-                    .types()
+            Self::Callable { params_t, return_t } => {
+                let params_t = params_t
                     .iter()
                     .map(|t| t.to_string())
                     .collect::<Vec<_>>()
@@ -118,54 +141,5 @@ impl Display for Type {
                 write!(f, "({}) -> {}", params_t, return_t)
             }
         }
-    }
-}
-
-impl FromStr for Type {
-    type Err = ();
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s {
-            "Int" => Ok(Self::Int),
-            "Float" => Ok(Self::Float),
-            "Bool" => Ok(Self::Bool),
-
-            _ => Err(()),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct CallableParameters {
-    ps: BTreeMap<String, Type>,
-}
-
-impl CallableParameters {
-    pub fn from_ast_node_pairs(pairs: &[(AstNode, AstNode)]) -> Result<Self> {
-        let mut ps = BTreeMap::new();
-
-        for (i, t) in pairs.iter() {
-            let (id, span) = i.unwrap_identifier();
-            if ps.contains_key(&id) {
-                return Err(Error::VariableAlreadyExist { id, span });
-            }
-
-            let t = Type::from_type_notation_node(t)?;
-
-            ps.insert(id, t.clone());
-        }
-
-        Ok(Self { ps })
-    }
-
-    pub fn pairs(&self) -> Vec<(String, Type)> {
-        self.ps
-            .iter()
-            .map(|(id, t)| (id.clone(), t.clone()))
-            .collect()
-    }
-
-    pub fn types(&self) -> Vec<Type> {
-        self.ps.values().cloned().collect::<Vec<_>>()
     }
 }

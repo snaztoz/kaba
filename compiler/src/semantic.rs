@@ -5,11 +5,10 @@ use self::{
     context::Context,
     error::{Error, Result},
     scope::Scope,
-    types::{CallableParameters, Type},
+    types::Type,
 };
 use crate::ast::{AstNode, Program as ProgramAst};
 use logos::Span;
-use types::CallableSignature;
 
 mod context;
 mod error;
@@ -40,9 +39,13 @@ impl SemanticChecker {
 
         for stmt in &program_ast.stmts {
             match stmt {
-                AstNode::FunctionDefinition { .. } => {
-                    let f = self.check_function_declaration(stmt)?;
-                    functions.push(f);
+                AstNode::FunctionDefinition { params, .. } => {
+                    let t = self.check_function_declaration(stmt)?;
+                    let param_ids = params
+                        .iter()
+                        .map(|p| p.0.unwrap_identifier())
+                        .collect::<Vec<_>>();
+                    functions.push((t, param_ids));
                 }
 
                 node => {
@@ -55,7 +58,8 @@ impl SemanticChecker {
 
         for (i, stmt) in program_ast.stmts.iter().enumerate() {
             if let AstNode::FunctionDefinition { id, body, .. } = stmt {
-                self.check_function_definition(id, &functions[i], body)?;
+                let (t, param_ids) = &functions[i];
+                self.check_function_definition(id, t, param_ids, body)?;
             }
         }
 
@@ -125,7 +129,7 @@ impl SemanticChecker {
         span: &Span,
     ) -> Result<()> {
         let (id, _) = id.unwrap_identifier();
-        let var_t = tn.map(Type::from_type_notation_node).transpose()?;
+        let var_t = tn.map(Type::from_type_notation).transpose()?;
         let val_t = val
             .map(|expression| self.check_expression(expression))
             .transpose()?;
@@ -264,7 +268,7 @@ impl SemanticChecker {
         }
     }
 
-    fn check_function_declaration(&self, node: &AstNode) -> Result<CallableSignature> {
+    fn check_function_declaration(&self, node: &AstNode) -> Result<Type> {
         if let AstNode::FunctionDefinition {
             id,
             params,
@@ -272,25 +276,28 @@ impl SemanticChecker {
             ..
         } = node
         {
-            let params = CallableParameters::from_ast_node_pairs(params)?;
+            let mut params_t = vec![];
+            for (_, tn) in params {
+                params_t.push(Type::from_type_notation(tn)?);
+            }
+
             let return_t = return_t
                 .as_ref()
-                .map_or(Ok(Type::Void), |tn| Type::from_type_notation_node(tn))?;
+                .map_or(Ok(Type::Void), |tn| Type::from_type_notation(tn))?;
+
+            let t = Type::Callable {
+                params_t,
+                return_t: Box::new(return_t.clone()),
+            };
 
             let (id, id_span) = id.unwrap_identifier();
-            self.ctx.save_symbol_or_else(
-                &id,
-                Type::Callable {
-                    params: params.clone(),
-                    return_t: Box::new(return_t.clone()),
-                },
-                || Error::FunctionAlreadyExist {
+            self.ctx
+                .save_symbol_or_else(&id, t.clone(), || Error::FunctionAlreadyExist {
                     id: id.clone(),
-                    span: id_span.clone(),
-                },
-            )?;
+                    span: id_span,
+                })?;
 
-            return Ok((params, return_t));
+            return Ok(t);
         }
 
         unreachable!()
@@ -299,18 +306,28 @@ impl SemanticChecker {
     fn check_function_definition(
         &self,
         id: &AstNode,
-        signature: &CallableSignature,
+        fn_t: &Type,
+        param_ids: &[(String, Span)],
         body: &[AstNode],
     ) -> Result<()> {
-        let (params, return_t) = signature;
+        let (params_t, return_t) = if let Type::Callable { params_t, return_t } = fn_t {
+            (params_t, return_t)
+        } else {
+            unreachable!()
+        };
+
+        let params = param_ids.iter().cloned().zip(params_t.iter());
 
         // Entering new scope
         self.ctx
-            .with_scope(Scope::new_function_scope(return_t.clone()), || {
-                for (i, t) in params.pairs() {
-                    self.ctx
-                        .save_symbol_or_else(&i, t.clone(), || unreachable!())
-                        .unwrap();
+            .with_scope(Scope::new_function_scope(*return_t.clone()), || {
+                for ((id, id_span), t) in params {
+                    self.ctx.save_symbol_or_else(&id, t.clone(), || {
+                        Error::VariableAlreadyExist {
+                            id: id.clone(),
+                            span: id_span.clone(),
+                        }
+                    })?;
                 }
 
                 // Check function body
@@ -322,7 +339,7 @@ impl SemanticChecker {
 
                 if !return_t.is_void() && body_t.is_none() {
                     return Err(Error::FunctionNotReturningValue {
-                        expect: return_t.clone(),
+                        expect: *return_t.clone(),
                         span: id.span().clone(),
                     });
                 }
@@ -489,8 +506,8 @@ impl SemanticChecker {
             _ => todo!(),
         };
 
-        if let Type::Callable { params, return_t } = &t {
-            if params.types() != args_t {
+        if let Type::Callable { params_t, return_t } = &t {
+            if params_t != &args_t {
                 return Err(Error::InvalidFunctionCallArgument {
                     args: args_t,
                     span: span.clone(),
@@ -576,6 +593,21 @@ mod tests {
         check_and_assert_is_ok(indoc! {"
                 fn main() do
                     var x = true;
+                end
+            "});
+    }
+
+    #[test]
+    fn test_check_variable_declaration_with_function_object_as_value() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    var x: () -> Int = produce;
+
+                    debug x();
+                end
+
+                fn produce(): Int do
+                    return 5;
                 end
             "});
     }
@@ -980,6 +1012,23 @@ mod tests {
 
                 fn return_two(): Int do
                     return 2;
+                end
+            "});
+    }
+
+    #[test]
+    fn test_function_type_as_function_parameter() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    debug get_num(produce);
+                end
+
+                fn get_num(producer: () -> Int): Int do
+                    return producer() + 5;
+                end
+
+                fn produce(): Int do
+                    return 10;
                 end
             "});
     }
