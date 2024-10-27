@@ -7,7 +7,7 @@ use self::{
     scope::Scope,
     types::Type,
 };
-use crate::ast::{AstNode, Program as ProgramAst};
+use crate::ast::{AstNode, IdentifierNode, Program as ProgramAst, TypeNotationNode};
 use logos::Span;
 
 mod context;
@@ -39,8 +39,17 @@ impl SemanticChecker {
 
         for stmt in &program_ast.stmts {
             match stmt {
-                AstNode::FunctionDefinition { params, .. } => {
-                    let t = self.check_function_declaration(stmt)?;
+                AstNode::FunctionDefinition {
+                    id,
+                    params,
+                    return_t,
+                    ..
+                } => {
+                    let t = self.check_function_declaration(
+                        id,
+                        params,
+                        &return_t.as_ref().map(|t| t.as_ref()),
+                    )?;
                     let param_ids = params
                         .iter()
                         .map(|p| p.0.unwrap_identifier())
@@ -83,7 +92,6 @@ impl SemanticChecker {
                     ..
                 } => {
                     let t = self.check_conditional_branch(cond, body, &or_else.as_deref())?;
-
                     if body_t.is_none() {
                         body_t = t;
                     }
@@ -277,45 +285,40 @@ impl SemanticChecker {
         }
     }
 
-    fn check_function_declaration(&self, node: &AstNode) -> Result<Type> {
-        if let AstNode::FunctionDefinition {
-            id,
-            params,
-            return_t,
-            ..
-        } = node
-        {
-            let mut params_t = vec![];
-            for (_, tn) in params {
-                let t = Type::from_type_notation(tn)?;
-                if t.is_void() {
-                    return Err(Error::VoidTypeVariable {
-                        span: tn.span().clone(),
-                    });
-                }
-                params_t.push(t);
+    fn check_function_declaration(
+        &self,
+        id: &AstNode,
+        params: &[(IdentifierNode, TypeNotationNode)],
+        return_t: &Option<&AstNode>,
+    ) -> Result<Type> {
+        let mut params_t = vec![];
+        for (_, tn) in params {
+            let t = Type::from_type_notation(tn)?;
+            if t.is_void() {
+                return Err(Error::VoidTypeVariable {
+                    span: tn.span().clone(),
+                });
             }
-
-            let return_t = return_t
-                .as_ref()
-                .map_or(Ok(Type::Void), |tn| Type::from_type_notation(tn))?;
-
-            let t = Type::Callable {
-                params_t,
-                return_t: Box::new(return_t.clone()),
-            };
-
-            let (id, id_span) = id.unwrap_identifier();
-            self.ctx
-                .save_symbol_or_else(&id, t.clone(), || Error::FunctionAlreadyExist {
-                    id: id.clone(),
-                    span: id_span,
-                })?;
-
-            return Ok(t);
+            params_t.push(t);
         }
 
-        unreachable!()
+        let return_t = return_t
+            .as_ref()
+            .map_or(Ok(Type::Void), |tn| Type::from_type_notation(tn))?;
+
+        let t = Type::Callable {
+            params_t,
+            return_t: Box::new(return_t.clone()),
+        };
+
+        let (id, id_span) = id.unwrap_identifier();
+        self.ctx
+            .save_symbol_or_else(&id, t.clone(), || Error::FunctionAlreadyExist {
+                id: id.clone(),
+                span: id_span,
+            })?;
+
+        Ok(t)
     }
 
     fn check_function_definition(
