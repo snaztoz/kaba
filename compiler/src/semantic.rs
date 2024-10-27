@@ -129,10 +129,9 @@ impl SemanticChecker {
         span: &Span,
     ) -> Result<()> {
         let (id, _) = id.unwrap_identifier();
+
         let var_t = tn.map(Type::from_type_notation).transpose()?;
-        let val_t = val
-            .map(|expression| self.check_expression(expression))
-            .transpose()?;
+        let val_t = val.map(|expr| self.check_expression(expr)).transpose()?;
 
         // Either variable's or value's type must be present
         if var_t.is_none() && val_t.is_none() {
@@ -142,10 +141,20 @@ impl SemanticChecker {
             });
         }
 
-        // If both present, check if value's type is compatible with
-        // the variable's
-        if let (Some(var_t), Some(val_t)) = (&var_t, &val_t) {
-            Type::assert_assignable(val_t, var_t, || span.clone())?;
+        if let Some(var_t) = &var_t {
+            // If variable's type is presents, prevent the usage of
+            // "Void" type
+            if var_t.is_void() {
+                return Err(Error::VoidTypeVariable {
+                    span: tn.unwrap().span().clone(),
+                });
+            }
+
+            // If both are present, check whether the value's type is
+            // compatible with the variable's
+            if let Some(val_t) = &val_t {
+                Type::assert_assignable(val_t, var_t, || span.clone())?;
+            }
         }
 
         let t = var_t.or(val_t).unwrap();
@@ -278,7 +287,13 @@ impl SemanticChecker {
         {
             let mut params_t = vec![];
             for (_, tn) in params {
-                params_t.push(Type::from_type_notation(tn)?);
+                let t = Type::from_type_notation(tn)?;
+                if t.is_void() {
+                    return Err(Error::VoidTypeVariable {
+                        span: tn.span().clone(),
+                    });
+                }
+                params_t.push(t);
             }
 
             let return_t = return_t
@@ -608,6 +623,15 @@ mod tests {
 
                 fn produce(): Int do
                     return 5;
+                end
+            "});
+    }
+
+    #[test]
+    fn test_check_variable_declaration_with_void_type() {
+        check_and_assert_is_err(indoc! {"
+                fn main() do
+                    var x: Void;
                 end
             "});
     }
@@ -1062,6 +1086,13 @@ mod tests {
     fn test_defining_function_with_an_invalid_parameter_type() {
         check_and_assert_is_err(indoc! {"
                 fn foo(x: NonExistingType) do end
+            "});
+    }
+
+    #[test]
+    fn test_defining_function_with_void_parameter_type() {
+        check_and_assert_is_err(indoc! {"
+                fn foo(x: Void) do end
             "});
     }
 

@@ -11,6 +11,10 @@ pub enum Error {
         span: Span,
     },
 
+    VoidTypeVariable {
+        span: Span,
+    },
+
     UnableToAssignValueType {
         var_t: String,
         value_t: String,
@@ -101,6 +105,7 @@ impl Error {
     pub fn span(&self) -> &Span {
         match self {
             Self::UnableToInferVariableType { span, .. }
+            | Self::VoidTypeVariable { span, .. }
             | Self::UnableToAssignValueType { span, .. }
             | Self::InvalidAssignmentLhs { span, .. }
             | Self::UnableToCompareTypeAWithTypeB { span, .. }
@@ -128,6 +133,9 @@ impl Display for Error {
         match self {
             Self::UnableToInferVariableType { id, .. } => {
                 write!(f, "unable to infer the type of variable `{id}` because of no type or initial value were provided")
+            }
+            Self::VoidTypeVariable { .. } => {
+                write!(f, "unable to create variable with `Void` type")
             }
             Self::UnableToAssignValueType { var_t, value_t, .. } => {
                 write!(
