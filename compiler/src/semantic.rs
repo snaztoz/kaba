@@ -36,27 +36,20 @@ impl SemanticChecker {
         // TODO: review other statements for possibilities to be applied here
 
         for stmt in &program_ast.stmts {
-            match stmt {
-                AstNode::FunctionDefinition {
-                    id,
-                    params,
-                    return_t,
-                    ..
-                } => {
-                    // this will also save the function identifiers into
-                    // global scope
-                    self.check_function_declaration(
-                        id,
-                        params,
-                        &return_t.as_ref().map(|t| t.as_ref()),
-                    )?;
-                }
-
-                node => {
-                    return Err(Error::NotExpectingStatementInGlobal {
-                        span: node.span().clone(),
-                    });
-                }
+            if let AstNode::FunctionDefinition {
+                id,
+                params,
+                return_t,
+                ..
+            } = stmt
+            {
+                // this will also save the function identifiers into
+                // global scope symbols
+                self.check_function_declaration(id, params, &return_t.as_deref())?;
+            } else {
+                return Err(Error::NotExpectingStatementInGlobal {
+                    span: stmt.span().clone(),
+                });
             }
         }
 
@@ -67,11 +60,11 @@ impl SemanticChecker {
             {
                 let id_str = &id.unwrap_identifier().0;
                 let t = self.ctx.get_symbol_type(id_str).unwrap();
-                let param_ids = params
+                let params_id = params
                     .iter()
                     .map(|p| p.0.unwrap_identifier())
                     .collect::<Vec<_>>();
-                self.check_function_definition(id, &t, &param_ids, body)?;
+                self.check_function_definition(id, &t, &params_id, body)?;
             }
         }
 
@@ -82,8 +75,8 @@ impl SemanticChecker {
         // Body may have a type if it contains a "return" statement
         let mut body_t = None;
 
-        for statement in body {
-            match statement {
+        for stmt in body {
+            match stmt {
                 AstNode::VariableDeclaration { id, tn, val, span } => {
                     self.check_variable_declaration(id, &tn.as_deref(), &val.as_deref(), span)?
                 }
@@ -281,11 +274,10 @@ impl SemanticChecker {
     }
 
     fn check_loop_control(&self, span: &Span) -> Result<()> {
-        if self.ctx.is_inside_loop() {
-            Ok(())
-        } else {
-            Err(Error::LoopControlNotInLoopScope { span: span.clone() })
+        if !self.ctx.is_inside_loop() {
+            return Err(Error::LoopControlNotInLoopScope { span: span.clone() });
         }
+        Ok(())
     }
 
     fn check_function_declaration(
@@ -328,7 +320,7 @@ impl SemanticChecker {
         &self,
         id: &AstNode,
         fn_t: &Type,
-        param_ids: &[(String, Span)],
+        params_id: &[(String, Span)],
         body: &[AstNode],
     ) -> Result<()> {
         let (params_t, return_t) = if let Type::Callable { params_t, return_t } = fn_t {
@@ -337,7 +329,7 @@ impl SemanticChecker {
             unreachable!()
         };
 
-        let params = param_ids.iter().cloned().zip(params_t.iter());
+        let params = params_id.iter().cloned().zip(params_t.iter());
 
         // Entering new scope
         self.ctx
@@ -377,7 +369,7 @@ impl SemanticChecker {
 
         let return_t = self
             .ctx
-            .get_current_function_return_type()
+            .current_function_return_type()
             .ok_or_else(|| Error::ReturnNotInFunctionScope { span: span.clone() })?;
 
         Type::assert_assignable(&expr_t, &return_t, || span.clone())
@@ -391,7 +383,7 @@ impl SemanticChecker {
 
     fn check_debug(&self, expr: &AstNode, span: &Span) -> Result<()> {
         let expr_t = self.check_expression(expr)?;
-        if matches!(expr_t, Type::Void) {
+        if expr_t.is_void() {
             return Err(Error::DebugVoid { span: span.clone() });
         }
         Ok(())
@@ -527,19 +519,22 @@ impl SemanticChecker {
             _ => todo!(),
         };
 
-        if let Type::Callable { params_t, return_t } = &t {
-            if params_t != &args_t {
-                return Err(Error::InvalidFunctionCallArgument {
-                    args: args_t,
-                    span: span.clone(),
-                });
+        return match &t {
+            Type::Callable { params_t, return_t } => {
+                if params_t != &args_t {
+                    return Err(Error::InvalidFunctionCallArgument {
+                        args: args_t,
+                        span: span.clone(),
+                    });
+                }
+                Ok(*return_t.clone())
             }
-            Ok(*return_t.clone())
-        } else {
-            Err(Error::NotAFunction {
-                span: callee.span().clone(),
-            })
-        }
+
+            _ => {
+                let span = callee.span().clone();
+                Err(Error::NotAFunction { span })
+            }
+        };
     }
 }
 

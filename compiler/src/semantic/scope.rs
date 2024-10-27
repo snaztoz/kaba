@@ -20,7 +20,7 @@ impl ScopeStack {
         self.stack.borrow().iter().rev().any(cond)
     }
 
-    pub fn with_last_scope<F>(&self, action: F) -> Result<()>
+    pub fn with_current_scope<F>(&self, action: F) -> Result<()>
     where
         F: FnOnce(&mut Scope) -> Result<()>,
     {

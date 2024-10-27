@@ -14,7 +14,7 @@ impl Context {
         self.scopes.find_reversed(|s| s.symbols.get(name).cloned())
     }
 
-    pub fn get_current_function_return_type(&self) -> Option<Type> {
+    pub fn current_function_return_type(&self) -> Option<Type> {
         self.scopes.find_reversed(|s| match &s.scope_t {
             ScopeType::Function { return_t } => Some(return_t.clone()),
             _ => None,
@@ -29,7 +29,7 @@ impl Context {
     where
         F: FnOnce() -> Error,
     {
-        self.scopes.with_last_scope(|s| {
+        self.scopes.with_current_scope(|s| {
             if s.symbols.contains_key(name) {
                 return Err(err());
             }
