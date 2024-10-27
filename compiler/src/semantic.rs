@@ -35,8 +35,6 @@ impl SemanticChecker {
         //
         // TODO: review other statements for possibilities to be applied here
 
-        let mut functions = vec![];
-
         for stmt in &program_ast.stmts {
             match stmt {
                 AstNode::FunctionDefinition {
@@ -45,16 +43,13 @@ impl SemanticChecker {
                     return_t,
                     ..
                 } => {
-                    let t = self.check_function_declaration(
+                    // this will also save the function identifiers into
+                    // global scope
+                    self.check_function_declaration(
                         id,
                         params,
                         &return_t.as_ref().map(|t| t.as_ref()),
                     )?;
-                    let param_ids = params
-                        .iter()
-                        .map(|p| p.0.unwrap_identifier())
-                        .collect::<Vec<_>>();
-                    functions.push((t, param_ids));
                 }
 
                 node => {
@@ -65,10 +60,18 @@ impl SemanticChecker {
             }
         }
 
-        for (i, stmt) in program_ast.stmts.iter().enumerate() {
-            if let AstNode::FunctionDefinition { id, body, .. } = stmt {
-                let (t, param_ids) = &functions[i];
-                self.check_function_definition(id, t, param_ids, body)?;
+        for stmt in &program_ast.stmts {
+            if let AstNode::FunctionDefinition {
+                id, params, body, ..
+            } = stmt
+            {
+                let id_str = &id.unwrap_identifier().0;
+                let t = self.ctx.get_symbol_type(id_str).unwrap();
+                let param_ids = params
+                    .iter()
+                    .map(|p| p.0.unwrap_identifier())
+                    .collect::<Vec<_>>();
+                self.check_function_definition(id, &t, &param_ids, body)?;
             }
         }
 
