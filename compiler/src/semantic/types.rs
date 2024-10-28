@@ -5,10 +5,7 @@ use std::fmt::Display;
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Type {
-    Void,
-    Int,
-    Float,
-    Bool,
+    Identifier(String),
     Callable {
         params_t: Vec<Type>,
         return_t: Box<Type>,
@@ -16,22 +13,27 @@ pub enum Type {
 }
 
 impl Type {
+    pub fn new(id: &str) -> Self {
+        Self::Identifier(String::from(id))
+    }
+
     pub fn from_value(val: &Value) -> Result<Self> {
         match val {
-            Value::Void => Ok(Self::Void),
-            Value::Integer(_) => Ok(Self::Int),
-            Value::Float(_) => Ok(Self::Float),
-            Value::Boolean(_) => Ok(Self::Bool),
+            Value::Void => Ok(Self::new("Void")),
+            Value::Integer(_) => Ok(Self::new("Int")),
+            Value::Float(_) => Ok(Self::new("Float")),
+            Value::Boolean(_) => Ok(Self::new("Bool")),
         }
     }
 
     pub fn from_type_notation(tn: &AstNode) -> Result<Self> {
         if let AstNode::TypeNotation { tn, span } = tn {
             match tn {
-                TypeNotation::Identifier(id) if id == "Void" => Ok(Self::Void),
-                TypeNotation::Identifier(id) if id == "Int" => Ok(Self::Int),
-                TypeNotation::Identifier(id) if id == "Float" => Ok(Self::Float),
-                TypeNotation::Identifier(id) if id == "Bool" => Ok(Self::Bool),
+                TypeNotation::Identifier(id)
+                    if id == "Void" || id == "Int" || id == "Float" || id == "Bool" =>
+                {
+                    Ok(Self::Identifier(id.clone()))
+                }
 
                 TypeNotation::Callable {
                     params_tn,
@@ -109,11 +111,11 @@ impl Type {
     }
 
     pub fn is_number(&self) -> bool {
-        *self == Self::Int || *self == Self::Float
+        matches!(self, Self::Identifier(id) if id == "Int" || id == "Float")
     }
 
     pub fn is_boolean(&self) -> bool {
-        *self == Self::Bool
+        matches!(self, Self::Identifier(id) if id == "Bool")
     }
 
     pub fn is_assignable_to(&self, other: &Type) -> bool {
@@ -121,17 +123,14 @@ impl Type {
     }
 
     pub fn is_void(&self) -> bool {
-        *self == Self::Void
+        matches!(self, Self::Identifier(id) if id == "Void")
     }
 }
 
 impl Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Void => write!(f, "Void"),
-            Self::Int => write!(f, "Int"),
-            Self::Float => write!(f, "Float"),
-            Self::Bool => write!(f, "Bool"),
+            Self::Identifier(id) => write!(f, "{id}"),
             Self::Callable { params_t, return_t } => {
                 let params_t = params_t
                     .iter()

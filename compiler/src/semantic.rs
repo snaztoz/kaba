@@ -184,7 +184,7 @@ impl SemanticChecker {
 
         Type::assert_assignable(&rhs_t, &lhs_t, || span.clone())?;
 
-        Ok(Type::Void)
+        Ok(Type::new("Void"))
     }
 
     fn check_shorthand_assignment(
@@ -299,7 +299,7 @@ impl SemanticChecker {
 
         let return_t = return_t
             .as_ref()
-            .map_or(Ok(Type::Void), |tn| Type::from_type_notation(tn))?;
+            .map_or(Ok(Type::new("Void")), |tn| Type::from_type_notation(tn))?;
 
         let t = Type::Callable {
             params_t,
@@ -365,7 +365,7 @@ impl SemanticChecker {
         let expr_t = expr
             .as_ref()
             .map(|expr| self.check_expression(expr).unwrap())
-            .unwrap_or(Type::Void);
+            .unwrap_or(Type::new("Void"));
 
         let return_t = self
             .ctx
@@ -449,7 +449,7 @@ impl SemanticChecker {
         Type::assert_boolean(&lhs_t, || lhs.span().clone())?;
         Type::assert_boolean(&rhs_t, || rhs.span().clone())?;
 
-        Ok(Type::Bool)
+        Ok(Type::new("Bool"))
     }
 
     fn check_equality_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
@@ -458,7 +458,7 @@ impl SemanticChecker {
 
         Type::assert_comparable(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
-        Ok(Type::Bool)
+        Ok(Type::new("Bool"))
     }
 
     fn check_comparison_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
@@ -470,7 +470,7 @@ impl SemanticChecker {
         Type::assert_number(&lhs_t, || lhs.span().clone())?;
         Type::assert_number(&rhs_t, || rhs.span().clone())?;
 
-        Ok(Type::Bool)
+        Ok(Type::new("Bool"))
     }
 
     fn check_math_binary_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
@@ -480,17 +480,17 @@ impl SemanticChecker {
         Type::assert_number(&lhs_t, || lhs.span().clone())?;
         Type::assert_number(&rhs_t, || rhs.span().clone())?;
 
-        if lhs_t == Type::Int && rhs_t == Type::Int {
-            Ok(Type::Int)
+        if lhs_t == Type::new("Int") && rhs_t == Type::new("Int") {
+            Ok(Type::new("Int"))
         } else {
-            Ok(Type::Float)
+            Ok(Type::new("Float"))
         }
     }
 
     fn check_logical_not_operation(&self, child: &AstNode) -> Result<Type> {
         let child_t = self.check_expression(child)?;
         Type::assert_boolean(&child_t, || child.span().clone())?;
-        Ok(Type::Bool)
+        Ok(Type::new("Bool"))
     }
 
     fn check_neg_operation(&self, child: &AstNode) -> Result<Type> {
@@ -1192,11 +1192,11 @@ mod tests {
     #[test]
     fn test_check_expressions_returned_types() {
         let cases = [
-            ("-5 + 50 * 200 / 7 - 999;", Type::Int),
-            ("-5 + -0.25;", Type::Float),
-            ("99.9 % 0.1;", Type::Float),
-            ("767 >= 900 == (45 < 67);", Type::Bool),
-            ("false || !false && 50 > 0;", Type::Bool),
+            ("-5 + 50 * 200 / 7 - 999;", Type::new("Int")),
+            ("-5 + -0.25;", Type::new("Float")),
+            ("99.9 % 0.1;", Type::new("Float")),
+            ("767 >= 900 == (45 < 67);", Type::new("Bool")),
+            ("false || !false && 50 > 0;", Type::new("Bool")),
         ];
 
         for (input, expected) in cases {
