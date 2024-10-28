@@ -134,7 +134,7 @@ impl SemanticChecker {
     ) -> Result<()> {
         let (id, _) = id.unwrap_identifier();
 
-        let var_t = tn.map(Type::from_type_notation).transpose()?;
+        let var_t = tn.map(Type::from_type_notation);
         let val_t = val.map(|expr| self.check_expression(expr)).transpose()?;
 
         // Either variable's or value's type must be present
@@ -146,8 +146,13 @@ impl SemanticChecker {
         }
 
         if let Some(var_t) = &var_t {
-            // If variable's type is presents, prevent the usage of
-            // "Void" type
+            // The provided type must exist in the current scope
+            if !self.ctx.has_type(var_t) {
+                let (id, span) = tn.unwrap().unwrap_type_notation();
+                return Err(Error::TypeNotExist { id, span });
+            }
+
+            // The variable should not have "Void" type
             if var_t.is_void() {
                 return Err(Error::VoidTypeVariable {
                     span: tn.unwrap().span().clone(),
@@ -288,18 +293,33 @@ impl SemanticChecker {
     ) -> Result<Type> {
         let mut params_t = vec![];
         for (_, tn) in params {
-            let t = Type::from_type_notation(tn)?;
+            let t = Type::from_type_notation(tn);
+
+            // Parameter type must exist in the current scope
+            if !self.ctx.has_type(&t) {
+                let (id, span) = tn.unwrap_type_notation();
+                return Err(Error::TypeNotExist { id, span });
+            }
+
+            // Parameter should not have "Void" type
             if t.is_void() {
                 return Err(Error::VoidTypeVariable {
                     span: tn.span().clone(),
                 });
             }
+
             params_t.push(t);
         }
 
-        let return_t = return_t
-            .as_ref()
-            .map_or(Ok(Type::new("Void")), |tn| Type::from_type_notation(tn))?;
+        let return_t = return_t.as_ref().map_or(Ok(Type::new("Void")), |tn| {
+            let t = Type::from_type_notation(tn);
+            if self.ctx.has_type(&t) {
+                Ok(t)
+            } else {
+                let (id, span) = tn.unwrap_type_notation();
+                Err(Error::TypeNotExist { id, span })
+            }
+        })?;
 
         let t = Type::Callable {
             params_t,

@@ -3,7 +3,7 @@ use crate::ast::{AstNode, TypeNotation, Value};
 use logos::Span;
 use std::fmt::Display;
 
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub enum Type {
     Identifier(String),
     Callable {
@@ -26,14 +26,10 @@ impl Type {
         }
     }
 
-    pub fn from_type_notation(tn: &AstNode) -> Result<Self> {
-        if let AstNode::TypeNotation { tn, span } = tn {
+    pub fn from_type_notation(tn: &AstNode) -> Self {
+        if let AstNode::TypeNotation { tn, .. } = tn {
             match tn {
-                TypeNotation::Identifier(id)
-                    if id == "Void" || id == "Int" || id == "Float" || id == "Bool" =>
-                {
-                    Ok(Self::Identifier(id.clone()))
-                }
+                TypeNotation::Identifier(id) => Self::new(id),
 
                 TypeNotation::Callable {
                     params_tn,
@@ -41,17 +37,11 @@ impl Type {
                 } => {
                     let mut params_t = vec![];
                     for tn in params_tn {
-                        params_t.push(Self::from_type_notation(tn)?);
+                        params_t.push(Self::from_type_notation(tn));
                     }
-                    let return_t = Box::new(Self::from_type_notation(return_tn)?);
-                    Ok(Self::Callable { params_t, return_t })
+                    let return_t = Box::new(Self::from_type_notation(return_tn));
+                    Self::Callable { params_t, return_t }
                 }
-
-                // TODO: Custom Type
-                TypeNotation::Identifier(id) => Err(Error::TypeNotExist {
-                    id: id.clone(),
-                    span: span.clone(),
-                }),
             }
         } else {
             unreachable!()

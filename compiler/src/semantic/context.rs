@@ -14,6 +14,14 @@ impl Context {
         self.scopes.find_reversed(|s| s.symbols.get(name).cloned())
     }
 
+    pub fn has_type(&self, t: &Type) -> bool {
+        matches!(t, Type::Callable { .. })
+            || self
+                .scopes
+                .find_reversed(|s| if s.types.contains(t) { Some(()) } else { None })
+                .is_some()
+    }
+
     pub fn current_function_return_type(&self) -> Option<Type> {
         self.scopes.find_reversed(|s| match &s.scope_t {
             ScopeType::Function { return_t } => Some(return_t.clone()),
