@@ -18,7 +18,7 @@ mod types;
 /// Provides a quick way to run semantic analysis on a Kaba AST.
 pub fn check(ast: &ProgramAst) -> Result<()> {
     let checker = SemanticChecker::default();
-    checker.check_program(ast)?;
+    checker.run(ast)?;
     Ok(())
 }
 
@@ -28,14 +28,21 @@ struct SemanticChecker {
 }
 
 impl SemanticChecker {
-    fn check_program(&self, program_ast: &ProgramAst) -> Result<()> {
+    fn run(&self, program_ast: &ProgramAst) -> Result<()> {
         // We are expecting that in global scope, statements (currently) are
         // consisted of function definitions only. So other statements are
         // rejected in this scope.
         //
         // TODO: review other statements for possibilities to be applied here
 
-        for stmt in &program_ast.stmts {
+        self.register_global_functions(&program_ast.stmts)?;
+        self.check_registered_global_functions(&program_ast.stmts)?;
+
+        Ok(())
+    }
+
+    fn register_global_functions(&self, stmts: &[AstNode]) -> Result<()> {
+        for stmt in stmts {
             if let AstNode::FunctionDefinition {
                 id,
                 params,
@@ -47,13 +54,17 @@ impl SemanticChecker {
                 // global scope symbols
                 self.check_function_declaration(id, params, &return_t.as_deref())?;
             } else {
-                return Err(Error::NotExpectingStatementInGlobal {
+                return Err(Error::UnexpectedStatementInGlobal {
                     span: stmt.span().clone(),
                 });
             }
         }
 
-        for stmt in &program_ast.stmts {
+        Ok(())
+    }
+
+    fn check_registered_global_functions(&self, stmts: &[AstNode]) -> Result<()> {
+        for stmt in stmts {
             if let AstNode::FunctionDefinition {
                 id, params, body, ..
             } = stmt
@@ -280,7 +291,7 @@ impl SemanticChecker {
 
     fn check_loop_control(&self, span: &Span) -> Result<()> {
         if !self.ctx.is_inside_loop() {
-            return Err(Error::LoopControlNotInLoopScope { span: span.clone() });
+            return Err(Error::UnexpectedLoopControl { span: span.clone() });
         }
         Ok(())
     }
@@ -390,7 +401,7 @@ impl SemanticChecker {
         let return_t = self
             .ctx
             .current_function_return_type()
-            .ok_or_else(|| Error::ReturnNotInFunctionScope { span: span.clone() })?;
+            .ok_or_else(|| Error::UnexpectedReturnStatement { span: span.clone() })?;
 
         Type::assert_assignable(&expr_t, &return_t, || span.clone())
             .map_err(|err| Error::ReturnTypeMismatch {
@@ -569,7 +580,7 @@ mod tests {
         let ast = parser::parse(tokens).unwrap();
 
         let checker = SemanticChecker::default();
-        let result = checker.check_program(&ast);
+        let result = checker.run(&ast);
 
         assert!(result.is_ok());
     }
@@ -579,7 +590,7 @@ mod tests {
         let ast = parser::parse(tokens).unwrap();
 
         let checker = SemanticChecker::default();
-        let result = checker.check_program(&ast);
+        let result = checker.run(&ast);
 
         assert!(result.is_err());
     }

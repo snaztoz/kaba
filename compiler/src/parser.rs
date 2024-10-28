@@ -8,12 +8,14 @@ use crate::{
 use logos::Span;
 use std::fmt::Display;
 
+type Result<T> = std::result::Result<T, ParsingError>;
+
 /// Provide a quick way to parse Kaba tokens, without the needs to
 /// setting up and running the parser manually.
 ///
 /// Produces an AST that represents the entire source code of the
 /// given tokens (see [`crate::ast::Program`]).
-pub fn parse(tokens: Vec<Token>) -> Result<ProgramAst, ParsingError> {
+pub fn parse(tokens: Vec<Token>) -> Result<ProgramAst> {
     Parser::new(tokens).parse()
 }
 
@@ -27,7 +29,7 @@ impl Parser {
         Self { tokens, cursor: 0 }
     }
 
-    fn parse(&mut self) -> Result<ProgramAst, ParsingError> {
+    fn parse(&mut self) -> Result<ProgramAst> {
         let mut stmts = vec![];
 
         loop {
@@ -67,7 +69,7 @@ impl Parser {
     fn parse_block(
         &mut self,
         possible_delimiter: Option<TokenKind>,
-    ) -> Result<(Vec<AstNode>, Span), ParsingError> {
+    ) -> Result<(Vec<AstNode>, Span)> {
         // Expecting "do"
 
         let start = self.get_current_token().span.start;
@@ -128,7 +130,7 @@ impl Parser {
     ///   # this is a block
     /// end
     /// ```
-    fn parse_statement(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_statement(&mut self) -> Result<AstNode> {
         // Check if statement starts with a keyword
 
         match self.get_current_token_kind() {
@@ -153,7 +155,7 @@ impl Parser {
         Ok(expr.unwrap_group())
     }
 
-    fn parse_variable_declaration(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_variable_declaration(&mut self) -> Result<AstNode> {
         let start = self.get_current_token().span.start;
         let mut end;
 
@@ -217,7 +219,7 @@ impl Parser {
         })
     }
 
-    fn parse_type_notation(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_type_notation(&mut self) -> Result<AstNode> {
         let token = self.get_current_token();
         match token.kind {
             TokenKind::Identifier(name) => {
@@ -288,7 +290,7 @@ impl Parser {
         }
     }
 
-    fn parse_conditional_branch(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_conditional_branch(&mut self) -> Result<AstNode> {
         let start = self.get_current_token().span.start;
         let mut end;
         self.skip(&TokenKind::If)?;
@@ -352,7 +354,7 @@ impl Parser {
         })
     }
 
-    fn parse_while(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_while(&mut self) -> Result<AstNode> {
         let start = self.get_current_token().span.start;
         self.skip(&TokenKind::While)?;
 
@@ -372,7 +374,7 @@ impl Parser {
         })
     }
 
-    fn parse_loop_control(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_loop_control(&mut self) -> Result<AstNode> {
         let Token { kind, span, .. } = self.get_current_token();
 
         // Expecting either "break" or "continue" keyword
@@ -392,7 +394,7 @@ impl Parser {
         Ok(control)
     }
 
-    fn parse_function_definition(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_function_definition(&mut self) -> Result<AstNode> {
         let start = self.get_current_token().span.start;
         self.skip(&TokenKind::Fn)?;
 
@@ -505,7 +507,7 @@ impl Parser {
         })
     }
 
-    fn parse_return_statement(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_return_statement(&mut self) -> Result<AstNode> {
         let start = self.get_current_token().span.start;
         let mut end = self.get_current_token().span.end;
         self.skip(&TokenKind::Return)?;
@@ -530,7 +532,7 @@ impl Parser {
         })
     }
 
-    fn parse_debug_statement(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_debug_statement(&mut self) -> Result<AstNode> {
         let start = self.get_current_token().span.start;
         self.skip(&TokenKind::Debug)?;
 
@@ -549,11 +551,11 @@ impl Parser {
         })
     }
 
-    fn parse_expression(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_expression(&mut self) -> Result<AstNode> {
         self.parse_assignment()
     }
 
-    fn parse_assignment(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_assignment(&mut self) -> Result<AstNode> {
         // Parse first term
 
         let lhs = self.parse_logical_and_or_expression()?;
@@ -637,7 +639,7 @@ impl Parser {
         }
     }
 
-    fn parse_logical_and_or_expression(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_logical_and_or_expression(&mut self) -> Result<AstNode> {
         // Parse first term
 
         let mut lhs = self.parse_equality_expression()?;
@@ -675,7 +677,7 @@ impl Parser {
         }
     }
 
-    fn parse_equality_expression(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_equality_expression(&mut self) -> Result<AstNode> {
         // Parse first term
 
         let mut lhs = self.parse_comparison_expression()?;
@@ -713,7 +715,7 @@ impl Parser {
         }
     }
 
-    fn parse_comparison_expression(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_comparison_expression(&mut self) -> Result<AstNode> {
         // Parse first term
 
         let lhs = self.parse_additive_expression()?;
@@ -773,7 +775,7 @@ impl Parser {
         }
     }
 
-    fn parse_additive_expression(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_additive_expression(&mut self) -> Result<AstNode> {
         // Parse first term
 
         let mut lhs = self.parse_multiplicative_expression()?;
@@ -811,7 +813,7 @@ impl Parser {
         }
     }
 
-    fn parse_multiplicative_expression(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_multiplicative_expression(&mut self) -> Result<AstNode> {
         // Parse first term
 
         let mut lhs = self.parse_unary_expression()?;
@@ -861,7 +863,7 @@ impl Parser {
         }
     }
 
-    fn parse_unary_expression(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_unary_expression(&mut self) -> Result<AstNode> {
         //  Prefixed by >= 0 negation or not expression
 
         if self.current_token_is(&TokenKind::Sub) {
@@ -904,7 +906,7 @@ impl Parser {
         Ok(child)
     }
 
-    fn parse_prefix_expression(&mut self, token: &TokenKind) -> Result<AstNode, ParsingError> {
+    fn parse_prefix_expression(&mut self, token: &TokenKind) -> Result<AstNode> {
         let start = self.get_current_token().span.start;
         self.skip(token)?;
 
@@ -925,7 +927,7 @@ impl Parser {
         }
     }
 
-    fn parse_primary_expression(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_primary_expression(&mut self) -> Result<AstNode> {
         let token = self.get_current_token();
 
         Ok(match token.kind {
@@ -993,7 +995,7 @@ impl Parser {
         })
     }
 
-    fn parse_function_call(&mut self) -> Result<Vec<AstNode>, ParsingError> {
+    fn parse_function_call(&mut self) -> Result<Vec<AstNode>> {
         // Can have >= 0 arguments
 
         let mut args = vec![];
@@ -1033,7 +1035,7 @@ impl Parser {
         }
     }
 
-    fn expect_current_token(&mut self, expect: &TokenKind) -> Result<(), ParsingError> {
+    fn expect_current_token(&mut self, expect: &TokenKind) -> Result<()> {
         let current = self.get_current_token();
         if &current.kind != expect {
             return Err(ParsingError::UnexpectedToken {
@@ -1050,7 +1052,7 @@ impl Parser {
         self.cursor += 1;
     }
 
-    fn skip(&mut self, expected_token: &TokenKind) -> Result<(), ParsingError> {
+    fn skip(&mut self, expected_token: &TokenKind) -> Result<()> {
         self.expect_current_token(expected_token)?;
         self.advance();
         Ok(())

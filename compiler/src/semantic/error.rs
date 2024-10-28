@@ -26,7 +26,7 @@ pub enum Error {
         span: Span,
     },
 
-    UnableToCompareTypeAWithTypeB {
+    UnableToCompareTypes {
         type_a: Type,
         type_b: Type,
         span: Span,
@@ -59,7 +59,7 @@ pub enum Error {
         span: Span,
     },
 
-    NotExpectingStatementInGlobal {
+    UnexpectedStatementInGlobal {
         span: Span,
     },
 
@@ -82,7 +82,7 @@ pub enum Error {
         span: Span,
     },
 
-    ReturnNotInFunctionScope {
+    UnexpectedReturnStatement {
         span: Span,
     },
 
@@ -92,7 +92,7 @@ pub enum Error {
         span: Span,
     },
 
-    LoopControlNotInLoopScope {
+    UnexpectedLoopControl {
         span: Span,
     },
 
@@ -108,21 +108,21 @@ impl Error {
             | Self::VoidTypeVariable { span, .. }
             | Self::UnableToAssignValueType { span, .. }
             | Self::InvalidAssignmentLhs { span, .. }
-            | Self::UnableToCompareTypeAWithTypeB { span, .. }
+            | Self::UnableToCompareTypes { span, .. }
             | Self::VariableNotExist { span, .. }
             | Self::VariableAlreadyExist { span, .. }
             | Self::TypeNotExist { span, .. }
             | Self::NotANumber { span, .. }
             | Self::NotABoolean { span, .. }
             | Self::NotAFunction { span, .. }
-            | Self::NotExpectingStatementInGlobal { span }
+            | Self::UnexpectedStatementInGlobal { span }
             | Self::FunctionDefinitionNotInGlobal { span, .. }
             | Self::FunctionAlreadyExist { span, .. }
             | Self::InvalidFunctionCallArgument { span, .. }
             | Self::FunctionNotReturningValue { span, .. }
-            | Self::ReturnNotInFunctionScope { span, .. }
+            | Self::UnexpectedReturnStatement { span, .. }
             | Self::ReturnTypeMismatch { span, .. }
-            | Self::LoopControlNotInLoopScope { span }
+            | Self::UnexpectedLoopControl { span }
             | Self::DebugVoid { span } => span,
         }
     }
@@ -146,7 +146,7 @@ impl Display for Error {
             Self::InvalidAssignmentLhs { lhs, .. } => {
                 write!(f, "{lhs} can not be an assignment's lhs")
             }
-            Self::UnableToCompareTypeAWithTypeB { type_a, type_b, .. } => {
+            Self::UnableToCompareTypes { type_a, type_b, .. } => {
                 write!(
                     f,
                     "unable to compare the value of type `{type_a}` with type `{type_b}`"
@@ -170,7 +170,7 @@ impl Display for Error {
             Self::NotAFunction { .. } => {
                 write!(f, "not a function")
             }
-            Self::NotExpectingStatementInGlobal { .. } => {
+            Self::UnexpectedStatementInGlobal { .. } => {
                 write!(f, "expecting only function definitions in global scope")
             }
             Self::FunctionDefinitionNotInGlobal { .. } => {
@@ -192,7 +192,7 @@ impl Display for Error {
                     "expecting function to return a value of type {expect}, but none was returned",
                 )
             }
-            Self::ReturnNotInFunctionScope { .. } => {
+            Self::UnexpectedReturnStatement { .. } => {
                 write!(
                     f,
                     "the usage of `return` statement must be within a function body",
@@ -204,7 +204,7 @@ impl Display for Error {
                     "expecting to returning value of type `{expect}`, but get `{get}` instead",
                 )
             }
-            Self::LoopControlNotInLoopScope { .. } => {
+            Self::UnexpectedLoopControl { .. } => {
                 write!(
                     f,
                     "the usage of `break` and `continue` statements must be within a loop"

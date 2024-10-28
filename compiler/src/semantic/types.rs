@@ -92,7 +92,7 @@ impl Type {
         if a == b {
             Ok(())
         } else {
-            Err(Error::UnableToCompareTypeAWithTypeB {
+            Err(Error::UnableToCompareTypes {
                 type_a: a.clone(),
                 type_b: b.clone(),
                 span: err_span(),
