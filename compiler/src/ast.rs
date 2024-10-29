@@ -218,7 +218,7 @@ pub enum AstNode {
     },
 
     Literal {
-        value: Value,
+        lit: Literal,
         span: Span,
     },
 }
@@ -434,7 +434,7 @@ impl Display for TypeNotation {
 /// The representation of each value that may exists in a Kaba
 /// source code, such as integer or string.
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
-pub enum Value {
+pub enum Literal {
     // A temporary value while the runtime is still using
     // a tree-walk interpreter mode
     Void,
@@ -444,13 +444,13 @@ pub enum Value {
     Boolean(bool),
 }
 
-impl Display for Value {
+impl Display for Literal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Value::Void => write!(f, "void"),
-            Value::Integer(n) => write!(f, "{n}"),
-            Value::Float(n) => write!(f, "{n}"),
-            Value::Boolean(b) => write!(f, "{b}"),
+            Literal::Void => write!(f, "void"),
+            Literal::Integer(n) => write!(f, "{n}"),
+            Literal::Float(n) => write!(f, "{n}"),
+            Literal::Boolean(b) => write!(f, "{b}"),
         }
     }
 }

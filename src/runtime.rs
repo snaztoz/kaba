@@ -321,7 +321,7 @@ impl<'a> Runtime<'a> {
             AstNode::FunctionCall { callee, args, .. } => self.run_function_call(callee, args),
 
             AstNode::Identifier { name, .. } => self.get_value(name),
-            AstNode::Literal { value, .. } => Ok(RuntimeValue::from(*value)),
+            AstNode::Literal { lit, .. } => Ok(RuntimeValue::from(*lit)),
 
             _ => unreachable!(),
         }

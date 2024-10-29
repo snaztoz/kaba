@@ -2,7 +2,7 @@
 //! parsing stage of a Kaba tokens.
 
 use crate::{
-    ast::{AstNode, Program as ProgramAst, TypeNotation, Value},
+    ast::{AstNode, Literal, Program as ProgramAst, TypeNotation},
     lexer::{Token, TokenKind},
 };
 use logos::Span;
@@ -959,28 +959,28 @@ impl Parser {
             TokenKind::Integer(n) => {
                 self.advance();
                 AstNode::Literal {
-                    value: Value::Integer(n),
+                    lit: Literal::Integer(n),
                     span: token.span,
                 }
             }
             TokenKind::Float(n) => {
                 self.advance();
                 AstNode::Literal {
-                    value: Value::Float(n),
+                    lit: Literal::Float(n),
                     span: token.span,
                 }
             }
             TokenKind::BooleanTrue => {
                 self.advance();
                 AstNode::Literal {
-                    value: Value::Boolean(true),
+                    lit: Literal::Boolean(true),
                     span: token.span,
                 }
             }
             TokenKind::BooleanFalse => {
                 self.advance();
                 AstNode::Literal {
-                    value: Value::Boolean(false),
+                    lit: Literal::Boolean(false),
                     span: token.span,
                 }
             }
@@ -1148,7 +1148,7 @@ mod tests {
                 tn: None,
                 val: Some(Box::new(AstNode::Mul {
                     lhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(123),
+                        lit: Literal::Integer(123),
                         span: 10..13,
                     }),
                     rhs: Box::new(AstNode::Identifier {
@@ -1174,11 +1174,11 @@ mod tests {
                 tn: None,
                 val: Some(Box::new(AstNode::Add {
                     lhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(123),
+                        lit: Literal::Integer(123),
                         span: 9..12,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(50),
+                        lit: Literal::Integer(50),
                         span: 15..17,
                     }),
                     span: 9..17,
@@ -1240,7 +1240,7 @@ mod tests {
                     span: 7..10,
                 })),
                 val: Some(Box::new(AstNode::Literal {
-                    value: Value::Integer(5),
+                    lit: Literal::Integer(5),
                     span: 13..14,
                 })),
                 span: 0..14,
@@ -1336,11 +1336,11 @@ mod tests {
             AstNode::If {
                 cond: Box::new(AstNode::Gt {
                     lhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(15),
+                        lit: Literal::Integer(15),
                         span: 3..5,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(10),
+                        lit: Literal::Integer(10),
                         span: 8..10,
                     }),
                     span: 3..10,
@@ -1351,7 +1351,7 @@ mod tests {
                         span: 14..19,
                     }),
                     args: vec![AstNode::Literal {
-                        value: Value::Integer(1),
+                        lit: Literal::Integer(1),
                         span: 20..21,
                     }],
                     span: 14..22,
@@ -1368,13 +1368,13 @@ mod tests {
             "if false do else if false do else do end",
             AstNode::If {
                 cond: Box::new(AstNode::Literal {
-                    value: Value::Boolean(false),
+                    lit: Literal::Boolean(false),
                     span: 3..8,
                 }),
                 body: vec![],
                 or_else: Some(Box::new(AstNode::If {
                     cond: Box::new(AstNode::Literal {
-                        value: Value::Boolean(false),
+                        lit: Literal::Boolean(false),
                         span: 20..25,
                     }),
                     body: vec![],
@@ -1399,7 +1399,7 @@ mod tests {
             "while true do end",
             AstNode::While {
                 cond: Box::new(AstNode::Literal {
-                    value: Value::Boolean(true),
+                    lit: Literal::Boolean(true),
                     span: 6..10,
                 }),
                 body: vec![],
@@ -1414,7 +1414,7 @@ mod tests {
             "while true do continue; break; end",
             AstNode::While {
                 cond: Box::new(AstNode::Literal {
-                    value: Value::Boolean(true),
+                    lit: Literal::Boolean(true),
                     span: 6..10,
                 }),
                 body: vec![
@@ -1537,7 +1537,7 @@ mod tests {
                 })),
                 body: vec![AstNode::Return {
                     expr: Some(Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 24..25,
                     })),
                     span: 17..25,
@@ -1558,16 +1558,16 @@ mod tests {
             AstNode::Debug {
                 expr: Box::new(AstNode::Add {
                     lhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 6..7,
                     }),
                     rhs: Box::new(AstNode::Mul {
                         lhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(5),
+                            lit: Literal::Integer(5),
                             span: 10..11,
                         }),
                         rhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(7),
+                            lit: Literal::Integer(7),
                             span: 14..15,
                         }),
                         span: 10..15,
@@ -1595,11 +1595,11 @@ mod tests {
                     }),
                     rhs: Box::new(AstNode::Mul {
                         lhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(512),
+                            lit: Literal::Integer(512),
                             span: 6..9,
                         }),
                         rhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(200),
+                            lit: Literal::Integer(200),
                             span: 12..15,
                         }),
                         span: 6..15,
@@ -1612,7 +1612,7 @@ mod tests {
                         span: 18..21,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(3),
+                        lit: Literal::Integer(3),
                         span: 24..25,
                     }),
                     span: 18..25,
@@ -1633,7 +1633,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Mul {
                     lhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(123),
+                        lit: Literal::Integer(123),
                         span: 6..9,
                     }),
                     rhs: Box::new(AstNode::Identifier {
@@ -1658,7 +1658,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 6..7,
                     }),
                     span: 5..7,
@@ -1679,7 +1679,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 7..8,
                     }),
                     span: 6..8,
@@ -1700,7 +1700,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 7..8,
                     }),
                     span: 6..8,
@@ -1721,7 +1721,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 7..8,
                     }),
                     span: 6..8,
@@ -1742,7 +1742,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 7..8,
                     }),
                     span: 6..8,
@@ -1763,7 +1763,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 7..8,
                     }),
                     span: 6..8,
@@ -1779,11 +1779,11 @@ mod tests {
             "50.0 % 2.0;",
             AstNode::Mod {
                 lhs: Box::new(AstNode::Literal {
-                    value: Value::Float(50.0),
+                    lit: Literal::Float(50.0),
                     span: 0..4,
                 }),
                 rhs: Box::new(AstNode::Literal {
-                    value: Value::Float(2.0),
+                    lit: Literal::Float(2.0),
                     span: 7..10,
                 }),
                 span: 0..10,
@@ -1798,17 +1798,17 @@ mod tests {
             AstNode::Mul {
                 lhs: Box::new(AstNode::Sub {
                     lhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(123),
+                        lit: Literal::Integer(123),
                         span: 1..4,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(53),
+                        lit: Literal::Integer(53),
                         span: 7..9,
                     }),
                     span: 1..9,
                 }),
                 rhs: Box::new(AstNode::Literal {
-                    value: Value::Integer(7),
+                    lit: Literal::Integer(7),
                     span: 13..14,
                 }),
                 span: 0..14,
@@ -1822,7 +1822,7 @@ mod tests {
             "123 + (foo - 50);",
             AstNode::Add {
                 lhs: Box::new(AstNode::Literal {
-                    value: Value::Integer(123),
+                    lit: Literal::Integer(123),
                     span: 0..3,
                 }),
                 rhs: Box::new(AstNode::Sub {
@@ -1831,7 +1831,7 @@ mod tests {
                         span: 7..10,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(50),
+                        lit: Literal::Integer(50),
                         span: 13..15,
                     }),
                     span: 7..15,
@@ -1846,7 +1846,7 @@ mod tests {
         parse_and_assert_result(
             "(((75)));",
             AstNode::Literal {
-                value: Value::Integer(75),
+                lit: Literal::Integer(75),
                 span: 3..5,
             },
         );
@@ -1864,16 +1864,16 @@ mod tests {
                     }),
                     args: vec![
                         AstNode::Literal {
-                            value: Value::Integer(123),
+                            lit: Literal::Integer(123),
                             span: 4..7,
                         },
                         AstNode::Add {
                             lhs: Box::new(AstNode::Literal {
-                                value: Value::Integer(50),
+                                lit: Literal::Integer(50),
                                 span: 9..11,
                             }),
                             rhs: Box::new(AstNode::Literal {
-                                value: Value::Integer(2),
+                                lit: Literal::Integer(2),
                                 span: 14..15,
                             }),
                             span: 9..15,
@@ -1882,7 +1882,7 @@ mod tests {
                     span: 0..16,
                 }),
                 rhs: Box::new(AstNode::Literal {
-                    value: Value::Integer(7),
+                    lit: Literal::Integer(7),
                     span: 19..20,
                 }),
                 span: 0..20,
@@ -1906,11 +1906,11 @@ mod tests {
                     }),
                     args: vec![
                         AstNode::Literal {
-                            value: Value::Integer(123),
+                            lit: Literal::Integer(123),
                             span: 8..11,
                         },
                         AstNode::Literal {
-                            value: Value::Integer(456),
+                            lit: Literal::Integer(456),
                             span: 13..16,
                         },
                     ],
@@ -1936,7 +1936,7 @@ mod tests {
                 rhs: Box::new(AstNode::Mul {
                     lhs: Box::new(AstNode::Neg {
                         child: Box::new(AstNode::Literal {
-                            value: Value::Integer(5),
+                            lit: Literal::Integer(5),
                             span: 10..11,
                         }),
                         span: 8..12,
@@ -1944,7 +1944,7 @@ mod tests {
                     rhs: Box::new(AstNode::Neg {
                         child: Box::new(AstNode::Neg {
                             child: Box::new(AstNode::Literal {
-                                value: Value::Integer(7),
+                                lit: Literal::Integer(7),
                                 span: 19..20,
                             }),
                             span: 18..20,
@@ -1990,7 +1990,7 @@ mod tests {
         parse_and_assert_result(
             "true;",
             AstNode::Literal {
-                value: Value::Boolean(true),
+                lit: Literal::Boolean(true),
                 span: 0..4,
             },
         );
@@ -2003,17 +2003,17 @@ mod tests {
             AstNode::Eq {
                 lhs: Box::new(AstNode::Gte {
                     lhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(1),
+                        lit: Literal::Integer(1),
                         span: 0..1,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 5..6,
                     }),
                     span: 0..6,
                 }),
                 rhs: Box::new(AstNode::Literal {
-                    value: Value::Boolean(true),
+                    lit: Literal::Boolean(true),
                     span: 10..14,
                 }),
                 span: 0..14,
@@ -2028,12 +2028,12 @@ mod tests {
             AstNode::And {
                 lhs: Box::new(AstNode::Or {
                     lhs: Box::new(AstNode::Literal {
-                        value: Value::Boolean(false),
+                        lit: Literal::Boolean(false),
                         span: 0..5,
                     }),
                     rhs: Box::new(AstNode::Not {
                         child: Box::new(AstNode::Literal {
-                            value: Value::Boolean(false),
+                            lit: Literal::Boolean(false),
                             span: 10..15,
                         }),
                         span: 9..15,
@@ -2041,7 +2041,7 @@ mod tests {
                     span: 0..15,
                 }),
                 rhs: Box::new(AstNode::Literal {
-                    value: Value::Boolean(true),
+                    lit: Literal::Boolean(true),
                     span: 19..23,
                 }),
                 span: 0..23,

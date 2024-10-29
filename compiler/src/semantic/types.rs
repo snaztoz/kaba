@@ -1,5 +1,5 @@
 use super::{error::Error, Result};
-use crate::ast::{AstNode, TypeNotation, Value};
+use crate::ast::{AstNode, Literal, TypeNotation};
 use logos::Span;
 use std::fmt::Display;
 
@@ -17,12 +17,12 @@ impl Type {
         Self::Identifier(String::from(id))
     }
 
-    pub fn from_value(val: &Value) -> Result<Self> {
-        match val {
-            Value::Void => Ok(Self::new("Void")),
-            Value::Integer(_) => Ok(Self::new("Int")),
-            Value::Float(_) => Ok(Self::new("Float")),
-            Value::Boolean(_) => Ok(Self::new("Bool")),
+    pub fn from_literal(lit: &Literal) -> Result<Self> {
+        match lit {
+            Literal::Void => Ok(Self::new("Void")),
+            Literal::Integer(_) => Ok(Self::new("Int")),
+            Literal::Float(_) => Ok(Self::new("Float")),
+            Literal::Boolean(_) => Ok(Self::new("Bool")),
         }
     }
 

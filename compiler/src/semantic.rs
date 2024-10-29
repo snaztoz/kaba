@@ -463,7 +463,7 @@ impl SemanticChecker {
                     })
             }
 
-            AstNode::Literal { value, .. } => Type::from_value(value),
+            AstNode::Literal { lit, .. } => Type::from_literal(lit),
 
             AstNode::FunctionCall { callee, args, span } => {
                 self.check_function_call(callee, args, span)
