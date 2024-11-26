@@ -439,7 +439,7 @@ pub enum Literal {
     // a tree-walk interpreter mode
     Void,
 
-    Integer(i32),
+    Integer(u32),
     Float(f64),
     Boolean(bool),
 }

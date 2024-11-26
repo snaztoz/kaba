@@ -63,7 +63,7 @@ pub enum TokenKind {
     //
 
     #[regex("[0-9]+", priority = 2, callback = lex_integer)]
-    Integer(i32),
+    Integer(u32),
 
     #[regex(r"[0-9]+\.[0-9]+", callback = lex_float)]
     Float(f64),
@@ -209,7 +209,7 @@ fn lex_identifier(lex: &mut Lexer<TokenKind>) -> Result<String, LexingError> {
     Ok(String::from(value))
 }
 
-fn lex_integer(lex: &mut Lexer<TokenKind>) -> i32 {
+fn lex_integer(lex: &mut Lexer<TokenKind>) -> u32 {
     lex.slice().parse().unwrap()
 }
 
