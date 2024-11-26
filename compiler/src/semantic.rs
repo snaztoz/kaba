@@ -149,7 +149,7 @@ impl SemanticChecker {
         let val_t = val.map(|expr| self.check_expression(expr)).transpose()?;
 
         // Either variable's or value's type must be present
-        if var_t.is_none() && val_t.is_none() {
+        if val_t.is_none() {
             return Err(Error::UnableToInferVariableType {
                 id,
                 span: span.clone(),
@@ -609,15 +609,6 @@ mod tests {
     }
 
     #[test]
-    fn test_check_variable_declaration_with_type_annotation_only() {
-        check_and_assert_is_ok(indoc! {"
-                fn main() do
-                    var x: Int;
-                end
-            "});
-    }
-
-    #[test]
     fn test_check_variable_declaration_with_initial_value_only() {
         check_and_assert_is_ok(indoc! {"
                 fn main() do
@@ -655,6 +646,15 @@ mod tests {
 
                 fn produce(): Int do
                     return 5;
+                end
+            "});
+    }
+
+    #[test]
+    fn test_check_variable_declaration_without_initial_value() {
+        check_and_assert_is_err(indoc! {"
+                fn main() do
+                    var x: Int;
                 end
             "});
     }
@@ -713,10 +713,10 @@ mod tests {
     fn test_check_value_assignments() {
         check_and_assert_is_ok(indoc! {"
                 fn main() do
-                    var x: Int;
+                    var x = 0;
                     x = 10;
 
-                    var y: Float;
+                    var y: Float = 0.0;
                     y = 5.0;
 
                     var z = false;
