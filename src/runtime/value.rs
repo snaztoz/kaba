@@ -26,7 +26,7 @@ impl From<Literal> for RuntimeValue {
     fn from(val: Literal) -> Self {
         match val {
             Literal::Void => Self::Void,
-            Literal::Integer(n) => Self::Integer(n),
+            Literal::Integer(n) => Self::Integer(n.try_into().unwrap()),
             Literal::Float(n) => Self::Float(n),
             Literal::Boolean(b) => Self::Boolean(b),
         }
