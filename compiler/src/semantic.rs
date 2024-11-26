@@ -127,6 +127,18 @@ impl SemanticChecker {
                     self.check_debug(expr, span)?;
                 }
 
+                AstNode::Assign { lhs, rhs, span } => {
+                    self.check_assignment(lhs, rhs, span)?;
+                }
+
+                AstNode::AddAssign { lhs, rhs, span }
+                | AstNode::SubAssign { lhs, rhs, span }
+                | AstNode::MulAssign { lhs, rhs, span }
+                | AstNode::DivAssign { lhs, rhs, span }
+                | AstNode::ModAssign { lhs, rhs, span } => {
+                    self.check_shorthand_assignment(lhs, rhs, span)?;
+                }
+
                 expr => {
                     self.check_expression(expr)?;
                 }
@@ -422,16 +434,6 @@ impl SemanticChecker {
 
     fn check_expression(&self, expr: &AstNode) -> Result<Type> {
         match expr {
-            AstNode::Assign { lhs, rhs, span } => self.check_assignment(lhs, rhs, span),
-
-            AstNode::AddAssign { lhs, rhs, span }
-            | AstNode::SubAssign { lhs, rhs, span }
-            | AstNode::MulAssign { lhs, rhs, span }
-            | AstNode::DivAssign { lhs, rhs, span }
-            | AstNode::ModAssign { lhs, rhs, span } => {
-                self.check_shorthand_assignment(lhs, rhs, span)
-            }
-
             AstNode::Eq { lhs, rhs, .. } | AstNode::Neq { lhs, rhs, .. } => {
                 self.check_equality_operation(lhs, rhs)
             }
