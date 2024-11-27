@@ -64,7 +64,7 @@ impl SemanticChecker {
 
     fn check_registered_global_functions(&self, stmts: &[AstNode]) -> Result<()> {
         for stmt in stmts {
-            FunctionDefinitionChecker::new(&self.ctx).check(stmt)?;
+            FunctionDefinitionChecker::new(&self.ctx, stmt).check()?;
         }
         Ok(())
     }
@@ -105,19 +105,19 @@ impl SemanticChecker {
             }
         })?;
 
-        let t = Type::Callable {
+        let fn_t = Type::Callable {
             params_t,
             return_t: Box::new(return_t.clone()),
         };
 
         let (id, id_span) = id.unwrap_identifier();
         self.ctx
-            .save_symbol_or_else(&id, t.clone(), || Error::FunctionAlreadyExist {
+            .save_symbol_or_else(&id, fn_t.clone(), || Error::FunctionAlreadyExist {
                 id: id.clone(),
                 span: id_span,
             })?;
 
-        Ok(t)
+        Ok(fn_t)
     }
 }
 
@@ -758,8 +758,8 @@ mod tests {
             let ast = parser::parse(tokens).unwrap();
 
             let ctx = Context::default();
-            let checker = ExpressionChecker::new(&ctx);
-            let result = checker.check(&ast.stmts[0]);
+            let checker = ExpressionChecker::new(&ctx, &ast.stmts[0]);
+            let result = checker.check();
 
             assert!(result.is_ok());
             assert_eq!(result.unwrap(), expected);
