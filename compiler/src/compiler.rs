@@ -1,7 +1,7 @@
 //! This module contains the high-level utility for the source
 //! code compilation procedure.
 
-use crate::{ast::Program as ProgramAst, lexer, parser, types, Error, Result};
+use crate::{ast::AstNode, lexer, parser, types, Error, Result};
 use std::{
     fmt::Display,
     fs,
@@ -58,7 +58,7 @@ impl Compiler {
     }
 
     /// Run the compilation process.
-    pub fn compile(mut self) -> Result<ProgramAst> {
+    pub fn compile(mut self) -> Result<AstNode> {
         self.normalize_newlines();
 
         let tokens = lexer::lex(&self.src);

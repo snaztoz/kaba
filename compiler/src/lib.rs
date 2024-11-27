@@ -1,10 +1,9 @@
 #![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/README.md"))]
 
-use std::path::Path;
-
-use ast::Program;
+use ast::AstNode;
 pub use compiler::Compiler;
 pub use error::Error;
+use std::path::Path;
 
 pub mod ast;
 mod compiler;
@@ -31,7 +30,7 @@ type Result<T> = std::result::Result<T, Error>;
 /// assert!(result.is_ok());
 /// ```
 ///
-pub fn compile(path: &Path) -> Result<Program> {
+pub fn compile(path: &Path) -> Result<AstNode> {
     let compiler = Compiler::from_file(path)?;
     compiler.compile()
 }

@@ -2,7 +2,7 @@
 //! parsing stage of a Kaba tokens.
 
 use crate::{
-    ast::{AstNode, Literal, Program as ProgramAst, TypeNotation},
+    ast::{AstNode, Literal, TypeNotation},
     lexer::{Token, TokenKind},
 };
 use logos::Span;
@@ -15,7 +15,7 @@ type Result<T> = std::result::Result<T, ParsingError>;
 ///
 /// Produces an AST that represents the entire source code of the
 /// given tokens (see [`crate::ast::Program`]).
-pub fn parse(tokens: Vec<Token>) -> Result<ProgramAst> {
+pub fn parse(tokens: Vec<Token>) -> Result<AstNode> {
     Parser::new(tokens).parse()
 }
 
@@ -29,18 +29,18 @@ impl Parser {
         Self { tokens, cursor: 0 }
     }
 
-    fn parse(&mut self) -> Result<ProgramAst> {
-        let mut stmts = vec![];
+    fn parse(&mut self) -> Result<AstNode> {
+        let mut body = vec![];
 
         loop {
             if self.current_token_is(&TokenKind::Eof) {
                 break;
             }
             let stmt = self.parse_statement()?;
-            stmts.push(stmt)
+            body.push(stmt)
         }
 
-        Ok(ProgramAst { stmts })
+        Ok(AstNode::Program { body })
     }
 
     /// Parse a code block.
@@ -1097,12 +1097,7 @@ mod tests {
         let result = parse(tokens);
 
         assert!(result.is_ok());
-        assert_eq!(
-            result.unwrap(),
-            ProgramAst {
-                stmts: vec![expect]
-            }
-        );
+        assert_eq!(result.unwrap(), AstNode::Program { body: vec![expect] });
     }
 
     fn parse_and_assert_error(input: &str) {

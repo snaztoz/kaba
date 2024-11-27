@@ -9,15 +9,14 @@ use std::fmt::Display;
 pub type IdentifierNode = AstNode;
 pub type TypeNotationNode = AstNode;
 
-/// The root of a Kaba source code's AST.
-#[derive(Debug, PartialEq)]
-pub struct Program {
-    pub stmts: Vec<AstNode>,
-}
-
 /// The representation of each node that make up a whole Kaba AST.
 #[derive(Debug, PartialEq)]
 pub enum AstNode {
+    // The root of all other AstNode variants
+    Program {
+        body: Vec<AstNode>,
+    },
+
     VariableDeclaration {
         id: Box<AstNode>,
         tn: Option<Box<AstNode>>,
@@ -226,6 +225,8 @@ pub enum AstNode {
 impl AstNode {
     pub fn span(&self) -> &Span {
         match self {
+            Self::Program { .. } => unreachable!(),
+
             Self::VariableDeclaration { span, .. }
             | Self::If { span, .. }
             | Self::Else { span, .. }

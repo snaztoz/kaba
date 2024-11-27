@@ -5,7 +5,7 @@ use self::{
     error::{Error, Result},
     typ::Type,
 };
-use crate::ast::{AstNode, IdentifierNode, Program as ProgramAst, TypeNotationNode};
+use crate::ast::{AstNode, IdentifierNode, TypeNotationNode};
 use scope::ScopeStack;
 use statement::FunctionDefinitionChecker;
 
@@ -16,55 +16,73 @@ mod statement;
 mod typ;
 
 /// Provides a quick way to run semantic analysis on a Kaba AST.
-pub fn check(ast: &ProgramAst) -> Result<()> {
-    TypeChecker::default().check(ast)
+pub fn check(program: &AstNode) -> Result<()> {
+    TypeChecker::new(program).check()
 }
 
-#[derive(Default)]
-struct TypeChecker {
+struct TypeChecker<'a> {
     scopes: ScopeStack,
+    program: &'a AstNode,
 }
 
-impl TypeChecker {
-    fn check(&self, program_ast: &ProgramAst) -> Result<()> {
+impl<'a> TypeChecker<'a> {
+    fn new(program: &'a AstNode) -> Self {
+        Self {
+            scopes: ScopeStack::default(),
+            program,
+        }
+    }
+}
+
+impl TypeChecker<'_> {
+    fn check(&self) -> Result<()> {
         // We are expecting that in global scope, statements (currently) are
         // consisted of function definitions only. So other statements are
         // rejected in this scope.
         //
         // TODO: review other statements for possibilities to be applied here
 
-        self.register_global_functions(&program_ast.stmts)?;
-        self.check_registered_global_functions(&program_ast.stmts)?;
+        self.read_function_declarations()?;
+        self.check_registered_global_functions()?;
 
         Ok(())
     }
 
-    fn register_global_functions(&self, stmts: &[AstNode]) -> Result<()> {
-        for stmt in stmts {
-            if let AstNode::FunctionDefinition {
-                id,
-                params,
-                return_t,
-                ..
-            } = stmt
-            {
-                // this will also save the function identifiers into
-                // global scope symbols
-                self.check_function_declaration(id, params, &return_t.as_deref())?;
-            } else {
-                return Err(Error::UnexpectedStatementInGlobal {
-                    span: stmt.span().clone(),
-                });
+    fn read_function_declarations(&self) -> Result<()> {
+        if let AstNode::Program { body } = self.program {
+            for stmt in body {
+                if let AstNode::FunctionDefinition {
+                    id,
+                    params,
+                    return_t,
+                    ..
+                } = stmt
+                {
+                    // this will also save the function identifiers into
+                    // global scope symbols
+                    self.check_function_declaration(id, params, &return_t.as_deref())?;
+                } else {
+                    return Err(Error::UnexpectedStatementInGlobal {
+                        span: stmt.span().clone(),
+                    });
+                }
             }
+        } else {
+            unreachable!()
         }
 
         Ok(())
     }
 
-    fn check_registered_global_functions(&self, stmts: &[AstNode]) -> Result<()> {
-        for stmt in stmts {
-            FunctionDefinitionChecker::new(&self.scopes, stmt).check()?;
+    fn check_registered_global_functions(&self) -> Result<()> {
+        if let AstNode::Program { body } = self.program {
+            for stmt in body {
+                FunctionDefinitionChecker::new(&self.scopes, stmt).check()?;
+            }
+        } else {
+            unreachable!()
         }
+
         Ok(())
     }
 
@@ -131,7 +149,7 @@ mod tests {
         let tokens = lexer::lex(input).unwrap();
         let ast = parser::parse(tokens).unwrap();
 
-        let result = TypeChecker::default().check(&ast);
+        let result = TypeChecker::new(&ast).check();
 
         assert!(result.is_ok());
     }
@@ -140,7 +158,7 @@ mod tests {
         let tokens = lexer::lex(input).unwrap();
         let ast = parser::parse(tokens).unwrap();
 
-        let result = TypeChecker::default().check(&ast);
+        let result = TypeChecker::new(&ast).check();
 
         assert!(result.is_err());
     }
@@ -757,8 +775,11 @@ mod tests {
             let ast = parser::parse(tokens).unwrap();
 
             let scopes = ScopeStack::default();
-            let checker = ExpressionChecker::new(&scopes, &ast.stmts[0]);
-            let result = checker.check();
+            let result = if let AstNode::Program { body } = &ast {
+                ExpressionChecker::new(&scopes, &body[0]).check()
+            } else {
+                unreachable!();
+            };
 
             assert!(result.is_ok());
             assert_eq!(result.unwrap(), expected);
