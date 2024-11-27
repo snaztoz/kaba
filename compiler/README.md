@@ -54,9 +54,9 @@ Operator precedences will also be handled during this stage.
 
 The parser used by the compiler is implemented using a hand-written [recursive-descent parsing](https://en.wikipedia.org/wiki/Recursive_descent_parser) technique.
 
-### Semantic Checking
+### Type Checking
 
-This stage will catch all the *nonsenses* found in the AST.
+This stage will catch all the type violation found in the AST.
 
 For example, the following program:
 
@@ -64,7 +64,7 @@ For example, the following program:
 5 + false;
 ```
 
-... is valid according to the syntax of Kaba language, but it will be marked as invalid by the semantic checker as it does not make sense to add a number with a boolean (not in Kaba, at least😉).
+... is valid according to the syntax of Kaba language, but it will be marked as invalid by the type checker as it does not make sense to add a number with a boolean (not in Kaba, at least😉).
 
 This part is also implemented manually (hand-written).
 

@@ -1,7 +1,7 @@
 use super::{
     context::Context,
     error::{Error, Result},
-    types::Type,
+    typ::Type,
 };
 use crate::ast::AstNode;
 use logos::Span;

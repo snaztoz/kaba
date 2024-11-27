@@ -1,7 +1,7 @@
 use super::{
     error::{Error, Result},
     scope::{Scope, ScopeStack, ScopeType},
-    types::Type,
+    typ::Type,
 };
 
 #[derive(Default)]

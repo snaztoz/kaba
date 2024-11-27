@@ -1,10 +1,10 @@
-//! This module contains the implementation for semantic analysis
-//! stage of the compiler.
+//! This module contains the implementation for type checking stage of the
+//! compiler.
 
 use self::{
     context::Context,
     error::{Error, Result},
-    types::Type,
+    typ::Type,
 };
 use crate::ast::{AstNode, IdentifierNode, Program as ProgramAst, TypeNotationNode};
 use statement::FunctionDefinitionChecker;
@@ -14,7 +14,7 @@ mod error;
 mod expression;
 mod scope;
 mod statement;
-mod types;
+mod typ;
 
 /// Provides a quick way to run semantic analysis on a Kaba AST.
 pub fn check(ast: &ProgramAst) -> Result<()> {

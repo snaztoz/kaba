@@ -1,4 +1,4 @@
-use super::{error::Result, types::Type};
+use super::{error::Result, typ::Type};
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},

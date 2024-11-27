@@ -11,7 +11,7 @@ mod compiler;
 mod error;
 mod lexer;
 mod parser;
-mod semantic;
+mod types;
 
 type Result<T> = std::result::Result<T, Error>;
 
