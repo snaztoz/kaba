@@ -6,11 +6,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    UnableToInferVariableType {
-        id: String,
-        span: Span,
-    },
-
     VoidTypeVariable {
         span: Span,
     },
@@ -104,8 +99,7 @@ pub enum Error {
 impl Error {
     pub fn span(&self) -> &Span {
         match self {
-            Self::UnableToInferVariableType { span, .. }
-            | Self::VoidTypeVariable { span, .. }
+            Self::VoidTypeVariable { span, .. }
             | Self::UnableToAssignValueType { span, .. }
             | Self::InvalidAssignmentLhs { span, .. }
             | Self::UnableToCompareTypes { span, .. }
@@ -131,9 +125,6 @@ impl Error {
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::UnableToInferVariableType { id, .. } => {
-                write!(f, "unable to infer the type of variable `{id}` because of no type or initial value were provided")
-            }
             Self::VoidTypeVariable { .. } => {
                 write!(f, "unable to create variable with `Void` type")
             }

@@ -21,7 +21,7 @@ pub enum AstNode {
     VariableDeclaration {
         id: Box<AstNode>,
         tn: Option<Box<AstNode>>,
-        val: Option<Box<AstNode>>,
+        val: Box<AstNode>,
         span: Span,
     },
 

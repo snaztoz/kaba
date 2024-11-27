@@ -64,10 +64,7 @@ impl<'a> Runtime<'a> {
             match stmt {
                 AstNode::VariableDeclaration { id, val, .. } => {
                     let name = id.unwrap_identifier().0;
-                    let val = match val.as_deref() {
-                        Some(v) => self.run_expression(v)?,
-                        None => RuntimeValue::Integer(0),
-                    };
+                    let val = self.run_expression(val)?;
                     self.store_value(&name, val);
                 }
 

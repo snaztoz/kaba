@@ -157,7 +157,6 @@ impl Parser {
 
     fn parse_variable_declaration(&mut self) -> Result<AstNode> {
         let start = self.get_current_token().span.start;
-        let mut end;
 
         self.skip(&TokenKind::Var)?;
 
@@ -178,7 +177,6 @@ impl Parser {
             }
         };
 
-        end = token.span.end;
         self.advance();
 
         // Expecting ":" (optional)
@@ -186,26 +184,17 @@ impl Parser {
         let tn = if self.current_token_is(&TokenKind::Colon) {
             self.skip(&TokenKind::Colon)?;
 
-            let tn = self.parse_type_notation()?;
-            end = tn.span().end;
-
-            Some(Box::new(tn))
+            Some(Box::new(self.parse_type_notation()?))
         } else {
             None
         };
 
-        // Expecting "=" (optional)
+        // Expecting "="
 
-        let val = if self.current_token_is(&TokenKind::Assign) {
-            self.skip(&TokenKind::Assign)?;
+        self.skip(&TokenKind::Assign)?;
 
-            let expr = self.parse_expression()?;
-            end = expr.span().end;
-
-            Some(Box::new(expr.unwrap_group()))
-        } else {
-            None
-        };
+        let expr = self.parse_expression()?;
+        let end = expr.span().end;
 
         // Expecting ";"
 
@@ -214,7 +203,7 @@ impl Parser {
         Ok(AstNode::VariableDeclaration {
             id,
             tn,
-            val,
+            val: Box::new(expr.unwrap_group()),
             span: start..end,
         })
     }
@@ -1116,28 +1105,19 @@ mod tests {
         );
     }
 
+    fn parse_and_assert_error(input: &str) {
+        let tokens = lexer::lex(input).unwrap();
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
     //
     // Test variable declarations
     //
 
     #[test]
-    fn test_parsing_without_type_notation_and_initial_value() {
-        parse_and_assert_result(
-            "var x;",
-            AstNode::VariableDeclaration {
-                id: Box::from(AstNode::Identifier {
-                    name: String::from("x"),
-                    span: 4..5,
-                }),
-                tn: None,
-                val: None,
-                span: 0..5,
-            },
-        );
-    }
-
-    #[test]
-    fn test_parsing_without_type_notation_but_with_initial_value() {
+    fn test_parsing_without_type_notation() {
         parse_and_assert_result(
             "var abc = 123 * x;",
             AstNode::VariableDeclaration {
@@ -1146,7 +1126,7 @@ mod tests {
                     span: 4..7,
                 }),
                 tn: None,
-                val: Some(Box::new(AstNode::Mul {
+                val: Box::new(AstNode::Mul {
                     lhs: Box::new(AstNode::Literal {
                         lit: Literal::Integer(123),
                         span: 10..13,
@@ -1156,7 +1136,7 @@ mod tests {
                         span: 16..17,
                     }),
                     span: 10..17,
-                })),
+                }),
                 span: 0..17,
             },
         );
@@ -1172,7 +1152,7 @@ mod tests {
                     span: 4..5,
                 }),
                 tn: None,
-                val: Some(Box::new(AstNode::Add {
+                val: Box::new(AstNode::Add {
                     lhs: Box::new(AstNode::Literal {
                         lit: Literal::Integer(123),
                         span: 9..12,
@@ -1182,7 +1162,7 @@ mod tests {
                         span: 15..17,
                     }),
                     span: 9..17,
-                })),
+                }),
                 span: 0..18,
             },
         );
@@ -1198,32 +1178,18 @@ mod tests {
                     span: 4..5,
                 }),
                 tn: None,
-                val: Some(Box::new(AstNode::Identifier {
+                val: Box::new(AstNode::Identifier {
                     name: String::from("foo"),
                     span: 12..15,
-                })),
+                }),
                 span: 0..19,
             },
         );
     }
 
     #[test]
-    fn test_parsing_with_type_notation_but_without_initial_value() {
-        parse_and_assert_result(
-            "var x: Int;",
-            AstNode::VariableDeclaration {
-                id: Box::from(AstNode::Identifier {
-                    name: String::from("x"),
-                    span: 4..5,
-                }),
-                tn: Some(Box::from(AstNode::TypeNotation {
-                    tn: TypeNotation::Identifier(String::from("Int")),
-                    span: 7..10,
-                })),
-                val: None,
-                span: 0..10,
-            },
-        );
+    fn test_parsing_without_initial_value() {
+        parse_and_assert_error("var x: Int;");
     }
 
     #[test]
@@ -1239,10 +1205,10 @@ mod tests {
                     tn: TypeNotation::Identifier(String::from("Int")),
                     span: 7..10,
                 })),
-                val: Some(Box::new(AstNode::Literal {
+                val: Box::new(AstNode::Literal {
                     lit: Literal::Integer(5),
                     span: 13..14,
-                })),
+                }),
                 span: 0..14,
             },
         );
@@ -1270,10 +1236,10 @@ mod tests {
                     },
                     span: 7..20,
                 })),
-                val: Some(Box::new(AstNode::Identifier {
+                val: Box::new(AstNode::Identifier {
                     name: String::from("foo"),
                     span: 23..26,
-                })),
+                }),
                 span: 0..26,
             },
         );
@@ -1316,10 +1282,10 @@ mod tests {
                     },
                     span: 7..36,
                 })),
-                val: Some(Box::new(AstNode::Identifier {
+                val: Box::new(AstNode::Identifier {
                     name: String::from("foo"),
                     span: 39..42,
-                })),
+                }),
                 span: 0..42,
             },
         );

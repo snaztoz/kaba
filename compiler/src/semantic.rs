@@ -4,22 +4,21 @@
 use self::{
     context::Context,
     error::{Error, Result},
-    scope::Scope,
     types::Type,
 };
 use crate::ast::{AstNode, IdentifierNode, Program as ProgramAst, TypeNotationNode};
-use logos::Span;
+use statement::FunctionDefinitionChecker;
 
 mod context;
 mod error;
+mod expression;
 mod scope;
+mod statement;
 mod types;
 
 /// Provides a quick way to run semantic analysis on a Kaba AST.
 pub fn check(ast: &ProgramAst) -> Result<()> {
-    let checker = SemanticChecker::default();
-    checker.run(ast)?;
-    Ok(())
+    SemanticChecker::default().check(ast)
 }
 
 #[derive(Default)]
@@ -28,7 +27,7 @@ struct SemanticChecker {
 }
 
 impl SemanticChecker {
-    fn run(&self, program_ast: &ProgramAst) -> Result<()> {
+    fn check(&self, program_ast: &ProgramAst) -> Result<()> {
         // We are expecting that in global scope, statements (currently) are
         // consisted of function definitions only. So other statements are
         // rejected in this scope.
@@ -65,245 +64,7 @@ impl SemanticChecker {
 
     fn check_registered_global_functions(&self, stmts: &[AstNode]) -> Result<()> {
         for stmt in stmts {
-            if let AstNode::FunctionDefinition {
-                id, params, body, ..
-            } = stmt
-            {
-                let id_str = &id.unwrap_identifier().0;
-                let t = self.ctx.get_symbol_type(id_str).unwrap();
-                let params_id = params
-                    .iter()
-                    .map(|p| p.0.unwrap_identifier())
-                    .collect::<Vec<_>>();
-                self.check_function_definition(id, &t, &params_id, body)?;
-            }
-        }
-
-        Ok(())
-    }
-
-    fn check_body(&self, body: &[AstNode]) -> Result<Option<Type>> {
-        // Body may have a type if it contains a "return" statement
-        let mut body_t = None;
-
-        for stmt in body {
-            match stmt {
-                AstNode::VariableDeclaration { id, tn, val, span } => {
-                    self.check_variable_declaration(id, &tn.as_deref(), &val.as_deref(), span)?
-                }
-
-                AstNode::If {
-                    cond,
-                    body,
-                    or_else,
-                    ..
-                } => {
-                    let t = self.check_conditional_branch(cond, body, &or_else.as_deref())?;
-                    if body_t.is_none() {
-                        body_t = t;
-                    }
-                }
-
-                AstNode::While { cond, body, .. } => {
-                    self.check_while(cond, body)?;
-                }
-
-                AstNode::Break { span } | AstNode::Continue { span } => {
-                    self.check_loop_control(span)?;
-                }
-
-                AstNode::FunctionDefinition { id, .. } => {
-                    return Err(Error::FunctionDefinitionNotInGlobal {
-                        span: id.span().clone(),
-                    })
-                }
-
-                AstNode::Return { expr, span } => {
-                    let t = self.check_return(expr, span)?;
-                    body_t = Some(t);
-                }
-
-                AstNode::Debug { expr, span } => {
-                    self.check_debug(expr, span)?;
-                }
-
-                AstNode::Assign { lhs, rhs, span } => {
-                    self.check_assignment(lhs, rhs, span)?;
-                }
-
-                AstNode::AddAssign { lhs, rhs, span }
-                | AstNode::SubAssign { lhs, rhs, span }
-                | AstNode::MulAssign { lhs, rhs, span }
-                | AstNode::DivAssign { lhs, rhs, span }
-                | AstNode::ModAssign { lhs, rhs, span } => {
-                    self.check_shorthand_assignment(lhs, rhs, span)?;
-                }
-
-                expr => {
-                    self.check_expression(expr)?;
-                }
-            }
-        }
-
-        Ok(body_t)
-    }
-
-    fn check_variable_declaration(
-        &self,
-        id: &AstNode,
-        tn: &Option<&AstNode>,
-        val: &Option<&AstNode>,
-        span: &Span,
-    ) -> Result<()> {
-        let (id, _) = id.unwrap_identifier();
-
-        let var_t = tn.map(Type::from_type_notation);
-        let val_t = val.map(|expr| self.check_expression(expr)).transpose()?;
-
-        // Either variable's or value's type must be present
-        if val_t.is_none() {
-            return Err(Error::UnableToInferVariableType {
-                id,
-                span: span.clone(),
-            });
-        }
-
-        if let Some(var_t) = &var_t {
-            // The provided type must exist in the current scope
-            if !self.ctx.has_type(var_t) {
-                let (id, span) = tn.unwrap().unwrap_type_notation();
-                return Err(Error::TypeNotExist { id, span });
-            }
-
-            // The variable should not have "Void" type
-            if var_t.is_void() {
-                return Err(Error::VoidTypeVariable {
-                    span: tn.unwrap().span().clone(),
-                });
-            }
-
-            // If both are present, check whether the value's type is
-            // compatible with the variable's
-            if let Some(val_t) = &val_t {
-                Type::assert_assignable(val_t, var_t, || span.clone())?;
-            }
-        }
-
-        let t = var_t.or(val_t).unwrap();
-        self.ctx
-            .save_symbol_or_else(&id, t, || Error::VariableAlreadyExist {
-                id: id.clone(),
-                span: span.clone(),
-            })?;
-
-        Ok(())
-    }
-
-    fn check_assignment(&self, lhs: &AstNode, rhs: &AstNode, span: &Span) -> Result<Type> {
-        if !lhs.is_assignable() {
-            return Err(Error::InvalidAssignmentLhs {
-                lhs: lhs.to_string(),
-                span: lhs.span().clone(),
-            });
-        }
-
-        let lhs_t = self.check_expression(lhs)?;
-        let rhs_t = self.check_expression(rhs)?;
-
-        Type::assert_assignable(&rhs_t, &lhs_t, || span.clone())?;
-
-        Ok(Type::new("Void"))
-    }
-
-    fn check_shorthand_assignment(
-        &self,
-        lhs: &AstNode,
-        rhs: &AstNode,
-        span: &Span,
-    ) -> Result<Type> {
-        let lhs_t = self.check_expression(lhs)?;
-        let rhs_t = self.check_expression(rhs)?;
-
-        Type::assert_number(&lhs_t, || lhs.span().clone())?;
-        Type::assert_number(&rhs_t, || rhs.span().clone())?;
-
-        self.check_assignment(lhs, rhs, span)
-    }
-
-    fn check_conditional_branch(
-        &self,
-        cond: &AstNode,
-        body: &[AstNode],
-        or_else: &Option<&AstNode>,
-    ) -> Result<Option<Type>> {
-        // Expecting boolean type for the condition
-
-        let cond_t = self.check_expression(cond)?;
-        Type::assert_boolean(&cond_t, || cond.span().clone())?;
-
-        // Check all statements inside the body with a new scope
-
-        let return_t = self
-            .ctx
-            .with_scope(Scope::new_conditional_scope(), || self.check_body(body))?;
-
-        if or_else.is_none() {
-            return Ok(None);
-        }
-
-        match or_else.unwrap() {
-            AstNode::If {
-                cond,
-                body,
-                or_else,
-                ..
-            } => {
-                // All conditional branches must returning a value for this whole
-                // statement to be considered as returning value
-
-                let branch_return_t =
-                    self.check_conditional_branch(cond, body, &or_else.as_deref())?;
-
-                if return_t.is_some() && branch_return_t.is_some() {
-                    Ok(return_t)
-                } else {
-                    Ok(None)
-                }
-            }
-
-            AstNode::Else { body, .. } => {
-                // Check all statements inside the body with a new scope
-
-                let branch_return_t = self
-                    .ctx
-                    .with_scope(Scope::new_conditional_scope(), || self.check_body(body))?;
-
-                if return_t.is_some() && branch_return_t.is_some() {
-                    Ok(return_t)
-                } else {
-                    Ok(None)
-                }
-            }
-
-            _ => unreachable!(),
-        }
-    }
-
-    fn check_while(&self, condition: &AstNode, body: &[AstNode]) -> Result<Option<Type>> {
-        // Expecting boolean type for the condition
-
-        let cond_t = self.check_expression(condition)?;
-        Type::assert_boolean(&cond_t, || condition.span().clone())?;
-
-        // Check all statements inside the body with a new scope
-
-        self.ctx
-            .with_scope(Scope::new_loop_scope(), || self.check_body(body))
-    }
-
-    fn check_loop_control(&self, span: &Span) -> Result<()> {
-        if !self.ctx.is_inside_loop() {
-            return Err(Error::UnexpectedLoopControl { span: span.clone() });
+            FunctionDefinitionChecker::new(&self.ctx).check(stmt)?;
         }
         Ok(())
     }
@@ -358,231 +119,20 @@ impl SemanticChecker {
 
         Ok(t)
     }
-
-    fn check_function_definition(
-        &self,
-        id: &AstNode,
-        fn_t: &Type,
-        params_id: &[(String, Span)],
-        body: &[AstNode],
-    ) -> Result<()> {
-        let (params_t, return_t) = if let Type::Callable { params_t, return_t } = fn_t {
-            (params_t, return_t)
-        } else {
-            unreachable!()
-        };
-
-        let params = params_id.iter().cloned().zip(params_t.iter());
-
-        // Entering new scope
-        self.ctx
-            .with_scope(Scope::new_function_scope(*return_t.clone()), || {
-                for ((id, id_span), t) in params {
-                    self.ctx.save_symbol_or_else(&id, t.clone(), || {
-                        Error::VariableAlreadyExist {
-                            id: id.clone(),
-                            span: id_span.clone(),
-                        }
-                    })?;
-                }
-
-                // Check function body
-                //
-                // We do this last in order to accommodate features such as
-                // recursive function call.
-
-                let body_t = self.check_body(body)?;
-
-                if !return_t.is_void() && body_t.is_none() {
-                    return Err(Error::FunctionNotReturningValue {
-                        expect: *return_t.clone(),
-                        span: id.span().clone(),
-                    });
-                }
-
-                Ok(())
-            })
-    }
-
-    fn check_return(&self, expr: &Option<Box<AstNode>>, span: &Span) -> Result<Type> {
-        let expr_t = expr
-            .as_ref()
-            .map(|expr| self.check_expression(expr).unwrap())
-            .unwrap_or(Type::new("Void"));
-
-        let return_t = self
-            .ctx
-            .current_function_return_type()
-            .ok_or_else(|| Error::UnexpectedReturnStatement { span: span.clone() })?;
-
-        Type::assert_assignable(&expr_t, &return_t, || span.clone())
-            .map_err(|err| Error::ReturnTypeMismatch {
-                expect: return_t.clone(),
-                get: expr_t,
-                span: err.span().clone(),
-            })
-            .map(|_| return_t)
-    }
-
-    fn check_debug(&self, expr: &AstNode, span: &Span) -> Result<()> {
-        let expr_t = self.check_expression(expr)?;
-        if expr_t.is_void() {
-            return Err(Error::DebugVoid { span: span.clone() });
-        }
-        Ok(())
-    }
-
-    fn check_expression(&self, expr: &AstNode) -> Result<Type> {
-        match expr {
-            AstNode::Eq { lhs, rhs, .. } | AstNode::Neq { lhs, rhs, .. } => {
-                self.check_equality_operation(lhs, rhs)
-            }
-
-            AstNode::Or { lhs, rhs, .. } | AstNode::And { lhs, rhs, .. } => {
-                self.check_logical_and_or_operation(lhs, rhs)
-            }
-
-            AstNode::Gt { lhs, rhs, .. }
-            | AstNode::Gte { lhs, rhs, .. }
-            | AstNode::Lt { lhs, rhs, .. }
-            | AstNode::Lte { lhs, rhs, .. } => self.check_comparison_operation(lhs, rhs),
-
-            AstNode::Add { lhs, rhs, .. }
-            | AstNode::Sub { lhs, rhs, .. }
-            | AstNode::Mul { lhs, rhs, .. }
-            | AstNode::Div { lhs, rhs, .. }
-            | AstNode::Mod { lhs, rhs, .. } => self.check_math_binary_operation(lhs, rhs),
-
-            AstNode::Not { child, .. } => self.check_logical_not_operation(child),
-            AstNode::Neg { child, .. } => self.check_neg_operation(child),
-
-            AstNode::Identifier { name, span } => {
-                self.ctx
-                    .get_symbol_type(name)
-                    .ok_or_else(|| Error::VariableNotExist {
-                        id: String::from(name),
-                        span: span.clone(),
-                    })
-            }
-
-            AstNode::Literal { lit, .. } => Type::from_literal(lit),
-
-            AstNode::FunctionCall { callee, args, span } => {
-                self.check_function_call(callee, args, span)
-            }
-
-            _ => unreachable!(),
-        }
-    }
-
-    fn check_logical_and_or_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
-        let lhs_t = self.check_expression(lhs)?;
-        let rhs_t = self.check_expression(rhs)?;
-
-        Type::assert_boolean(&lhs_t, || lhs.span().clone())?;
-        Type::assert_boolean(&rhs_t, || rhs.span().clone())?;
-
-        Ok(Type::new("Bool"))
-    }
-
-    fn check_equality_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
-        let lhs_t = self.check_expression(lhs)?;
-        let rhs_t = self.check_expression(rhs)?;
-
-        Type::assert_comparable(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
-
-        Ok(Type::new("Bool"))
-    }
-
-    fn check_comparison_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
-        let lhs_t = self.check_expression(lhs)?;
-        let rhs_t = self.check_expression(rhs)?;
-
-        Type::assert_comparable(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
-
-        Type::assert_number(&lhs_t, || lhs.span().clone())?;
-        Type::assert_number(&rhs_t, || rhs.span().clone())?;
-
-        Ok(Type::new("Bool"))
-    }
-
-    fn check_math_binary_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
-        let lhs_t = self.check_expression(lhs)?;
-        let rhs_t = self.check_expression(rhs)?;
-
-        Type::assert_number(&lhs_t, || lhs.span().clone())?;
-        Type::assert_number(&rhs_t, || rhs.span().clone())?;
-
-        if lhs_t == Type::new("Int") && rhs_t == Type::new("Int") {
-            Ok(Type::new("Int"))
-        } else {
-            Ok(Type::new("Float"))
-        }
-    }
-
-    fn check_logical_not_operation(&self, child: &AstNode) -> Result<Type> {
-        let child_t = self.check_expression(child)?;
-        Type::assert_boolean(&child_t, || child.span().clone())?;
-        Ok(Type::new("Bool"))
-    }
-
-    fn check_neg_operation(&self, child: &AstNode) -> Result<Type> {
-        let child_t = self.check_expression(child)?;
-        Type::assert_number(&child_t, || child.span().clone())?;
-        Ok(child_t)
-    }
-
-    fn check_function_call(&self, callee: &AstNode, args: &[AstNode], span: &Span) -> Result<Type> {
-        // transform the arguments into their respective type
-        let mut args_t = vec![];
-        for arg in args {
-            args_t.push(self.check_expression(arg)?)
-        }
-
-        let t = match callee {
-            AstNode::Identifier { name, span } => {
-                self.ctx
-                    .get_symbol_type(name)
-                    .ok_or_else(|| Error::VariableNotExist {
-                        id: String::from(name),
-                        span: span.clone(),
-                    })?
-            }
-
-            _ => todo!(),
-        };
-
-        return match &t {
-            Type::Callable { params_t, return_t } => {
-                if params_t != &args_t {
-                    return Err(Error::InvalidFunctionCallArgument {
-                        args: args_t,
-                        span: span.clone(),
-                    });
-                }
-                Ok(*return_t.clone())
-            }
-
-            _ => {
-                let span = callee.span().clone();
-                Err(Error::NotAFunction { span })
-            }
-        };
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{lexer, parser};
+    use expression::ExpressionChecker;
     use indoc::indoc;
 
     fn check_and_assert_is_ok(input: &str) {
         let tokens = lexer::lex(input).unwrap();
         let ast = parser::parse(tokens).unwrap();
 
-        let checker = SemanticChecker::default();
-        let result = checker.run(&ast);
+        let result = SemanticChecker::default().check(&ast);
 
         assert!(result.is_ok());
     }
@@ -591,8 +141,7 @@ mod tests {
         let tokens = lexer::lex(input).unwrap();
         let ast = parser::parse(tokens).unwrap();
 
-        let checker = SemanticChecker::default();
-        let result = checker.run(&ast);
+        let result = SemanticChecker::default().check(&ast);
 
         assert!(result.is_err());
     }
@@ -653,19 +202,10 @@ mod tests {
     }
 
     #[test]
-    fn test_check_variable_declaration_without_initial_value() {
-        check_and_assert_is_err(indoc! {"
-                fn main() do
-                    var x: Int;
-                end
-            "});
-    }
-
-    #[test]
     fn test_check_variable_declaration_with_void_type() {
         check_and_assert_is_err(indoc! {"
                 fn main() do
-                    var x: Void;
+                    var x: Void = 5;
                 end
             "});
     }
@@ -680,19 +220,10 @@ mod tests {
     }
 
     #[test]
-    fn test_using_no_type_annotation_or_initial_value_in_variable_declaration() {
-        check_and_assert_is_err(indoc! {"
-                fn main() do
-                    var x;
-                end
-            "})
-    }
-
-    #[test]
     fn test_using_non_existing_type_in_variable_declaration() {
         check_and_assert_is_err(indoc! {"
                 fn main() do
-                    var x: NonExistingType;
+                    var x: NonExistingType = 10;
                 end
             "})
     }
@@ -752,20 +283,10 @@ mod tests {
     }
 
     #[test]
-    fn test_assigning_value_with_mismatched_types() {
-        check_and_assert_is_err(indoc! {"
-                fn main() do
-                    var x: Int;
-                    x = 5.0;
-                end
-            "})
-    }
-
-    #[test]
     fn test_assigning_value_with_non_existing_variable() {
         check_and_assert_is_err(indoc! {"
                 fn main() do
-                    var x: Float;
+                    var x: Float = 5.0;
                     x = y;
                 end
             "})
@@ -1236,8 +757,9 @@ mod tests {
             let tokens = lexer::lex(input).unwrap();
             let ast = parser::parse(tokens).unwrap();
 
-            let checker = SemanticChecker::default();
-            let result = checker.check_expression(&ast.stmts[0]);
+            let ctx = Context::default();
+            let checker = ExpressionChecker::new(&ctx);
+            let result = checker.check(&ast.stmts[0]);
 
             assert!(result.is_ok());
             assert_eq!(result.unwrap(), expected);
