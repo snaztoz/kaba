@@ -2,14 +2,13 @@
 //! compiler.
 
 use self::{
-    context::Context,
     error::{Error, Result},
     typ::Type,
 };
 use crate::ast::{AstNode, IdentifierNode, Program as ProgramAst, TypeNotationNode};
+use scope::ScopeStack;
 use statement::FunctionDefinitionChecker;
 
-mod context;
 mod error;
 mod expression;
 mod scope;
@@ -18,15 +17,15 @@ mod typ;
 
 /// Provides a quick way to run semantic analysis on a Kaba AST.
 pub fn check(ast: &ProgramAst) -> Result<()> {
-    SemanticChecker::default().check(ast)
+    TypeChecker::default().check(ast)
 }
 
 #[derive(Default)]
-struct SemanticChecker {
-    ctx: Context,
+struct TypeChecker {
+    scopes: ScopeStack,
 }
 
-impl SemanticChecker {
+impl TypeChecker {
     fn check(&self, program_ast: &ProgramAst) -> Result<()> {
         // We are expecting that in global scope, statements (currently) are
         // consisted of function definitions only. So other statements are
@@ -64,7 +63,7 @@ impl SemanticChecker {
 
     fn check_registered_global_functions(&self, stmts: &[AstNode]) -> Result<()> {
         for stmt in stmts {
-            FunctionDefinitionChecker::new(&self.ctx, stmt).check()?;
+            FunctionDefinitionChecker::new(&self.scopes, stmt).check()?;
         }
         Ok(())
     }
@@ -80,7 +79,7 @@ impl SemanticChecker {
             let t = Type::from_type_notation(tn);
 
             // Parameter type must exist in the current scope
-            if !self.ctx.has_type(&t) {
+            if !self.scopes.has_type(&t) {
                 let (id, span) = tn.unwrap_type_notation();
                 return Err(Error::TypeNotExist { id, span });
             }
@@ -97,7 +96,7 @@ impl SemanticChecker {
 
         let return_t = return_t.as_ref().map_or(Ok(Type::new("Void")), |tn| {
             let t = Type::from_type_notation(tn);
-            if self.ctx.has_type(&t) {
+            if self.scopes.has_type(&t) {
                 Ok(t)
             } else {
                 let (id, span) = tn.unwrap_type_notation();
@@ -111,7 +110,7 @@ impl SemanticChecker {
         };
 
         let (id, id_span) = id.unwrap_identifier();
-        self.ctx
+        self.scopes
             .save_symbol_or_else(&id, fn_t.clone(), || Error::FunctionAlreadyExist {
                 id: id.clone(),
                 span: id_span,
@@ -132,7 +131,7 @@ mod tests {
         let tokens = lexer::lex(input).unwrap();
         let ast = parser::parse(tokens).unwrap();
 
-        let result = SemanticChecker::default().check(&ast);
+        let result = TypeChecker::default().check(&ast);
 
         assert!(result.is_ok());
     }
@@ -141,7 +140,7 @@ mod tests {
         let tokens = lexer::lex(input).unwrap();
         let ast = parser::parse(tokens).unwrap();
 
-        let result = SemanticChecker::default().check(&ast);
+        let result = TypeChecker::default().check(&ast);
 
         assert!(result.is_err());
     }
@@ -757,8 +756,8 @@ mod tests {
             let tokens = lexer::lex(input).unwrap();
             let ast = parser::parse(tokens).unwrap();
 
-            let ctx = Context::default();
-            let checker = ExpressionChecker::new(&ctx, &ast.stmts[0]);
+            let scopes = ScopeStack::default();
+            let checker = ExpressionChecker::new(&scopes, &ast.stmts[0]);
             let result = checker.check();
 
             assert!(result.is_ok());

@@ -1,8 +1,7 @@
 use super::{
-    context::Context,
     error::{Error, Result},
     expression::ExpressionChecker,
-    scope::Scope,
+    scope::{Scope, ScopeStack},
     typ::Type,
 };
 use crate::ast::AstNode;
@@ -11,15 +10,15 @@ use logos::Span;
 /// Semantic checker for function definition.
 ///
 /// This checker assumes that the data from function declarations (i.e. function
-/// signature informations) are already stored in the Context.
+/// signature informations) are already stored in the ScopeStack.
 pub struct FunctionDefinitionChecker<'a> {
-    ctx: &'a Context,
+    ss: &'a ScopeStack,
     node: &'a AstNode,
 }
 
 impl<'a> FunctionDefinitionChecker<'a> {
-    pub fn new(ctx: &'a Context, node: &'a AstNode) -> Self {
-        Self { ctx, node }
+    pub fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+        Self { ss, node }
     }
 
     pub fn check(&self) -> Result<Type> {
@@ -36,10 +35,10 @@ impl<'a> FunctionDefinitionChecker<'a> {
         let params = params_id.iter().cloned().zip(params_t.iter());
 
         // Entering new scope
-        self.ctx
+        self.ss
             .with_scope(Scope::new_function_scope(*return_t.clone()), || {
                 for ((id, id_span), t) in params {
-                    self.ctx.save_symbol_or_else(&id, t.clone(), || {
+                    self.ss.save_symbol_or_else(&id, t.clone(), || {
                         Error::VariableAlreadyExist {
                             id: id.clone(),
                             span: id_span.clone(),
@@ -52,7 +51,7 @@ impl<'a> FunctionDefinitionChecker<'a> {
                 // We do this last in order to accommodate features such as
                 // recursive function call.
 
-                let body_t = BodyChecker::new(self.ctx, self.node).check()?;
+                let body_t = BodyChecker::new(self.ss, self.node).check()?;
 
                 if !return_t.is_void() && body_t.is_void() {
                     return Err(Error::FunctionNotReturningValue {
@@ -78,7 +77,7 @@ impl<'a> FunctionDefinitionChecker<'a> {
     fn unwrap_type(&self) -> Type {
         if let AstNode::FunctionDefinition { id, .. } = self.node {
             let id_str = &id.unwrap_identifier().0;
-            self.ctx.get_symbol_type(id_str).unwrap()
+            self.ss.get_symbol_type(id_str).unwrap()
         } else {
             unreachable!()
         }
@@ -101,13 +100,13 @@ impl<'a> FunctionDefinitionChecker<'a> {
 /// Statement bodies are consist of `>= 0` statements, so this checker will call
 /// the StatementChecker on each statement found in current body.
 struct BodyChecker<'a> {
-    ctx: &'a Context,
+    ss: &'a ScopeStack,
     node: &'a AstNode,
 }
 
 impl<'a> BodyChecker<'a> {
-    fn new(ctx: &'a Context, node: &'a AstNode) -> Self {
-        Self { ctx, node }
+    fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+        Self { ss, node }
     }
 
     fn check(&self) -> Result<Type> {
@@ -115,7 +114,7 @@ impl<'a> BodyChecker<'a> {
         let mut body_t = Type::new("Void");
 
         for stmt in body {
-            let t = StatementChecker::new(self.ctx, stmt).check()?;
+            let t = StatementChecker::new(self.ss, stmt).check()?;
             if body_t.is_void() {
                 body_t = t;
             }
@@ -142,24 +141,24 @@ impl<'a> BodyChecker<'a> {
 /// an aggregate for another (more specific) statement checkers, such as the
 /// AssignmentChecker.
 struct StatementChecker<'a> {
-    ctx: &'a Context,
+    ss: &'a ScopeStack,
     node: &'a AstNode,
 }
 
 impl<'a> StatementChecker<'a> {
-    fn new(ctx: &'a Context, node: &'a AstNode) -> Self {
-        Self { ctx, node }
+    fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+        Self { ss, node }
     }
 
     fn check(&self) -> Result<Type> {
         match self.node {
             AstNode::VariableDeclaration { .. } => {
-                VariableDeclarationChecker::new(self.ctx, self.node).check()
+                VariableDeclarationChecker::new(self.ss, self.node).check()
             }
 
-            AstNode::If { .. } => ConditionalBranchChecker::new(self.ctx, self.node).check(),
+            AstNode::If { .. } => ConditionalBranchChecker::new(self.ss, self.node).check(),
 
-            AstNode::While { .. } => LoopChecker::new(self.ctx, self.node).check(),
+            AstNode::While { .. } => LoopChecker::new(self.ss, self.node).check(),
 
             AstNode::Break { span } | AstNode::Continue { span } => self.check_loop_control(span),
 
@@ -178,14 +177,14 @@ impl<'a> StatementChecker<'a> {
             | AstNode::SubAssign { .. }
             | AstNode::MulAssign { .. }
             | AstNode::DivAssign { .. }
-            | AstNode::ModAssign { .. } => AssignmentChecker::new(self.ctx, self.node).check(),
+            | AstNode::ModAssign { .. } => AssignmentChecker::new(self.ss, self.node).check(),
 
-            expr => ExpressionChecker::new(self.ctx, expr).check(),
+            expr => ExpressionChecker::new(self.ss, expr).check(),
         }
     }
 
     fn check_loop_control(&self, span: &Span) -> Result<Type> {
-        if !self.ctx.is_inside_loop() {
+        if !self.ss.is_inside_loop() {
             return Err(Error::UnexpectedLoopControl { span: span.clone() });
         }
         Ok(Type::new("Void"))
@@ -194,11 +193,11 @@ impl<'a> StatementChecker<'a> {
     fn check_return(&self, expr: &Option<Box<AstNode>>, span: &Span) -> Result<Type> {
         let expr_t = expr
             .as_ref()
-            .map(|expr| ExpressionChecker::new(self.ctx, expr).check().unwrap())
+            .map(|expr| ExpressionChecker::new(self.ss, expr).check().unwrap())
             .unwrap_or(Type::new("Void"));
 
         let return_t = self
-            .ctx
+            .ss
             .current_function_return_type()
             .ok_or_else(|| Error::UnexpectedReturnStatement { span: span.clone() })?;
 
@@ -212,7 +211,7 @@ impl<'a> StatementChecker<'a> {
     }
 
     fn check_debug(&self, expr: &AstNode, span: &Span) -> Result<Type> {
-        let expr_t = ExpressionChecker::new(self.ctx, expr).check()?;
+        let expr_t = ExpressionChecker::new(self.ss, expr).check()?;
         if expr_t.is_void() {
             return Err(Error::DebugVoid { span: span.clone() });
         }
@@ -251,13 +250,13 @@ impl<'a> StatementChecker<'a> {
 /// var x: Int = 5.0;
 /// ```
 struct VariableDeclarationChecker<'a> {
-    ctx: &'a Context,
+    ss: &'a ScopeStack,
     node: &'a AstNode,
 }
 
 impl<'a> VariableDeclarationChecker<'a> {
-    fn new(ctx: &'a Context, node: &'a AstNode) -> Self {
-        Self { ctx, node }
+    fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+        Self { ss, node }
     }
 
     fn check(&self) -> Result<Type> {
@@ -267,11 +266,11 @@ impl<'a> VariableDeclarationChecker<'a> {
         let span = self.unwrap_span();
 
         let var_t = tn.map(Type::from_type_notation);
-        let val_t = ExpressionChecker::new(self.ctx, val).check()?;
+        let val_t = ExpressionChecker::new(self.ss, val).check()?;
 
         if let Some(var_t) = &var_t {
             // The provided type must exist in the current scope
-            if !self.ctx.has_type(var_t) {
+            if !self.ss.has_type(var_t) {
                 let (id, span) = tn.unwrap().unwrap_type_notation();
                 return Err(Error::TypeNotExist { id, span });
             }
@@ -325,7 +324,7 @@ impl<'a> VariableDeclarationChecker<'a> {
     }
 
     fn save_symbol(&self, id: &str, t: Type, span: &Span) -> Result<()> {
-        self.ctx
+        self.ss
             .save_symbol_or_else(id, t, || Error::VariableAlreadyExist {
                 id: String::from(id),
                 span: span.clone(),
@@ -395,26 +394,26 @@ impl<'a> VariableDeclarationChecker<'a> {
 /// end
 /// ```
 struct ConditionalBranchChecker<'a> {
-    ctx: &'a Context,
+    ss: &'a ScopeStack,
     node: &'a AstNode,
 }
 
 impl<'a> ConditionalBranchChecker<'a> {
-    fn new(ctx: &'a Context, node: &'a AstNode) -> Self {
-        Self { ctx, node }
+    fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+        Self { ss, node }
     }
 
     fn check(&self) -> Result<Type> {
         let cond = self.unwrap_condition();
         let or_else = self.unwrap_else_branch();
 
-        let cond_t = ExpressionChecker::new(self.ctx, cond).check()?;
+        let cond_t = ExpressionChecker::new(self.ss, cond).check()?;
         Type::assert_boolean(&cond_t, || cond.span().clone())?;
 
         // Check all statements inside the body with a new scope
 
-        let return_t = self.ctx.with_scope(Scope::new_conditional_scope(), || {
-            BodyChecker::new(self.ctx, self.node).check()
+        let return_t = self.ss.with_scope(Scope::new_conditional_scope(), || {
+            BodyChecker::new(self.ss, self.node).check()
         })?;
 
         if or_else.is_none() {
@@ -427,7 +426,7 @@ impl<'a> ConditionalBranchChecker<'a> {
                 // statement to be considered as returning value
 
                 let branch_return_t =
-                    ConditionalBranchChecker::new(self.ctx, or_else.unwrap()).check()?;
+                    ConditionalBranchChecker::new(self.ss, or_else.unwrap()).check()?;
 
                 if !return_t.is_void() && !branch_return_t.is_void() {
                     Ok(return_t)
@@ -439,10 +438,9 @@ impl<'a> ConditionalBranchChecker<'a> {
             AstNode::Else { .. } => {
                 // Check all statements inside the body with a new scope
 
-                let branch_return_t =
-                    self.ctx.with_scope(Scope::new_conditional_scope(), || {
-                        BodyChecker::new(self.ctx, or_else.unwrap()).check()
-                    })?;
+                let branch_return_t = self.ss.with_scope(Scope::new_conditional_scope(), || {
+                    BodyChecker::new(self.ss, or_else.unwrap()).check()
+                })?;
 
                 if !return_t.is_void() && !branch_return_t.is_void() {
                     Ok(return_t)
@@ -505,13 +503,13 @@ impl<'a> ConditionalBranchChecker<'a> {
 /// end
 /// ```
 struct LoopChecker<'a> {
-    ctx: &'a Context,
+    ss: &'a ScopeStack,
     node: &'a AstNode,
 }
 
 impl<'a> LoopChecker<'a> {
-    fn new(ctx: &'a Context, node: &'a AstNode) -> Self {
-        Self { ctx, node }
+    fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+        Self { ss, node }
     }
 
     fn check(&self) -> Result<Type> {
@@ -519,13 +517,13 @@ impl<'a> LoopChecker<'a> {
 
         // Expecting boolean type for the condition
 
-        let cond_t = ExpressionChecker::new(self.ctx, cond).check()?;
+        let cond_t = ExpressionChecker::new(self.ss, cond).check()?;
         Type::assert_boolean(&cond_t, || cond.span().clone())?;
 
         // Check all statements inside the body with a new scope
 
-        self.ctx.with_scope(Scope::new_loop_scope(), || {
-            BodyChecker::new(self.ctx, self.node).check()
+        self.ss.with_scope(Scope::new_loop_scope(), || {
+            BodyChecker::new(self.ss, self.node).check()
         })?;
 
         Ok(Type::new("Void"))
@@ -582,13 +580,13 @@ impl<'a> LoopChecker<'a> {
 /// x += false;
 /// ```
 struct AssignmentChecker<'a> {
-    ctx: &'a Context,
+    ss: &'a ScopeStack,
     node: &'a AstNode,
 }
 
 impl<'a> AssignmentChecker<'a> {
-    fn new(ctx: &'a Context, node: &'a AstNode) -> Self {
-        Self { ctx, node }
+    fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+        Self { ss, node }
     }
 
     fn check(&self) -> Result<Type> {
@@ -615,8 +613,8 @@ impl<'a> AssignmentChecker<'a> {
             });
         }
 
-        let lhs_t = ExpressionChecker::new(self.ctx, lhs).check()?;
-        let rhs_t = ExpressionChecker::new(self.ctx, rhs).check()?;
+        let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
+        let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
 
         Type::assert_assignable(&rhs_t, &lhs_t, || span.clone())?;
 
@@ -629,8 +627,8 @@ impl<'a> AssignmentChecker<'a> {
         rhs: &AstNode,
         span: &Span,
     ) -> Result<Type> {
-        let lhs_t = ExpressionChecker::new(self.ctx, lhs).check()?;
-        let rhs_t = ExpressionChecker::new(self.ctx, rhs).check()?;
+        let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
+        let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
 
         Type::assert_number(&lhs_t, || lhs.span().clone())?;
         Type::assert_number(&rhs_t, || rhs.span().clone())?;

@@ -1,6 +1,6 @@
 use super::{
-    context::Context,
     error::{Error, Result},
+    scope::ScopeStack,
     typ::Type,
 };
 use crate::ast::AstNode;
@@ -8,13 +8,13 @@ use logos::Span;
 
 /// Semantic checker for all expression rules.
 pub struct ExpressionChecker<'a> {
-    ctx: &'a Context,
+    ss: &'a ScopeStack,
     node: &'a AstNode,
 }
 
 impl<'a> ExpressionChecker<'a> {
-    pub fn new(ctx: &'a Context, node: &'a AstNode) -> Self {
-        Self { ctx, node }
+    pub fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+        Self { ss, node }
     }
 
     pub fn check(&self) -> Result<Type> {
@@ -42,7 +42,7 @@ impl<'a> ExpressionChecker<'a> {
             AstNode::Neg { child, .. } => self.check_neg_operation(child),
 
             AstNode::Identifier { name, span } => {
-                self.ctx
+                self.ss
                     .get_symbol_type(name)
                     .ok_or_else(|| Error::VariableNotExist {
                         id: String::from(name),
@@ -61,8 +61,8 @@ impl<'a> ExpressionChecker<'a> {
     }
 
     fn check_logical_and_or_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
-        let lhs_t = ExpressionChecker::new(self.ctx, lhs).check()?;
-        let rhs_t = ExpressionChecker::new(self.ctx, rhs).check()?;
+        let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
+        let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
 
         Type::assert_boolean(&lhs_t, || lhs.span().clone())?;
         Type::assert_boolean(&rhs_t, || rhs.span().clone())?;
@@ -71,8 +71,8 @@ impl<'a> ExpressionChecker<'a> {
     }
 
     fn check_equality_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
-        let lhs_t = ExpressionChecker::new(self.ctx, lhs).check()?;
-        let rhs_t = ExpressionChecker::new(self.ctx, rhs).check()?;
+        let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
+        let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
 
         Type::assert_comparable(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
@@ -80,8 +80,8 @@ impl<'a> ExpressionChecker<'a> {
     }
 
     fn check_comparison_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
-        let lhs_t = ExpressionChecker::new(self.ctx, lhs).check()?;
-        let rhs_t = ExpressionChecker::new(self.ctx, rhs).check()?;
+        let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
+        let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
 
         Type::assert_comparable(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
@@ -92,8 +92,8 @@ impl<'a> ExpressionChecker<'a> {
     }
 
     fn check_math_binary_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
-        let lhs_t = ExpressionChecker::new(self.ctx, lhs).check()?;
-        let rhs_t = ExpressionChecker::new(self.ctx, rhs).check()?;
+        let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
+        let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
 
         Type::assert_number(&lhs_t, || lhs.span().clone())?;
         Type::assert_number(&rhs_t, || rhs.span().clone())?;
@@ -106,13 +106,13 @@ impl<'a> ExpressionChecker<'a> {
     }
 
     fn check_logical_not_operation(&self, child: &AstNode) -> Result<Type> {
-        let child_t = ExpressionChecker::new(self.ctx, child).check()?;
+        let child_t = ExpressionChecker::new(self.ss, child).check()?;
         Type::assert_boolean(&child_t, || child.span().clone())?;
         Ok(Type::new("Bool"))
     }
 
     fn check_neg_operation(&self, child: &AstNode) -> Result<Type> {
-        let child_t = ExpressionChecker::new(self.ctx, child).check()?;
+        let child_t = ExpressionChecker::new(self.ss, child).check()?;
         Type::assert_number(&child_t, || child.span().clone())?;
         Ok(child_t)
     }
@@ -121,13 +121,13 @@ impl<'a> ExpressionChecker<'a> {
         // transform the arguments into their respective type
         let mut args_t = vec![];
         for arg in args {
-            let t = ExpressionChecker::new(self.ctx, arg).check()?;
+            let t = ExpressionChecker::new(self.ss, arg).check()?;
             args_t.push(t);
         }
 
         let t = match callee {
             AstNode::Identifier { name, span } => {
-                self.ctx
+                self.ss
                     .get_symbol_type(name)
                     .ok_or_else(|| Error::VariableNotExist {
                         id: String::from(name),

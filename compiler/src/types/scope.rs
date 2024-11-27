@@ -1,35 +1,52 @@
-use super::{error::Result, typ::Type};
+use super::{
+    error::{Error, Result},
+    typ::Type,
+};
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
 };
 
+/// ScopeStack (or often abbreviated as `ss`) represents the stack of scopes
+/// found in the program.
 pub struct ScopeStack {
     stack: RefCell<Vec<Scope>>,
 }
 
 impl ScopeStack {
-    pub fn find_reversed<U, F>(&self, finder: F) -> Option<U>
-    where
-        F: FnMut(&Scope) -> Option<U>,
-    {
-        self.stack.borrow().iter().rev().find_map(finder)
+    pub fn get_symbol_type(&self, name: &str) -> Option<Type> {
+        self.find_reversed(|s| s.symbols.get(name).cloned())
     }
 
-    pub fn any_reversed<F>(&self, cond: F) -> bool
-    where
-        F: FnMut(&Scope) -> bool,
-    {
-        self.stack.borrow().iter().rev().any(cond)
+    pub fn has_type(&self, t: &Type) -> bool {
+        matches!(t, Type::Callable { .. })
+            || self
+                .find_reversed(|s| if s.types.contains(t) { Some(()) } else { None })
+                .is_some()
     }
 
-    pub fn with_current_scope<F>(&self, action: F) -> Result<()>
+    pub fn current_function_return_type(&self) -> Option<Type> {
+        self.find_reversed(|s| match &s.scope_t {
+            ScopeType::Function { return_t } => Some(return_t.clone()),
+            _ => None,
+        })
+    }
+
+    pub fn is_inside_loop(&self) -> bool {
+        self.any_reversed(|s| s.scope_t == ScopeType::Loop)
+    }
+
+    pub fn save_symbol_or_else<F>(&self, name: &str, sym_t: Type, err: F) -> Result<()>
     where
-        F: FnOnce(&mut Scope) -> Result<()>,
+        F: FnOnce() -> Error,
     {
-        let mut stack = self.stack.borrow_mut();
-        let s = stack.last_mut().unwrap();
-        action(s)
+        self.with_current_scope(|s| {
+            if s.symbols.contains_key(name) {
+                return Err(err());
+            }
+            s.symbols.insert(String::from(name), sym_t);
+            Ok(())
+        })
     }
 
     pub fn with_scope<U, F>(&self, scope: Scope, callback: F) -> U
@@ -40,6 +57,29 @@ impl ScopeStack {
         let result = callback();
         self.pop_scope();
         result
+    }
+
+    fn find_reversed<U, F>(&self, finder: F) -> Option<U>
+    where
+        F: FnMut(&Scope) -> Option<U>,
+    {
+        self.stack.borrow().iter().rev().find_map(finder)
+    }
+
+    fn any_reversed<F>(&self, cond: F) -> bool
+    where
+        F: FnMut(&Scope) -> bool,
+    {
+        self.stack.borrow().iter().rev().any(cond)
+    }
+
+    fn with_current_scope<F>(&self, action: F) -> Result<()>
+    where
+        F: FnOnce(&mut Scope) -> Result<()>,
+    {
+        let mut stack = self.stack.borrow_mut();
+        let s = stack.last_mut().unwrap();
+        action(s)
     }
 
     fn push_scope(&self, scope: Scope) {
