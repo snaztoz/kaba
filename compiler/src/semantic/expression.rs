@@ -159,6 +159,10 @@ impl FunctionCallChecker<'_> {
                     })
             }
 
+            AstNode::FunctionCall { .. } => {
+                FunctionCallChecker::new(self.ss, self.callee()).check()
+            }
+
             _ => todo!("functions stored in array, method, etc"),
         }
     }
