@@ -2,7 +2,7 @@
 //! parsing stage of a Kaba tokens.
 
 use crate::{
-    ast::{AstNode, Literal, TypeNotation},
+    ast::{AstNode, FunctionParam, Literal, TypeNotation},
     lexer::{Token, TokenKind},
 };
 use logos::Span;
@@ -419,7 +419,7 @@ impl Parser {
             // Expecting identifier
 
             let token = self.get_current_token();
-            let param = match token.kind {
+            let id = match token.kind {
                 TokenKind::Identifier(name) => {
                     self.advance();
                     AstNode::Identifier {
@@ -443,11 +443,11 @@ impl Parser {
 
             // Expecting type notation
 
-            let param_t = self.parse_type_notation()?;
+            let tn = self.parse_type_notation()?;
 
             // Add to parameter list
 
-            params.push((param, param_t));
+            params.push(FunctionParam { id, tn });
 
             // Expecting either "," or ")"
 
@@ -476,7 +476,7 @@ impl Parser {
 
         // Expecting return type notation (optional)
 
-        let return_t = if self.current_token_is(&TokenKind::Colon) {
+        let return_tn = if self.current_token_is(&TokenKind::Colon) {
             self.skip(&TokenKind::Colon)?;
             Some(Box::new(self.parse_type_notation()?))
         } else {
@@ -490,7 +490,7 @@ impl Parser {
         Ok(AstNode::FunctionDefinition {
             id,
             params,
-            return_t,
+            return_tn,
             body,
             span: start..body_span.end,
         })
@@ -1401,7 +1401,7 @@ mod tests {
                     span: 3..6,
                 }),
                 params: vec![],
-                return_t: None,
+                return_tn: None,
                 body: vec![],
                 span: 0..15,
             },
@@ -1418,28 +1418,28 @@ mod tests {
                     span: 3..6,
                 }),
                 params: vec![
-                    (
-                        AstNode::Identifier {
+                    FunctionParam {
+                        id: AstNode::Identifier {
                             name: String::from("x"),
                             span: 7..8,
                         },
-                        AstNode::TypeNotation {
+                        tn: AstNode::TypeNotation {
                             tn: TypeNotation::Identifier(String::from("Int")),
                             span: 10..13,
                         },
-                    ),
-                    (
-                        AstNode::Identifier {
+                    },
+                    FunctionParam {
+                        id:AstNode::Identifier {
                             name: String::from("y"),
                             span: 15..16,
                         },
-                        AstNode::TypeNotation {
+                        tn: AstNode::TypeNotation {
                             tn: TypeNotation::Identifier(String::from("Bool")),
                             span: 18..22,
                         },
-                    ),
+                    },
                 ],
-                return_t: None,
+                return_tn: None,
                 body: vec![],
                 span: 0..31,
             },
@@ -1455,17 +1455,17 @@ mod tests {
                     name: String::from("write"),
                     span: 3..8,
                 }),
-                params: vec![(
-                    AstNode::Identifier {
+                params: vec![FunctionParam {
+                    id: AstNode::Identifier {
                         name: String::from("x"),
                         span: 9..10,
                     },
-                    AstNode::TypeNotation {
+                    tn: AstNode::TypeNotation {
                         tn: TypeNotation::Identifier(String::from("Int")),
                         span: 12..15,
                     },
-                )],
-                return_t: None,
+                }],
+                return_tn: None,
                 body: vec![AstNode::FunctionCall {
                     callee: Box::new(AstNode::Identifier {
                         name: String::from("print"),
@@ -1492,7 +1492,7 @@ mod tests {
                     span: 3..6,
                 }),
                 params: vec![],
-                return_t: Some(Box::new(AstNode::TypeNotation {
+                return_tn: Some(Box::new(AstNode::TypeNotation {
                     tn: TypeNotation::Identifier(String::from("Int")),
                     span: 10..13,
                 })),

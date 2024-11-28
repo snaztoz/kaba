@@ -1,13 +1,10 @@
 //! This module contains representation of the AST of Kaba program.
 //!
-//! Root of the tree will always be the [`Program`] that may contains
+//! Root of the tree will always be the [`AstNode::Program`] that may contains
 //! `>= 0` statements.
 
 use logos::Span;
 use std::fmt::Display;
-
-type IdentifierNode = AstNode;
-type TypeNotationNode = AstNode;
 
 /// The representation of each node that make up a whole Kaba AST.
 #[derive(Debug, PartialEq)]
@@ -52,8 +49,8 @@ pub enum AstNode {
 
     FunctionDefinition {
         id: Box<AstNode>,
-        params: Vec<(IdentifierNode, TypeNotationNode)>,
-        return_t: Option<Box<AstNode>>,
+        params: Vec<FunctionParam>,
+        return_tn: Option<Box<AstNode>>,
         body: Vec<AstNode>,
         span: Span,
     },
@@ -198,9 +195,8 @@ pub enum AstNode {
         span: Span,
     },
 
-    // This variant only be used as the span information holder and
-    // then should be removed. It won't be present in the final
-    // resulting ASTs.
+    // This variant is only used as the span information holder and then will be
+    // removed. It won't be present in the final resulting ASTs.
     Group {
         child: Box<AstNode>,
         span: Span,
@@ -265,7 +261,7 @@ impl AstNode {
         }
     }
 
-    pub fn is_assignable(&self) -> bool {
+    pub fn is_valid_assignment_lhs(&self) -> bool {
         matches!(self, Self::Identifier { .. })
     }
 
@@ -275,17 +271,6 @@ impl AstNode {
         } else {
             panic!(
                 "calling `unwrap_identifier` on non-identifier AstNode: {:?}",
-                self
-            )
-        }
-    }
-
-    pub fn unwrap_type_notation(&self) -> (String, Span) {
-        if let AstNode::TypeNotation { tn, span } = self {
-            (tn.to_string(), span.clone())
-        } else {
-            panic!(
-                "calling `unwrap_type_notation` on non-type notation AstNode: {:?}",
                 self
             )
         }
@@ -404,11 +389,17 @@ impl Display for AstNode {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct FunctionParam {
+    pub id: AstNode,
+    pub tn: AstNode,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum TypeNotation {
     Identifier(String),
     Callable {
-        params_tn: Vec<TypeNotationNode>,
-        return_tn: Box<TypeNotationNode>,
+        params_tn: Vec<AstNode>,
+        return_tn: Box<AstNode>,
     },
 }
 

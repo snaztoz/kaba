@@ -5,7 +5,7 @@ use super::{
     tn::TypeNotationChecker,
     types::Type,
 };
-use crate::ast::AstNode;
+use crate::ast::{AstNode, FunctionParam};
 use logos::Span;
 
 /// Checker for function declarations.
@@ -38,7 +38,7 @@ impl FunctionDeclarationChecker<'_> {
     }
 
     fn check_params_tn(&self) -> Result<()> {
-        for (_, tn) in self.params() {
+        for FunctionParam { tn, .. } in self.params() {
             TypeNotationChecker::new(self.ss, tn).check()?;
         }
 
@@ -55,9 +55,8 @@ impl FunctionDeclarationChecker<'_> {
 
     fn params_t(&self) -> Vec<Type> {
         let mut params_t = vec![];
-        for (_, tn) in self.params() {
-            let t = Type::from_type_notation(tn);
-            params_t.push(t);
+        for FunctionParam { tn, .. } in self.params() {
+            params_t.push(Type::from_tn(tn));
         }
 
         params_t
@@ -65,7 +64,7 @@ impl FunctionDeclarationChecker<'_> {
 
     fn return_t(&self) -> Type {
         self.return_tn()
-            .map_or(Type::new("Void"), Type::from_type_notation)
+            .map_or(Type::new("Void"), Type::from_tn)
     }
 
     // Save function information to the ScopeStack.
@@ -86,7 +85,7 @@ impl FunctionDeclarationChecker<'_> {
         }
     }
 
-    fn params(&self) -> &[(AstNode, AstNode)] {
+    fn params(&self) -> &[FunctionParam] {
         if let AstNode::FunctionDefinition { params, .. } = self.node {
             params
         } else {
@@ -95,8 +94,8 @@ impl FunctionDeclarationChecker<'_> {
     }
 
     fn return_tn(&self) -> Option<&AstNode> {
-        if let AstNode::FunctionDefinition { return_t, .. } = self.node {
-            return_t.as_deref()
+        if let AstNode::FunctionDefinition { return_tn, .. } = self.node {
+            return_tn.as_deref()
         } else {
             unreachable!()
         }
@@ -189,7 +188,7 @@ impl FunctionDefinitionChecker<'_> {
         if let AstNode::FunctionDefinition { params, .. } = self.node {
             params
                 .iter()
-                .map(|p| p.0.unwrap_identifier())
+                .map(|p| p.id.unwrap_identifier())
                 .collect::<Vec<_>>()
         } else {
             unreachable!()

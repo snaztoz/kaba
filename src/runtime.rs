@@ -4,7 +4,7 @@
 //! runtime that operates on bytecodes (TODO).
 
 use self::{error::RuntimeError, state::RuntimeState, stream::RuntimeStream, value::RuntimeValue};
-use compiler::ast::AstNode;
+use compiler::ast::{AstNode, FunctionParam};
 use std::{cell::RefCell, collections::HashMap};
 
 type Result<T> = std::result::Result<T, RuntimeError>;
@@ -450,7 +450,7 @@ impl<'a> Runtime<'a> {
             if let AstNode::FunctionDefinition { params, body, .. } = f {
                 self.scopes.borrow_mut().push(HashMap::new());
 
-                for (i, (id, _)) in params.iter().enumerate() {
+                for (i, FunctionParam { id, .. }) in params.iter().enumerate() {
                     let (id, _) = id.unwrap_identifier();
                     let val = args[i];
                     self.store_value(&id, val);
