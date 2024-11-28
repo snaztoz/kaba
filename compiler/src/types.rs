@@ -5,9 +5,9 @@ use self::{
     error::{Error, Result},
     typ::Type,
 };
-use crate::ast::{AstNode, IdentifierNode, TypeNotationNode};
+use crate::ast::AstNode;
 use scope::ScopeStack;
-use statement::FunctionDefinitionChecker;
+use statement::{FunctionDeclarationChecker, FunctionDefinitionChecker};
 
 mod error;
 mod expression;
@@ -16,125 +16,57 @@ mod statement;
 mod typ;
 
 /// Provides a quick way to run semantic analysis on a Kaba AST.
-pub fn check(program: &AstNode) -> Result<()> {
-    TypeChecker::new(program).check()
+pub fn check(program: &AstNode) -> Result<Type> {
+    ProgramChecker::new(program).check()
 }
 
-struct TypeChecker<'a> {
-    scopes: ScopeStack,
+struct ProgramChecker<'a> {
+    ss: ScopeStack,
     program: &'a AstNode,
 }
 
-impl<'a> TypeChecker<'a> {
+impl<'a> ProgramChecker<'a> {
     fn new(program: &'a AstNode) -> Self {
         Self {
-            scopes: ScopeStack::default(),
+            ss: ScopeStack::default(),
             program,
         }
     }
 }
 
-impl TypeChecker<'_> {
-    fn check(&self) -> Result<()> {
+impl ProgramChecker<'_> {
+    fn check(&self) -> Result<Type> {
         // We are expecting that in global scope, statements (currently) are
         // consisted of function definitions only. So other statements are
         // rejected in this scope.
         //
         // TODO: review other statements for possibilities to be applied here
 
-        self.read_function_declarations()?;
-        self.check_registered_global_functions()?;
+        let body = self.unwrap_body();
 
-        Ok(())
-    }
-
-    fn read_function_declarations(&self) -> Result<()> {
-        if let AstNode::Program { body } = self.program {
-            for stmt in body {
-                if let AstNode::FunctionDefinition {
-                    id,
-                    params,
-                    return_t,
-                    ..
-                } = stmt
-                {
-                    // this will also save the function identifiers into
-                    // global scope symbols
-                    self.check_function_declaration(id, params, &return_t.as_deref())?;
-                } else {
-                    return Err(Error::UnexpectedStatementInGlobal {
-                        span: stmt.span().clone(),
-                    });
-                }
-            }
-        } else {
-            unreachable!()
-        }
-
-        Ok(())
-    }
-
-    fn check_registered_global_functions(&self) -> Result<()> {
-        if let AstNode::Program { body } = self.program {
-            for stmt in body {
-                FunctionDefinitionChecker::new(&self.scopes, stmt).check()?;
-            }
-        } else {
-            unreachable!()
-        }
-
-        Ok(())
-    }
-
-    fn check_function_declaration(
-        &self,
-        id: &AstNode,
-        params: &[(IdentifierNode, TypeNotationNode)],
-        return_t: &Option<&AstNode>,
-    ) -> Result<Type> {
-        let mut params_t = vec![];
-        for (_, tn) in params {
-            let t = Type::from_type_notation(tn);
-
-            // Parameter type must exist in the current scope
-            if !self.scopes.has_type(&t) {
-                let (id, span) = tn.unwrap_type_notation();
-                return Err(Error::TypeNotExist { id, span });
-            }
-
-            // Parameter should not have "Void" type
-            if t.is_void() {
-                return Err(Error::VoidTypeVariable {
-                    span: tn.span().clone(),
+        for stmt in body {
+            if !matches!(stmt, AstNode::FunctionDefinition { .. }) {
+                return Err(Error::UnexpectedStatementInGlobal {
+                    span: stmt.span().clone(),
                 });
             }
 
-            params_t.push(t);
+            FunctionDeclarationChecker::new(&self.ss, stmt).check()?;
         }
 
-        let return_t = return_t.as_ref().map_or(Ok(Type::new("Void")), |tn| {
-            let t = Type::from_type_notation(tn);
-            if self.scopes.has_type(&t) {
-                Ok(t)
-            } else {
-                let (id, span) = tn.unwrap_type_notation();
-                Err(Error::TypeNotExist { id, span })
-            }
-        })?;
+        for stmt in body {
+            FunctionDefinitionChecker::new(&self.ss, stmt).check()?;
+        }
 
-        let fn_t = Type::Callable {
-            params_t,
-            return_t: Box::new(return_t.clone()),
-        };
+        Ok(Type::new("Void"))
+    }
 
-        let (id, id_span) = id.unwrap_identifier();
-        self.scopes
-            .save_symbol_or_else(&id, fn_t.clone(), || Error::FunctionAlreadyExist {
-                id: id.clone(),
-                span: id_span,
-            })?;
-
-        Ok(fn_t)
+    fn unwrap_body(&self) -> &[AstNode] {
+        if let AstNode::Program { body } = self.program {
+            body
+        } else {
+            unreachable!()
+        }
     }
 }
 
@@ -149,7 +81,7 @@ mod tests {
         let tokens = lexer::lex(input).unwrap();
         let ast = parser::parse(tokens).unwrap();
 
-        let result = TypeChecker::new(&ast).check();
+        let result = ProgramChecker::new(&ast).check();
 
         assert!(result.is_ok());
     }
@@ -158,7 +90,7 @@ mod tests {
         let tokens = lexer::lex(input).unwrap();
         let ast = parser::parse(tokens).unwrap();
 
-        let result = TypeChecker::new(&ast).check();
+        let result = ProgramChecker::new(&ast).check();
 
         assert!(result.is_err());
     }

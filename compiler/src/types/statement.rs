@@ -7,7 +7,98 @@ use super::{
 use crate::ast::AstNode;
 use logos::Span;
 
-/// Semantic checker for function definition.
+/// Checker for function declarations.
+///
+/// This checker assumes that the data from function declarations (i.e. function
+/// signature informations) are already stored in the ScopeStack.
+pub struct FunctionDeclarationChecker<'a> {
+    ss: &'a ScopeStack,
+    node: &'a AstNode,
+}
+
+impl<'a> FunctionDeclarationChecker<'a> {
+    pub fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+        Self { ss, node }
+    }
+}
+
+impl FunctionDeclarationChecker<'_> {
+    pub fn check(&self) -> Result<Type> {
+        let id = self.unwrap_identifier();
+        let params = self.unwrap_params();
+        let return_t = self.unwrap_return_type();
+
+        let mut params_t = vec![];
+        for (_, tn) in params {
+            let t = Type::from_type_notation(tn);
+
+            // Parameter type must exist in the current scope
+            if !self.ss.has_type(&t) {
+                let (id, span) = tn.unwrap_type_notation();
+                return Err(Error::TypeNotExist { id, span });
+            }
+
+            // Parameter should not have "Void" type
+            if t.is_void() {
+                return Err(Error::VoidTypeVariable {
+                    span: tn.span().clone(),
+                });
+            }
+
+            params_t.push(t);
+        }
+
+        let return_t = return_t.as_ref().map_or(Ok(Type::new("Void")), |tn| {
+            let t = Type::from_type_notation(tn);
+            if self.ss.has_type(&t) {
+                Ok(t)
+            } else {
+                let (id, span) = tn.unwrap_type_notation();
+                Err(Error::TypeNotExist { id, span })
+            }
+        })?;
+
+        let fn_t = Type::Callable {
+            params_t,
+            return_t: Box::new(return_t.clone()),
+        };
+
+        let (id, id_span) = id.unwrap_identifier();
+        self.ss
+            .save_symbol_or_else(&id, fn_t.clone(), || Error::FunctionAlreadyExist {
+                id: id.clone(),
+                span: id_span,
+            })?;
+
+        Ok(fn_t)
+    }
+
+    fn unwrap_identifier(&self) -> &AstNode {
+        if let AstNode::FunctionDefinition { id, .. } = self.node {
+            id
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn unwrap_params(&self) -> &[(AstNode, AstNode)] {
+        if let AstNode::FunctionDefinition { params, .. } = self.node {
+            params
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn unwrap_return_type(&self) -> Option<&AstNode> {
+        if let AstNode::FunctionDefinition { return_t, .. } = self.node {
+            return_t.as_deref()
+        } else {
+            unreachable!()
+        }
+    }
+}
+
+/// Checker for function definition.
 ///
 /// This checker assumes that the data from function declarations (i.e. function
 /// signature informations) are already stored in the ScopeStack.
@@ -20,7 +111,9 @@ impl<'a> FunctionDefinitionChecker<'a> {
     pub fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
+}
 
+impl FunctionDefinitionChecker<'_> {
     pub fn check(&self) -> Result<Type> {
         let id = self.unwrap_identifier();
         let fn_t = self.unwrap_type();
@@ -95,7 +188,7 @@ impl<'a> FunctionDefinitionChecker<'a> {
     }
 }
 
-/// Semantic checker for a statement body.
+/// Checker for a statement body.
 ///
 /// Statement bodies are consist of `>= 0` statements, so this checker will call
 /// the StatementChecker on each statement found in current body.
@@ -108,7 +201,9 @@ impl<'a> BodyChecker<'a> {
     fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
+}
 
+impl BodyChecker<'_> {
     fn check(&self) -> Result<Type> {
         let body = self.unwrap_body();
         let mut body_t = Type::new("Void");
@@ -135,7 +230,7 @@ impl<'a> BodyChecker<'a> {
     }
 }
 
-/// Semantic checker for a single statement.
+/// Checker for a single statement.
 ///
 /// It checks simple statements, such as loop control checking, and also acts as
 /// an aggregate for another (more specific) statement checkers, such as the
@@ -149,7 +244,9 @@ impl<'a> StatementChecker<'a> {
     fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
+}
 
+impl StatementChecker<'_> {
     fn check(&self) -> Result<Type> {
         match self.node {
             AstNode::VariableDeclaration { .. } => {
@@ -219,7 +316,7 @@ impl<'a> StatementChecker<'a> {
     }
 }
 
-/// Semantic checker for variable declaration statement.
+/// Checker for variable declaration statement.
 ///
 /// ### ✅ Valid Examples
 ///
@@ -258,7 +355,9 @@ impl<'a> VariableDeclarationChecker<'a> {
     fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
+}
 
+impl VariableDeclarationChecker<'_> {
     fn check(&self) -> Result<Type> {
         let id = self.unwrap_identifier_string();
         let tn = self.unwrap_type();
@@ -332,7 +431,7 @@ impl<'a> VariableDeclarationChecker<'a> {
     }
 }
 
-/// Semantic checker for conditional branch statement.
+/// Checker for conditional branch statement.
 ///
 /// ### ✅ Valid Examples
 ///
@@ -402,7 +501,9 @@ impl<'a> ConditionalBranchChecker<'a> {
     fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
+}
 
+impl ConditionalBranchChecker<'_> {
     fn check(&self) -> Result<Type> {
         let cond = self.unwrap_condition();
         let or_else = self.unwrap_else_branch();
@@ -470,7 +571,7 @@ impl<'a> ConditionalBranchChecker<'a> {
     }
 }
 
-/// Semantic checker for loop statement.
+/// Checker for loop statement.
 ///
 /// ### ✅ Valid Examples
 ///
@@ -511,7 +612,9 @@ impl<'a> LoopChecker<'a> {
     fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
+}
 
+impl LoopChecker<'_> {
     fn check(&self) -> Result<Type> {
         let cond = self.unwrap_condition();
 
@@ -538,7 +641,7 @@ impl<'a> LoopChecker<'a> {
     }
 }
 
-/// Semantic checker for assignment statements.
+/// Checker for assignment statements.
 ///
 /// This checker handles the checking of plain assignment and also shorthand
 /// assignment.
@@ -588,7 +691,9 @@ impl<'a> AssignmentChecker<'a> {
     fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
+}
 
+impl AssignmentChecker<'_> {
     fn check(&self) -> Result<Type> {
         match self.node {
             AstNode::Assign { lhs, rhs, span } => self.check_assignment(lhs, rhs, span),

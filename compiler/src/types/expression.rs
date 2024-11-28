@@ -6,7 +6,7 @@ use super::{
 use crate::ast::AstNode;
 use logos::Span;
 
-/// Semantic checker for all expression rules.
+/// Checker for all expression rules.
 pub struct ExpressionChecker<'a> {
     ss: &'a ScopeStack,
     node: &'a AstNode,
@@ -16,7 +16,9 @@ impl<'a> ExpressionChecker<'a> {
     pub fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
+}
 
+impl ExpressionChecker<'_> {
     pub fn check(&self) -> Result<Type> {
         match self.node {
             AstNode::Eq { lhs, rhs, .. } | AstNode::Neq { lhs, rhs, .. } => {

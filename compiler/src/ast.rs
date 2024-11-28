@@ -6,8 +6,8 @@
 use logos::Span;
 use std::fmt::Display;
 
-pub type IdentifierNode = AstNode;
-pub type TypeNotationNode = AstNode;
+type IdentifierNode = AstNode;
+type TypeNotationNode = AstNode;
 
 /// The representation of each node that make up a whole Kaba AST.
 #[derive(Debug, PartialEq)]
