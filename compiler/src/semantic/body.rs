@@ -1,4 +1,4 @@
-use super::{error::Result, scope::ScopeStack, statement::StatementChecker, typ::Type};
+use super::{error::Result, scope::ScopeStack, statement::StatementChecker, types::Type};
 use crate::ast::AstNode;
 
 /// Checker for a statement body.

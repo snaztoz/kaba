@@ -1,6 +1,6 @@
 use super::{
     error::{Error, Result},
-    typ::Type,
+    types::Type,
 };
 use std::{
     cell::RefCell,

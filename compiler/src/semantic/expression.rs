@@ -1,7 +1,7 @@
 use super::{
     error::{Error, Result},
     scope::ScopeStack,
-    typ::Type,
+    types::Type,
 };
 use crate::ast::AstNode;
 use logos::Span;

@@ -3,7 +3,7 @@ use super::{
     error::{Error, Result},
     expression::ExpressionChecker,
     scope::{Scope, ScopeStack},
-    typ::Type,
+    types::Type,
 };
 use crate::ast::AstNode;
 use logos::Span;

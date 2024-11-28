@@ -3,7 +3,7 @@
 
 use self::{
     error::{Error, Result},
-    typ::Type,
+    types::Type,
 };
 use crate::ast::AstNode;
 use function::{FunctionDeclarationChecker, FunctionDefinitionChecker};
@@ -15,7 +15,7 @@ mod expression;
 mod function;
 mod scope;
 mod statement;
-mod typ;
+mod types;
 
 /// Provides a quick way to run semantic analysis on a Kaba AST.
 pub fn check(program: &AstNode) -> Result<Type> {

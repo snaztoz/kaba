@@ -2,7 +2,7 @@ use super::{
     body::BodyChecker,
     error::{Error, Result},
     scope::{Scope, ScopeStack},
-    typ::Type,
+    types::Type,
 };
 use crate::ast::AstNode;
 use logos::Span;
