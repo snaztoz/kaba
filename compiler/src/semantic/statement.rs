@@ -3,6 +3,7 @@ use super::{
     error::{Error, Result},
     expression::ExpressionChecker,
     scope::{Scope, ScopeStack},
+    tn::TypeNotationChecker,
     types::Type,
 };
 use crate::ast::AstNode;
@@ -139,34 +140,27 @@ impl<'a> VariableDeclarationChecker<'a> {
 
 impl VariableDeclarationChecker<'_> {
     fn check(&self) -> Result<Type> {
-        let var_t = self.tn().map(Type::from_type_notation);
         let val_t = ExpressionChecker::new(self.ss, self.val()).check()?;
 
-        if let Some(var_t) = &var_t {
-            self.check_var_tn(var_t, &val_t)?;
-        }
+        let var_t = if let Some(tn) = self.tn() {
+            let var_t = self.check_tn(tn, &val_t)?;
+            Some(var_t)
+        } else {
+            None
+        };
 
         self.save_symbol(&self.id_string(), var_t.unwrap_or(val_t), self.span())?;
 
         Ok(Type::new("Void"))
     }
 
-    fn check_var_tn(&self, var_t: &Type, val_t: &Type) -> Result<()> {
-        // The provided type must exist in the current scope
-        if !self.ss.has_type(var_t) {
-            let (id, span) = self.tn().unwrap().unwrap_type_notation();
-            return Err(Error::TypeNotExist { id, span });
-        }
+    fn check_tn(&self, tn: &AstNode, val_t: &Type) -> Result<Type> {
+        let t = TypeNotationChecker::new(self.ss, tn).check()?;
 
-        // Variable should not have "Void" type
-        if var_t.is_void() {
-            return Err(Error::VoidTypeVariable {
-                span: self.tn().unwrap().span().clone(),
-            });
-        }
+        // Check if the value type is compatible with the variable
+        Type::assert_assignable(val_t, &t, || self.span().clone())?;
 
-        // Check whether the value's type is compatible with the variable
-        Type::assert_assignable(val_t, var_t, || self.span().clone())
+        Ok(t)
     }
 
     fn id_string(&self) -> String {

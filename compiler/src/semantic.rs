@@ -15,6 +15,7 @@ mod expression;
 mod function;
 mod scope;
 mod statement;
+mod tn;
 mod types;
 
 /// Provides a quick way to run semantic analysis on a Kaba AST.

@@ -2,6 +2,7 @@ use super::{
     body::BodyChecker,
     error::{Error, Result},
     scope::{Scope, ScopeStack},
+    tn::TypeNotationChecker,
     types::Type,
 };
 use crate::ast::AstNode;
@@ -24,8 +25,11 @@ impl<'a> FunctionDeclarationChecker<'a> {
 
 impl FunctionDeclarationChecker<'_> {
     pub fn check(&self) -> Result<Type> {
-        let params_t = self.params_t()?;
-        let return_t = Box::new(self.return_t()?);
+        self.check_params_tn()?;
+        self.check_return_tn()?;
+
+        let params_t = self.params_t();
+        let return_t = Box::new(self.return_t());
 
         let fn_t = Type::Callable { params_t, return_t };
         self.save_fn_t_to_stack(fn_t.clone())?;
@@ -33,40 +37,35 @@ impl FunctionDeclarationChecker<'_> {
         Ok(fn_t)
     }
 
-    fn params_t(&self) -> Result<Vec<Type>> {
+    fn check_params_tn(&self) -> Result<()> {
+        for (_, tn) in self.params() {
+            TypeNotationChecker::new(self.ss, tn).check()?;
+        }
+
+        Ok(())
+    }
+
+    fn check_return_tn(&self) -> Result<()> {
+        if let Some(tn) = self.return_tn() {
+            TypeNotationChecker::new_with_void_allowed(self.ss, tn).check()?;
+        }
+
+        Ok(())
+    }
+
+    fn params_t(&self) -> Vec<Type> {
         let mut params_t = vec![];
         for (_, tn) in self.params() {
             let t = Type::from_type_notation(tn);
-
-            // Parameter type must exist in the current scope
-            if !self.ss.has_type(&t) {
-                let (id, span) = tn.unwrap_type_notation();
-                return Err(Error::TypeNotExist { id, span });
-            }
-
-            // Parameter should not have "Void" type
-            if t.is_void() {
-                return Err(Error::VoidTypeVariable {
-                    span: tn.span().clone(),
-                });
-            }
-
             params_t.push(t);
         }
 
-        Ok(params_t)
+        params_t
     }
 
-    fn return_t(&self) -> Result<Type> {
-        self.return_tn().map_or(Ok(Type::new("Void")), |tn| {
-            let t = Type::from_type_notation(tn);
-            if self.ss.has_type(&t) {
-                Ok(t)
-            } else {
-                let (id, span) = tn.unwrap_type_notation();
-                Err(Error::TypeNotExist { id, span })
-            }
-        })
+    fn return_t(&self) -> Type {
+        self.return_tn()
+            .map_or(Type::new("Void"), Type::from_type_notation)
     }
 
     // Save function information to the ScopeStack.
