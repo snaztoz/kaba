@@ -568,6 +568,23 @@ mod tests {
     }
 
     #[test]
+    fn test_calling_function_returned_from_another_function_call() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    debug foo()();
+                end
+
+                fn foo(): () -> Int do
+                    return bar;
+                end
+
+                fn bar(): Int do
+                    return 25;
+                end
+            "});
+    }
+
+    #[test]
     fn test_defining_function_not_in_global_scope() {
         check_and_assert_is_err(indoc! {"
                 fn main() do
