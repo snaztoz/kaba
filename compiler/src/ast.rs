@@ -6,22 +6,21 @@
 use logos::Span;
 use std::fmt::Display;
 
-pub type IdentifierNode = AstNode;
-pub type TypeNotationNode = AstNode;
-
-/// The root of a Kaba source code's AST.
-#[derive(Debug, PartialEq)]
-pub struct Program {
-    pub stmts: Vec<AstNode>,
-}
+type IdentifierNode = AstNode;
+type TypeNotationNode = AstNode;
 
 /// The representation of each node that make up a whole Kaba AST.
 #[derive(Debug, PartialEq)]
 pub enum AstNode {
+    // The root of all other AstNode variants
+    Program {
+        body: Vec<AstNode>,
+    },
+
     VariableDeclaration {
         id: Box<AstNode>,
         tn: Option<Box<AstNode>>,
-        val: Option<Box<AstNode>>,
+        val: Box<AstNode>,
         span: Span,
     },
 
@@ -218,7 +217,7 @@ pub enum AstNode {
     },
 
     Literal {
-        value: Value,
+        lit: Literal,
         span: Span,
     },
 }
@@ -226,6 +225,8 @@ pub enum AstNode {
 impl AstNode {
     pub fn span(&self) -> &Span {
         match self {
+            Self::Program { .. } => unreachable!(),
+
             Self::VariableDeclaration { span, .. }
             | Self::If { span, .. }
             | Self::Else { span, .. }
@@ -434,23 +435,23 @@ impl Display for TypeNotation {
 /// The representation of each value that may exists in a Kaba
 /// source code, such as integer or string.
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
-pub enum Value {
+pub enum Literal {
     // A temporary value while the runtime is still using
     // a tree-walk interpreter mode
     Void,
 
-    Integer(i32),
+    Integer(u32),
     Float(f64),
     Boolean(bool),
 }
 
-impl Display for Value {
+impl Display for Literal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Value::Void => write!(f, "void"),
-            Value::Integer(n) => write!(f, "{n}"),
-            Value::Float(n) => write!(f, "{n}"),
-            Value::Boolean(b) => write!(f, "{b}"),
+            Literal::Void => write!(f, "void"),
+            Literal::Integer(n) => write!(f, "{n}"),
+            Literal::Float(n) => write!(f, "{n}"),
+            Literal::Boolean(b) => write!(f, "{b}"),
         }
     }
 }

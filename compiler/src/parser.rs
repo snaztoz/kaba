@@ -2,18 +2,20 @@
 //! parsing stage of a Kaba tokens.
 
 use crate::{
-    ast::{AstNode, Program as ProgramAst, TypeNotation, Value},
+    ast::{AstNode, Literal, TypeNotation},
     lexer::{Token, TokenKind},
 };
 use logos::Span;
 use std::fmt::Display;
+
+type Result<T> = std::result::Result<T, ParsingError>;
 
 /// Provide a quick way to parse Kaba tokens, without the needs to
 /// setting up and running the parser manually.
 ///
 /// Produces an AST that represents the entire source code of the
 /// given tokens (see [`crate::ast::Program`]).
-pub fn parse(tokens: Vec<Token>) -> Result<ProgramAst, ParsingError> {
+pub fn parse(tokens: Vec<Token>) -> Result<AstNode> {
     Parser::new(tokens).parse()
 }
 
@@ -27,18 +29,18 @@ impl Parser {
         Self { tokens, cursor: 0 }
     }
 
-    fn parse(&mut self) -> Result<ProgramAst, ParsingError> {
-        let mut stmts = vec![];
+    fn parse(&mut self) -> Result<AstNode> {
+        let mut body = vec![];
 
         loop {
             if self.current_token_is(&TokenKind::Eof) {
                 break;
             }
             let stmt = self.parse_statement()?;
-            stmts.push(stmt)
+            body.push(stmt)
         }
 
-        Ok(ProgramAst { stmts })
+        Ok(AstNode::Program { body })
     }
 
     /// Parse a code block.
@@ -67,7 +69,7 @@ impl Parser {
     fn parse_block(
         &mut self,
         possible_delimiter: Option<TokenKind>,
-    ) -> Result<(Vec<AstNode>, Span), ParsingError> {
+    ) -> Result<(Vec<AstNode>, Span)> {
         // Expecting "do"
 
         let start = self.get_current_token().span.start;
@@ -128,7 +130,7 @@ impl Parser {
     ///   # this is a block
     /// end
     /// ```
-    fn parse_statement(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_statement(&mut self) -> Result<AstNode> {
         // Check if statement starts with a keyword
 
         match self.get_current_token_kind() {
@@ -153,9 +155,8 @@ impl Parser {
         Ok(expr.unwrap_group())
     }
 
-    fn parse_variable_declaration(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_variable_declaration(&mut self) -> Result<AstNode> {
         let start = self.get_current_token().span.start;
-        let mut end;
 
         self.skip(&TokenKind::Var)?;
 
@@ -176,7 +177,6 @@ impl Parser {
             }
         };
 
-        end = token.span.end;
         self.advance();
 
         // Expecting ":" (optional)
@@ -184,26 +184,17 @@ impl Parser {
         let tn = if self.current_token_is(&TokenKind::Colon) {
             self.skip(&TokenKind::Colon)?;
 
-            let tn = self.parse_type_notation()?;
-            end = tn.span().end;
-
-            Some(Box::new(tn))
+            Some(Box::new(self.parse_type_notation()?))
         } else {
             None
         };
 
-        // Expecting "=" (optional)
+        // Expecting "="
 
-        let val = if self.current_token_is(&TokenKind::Assign) {
-            self.skip(&TokenKind::Assign)?;
+        self.skip(&TokenKind::Assign)?;
 
-            let expr = self.parse_expression()?;
-            end = expr.span().end;
-
-            Some(Box::new(expr.unwrap_group()))
-        } else {
-            None
-        };
+        let expr = self.parse_expression()?;
+        let end = expr.span().end;
 
         // Expecting ";"
 
@@ -212,12 +203,12 @@ impl Parser {
         Ok(AstNode::VariableDeclaration {
             id,
             tn,
-            val,
+            val: Box::new(expr.unwrap_group()),
             span: start..end,
         })
     }
 
-    fn parse_type_notation(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_type_notation(&mut self) -> Result<AstNode> {
         let token = self.get_current_token();
         match token.kind {
             TokenKind::Identifier(name) => {
@@ -288,7 +279,7 @@ impl Parser {
         }
     }
 
-    fn parse_conditional_branch(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_conditional_branch(&mut self) -> Result<AstNode> {
         let start = self.get_current_token().span.start;
         let mut end;
         self.skip(&TokenKind::If)?;
@@ -352,7 +343,7 @@ impl Parser {
         })
     }
 
-    fn parse_while(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_while(&mut self) -> Result<AstNode> {
         let start = self.get_current_token().span.start;
         self.skip(&TokenKind::While)?;
 
@@ -372,7 +363,7 @@ impl Parser {
         })
     }
 
-    fn parse_loop_control(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_loop_control(&mut self) -> Result<AstNode> {
         let Token { kind, span, .. } = self.get_current_token();
 
         // Expecting either "break" or "continue" keyword
@@ -392,7 +383,7 @@ impl Parser {
         Ok(control)
     }
 
-    fn parse_function_definition(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_function_definition(&mut self) -> Result<AstNode> {
         let start = self.get_current_token().span.start;
         self.skip(&TokenKind::Fn)?;
 
@@ -505,7 +496,7 @@ impl Parser {
         })
     }
 
-    fn parse_return_statement(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_return_statement(&mut self) -> Result<AstNode> {
         let start = self.get_current_token().span.start;
         let mut end = self.get_current_token().span.end;
         self.skip(&TokenKind::Return)?;
@@ -530,7 +521,7 @@ impl Parser {
         })
     }
 
-    fn parse_debug_statement(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_debug_statement(&mut self) -> Result<AstNode> {
         let start = self.get_current_token().span.start;
         self.skip(&TokenKind::Debug)?;
 
@@ -549,11 +540,11 @@ impl Parser {
         })
     }
 
-    fn parse_expression(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_expression(&mut self) -> Result<AstNode> {
         self.parse_assignment()
     }
 
-    fn parse_assignment(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_assignment(&mut self) -> Result<AstNode> {
         // Parse first term
 
         let lhs = self.parse_logical_and_or_expression()?;
@@ -637,7 +628,7 @@ impl Parser {
         }
     }
 
-    fn parse_logical_and_or_expression(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_logical_and_or_expression(&mut self) -> Result<AstNode> {
         // Parse first term
 
         let mut lhs = self.parse_equality_expression()?;
@@ -675,7 +666,7 @@ impl Parser {
         }
     }
 
-    fn parse_equality_expression(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_equality_expression(&mut self) -> Result<AstNode> {
         // Parse first term
 
         let mut lhs = self.parse_comparison_expression()?;
@@ -713,7 +704,7 @@ impl Parser {
         }
     }
 
-    fn parse_comparison_expression(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_comparison_expression(&mut self) -> Result<AstNode> {
         // Parse first term
 
         let lhs = self.parse_additive_expression()?;
@@ -773,7 +764,7 @@ impl Parser {
         }
     }
 
-    fn parse_additive_expression(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_additive_expression(&mut self) -> Result<AstNode> {
         // Parse first term
 
         let mut lhs = self.parse_multiplicative_expression()?;
@@ -811,7 +802,7 @@ impl Parser {
         }
     }
 
-    fn parse_multiplicative_expression(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_multiplicative_expression(&mut self) -> Result<AstNode> {
         // Parse first term
 
         let mut lhs = self.parse_unary_expression()?;
@@ -861,7 +852,7 @@ impl Parser {
         }
     }
 
-    fn parse_unary_expression(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_unary_expression(&mut self) -> Result<AstNode> {
         //  Prefixed by >= 0 negation or not expression
 
         if self.current_token_is(&TokenKind::Sub) {
@@ -904,7 +895,7 @@ impl Parser {
         Ok(child)
     }
 
-    fn parse_prefix_expression(&mut self, token: &TokenKind) -> Result<AstNode, ParsingError> {
+    fn parse_prefix_expression(&mut self, token: &TokenKind) -> Result<AstNode> {
         let start = self.get_current_token().span.start;
         self.skip(token)?;
 
@@ -925,7 +916,7 @@ impl Parser {
         }
     }
 
-    fn parse_primary_expression(&mut self) -> Result<AstNode, ParsingError> {
+    fn parse_primary_expression(&mut self) -> Result<AstNode> {
         let token = self.get_current_token();
 
         Ok(match token.kind {
@@ -957,28 +948,28 @@ impl Parser {
             TokenKind::Integer(n) => {
                 self.advance();
                 AstNode::Literal {
-                    value: Value::Integer(n),
+                    lit: Literal::Integer(n),
                     span: token.span,
                 }
             }
             TokenKind::Float(n) => {
                 self.advance();
                 AstNode::Literal {
-                    value: Value::Float(n),
+                    lit: Literal::Float(n),
                     span: token.span,
                 }
             }
             TokenKind::BooleanTrue => {
                 self.advance();
                 AstNode::Literal {
-                    value: Value::Boolean(true),
+                    lit: Literal::Boolean(true),
                     span: token.span,
                 }
             }
             TokenKind::BooleanFalse => {
                 self.advance();
                 AstNode::Literal {
-                    value: Value::Boolean(false),
+                    lit: Literal::Boolean(false),
                     span: token.span,
                 }
             }
@@ -993,7 +984,7 @@ impl Parser {
         })
     }
 
-    fn parse_function_call(&mut self) -> Result<Vec<AstNode>, ParsingError> {
+    fn parse_function_call(&mut self) -> Result<Vec<AstNode>> {
         // Can have >= 0 arguments
 
         let mut args = vec![];
@@ -1033,7 +1024,7 @@ impl Parser {
         }
     }
 
-    fn expect_current_token(&mut self, expect: &TokenKind) -> Result<(), ParsingError> {
+    fn expect_current_token(&mut self, expect: &TokenKind) -> Result<()> {
         let current = self.get_current_token();
         if &current.kind != expect {
             return Err(ParsingError::UnexpectedToken {
@@ -1050,7 +1041,7 @@ impl Parser {
         self.cursor += 1;
     }
 
-    fn skip(&mut self, expected_token: &TokenKind) -> Result<(), ParsingError> {
+    fn skip(&mut self, expected_token: &TokenKind) -> Result<()> {
         self.expect_current_token(expected_token)?;
         self.advance();
         Ok(())
@@ -1106,12 +1097,14 @@ mod tests {
         let result = parse(tokens);
 
         assert!(result.is_ok());
-        assert_eq!(
-            result.unwrap(),
-            ProgramAst {
-                stmts: vec![expect]
-            }
-        );
+        assert_eq!(result.unwrap(), AstNode::Program { body: vec![expect] });
+    }
+
+    fn parse_and_assert_error(input: &str) {
+        let tokens = lexer::lex(input).unwrap();
+        let result = parse(tokens);
+
+        assert!(result.is_err());
     }
 
     //
@@ -1119,23 +1112,7 @@ mod tests {
     //
 
     #[test]
-    fn test_parsing_without_type_notation_and_initial_value() {
-        parse_and_assert_result(
-            "var x;",
-            AstNode::VariableDeclaration {
-                id: Box::from(AstNode::Identifier {
-                    name: String::from("x"),
-                    span: 4..5,
-                }),
-                tn: None,
-                val: None,
-                span: 0..5,
-            },
-        );
-    }
-
-    #[test]
-    fn test_parsing_without_type_notation_but_with_initial_value() {
+    fn test_parsing_without_type_notation() {
         parse_and_assert_result(
             "var abc = 123 * x;",
             AstNode::VariableDeclaration {
@@ -1144,9 +1121,9 @@ mod tests {
                     span: 4..7,
                 }),
                 tn: None,
-                val: Some(Box::new(AstNode::Mul {
+                val: Box::new(AstNode::Mul {
                     lhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(123),
+                        lit: Literal::Integer(123),
                         span: 10..13,
                     }),
                     rhs: Box::new(AstNode::Identifier {
@@ -1154,7 +1131,7 @@ mod tests {
                         span: 16..17,
                     }),
                     span: 10..17,
-                })),
+                }),
                 span: 0..17,
             },
         );
@@ -1170,17 +1147,17 @@ mod tests {
                     span: 4..5,
                 }),
                 tn: None,
-                val: Some(Box::new(AstNode::Add {
+                val: Box::new(AstNode::Add {
                     lhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(123),
+                        lit: Literal::Integer(123),
                         span: 9..12,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(50),
+                        lit: Literal::Integer(50),
                         span: 15..17,
                     }),
                     span: 9..17,
-                })),
+                }),
                 span: 0..18,
             },
         );
@@ -1196,32 +1173,18 @@ mod tests {
                     span: 4..5,
                 }),
                 tn: None,
-                val: Some(Box::new(AstNode::Identifier {
+                val: Box::new(AstNode::Identifier {
                     name: String::from("foo"),
                     span: 12..15,
-                })),
+                }),
                 span: 0..19,
             },
         );
     }
 
     #[test]
-    fn test_parsing_with_type_notation_but_without_initial_value() {
-        parse_and_assert_result(
-            "var x: Int;",
-            AstNode::VariableDeclaration {
-                id: Box::from(AstNode::Identifier {
-                    name: String::from("x"),
-                    span: 4..5,
-                }),
-                tn: Some(Box::from(AstNode::TypeNotation {
-                    tn: TypeNotation::Identifier(String::from("Int")),
-                    span: 7..10,
-                })),
-                val: None,
-                span: 0..10,
-            },
-        );
+    fn test_parsing_without_initial_value() {
+        parse_and_assert_error("var x: Int;");
     }
 
     #[test]
@@ -1237,10 +1200,10 @@ mod tests {
                     tn: TypeNotation::Identifier(String::from("Int")),
                     span: 7..10,
                 })),
-                val: Some(Box::new(AstNode::Literal {
-                    value: Value::Integer(5),
+                val: Box::new(AstNode::Literal {
+                    lit: Literal::Integer(5),
                     span: 13..14,
-                })),
+                }),
                 span: 0..14,
             },
         );
@@ -1268,10 +1231,10 @@ mod tests {
                     },
                     span: 7..20,
                 })),
-                val: Some(Box::new(AstNode::Identifier {
+                val: Box::new(AstNode::Identifier {
                     name: String::from("foo"),
                     span: 23..26,
-                })),
+                }),
                 span: 0..26,
             },
         );
@@ -1314,10 +1277,10 @@ mod tests {
                     },
                     span: 7..36,
                 })),
-                val: Some(Box::new(AstNode::Identifier {
+                val: Box::new(AstNode::Identifier {
                     name: String::from("foo"),
                     span: 39..42,
-                })),
+                }),
                 span: 0..42,
             },
         );
@@ -1334,11 +1297,11 @@ mod tests {
             AstNode::If {
                 cond: Box::new(AstNode::Gt {
                     lhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(15),
+                        lit: Literal::Integer(15),
                         span: 3..5,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(10),
+                        lit: Literal::Integer(10),
                         span: 8..10,
                     }),
                     span: 3..10,
@@ -1349,7 +1312,7 @@ mod tests {
                         span: 14..19,
                     }),
                     args: vec![AstNode::Literal {
-                        value: Value::Integer(1),
+                        lit: Literal::Integer(1),
                         span: 20..21,
                     }],
                     span: 14..22,
@@ -1366,13 +1329,13 @@ mod tests {
             "if false do else if false do else do end",
             AstNode::If {
                 cond: Box::new(AstNode::Literal {
-                    value: Value::Boolean(false),
+                    lit: Literal::Boolean(false),
                     span: 3..8,
                 }),
                 body: vec![],
                 or_else: Some(Box::new(AstNode::If {
                     cond: Box::new(AstNode::Literal {
-                        value: Value::Boolean(false),
+                        lit: Literal::Boolean(false),
                         span: 20..25,
                     }),
                     body: vec![],
@@ -1397,7 +1360,7 @@ mod tests {
             "while true do end",
             AstNode::While {
                 cond: Box::new(AstNode::Literal {
-                    value: Value::Boolean(true),
+                    lit: Literal::Boolean(true),
                     span: 6..10,
                 }),
                 body: vec![],
@@ -1412,7 +1375,7 @@ mod tests {
             "while true do continue; break; end",
             AstNode::While {
                 cond: Box::new(AstNode::Literal {
-                    value: Value::Boolean(true),
+                    lit: Literal::Boolean(true),
                     span: 6..10,
                 }),
                 body: vec![
@@ -1535,7 +1498,7 @@ mod tests {
                 })),
                 body: vec![AstNode::Return {
                     expr: Some(Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 24..25,
                     })),
                     span: 17..25,
@@ -1556,16 +1519,16 @@ mod tests {
             AstNode::Debug {
                 expr: Box::new(AstNode::Add {
                     lhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 6..7,
                     }),
                     rhs: Box::new(AstNode::Mul {
                         lhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(5),
+                            lit: Literal::Integer(5),
                             span: 10..11,
                         }),
                         rhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(7),
+                            lit: Literal::Integer(7),
                             span: 14..15,
                         }),
                         span: 10..15,
@@ -1593,11 +1556,11 @@ mod tests {
                     }),
                     rhs: Box::new(AstNode::Mul {
                         lhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(512),
+                            lit: Literal::Integer(512),
                             span: 6..9,
                         }),
                         rhs: Box::new(AstNode::Literal {
-                            value: Value::Integer(200),
+                            lit: Literal::Integer(200),
                             span: 12..15,
                         }),
                         span: 6..15,
@@ -1610,7 +1573,7 @@ mod tests {
                         span: 18..21,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(3),
+                        lit: Literal::Integer(3),
                         span: 24..25,
                     }),
                     span: 18..25,
@@ -1631,7 +1594,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Mul {
                     lhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(123),
+                        lit: Literal::Integer(123),
                         span: 6..9,
                     }),
                     rhs: Box::new(AstNode::Identifier {
@@ -1656,7 +1619,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 6..7,
                     }),
                     span: 5..7,
@@ -1677,7 +1640,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 7..8,
                     }),
                     span: 6..8,
@@ -1698,7 +1661,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 7..8,
                     }),
                     span: 6..8,
@@ -1719,7 +1682,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 7..8,
                     }),
                     span: 6..8,
@@ -1740,7 +1703,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 7..8,
                     }),
                     span: 6..8,
@@ -1761,7 +1724,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 7..8,
                     }),
                     span: 6..8,
@@ -1777,11 +1740,11 @@ mod tests {
             "50.0 % 2.0;",
             AstNode::Mod {
                 lhs: Box::new(AstNode::Literal {
-                    value: Value::Float(50.0),
+                    lit: Literal::Float(50.0),
                     span: 0..4,
                 }),
                 rhs: Box::new(AstNode::Literal {
-                    value: Value::Float(2.0),
+                    lit: Literal::Float(2.0),
                     span: 7..10,
                 }),
                 span: 0..10,
@@ -1796,17 +1759,17 @@ mod tests {
             AstNode::Mul {
                 lhs: Box::new(AstNode::Sub {
                     lhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(123),
+                        lit: Literal::Integer(123),
                         span: 1..4,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(53),
+                        lit: Literal::Integer(53),
                         span: 7..9,
                     }),
                     span: 1..9,
                 }),
                 rhs: Box::new(AstNode::Literal {
-                    value: Value::Integer(7),
+                    lit: Literal::Integer(7),
                     span: 13..14,
                 }),
                 span: 0..14,
@@ -1820,7 +1783,7 @@ mod tests {
             "123 + (foo - 50);",
             AstNode::Add {
                 lhs: Box::new(AstNode::Literal {
-                    value: Value::Integer(123),
+                    lit: Literal::Integer(123),
                     span: 0..3,
                 }),
                 rhs: Box::new(AstNode::Sub {
@@ -1829,7 +1792,7 @@ mod tests {
                         span: 7..10,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(50),
+                        lit: Literal::Integer(50),
                         span: 13..15,
                     }),
                     span: 7..15,
@@ -1844,7 +1807,7 @@ mod tests {
         parse_and_assert_result(
             "(((75)));",
             AstNode::Literal {
-                value: Value::Integer(75),
+                lit: Literal::Integer(75),
                 span: 3..5,
             },
         );
@@ -1862,16 +1825,16 @@ mod tests {
                     }),
                     args: vec![
                         AstNode::Literal {
-                            value: Value::Integer(123),
+                            lit: Literal::Integer(123),
                             span: 4..7,
                         },
                         AstNode::Add {
                             lhs: Box::new(AstNode::Literal {
-                                value: Value::Integer(50),
+                                lit: Literal::Integer(50),
                                 span: 9..11,
                             }),
                             rhs: Box::new(AstNode::Literal {
-                                value: Value::Integer(2),
+                                lit: Literal::Integer(2),
                                 span: 14..15,
                             }),
                             span: 9..15,
@@ -1880,7 +1843,7 @@ mod tests {
                     span: 0..16,
                 }),
                 rhs: Box::new(AstNode::Literal {
-                    value: Value::Integer(7),
+                    lit: Literal::Integer(7),
                     span: 19..20,
                 }),
                 span: 0..20,
@@ -1904,11 +1867,11 @@ mod tests {
                     }),
                     args: vec![
                         AstNode::Literal {
-                            value: Value::Integer(123),
+                            lit: Literal::Integer(123),
                             span: 8..11,
                         },
                         AstNode::Literal {
-                            value: Value::Integer(456),
+                            lit: Literal::Integer(456),
                             span: 13..16,
                         },
                     ],
@@ -1934,7 +1897,7 @@ mod tests {
                 rhs: Box::new(AstNode::Mul {
                     lhs: Box::new(AstNode::Neg {
                         child: Box::new(AstNode::Literal {
-                            value: Value::Integer(5),
+                            lit: Literal::Integer(5),
                             span: 10..11,
                         }),
                         span: 8..12,
@@ -1942,7 +1905,7 @@ mod tests {
                     rhs: Box::new(AstNode::Neg {
                         child: Box::new(AstNode::Neg {
                             child: Box::new(AstNode::Literal {
-                                value: Value::Integer(7),
+                                lit: Literal::Integer(7),
                                 span: 19..20,
                             }),
                             span: 18..20,
@@ -1988,7 +1951,7 @@ mod tests {
         parse_and_assert_result(
             "true;",
             AstNode::Literal {
-                value: Value::Boolean(true),
+                lit: Literal::Boolean(true),
                 span: 0..4,
             },
         );
@@ -2001,17 +1964,17 @@ mod tests {
             AstNode::Eq {
                 lhs: Box::new(AstNode::Gte {
                     lhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(1),
+                        lit: Literal::Integer(1),
                         span: 0..1,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        value: Value::Integer(5),
+                        lit: Literal::Integer(5),
                         span: 5..6,
                     }),
                     span: 0..6,
                 }),
                 rhs: Box::new(AstNode::Literal {
-                    value: Value::Boolean(true),
+                    lit: Literal::Boolean(true),
                     span: 10..14,
                 }),
                 span: 0..14,
@@ -2026,12 +1989,12 @@ mod tests {
             AstNode::And {
                 lhs: Box::new(AstNode::Or {
                     lhs: Box::new(AstNode::Literal {
-                        value: Value::Boolean(false),
+                        lit: Literal::Boolean(false),
                         span: 0..5,
                     }),
                     rhs: Box::new(AstNode::Not {
                         child: Box::new(AstNode::Literal {
-                            value: Value::Boolean(false),
+                            lit: Literal::Boolean(false),
                             span: 10..15,
                         }),
                         span: 9..15,
@@ -2039,7 +2002,7 @@ mod tests {
                     span: 0..15,
                 }),
                 rhs: Box::new(AstNode::Literal {
-                    value: Value::Boolean(true),
+                    lit: Literal::Boolean(true),
                     span: 19..23,
                 }),
                 span: 0..23,

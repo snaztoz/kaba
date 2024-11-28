@@ -1,14 +1,11 @@
 use super::{error::Error, Result};
-use crate::ast::{AstNode, TypeNotation, Value};
+use crate::ast::{AstNode, Literal, TypeNotation};
 use logos::Span;
 use std::fmt::Display;
 
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub enum Type {
-    Void,
-    Int,
-    Float,
-    Bool,
+    Identifier(String),
     Callable {
         params_t: Vec<Type>,
         return_t: Box<Type>,
@@ -16,22 +13,23 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn from_value(val: &Value) -> Result<Self> {
-        match val {
-            Value::Void => Ok(Self::Void),
-            Value::Integer(_) => Ok(Self::Int),
-            Value::Float(_) => Ok(Self::Float),
-            Value::Boolean(_) => Ok(Self::Bool),
+    pub fn new(id: &str) -> Self {
+        Self::Identifier(String::from(id))
+    }
+
+    pub fn from_literal(lit: &Literal) -> Result<Self> {
+        match lit {
+            Literal::Void => Ok(Self::new("Void")),
+            Literal::Integer(_) => Ok(Self::new("Int")),
+            Literal::Float(_) => Ok(Self::new("Float")),
+            Literal::Boolean(_) => Ok(Self::new("Bool")),
         }
     }
 
-    pub fn from_type_notation(tn: &AstNode) -> Result<Self> {
-        if let AstNode::TypeNotation { tn, span } = tn {
+    pub fn from_type_notation(tn: &AstNode) -> Self {
+        if let AstNode::TypeNotation { tn, .. } = tn {
             match tn {
-                TypeNotation::Identifier(id) if id == "Void" => Ok(Self::Void),
-                TypeNotation::Identifier(id) if id == "Int" => Ok(Self::Int),
-                TypeNotation::Identifier(id) if id == "Float" => Ok(Self::Float),
-                TypeNotation::Identifier(id) if id == "Bool" => Ok(Self::Bool),
+                TypeNotation::Identifier(id) => Self::new(id),
 
                 TypeNotation::Callable {
                     params_tn,
@@ -39,17 +37,11 @@ impl Type {
                 } => {
                     let mut params_t = vec![];
                     for tn in params_tn {
-                        params_t.push(Self::from_type_notation(tn)?);
+                        params_t.push(Self::from_type_notation(tn));
                     }
-                    let return_t = Box::new(Self::from_type_notation(return_tn)?);
-                    Ok(Self::Callable { params_t, return_t })
+                    let return_t = Box::new(Self::from_type_notation(return_tn));
+                    Self::Callable { params_t, return_t }
                 }
-
-                // TODO: Custom Type
-                TypeNotation::Identifier(id) => Err(Error::TypeNotExist {
-                    id: id.clone(),
-                    span: span.clone(),
-                }),
             }
         } else {
             unreachable!()
@@ -78,6 +70,17 @@ impl Type {
         }
     }
 
+    pub fn assert_callable<F>(t: &Self, err_span: F) -> Result<()>
+    where
+        F: FnOnce() -> Span,
+    {
+        if t.is_callable() {
+            Ok(())
+        } else {
+            Err(Error::NotAFunction { span: err_span() })
+        }
+    }
+
     pub fn assert_assignable<F>(from: &Self, to: &Self, err_span: F) -> Result<()>
     where
         F: FnOnce() -> Span,
@@ -100,7 +103,7 @@ impl Type {
         if a == b {
             Ok(())
         } else {
-            Err(Error::UnableToCompareTypeAWithTypeB {
+            Err(Error::UnableToCompareTypes {
                 type_a: a.clone(),
                 type_b: b.clone(),
                 span: err_span(),
@@ -109,11 +112,15 @@ impl Type {
     }
 
     pub fn is_number(&self) -> bool {
-        *self == Self::Int || *self == Self::Float
+        matches!(self, Self::Identifier(id) if id == "Int" || id == "Float")
     }
 
     pub fn is_boolean(&self) -> bool {
-        *self == Self::Bool
+        matches!(self, Self::Identifier(id) if id == "Bool")
+    }
+
+    fn is_callable(&self) -> bool {
+        matches!(self, Self::Callable { .. })
     }
 
     pub fn is_assignable_to(&self, other: &Type) -> bool {
@@ -121,17 +128,22 @@ impl Type {
     }
 
     pub fn is_void(&self) -> bool {
-        *self == Self::Void
+        matches!(self, Self::Identifier(id) if id == "Void")
+    }
+
+    pub fn unwrap_callable(self) -> (Vec<Type>, Type) {
+        if let Type::Callable { params_t, return_t } = self {
+            (params_t, *return_t)
+        } else {
+            panic!("trying to unwrap callable on non-Callable type")
+        }
     }
 }
 
 impl Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Void => write!(f, "Void"),
-            Self::Int => write!(f, "Int"),
-            Self::Float => write!(f, "Float"),
-            Self::Bool => write!(f, "Bool"),
+            Self::Identifier(id) => write!(f, "{id}"),
             Self::Callable { params_t, return_t } => {
                 let params_t = params_t
                     .iter()

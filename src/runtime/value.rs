@@ -1,4 +1,4 @@
-use compiler::ast::Value;
+use compiler::ast::Literal;
 use std::{convert::From, fmt::Display};
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
@@ -22,13 +22,13 @@ impl Display for RuntimeValue {
     }
 }
 
-impl From<Value> for RuntimeValue {
-    fn from(val: Value) -> Self {
+impl From<Literal> for RuntimeValue {
+    fn from(val: Literal) -> Self {
         match val {
-            Value::Void => Self::Void,
-            Value::Integer(n) => Self::Integer(n),
-            Value::Float(n) => Self::Float(n),
-            Value::Boolean(b) => Self::Boolean(b),
+            Literal::Void => Self::Void,
+            Literal::Integer(n) => Self::Integer(n.try_into().unwrap()),
+            Literal::Float(n) => Self::Float(n),
+            Literal::Boolean(b) => Self::Boolean(b),
         }
     }
 }

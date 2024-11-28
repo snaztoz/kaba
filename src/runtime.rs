@@ -4,7 +4,7 @@
 //! runtime that operates on bytecodes (TODO).
 
 use self::{error::RuntimeError, state::RuntimeState, stream::RuntimeStream, value::RuntimeValue};
-use compiler::ast::{AstNode, Program as ProgramAst};
+use compiler::ast::AstNode;
 use std::{cell::RefCell, collections::HashMap};
 
 type Result<T> = std::result::Result<T, RuntimeError>;
@@ -16,14 +16,14 @@ pub mod stream;
 mod value;
 
 pub struct Runtime<'a> {
-    ast: Option<ProgramAst>,
+    ast: Option<AstNode>,
     scopes: RefCell<Vec<Scope>>,
     streams: RuntimeStream<'a>,
     state: RuntimeState,
 }
 
 impl<'a> Runtime<'a> {
-    pub fn new(ast: ProgramAst, streams: RuntimeStream<'a>) -> Self {
+    pub fn new(ast: AstNode, streams: RuntimeStream<'a>) -> Self {
         Self {
             ast: Some(ast),
             scopes: RefCell::new(vec![
@@ -35,8 +35,13 @@ impl<'a> Runtime<'a> {
     }
 
     pub fn run(&self) -> Result<()> {
-        let stmts = &self.ast.as_ref().unwrap().stmts;
-        self.register_globals(stmts);
+        let body = if let AstNode::Program { body } = &self.ast.as_ref().unwrap() {
+            body
+        } else {
+            unreachable!()
+        };
+
+        self.register_globals(body);
 
         let main = self.get_value("main")?;
         self.run_function_ptr_call(main, &[])?;
@@ -64,10 +69,7 @@ impl<'a> Runtime<'a> {
             match stmt {
                 AstNode::VariableDeclaration { id, val, .. } => {
                     let name = id.unwrap_identifier().0;
-                    let val = match val.as_deref() {
-                        Some(v) => self.run_expression(v)?,
-                        None => RuntimeValue::Integer(0),
-                    };
+                    let val = self.run_expression(val)?;
                     self.store_value(&name, val);
                 }
 
@@ -321,7 +323,7 @@ impl<'a> Runtime<'a> {
             AstNode::FunctionCall { callee, args, .. } => self.run_function_call(callee, args),
 
             AstNode::Identifier { name, .. } => self.get_value(name),
-            AstNode::Literal { value, .. } => Ok(RuntimeValue::from(*value)),
+            AstNode::Literal { lit, .. } => Ok(RuntimeValue::from(*lit)),
 
             _ => unreachable!(),
         }
@@ -437,8 +439,13 @@ impl<'a> Runtime<'a> {
         args: &[RuntimeValue],
     ) -> Result<RuntimeValue> {
         if let RuntimeValue::Function(ptr) = f_ptr {
-            let globals = &self.ast.as_ref().unwrap().stmts;
-            let f = globals.get(ptr).unwrap();
+            let body = if let AstNode::Program { body } = &self.ast.as_ref().unwrap() {
+                body
+            } else {
+                unreachable!()
+            };
+
+            let f = body.get(ptr).unwrap();
 
             if let AstNode::FunctionDefinition { params, body, .. } = f {
                 self.scopes.borrow_mut().push(HashMap::new());

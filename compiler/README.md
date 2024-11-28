@@ -56,7 +56,7 @@ The parser used by the compiler is implemented using a hand-written [recursive-d
 
 ### Semantic Checking
 
-This stage will catch all the *nonsenses* found in the AST.
+This stage will catch all the semantic violation found in the AST.
 
 For example, the following program:
 
