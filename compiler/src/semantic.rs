@@ -652,6 +652,15 @@ mod tests {
     }
 
     #[test]
+    fn test_returning_non_existing_variable() {
+        check_and_assert_is_err(indoc! {"
+                fn foo(): Int do
+                    return not_exist;
+                end
+            "});
+    }
+
+    #[test]
     fn test_defining_function_with_missing_return_in_other_branches() {
         check_and_assert_is_err(indoc! {"
                 fn foo(): Int do

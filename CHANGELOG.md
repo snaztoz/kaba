@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3] - 2024-11-28
+
+### Fixed
+
+- Return statement's expression checking bug.
+
 ## [0.3.2] - 2024-11-28
 
 ### Fixed
 
-- Creating variable with `Void` type.
+- Prevent creating variable with `Void` type.
 - Calling function returned from another function call.
 
 ### Removed

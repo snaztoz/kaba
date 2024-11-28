@@ -70,8 +70,8 @@ impl StatementChecker<'_> {
     fn check_return(&self, expr: &Option<Box<AstNode>>, span: &Span) -> Result<Type> {
         let expr_t = expr
             .as_ref()
-            .map(|expr| ExpressionChecker::new(self.ss, expr).check().unwrap())
-            .unwrap_or(Type::new("Void"));
+            .map(|expr| ExpressionChecker::new(self.ss, expr).check())
+            .unwrap_or(Ok(Type::new("Void")))?;
 
         let return_t = self
             .ss
