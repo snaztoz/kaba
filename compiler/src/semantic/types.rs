@@ -26,7 +26,7 @@ impl Type {
         }
     }
 
-    pub fn from_type_notation(tn: &AstNode) -> Self {
+    pub fn from_tn(tn: &AstNode) -> Self {
         if let AstNode::TypeNotation { tn, .. } = tn {
             match tn {
                 TypeNotation::Identifier(id) => Self::new(id),
@@ -37,9 +37,9 @@ impl Type {
                 } => {
                     let mut params_t = vec![];
                     for tn in params_tn {
-                        params_t.push(Self::from_type_notation(tn));
+                        params_t.push(Self::from_tn(tn));
                     }
-                    let return_t = Box::new(Self::from_type_notation(return_tn));
+                    let return_t = Box::new(Self::from_tn(return_tn));
                     Self::Callable { params_t, return_t }
                 }
             }

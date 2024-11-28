@@ -50,7 +50,7 @@ impl TypeNotationChecker<'_> {
     }
 
     fn t(&self) -> Type {
-        Type::from_type_notation(self.node)
+        Type::from_tn(self.node)
     }
 
     fn span(&self) -> &Span {

@@ -56,8 +56,7 @@ impl FunctionDeclarationChecker<'_> {
     fn params_t(&self) -> Vec<Type> {
         let mut params_t = vec![];
         for (_, tn) in self.params() {
-            let t = Type::from_type_notation(tn);
-            params_t.push(t);
+            params_t.push(Type::from_tn(tn));
         }
 
         params_t
@@ -65,7 +64,7 @@ impl FunctionDeclarationChecker<'_> {
 
     fn return_t(&self) -> Type {
         self.return_tn()
-            .map_or(Type::new("Void"), Type::from_type_notation)
+            .map_or(Type::new("Void"), Type::from_tn)
     }
 
     // Save function information to the ScopeStack.
