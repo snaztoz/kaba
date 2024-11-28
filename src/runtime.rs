@@ -418,8 +418,11 @@ impl<'a> Runtime<'a> {
     }
 
     fn run_function_call(&self, callee: &AstNode, args: &[AstNode]) -> Result<RuntimeValue> {
-        let callee = match callee {
-            AstNode::Identifier { name, .. } => name,
+        let f_ptr = match callee {
+            AstNode::Identifier { name, .. } => self.get_value(name).unwrap(),
+
+            AstNode::FunctionCall { callee, args, .. } => self.run_function_call(callee, args)?,
+
             _ => todo!("function callee"),
         };
 
@@ -427,8 +430,6 @@ impl<'a> Runtime<'a> {
         for arg in args {
             evaluated_args.push(self.run_expression(arg)?);
         }
-
-        let f_ptr = self.get_value(callee).unwrap();
 
         self.run_function_ptr_call(f_ptr, &evaluated_args)
     }
@@ -887,6 +888,26 @@ mod tests {
                 end
             "},
             "5\n5\n".as_bytes(),
+        );
+    }
+
+    #[test]
+    fn test_calling_function_returned_from_another_function_call() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
+                    debug foo()();
+                end
+
+                fn foo(): () -> Int do
+                    return bar;
+                end
+
+                fn bar(): Int do
+                    return 25;
+                end
+            "},
+            "25\n".as_bytes(),
         );
     }
 }
