@@ -63,8 +63,7 @@ impl FunctionDeclarationChecker<'_> {
     }
 
     fn return_t(&self) -> Type {
-        self.return_tn()
-            .map_or(Type::new("Void"), Type::from_tn)
+        self.return_tn().map_or(Type::new("Void"), Type::from_tn)
     }
 
     // Save function information to the ScopeStack.

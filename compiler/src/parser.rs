@@ -1429,7 +1429,7 @@ mod tests {
                         },
                     },
                     FunctionParam {
-                        id:AstNode::Identifier {
+                        id: AstNode::Identifier {
                             name: String::from("y"),
                             span: 15..16,
                         },
