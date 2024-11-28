@@ -38,19 +38,8 @@ impl<'a> ProgramChecker<'a> {
 
 impl ProgramChecker<'_> {
     fn check(&self) -> Result<Type> {
-        // We are expecting that in global scope, statements (currently) are
-        // consisted of function definitions only. So other statements are
-        // rejected in this scope.
-        //
-        // TODO: review other statements for possibilities to be applied here
-
         for stmt in self.body() {
-            if !matches!(stmt, AstNode::FunctionDefinition { .. }) {
-                return Err(Error::UnexpectedStatementInGlobal {
-                    span: stmt.span().clone(),
-                });
-            }
-
+            self.ensure_global_statement(stmt)?;
             FunctionDeclarationChecker::new(&self.ss, stmt).check()?;
         }
 
@@ -59,6 +48,22 @@ impl ProgramChecker<'_> {
         }
 
         Ok(Type::new("Void"))
+    }
+
+    fn ensure_global_statement(&self, stmt: &AstNode) -> Result<()> {
+        // We are expecting that in global scope, statements (currently) are
+        // only consisted of function definitions, while other statements are
+        // rejected in this scope.
+        //
+        // TODO: review other statements for possibilities to be applied here
+
+        match stmt {
+            AstNode::FunctionDefinition { .. } => Ok(()),
+
+            _ => Err(Error::UnexpectedStatementInGlobal {
+                span: stmt.span().clone(),
+            }),
+        }
     }
 
     fn body(&self) -> &[AstNode] {

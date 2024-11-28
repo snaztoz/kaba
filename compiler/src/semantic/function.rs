@@ -24,6 +24,16 @@ impl<'a> FunctionDeclarationChecker<'a> {
 
 impl FunctionDeclarationChecker<'_> {
     pub fn check(&self) -> Result<Type> {
+        let params_t = self.params_t()?;
+        let return_t = Box::new(self.return_t()?);
+
+        let fn_t = Type::Callable { params_t, return_t };
+        self.save_fn_t_to_stack(fn_t.clone())?;
+
+        Ok(fn_t)
+    }
+
+    fn params_t(&self) -> Result<Vec<Type>> {
         let mut params_t = vec![];
         for (_, tn) in self.params() {
             let t = Type::from_type_notation(tn);
@@ -44,7 +54,11 @@ impl FunctionDeclarationChecker<'_> {
             params_t.push(t);
         }
 
-        let return_t = self.return_t().map_or(Ok(Type::new("Void")), |tn| {
+        Ok(params_t)
+    }
+
+    fn return_t(&self) -> Result<Type> {
+        self.return_tn().map_or(Ok(Type::new("Void")), |tn| {
             let t = Type::from_type_notation(tn);
             if self.ss.has_type(&t) {
                 Ok(t)
@@ -52,21 +66,17 @@ impl FunctionDeclarationChecker<'_> {
                 let (id, span) = tn.unwrap_type_notation();
                 Err(Error::TypeNotExist { id, span })
             }
-        })?;
+        })
+    }
 
-        let fn_t = Type::Callable {
-            params_t,
-            return_t: Box::new(return_t.clone()),
-        };
-
+    // Save function information to the ScopeStack.
+    fn save_fn_t_to_stack(&self, fn_t: Type) -> Result<()> {
         let (id, id_span) = self.id().unwrap_identifier();
         self.ss
             .save_symbol_or_else(&id, fn_t.clone(), || Error::FunctionAlreadyExist {
                 id: id.clone(),
                 span: id_span,
-            })?;
-
-        Ok(fn_t)
+            })
     }
 
     fn id(&self) -> &AstNode {
@@ -85,7 +95,7 @@ impl FunctionDeclarationChecker<'_> {
         }
     }
 
-    fn return_t(&self) -> Option<&AstNode> {
+    fn return_tn(&self) -> Option<&AstNode> {
         if let AstNode::FunctionDefinition { return_t, .. } = self.node {
             return_t.as_deref()
         } else {
@@ -111,26 +121,10 @@ impl<'a> FunctionDefinitionChecker<'a> {
 
 impl FunctionDefinitionChecker<'_> {
     pub fn check(&self) -> Result<Type> {
-        let (params_t, return_t) = if let Type::Callable { params_t, return_t } = self.fn_t() {
-            (params_t, return_t)
-        } else {
-            unreachable!()
-        };
-
-        let params_id = self.params_id();
-        let params = params_id.iter().cloned().zip(params_t.iter());
-
-        // Entering new scope
+        let return_t = self.fn_t().unwrap_callable().1;
         self.ss
-            .with_scope(Scope::new_function_scope(*return_t.clone()), || {
-                for ((id, id_span), t) in params {
-                    self.ss.save_symbol_or_else(&id, t.clone(), || {
-                        Error::VariableAlreadyExist {
-                            id: id.clone(),
-                            span: id_span.clone(),
-                        }
-                    })?;
-                }
+            .with_scope(Scope::new_function_scope(return_t.clone()), || {
+                self.save_params_to_stack(&self.params())?;
 
                 // Check function body
                 //
@@ -141,7 +135,7 @@ impl FunctionDefinitionChecker<'_> {
 
                 if !return_t.is_void() && body_t.is_void() {
                     return Err(Error::FunctionNotReturningValue {
-                        expect: *return_t.clone(),
+                        expect: return_t,
                         span: self.id().span().clone(),
                     });
                 }
@@ -150,6 +144,29 @@ impl FunctionDefinitionChecker<'_> {
             })?;
 
         Ok(Type::new("Void"))
+    }
+
+    fn save_params_to_stack(&self, params: &[((String, Span), Type)]) -> Result<()> {
+        for ((id, id_span), t) in params {
+            self.ss
+                .save_symbol_or_else(id, t.clone(), || Error::VariableAlreadyExist {
+                    id: id.clone(),
+                    span: id_span.clone(),
+                })?;
+        }
+
+        Ok(())
+    }
+
+    fn params(&self) -> Vec<((String, Span), Type)> {
+        let params_t = self.fn_t().unwrap_callable().0;
+        let params_id = self.params_id();
+
+        params_id
+            .iter()
+            .cloned()
+            .zip(params_t.iter().cloned())
+            .collect::<Vec<_>>()
     }
 
     fn id(&self) -> &AstNode {

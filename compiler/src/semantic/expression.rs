@@ -6,7 +6,7 @@ use super::{
 use crate::ast::AstNode;
 use logos::Span;
 
-/// Checker for all expression rules.
+/// Checker for expression rules.
 pub struct ExpressionChecker<'a> {
     ss: &'a ScopeStack,
     node: &'a AstNode,
@@ -54,9 +54,7 @@ impl ExpressionChecker<'_> {
 
             AstNode::Literal { lit, .. } => Type::from_literal(lit),
 
-            AstNode::FunctionCall { callee, args, span } => {
-                self.check_function_call(callee, args, span)
-            }
+            AstNode::FunctionCall { .. } => FunctionCallChecker::new(self.ss, self.node).check(),
 
             _ => unreachable!(),
         }
@@ -118,43 +116,84 @@ impl ExpressionChecker<'_> {
         Type::assert_number(&child_t, || child.span().clone())?;
         Ok(child_t)
     }
+}
 
-    fn check_function_call(&self, callee: &AstNode, args: &[AstNode], span: &Span) -> Result<Type> {
-        // transform the arguments into their respective type
-        let mut args_t = vec![];
-        for arg in args {
-            let t = ExpressionChecker::new(self.ss, arg).check()?;
-            args_t.push(t);
+/// Checker for function call expression rule.
+struct FunctionCallChecker<'a> {
+    ss: &'a ScopeStack,
+    node: &'a AstNode,
+}
+
+impl<'a> FunctionCallChecker<'a> {
+    fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+        Self { ss, node }
+    }
+}
+
+impl FunctionCallChecker<'_> {
+    fn check(&self) -> Result<Type> {
+        let fn_t = self.fn_t()?;
+        Type::assert_callable(&fn_t, || self.callee().span().clone())?;
+
+        let args_t = self.args_t()?;
+        let (params_t, return_t) = fn_t.unwrap_callable();
+
+        if params_t != args_t {
+            return Err(Error::InvalidFunctionCallArgument {
+                args: args_t,
+                span: self.span().clone(),
+            });
         }
 
-        let t = match callee {
+        Ok(return_t)
+    }
+
+    fn fn_t(&self) -> Result<Type> {
+        match self.callee() {
             AstNode::Identifier { name, span } => {
                 self.ss
                     .get_symbol_type(name)
                     .ok_or_else(|| Error::VariableNotExist {
                         id: String::from(name),
                         span: span.clone(),
-                    })?
+                    })
             }
 
-            _ => todo!(),
-        };
+            _ => todo!("functions stored in array, method, etc"),
+        }
+    }
 
-        return match &t {
-            Type::Callable { params_t, return_t } => {
-                if params_t != &args_t {
-                    return Err(Error::InvalidFunctionCallArgument {
-                        args: args_t,
-                        span: span.clone(),
-                    });
-                }
-                Ok(*return_t.clone())
-            }
+    // Transform arguments into their respective type
+    fn args_t(&self) -> Result<Vec<Type>> {
+        let mut args_t = vec![];
+        for arg in self.args() {
+            let t = ExpressionChecker::new(self.ss, arg).check()?;
+            args_t.push(t);
+        }
+        Ok(args_t)
+    }
 
-            _ => {
-                let span = callee.span().clone();
-                Err(Error::NotAFunction { span })
-            }
-        };
+    fn callee(&self) -> &AstNode {
+        if let AstNode::FunctionCall { callee, .. } = self.node {
+            callee
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn args(&self) -> &[AstNode] {
+        if let AstNode::FunctionCall { args, .. } = self.node {
+            args
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn span(&self) -> &Span {
+        if let AstNode::FunctionCall { span, .. } = self.node {
+            span
+        } else {
+            unreachable!()
+        }
     }
 }

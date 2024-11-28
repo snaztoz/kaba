@@ -33,7 +33,7 @@ impl StatementChecker<'_> {
 
             AstNode::If { .. } => ConditionalBranchChecker::new(self.ss, self.node).check(),
 
-            AstNode::While { .. } => LoopChecker::new(self.ss, self.node).check(),
+            AstNode::While { .. } => WhileLoopChecker::new(self.ss, self.node).check(),
 
             AstNode::Break { span } | AstNode::Continue { span } => self.check_loop_control(span),
 
@@ -62,6 +62,7 @@ impl StatementChecker<'_> {
         if !self.ss.is_inside_loop() {
             return Err(Error::UnexpectedLoopControl { span: span.clone() });
         }
+
         Ok(Type::new("Void"))
     }
 
@@ -90,6 +91,7 @@ impl StatementChecker<'_> {
         if expr_t.is_void() {
             return Err(Error::DebugVoid { span: span.clone() });
         }
+
         Ok(Type::new("Void"))
     }
 }
@@ -141,26 +143,30 @@ impl VariableDeclarationChecker<'_> {
         let val_t = ExpressionChecker::new(self.ss, self.val()).check()?;
 
         if let Some(var_t) = &var_t {
-            // The provided type must exist in the current scope
-            if !self.ss.has_type(var_t) {
-                let (id, span) = self.tn().unwrap().unwrap_type_notation();
-                return Err(Error::TypeNotExist { id, span });
-            }
-
-            // Variable should not have "Void" type
-            if var_t.is_void() {
-                return Err(Error::VoidTypeVariable {
-                    span: self.tn().unwrap().span().clone(),
-                });
-            }
-
-            // Check whether the value's type is compatible with the variable
-            Type::assert_assignable(&val_t, var_t, || self.span().clone())?;
+            self.check_var_tn(var_t, &val_t)?;
         }
 
         self.save_symbol(&self.id_string(), var_t.unwrap_or(val_t), self.span())?;
 
         Ok(Type::new("Void"))
+    }
+
+    fn check_var_tn(&self, var_t: &Type, val_t: &Type) -> Result<()> {
+        // The provided type must exist in the current scope
+        if !self.ss.has_type(var_t) {
+            let (id, span) = self.tn().unwrap().unwrap_type_notation();
+            return Err(Error::TypeNotExist { id, span });
+        }
+
+        // Variable should not have "Void" type
+        if var_t.is_void() {
+            return Err(Error::VoidTypeVariable {
+                span: self.tn().unwrap().span().clone(),
+            });
+        }
+
+        // Check whether the value's type is compatible with the variable
+        Type::assert_assignable(val_t, var_t, || self.span().clone())
     }
 
     fn id_string(&self) -> String {
@@ -288,13 +294,14 @@ impl ConditionalBranchChecker<'_> {
         })?;
 
         if self.or_else().is_none() {
+            // Non-exhaustive branches, set to "Void"
             return Ok(Type::new("Void"));
         }
 
         match self.or_else().unwrap() {
             AstNode::If { .. } => {
-                // All conditional branches must returning a value for this whole
-                // statement to be considered as returning value
+                // All conditional branches must returning a value (exhaustive)
+                // for this statement to be considered as returning value
 
                 let branch_return_t =
                     ConditionalBranchChecker::new(self.ss, self.or_else().unwrap()).check()?;
@@ -341,7 +348,7 @@ impl ConditionalBranchChecker<'_> {
     }
 }
 
-/// Checker for loop statement.
+/// Checker for `while` loop statement.
 ///
 /// ### ✅ Valid Examples
 ///
@@ -373,18 +380,18 @@ impl ConditionalBranchChecker<'_> {
 ///     # Invalid
 /// end
 /// ```
-struct LoopChecker<'a> {
+struct WhileLoopChecker<'a> {
     ss: &'a ScopeStack,
     node: &'a AstNode,
 }
 
-impl<'a> LoopChecker<'a> {
+impl<'a> WhileLoopChecker<'a> {
     fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
 }
 
-impl LoopChecker<'_> {
+impl WhileLoopChecker<'_> {
     fn check(&self) -> Result<Type> {
         // Expecting boolean type for the condition
 

@@ -70,6 +70,17 @@ impl Type {
         }
     }
 
+    pub fn assert_callable<F>(t: &Self, err_span: F) -> Result<()>
+    where
+        F: FnOnce() -> Span,
+    {
+        if t.is_callable() {
+            Ok(())
+        } else {
+            Err(Error::NotAFunction { span: err_span() })
+        }
+    }
+
     pub fn assert_assignable<F>(from: &Self, to: &Self, err_span: F) -> Result<()>
     where
         F: FnOnce() -> Span,
@@ -108,12 +119,24 @@ impl Type {
         matches!(self, Self::Identifier(id) if id == "Bool")
     }
 
+    fn is_callable(&self) -> bool {
+        matches!(self, Self::Callable { .. })
+    }
+
     pub fn is_assignable_to(&self, other: &Type) -> bool {
         self == other
     }
 
     pub fn is_void(&self) -> bool {
         matches!(self, Self::Identifier(id) if id == "Void")
+    }
+
+    pub fn unwrap_callable(self) -> (Vec<Type>, Type) {
+        if let Type::Callable { params_t, return_t } = self {
+            (params_t, *return_t)
+        } else {
+            panic!("trying to unwrap callable on non-Callable type")
+        }
     }
 }
 
