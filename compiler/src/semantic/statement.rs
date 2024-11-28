@@ -143,8 +143,8 @@ impl VariableDeclarationChecker<'_> {
         let val_t = ExpressionChecker::new(self.ss, self.val()).check()?;
 
         let var_t = if let Some(tn) = self.tn() {
-            let var_t = self.check_tn(tn, &val_t)?;
-            Some(var_t)
+            let t = self.check_tn(tn, &val_t)?;
+            Some(t)
         } else {
             None
         };
@@ -480,7 +480,7 @@ impl AssignmentChecker<'_> {
     }
 
     fn check_assignment(&self, lhs: &AstNode, rhs: &AstNode, span: &Span) -> Result<Type> {
-        if !lhs.is_assignable() {
+        if !lhs.is_valid_assignment_lhs() {
             return Err(Error::InvalidAssignmentLhs {
                 lhs: lhs.to_string(),
                 span: lhs.span().clone(),
