@@ -42,9 +42,7 @@ impl ProgramChecker<'_> {
         //
         // TODO: review other statements for possibilities to be applied here
 
-        let body = self.unwrap_body();
-
-        for stmt in body {
+        for stmt in self.body() {
             if !matches!(stmt, AstNode::FunctionDefinition { .. }) {
                 return Err(Error::UnexpectedStatementInGlobal {
                     span: stmt.span().clone(),
@@ -54,14 +52,14 @@ impl ProgramChecker<'_> {
             FunctionDeclarationChecker::new(&self.ss, stmt).check()?;
         }
 
-        for stmt in body {
+        for stmt in self.body() {
             FunctionDefinitionChecker::new(&self.ss, stmt).check()?;
         }
 
         Ok(Type::new("Void"))
     }
 
-    fn unwrap_body(&self) -> &[AstNode] {
+    fn body(&self) -> &[AstNode] {
         if let AstNode::Program { body } = self.program {
             body
         } else {

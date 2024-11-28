@@ -24,12 +24,8 @@ impl<'a> FunctionDeclarationChecker<'a> {
 
 impl FunctionDeclarationChecker<'_> {
     pub fn check(&self) -> Result<Type> {
-        let id = self.unwrap_identifier();
-        let params = self.unwrap_params();
-        let return_t = self.unwrap_return_type();
-
         let mut params_t = vec![];
-        for (_, tn) in params {
+        for (_, tn) in self.params() {
             let t = Type::from_type_notation(tn);
 
             // Parameter type must exist in the current scope
@@ -48,7 +44,7 @@ impl FunctionDeclarationChecker<'_> {
             params_t.push(t);
         }
 
-        let return_t = return_t.as_ref().map_or(Ok(Type::new("Void")), |tn| {
+        let return_t = self.return_t().map_or(Ok(Type::new("Void")), |tn| {
             let t = Type::from_type_notation(tn);
             if self.ss.has_type(&t) {
                 Ok(t)
@@ -63,7 +59,7 @@ impl FunctionDeclarationChecker<'_> {
             return_t: Box::new(return_t.clone()),
         };
 
-        let (id, id_span) = id.unwrap_identifier();
+        let (id, id_span) = self.id().unwrap_identifier();
         self.ss
             .save_symbol_or_else(&id, fn_t.clone(), || Error::FunctionAlreadyExist {
                 id: id.clone(),
@@ -73,7 +69,7 @@ impl FunctionDeclarationChecker<'_> {
         Ok(fn_t)
     }
 
-    fn unwrap_identifier(&self) -> &AstNode {
+    fn id(&self) -> &AstNode {
         if let AstNode::FunctionDefinition { id, .. } = self.node {
             id
         } else {
@@ -81,7 +77,7 @@ impl FunctionDeclarationChecker<'_> {
         }
     }
 
-    fn unwrap_params(&self) -> &[(AstNode, AstNode)] {
+    fn params(&self) -> &[(AstNode, AstNode)] {
         if let AstNode::FunctionDefinition { params, .. } = self.node {
             params
         } else {
@@ -89,7 +85,7 @@ impl FunctionDeclarationChecker<'_> {
         }
     }
 
-    fn unwrap_return_type(&self) -> Option<&AstNode> {
+    fn return_t(&self) -> Option<&AstNode> {
         if let AstNode::FunctionDefinition { return_t, .. } = self.node {
             return_t.as_deref()
         } else {
@@ -115,16 +111,13 @@ impl<'a> FunctionDefinitionChecker<'a> {
 
 impl FunctionDefinitionChecker<'_> {
     pub fn check(&self) -> Result<Type> {
-        let id = self.unwrap_identifier();
-        let fn_t = self.unwrap_type();
-        let params_id = self.unwrap_param_identifiers();
-
-        let (params_t, return_t) = if let Type::Callable { params_t, return_t } = fn_t {
+        let (params_t, return_t) = if let Type::Callable { params_t, return_t } = self.fn_t() {
             (params_t, return_t)
         } else {
             unreachable!()
         };
 
+        let params_id = self.params_id();
         let params = params_id.iter().cloned().zip(params_t.iter());
 
         // Entering new scope
@@ -149,7 +142,7 @@ impl FunctionDefinitionChecker<'_> {
                 if !return_t.is_void() && body_t.is_void() {
                     return Err(Error::FunctionNotReturningValue {
                         expect: *return_t.clone(),
-                        span: id.span().clone(),
+                        span: self.id().span().clone(),
                     });
                 }
 
@@ -159,7 +152,7 @@ impl FunctionDefinitionChecker<'_> {
         Ok(Type::new("Void"))
     }
 
-    fn unwrap_identifier(&self) -> &AstNode {
+    fn id(&self) -> &AstNode {
         if let AstNode::FunctionDefinition { id, .. } = self.node {
             id
         } else {
@@ -167,7 +160,7 @@ impl FunctionDefinitionChecker<'_> {
         }
     }
 
-    fn unwrap_type(&self) -> Type {
+    fn fn_t(&self) -> Type {
         if let AstNode::FunctionDefinition { id, .. } = self.node {
             let id_str = &id.unwrap_identifier().0;
             self.ss.get_symbol_type(id_str).unwrap()
@@ -176,7 +169,7 @@ impl FunctionDefinitionChecker<'_> {
         }
     }
 
-    fn unwrap_param_identifiers(&self) -> Vec<(String, Span)> {
+    fn params_id(&self) -> Vec<(String, Span)> {
         if let AstNode::FunctionDefinition { params, .. } = self.node {
             params
                 .iter()
@@ -205,10 +198,9 @@ impl<'a> BodyChecker<'a> {
 
 impl BodyChecker<'_> {
     fn check(&self) -> Result<Type> {
-        let body = self.unwrap_body();
         let mut body_t = Type::new("Void");
 
-        for stmt in body {
+        for stmt in self.body() {
             let t = StatementChecker::new(self.ss, stmt).check()?;
             if body_t.is_void() {
                 body_t = t;
@@ -218,7 +210,7 @@ impl BodyChecker<'_> {
         Ok(body_t)
     }
 
-    fn unwrap_body(&self) -> &[AstNode] {
+    fn body(&self) -> &[AstNode] {
         match self.node {
             AstNode::FunctionDefinition { body, .. }
             | AstNode::If { body, .. }
@@ -359,38 +351,33 @@ impl<'a> VariableDeclarationChecker<'a> {
 
 impl VariableDeclarationChecker<'_> {
     fn check(&self) -> Result<Type> {
-        let id = self.unwrap_identifier_string();
-        let tn = self.unwrap_type();
-        let val = self.unwrap_value_type();
-        let span = self.unwrap_span();
-
-        let var_t = tn.map(Type::from_type_notation);
-        let val_t = ExpressionChecker::new(self.ss, val).check()?;
+        let var_t = self.tn().map(Type::from_type_notation);
+        let val_t = ExpressionChecker::new(self.ss, self.val()).check()?;
 
         if let Some(var_t) = &var_t {
             // The provided type must exist in the current scope
             if !self.ss.has_type(var_t) {
-                let (id, span) = tn.unwrap().unwrap_type_notation();
+                let (id, span) = self.tn().unwrap().unwrap_type_notation();
                 return Err(Error::TypeNotExist { id, span });
             }
 
             // Variable should not have "Void" type
             if var_t.is_void() {
                 return Err(Error::VoidTypeVariable {
-                    span: tn.unwrap().span().clone(),
+                    span: self.tn().unwrap().span().clone(),
                 });
             }
 
             // Check whether the value's type is compatible with the variable
-            Type::assert_assignable(&val_t, var_t, || span.clone())?;
+            Type::assert_assignable(&val_t, var_t, || self.span().clone())?;
         }
 
-        self.save_symbol(&id, var_t.unwrap_or(val_t), span)?;
+        self.save_symbol(&self.id_string(), var_t.unwrap_or(val_t), self.span())?;
 
         Ok(Type::new("Void"))
     }
 
-    fn unwrap_identifier_string(&self) -> String {
+    fn id_string(&self) -> String {
         if let AstNode::VariableDeclaration { id, .. } = self.node {
             id.unwrap_identifier().0
         } else {
@@ -398,7 +385,7 @@ impl VariableDeclarationChecker<'_> {
         }
     }
 
-    fn unwrap_type(&self) -> Option<&AstNode> {
+    fn tn(&self) -> Option<&AstNode> {
         if let AstNode::VariableDeclaration { tn, .. } = self.node {
             tn.as_deref()
         } else {
@@ -406,7 +393,7 @@ impl VariableDeclarationChecker<'_> {
         }
     }
 
-    fn unwrap_value_type(&self) -> &AstNode {
+    fn val(&self) -> &AstNode {
         if let AstNode::VariableDeclaration { val, .. } = self.node {
             val
         } else {
@@ -414,7 +401,7 @@ impl VariableDeclarationChecker<'_> {
         }
     }
 
-    fn unwrap_span(&self) -> &Span {
+    fn span(&self) -> &Span {
         if let AstNode::VariableDeclaration { span, .. } = self.node {
             span
         } else {
@@ -505,11 +492,8 @@ impl<'a> ConditionalBranchChecker<'a> {
 
 impl ConditionalBranchChecker<'_> {
     fn check(&self) -> Result<Type> {
-        let cond = self.unwrap_condition();
-        let or_else = self.unwrap_else_branch();
-
-        let cond_t = ExpressionChecker::new(self.ss, cond).check()?;
-        Type::assert_boolean(&cond_t, || cond.span().clone())?;
+        let cond_t = ExpressionChecker::new(self.ss, self.cond()).check()?;
+        Type::assert_boolean(&cond_t, || self.cond().span().clone())?;
 
         // Check all statements inside the body with a new scope
 
@@ -517,17 +501,17 @@ impl ConditionalBranchChecker<'_> {
             BodyChecker::new(self.ss, self.node).check()
         })?;
 
-        if or_else.is_none() {
+        if self.or_else().is_none() {
             return Ok(Type::new("Void"));
         }
 
-        match or_else.unwrap() {
+        match self.or_else().unwrap() {
             AstNode::If { .. } => {
                 // All conditional branches must returning a value for this whole
                 // statement to be considered as returning value
 
                 let branch_return_t =
-                    ConditionalBranchChecker::new(self.ss, or_else.unwrap()).check()?;
+                    ConditionalBranchChecker::new(self.ss, self.or_else().unwrap()).check()?;
 
                 if !return_t.is_void() && !branch_return_t.is_void() {
                     Ok(return_t)
@@ -540,7 +524,7 @@ impl ConditionalBranchChecker<'_> {
                 // Check all statements inside the body with a new scope
 
                 let branch_return_t = self.ss.with_scope(Scope::new_conditional_scope(), || {
-                    BodyChecker::new(self.ss, or_else.unwrap()).check()
+                    BodyChecker::new(self.ss, self.or_else().unwrap()).check()
                 })?;
 
                 if !return_t.is_void() && !branch_return_t.is_void() {
@@ -554,7 +538,7 @@ impl ConditionalBranchChecker<'_> {
         }
     }
 
-    fn unwrap_condition(&self) -> &AstNode {
+    fn cond(&self) -> &AstNode {
         if let AstNode::If { cond, .. } = self.node {
             cond
         } else {
@@ -562,7 +546,7 @@ impl ConditionalBranchChecker<'_> {
         }
     }
 
-    fn unwrap_else_branch(&self) -> Option<&AstNode> {
+    fn or_else(&self) -> Option<&AstNode> {
         if let AstNode::If { or_else, .. } = self.node {
             or_else.as_deref()
         } else {
@@ -616,12 +600,10 @@ impl<'a> LoopChecker<'a> {
 
 impl LoopChecker<'_> {
     fn check(&self) -> Result<Type> {
-        let cond = self.unwrap_condition();
-
         // Expecting boolean type for the condition
 
-        let cond_t = ExpressionChecker::new(self.ss, cond).check()?;
-        Type::assert_boolean(&cond_t, || cond.span().clone())?;
+        let cond_t = ExpressionChecker::new(self.ss, self.cond()).check()?;
+        Type::assert_boolean(&cond_t, || self.cond().span().clone())?;
 
         // Check all statements inside the body with a new scope
 
@@ -632,7 +614,7 @@ impl LoopChecker<'_> {
         Ok(Type::new("Void"))
     }
 
-    fn unwrap_condition(&self) -> &AstNode {
+    fn cond(&self) -> &AstNode {
         if let AstNode::While { cond, .. } = self.node {
             cond
         } else {
