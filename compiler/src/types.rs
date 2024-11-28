@@ -6,11 +6,13 @@ use self::{
     typ::Type,
 };
 use crate::ast::AstNode;
+use function::{FunctionDeclarationChecker, FunctionDefinitionChecker};
 use scope::ScopeStack;
-use statement::{FunctionDeclarationChecker, FunctionDefinitionChecker};
 
+mod body;
 mod error;
 mod expression;
+mod function;
 mod scope;
 mod statement;
 mod typ;
