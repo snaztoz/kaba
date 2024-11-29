@@ -92,7 +92,7 @@ impl VariableDeclarationChecker<'_> {
 
     fn val(&self) -> &AstNode {
         if let AstNode::VariableDeclaration { val, .. } = self.node {
-            &val
+            val
         } else {
             unreachable!()
         }
@@ -100,7 +100,7 @@ impl VariableDeclarationChecker<'_> {
 
     fn span(&self) -> &Span {
         if let AstNode::VariableDeclaration { span, .. } = self.node {
-            &span
+            span
         } else {
             unreachable!()
         }
