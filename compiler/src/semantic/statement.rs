@@ -89,7 +89,7 @@ impl StatementChecker<'_> {
 
         Type::assert_assignable(&expr_t, &return_t, || span.clone())
             .map_err(|err| Error::ReturnTypeMismatch {
-                expect: return_t.clone(),
+                expected: return_t.clone(),
                 get: expr_t,
                 span: err.span().clone(),
             })

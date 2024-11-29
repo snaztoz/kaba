@@ -131,8 +131,9 @@ impl FunctionDefinitionChecker<'_> {
                 let body_t = BodyChecker::new(self.ss, self.node).check()?;
 
                 if !return_t.is_void() && body_t.is_void() {
-                    return Err(Error::FunctionNotReturningValue {
-                        expect: return_t,
+                    return Err(Error::ReturnTypeMismatch {
+                        expected: return_t,
+                        get: Type::new("Void"),
                         span: self.id().span().clone(),
                     });
                 }

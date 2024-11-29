@@ -59,13 +59,8 @@ pub enum Error {
         span: Span,
     },
 
-    FunctionNotReturningValue {
-        expect: Type,
-        span: Span,
-    },
-
     ReturnTypeMismatch {
-        expect: Type,
+        expected: Type,
         get: Type,
         span: Span,
     },
@@ -89,7 +84,6 @@ impl Error {
             | Self::NotAFunction { span, .. }
             | Self::UnexpectedStatement { span, .. }
             | Self::InvalidFunctionCallArgument { span, .. }
-            | Self::FunctionNotReturningValue { span, .. }
             | Self::ReturnTypeMismatch { span, .. }
             | Self::DebugVoid { span } => span,
         }
@@ -141,16 +135,10 @@ impl Display for Error {
                     "unable to call function with argument(s) of type {args:?}"
                 )
             }
-            Self::FunctionNotReturningValue { expect, .. } => {
+            Self::ReturnTypeMismatch { expected, get, .. } => {
                 write!(
                     f,
-                    "expecting function to return a value of type {expect}, but none was returned",
-                )
-            }
-            Self::ReturnTypeMismatch { expect, get, .. } => {
-                write!(
-                    f,
-                    "expecting to returning value of type `{expect}`, but get `{get}` instead",
+                    "expecting function to returns `{expected}`, but get `{get}` instead",
                 )
             }
             Self::DebugVoid { .. } => {
