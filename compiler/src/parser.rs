@@ -32,10 +32,7 @@ impl Parser {
     fn parse(&mut self) -> Result<AstNode> {
         let mut body = vec![];
 
-        loop {
-            if self.current_token_is(&TokenKind::Eof) {
-                break;
-            }
+        while !self.current_token_is(&TokenKind::Eof) {
             let stmt = self.parse_statement()?;
             body.push(stmt)
         }
