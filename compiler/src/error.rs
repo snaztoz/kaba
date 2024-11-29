@@ -4,7 +4,7 @@
 use colored::Colorize;
 use indoc::writedoc;
 use logos::Span;
-use std::{fmt, path::PathBuf};
+use std::{fmt, path::Path};
 
 type Line = String;
 type Row = usize;
@@ -14,14 +14,14 @@ type Col = usize;
 /// process, alongside with the information of its source code
 /// file path and the source code itself.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct Error {
-    pub path: Option<PathBuf>,
-    pub src: String,
+pub struct Error<'a> {
+    pub path: Option<&'a Path>,
+    pub src: &'a str,
     pub message: String,
     pub span: Option<Span>,
 }
 
-impl Error {
+impl Error<'_> {
     fn get_position(&self) -> Option<(Line, Row, Col)> {
         let span = self.span.as_ref().unwrap();
         let left_of_selected = &self.src[..span.start];
@@ -56,7 +56,7 @@ impl Error {
     }
 }
 
-impl fmt::Display for Error {
+impl fmt::Display for Error<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let label = "error:".bright_red().bold();
         let message = &self.message;
@@ -116,7 +116,7 @@ mod tests {
 
         for (span, expected_line, expected_row, expected_col) in cases {
             let error = Error {
-                src: String::from(input),
+                src: input,
                 span: Some(span),
                 ..Error::default()
             };

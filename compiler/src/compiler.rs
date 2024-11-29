@@ -30,10 +30,9 @@ impl Compiler {
         let ext = path.extension().and_then(|e| e.to_str());
         if !matches!(ext, Some("kaba")) {
             return Err(Error {
-                path: Some(PathBuf::from(path)),
-                src: String::new(),
+                path: Some(path),
                 message: SourceCodeError::WrongExtension.to_string(),
-                span: None,
+                ..Error::default()
             });
         }
 
@@ -42,10 +41,9 @@ impl Compiler {
                 path: PathBuf::from(path),
             };
             return Err(Error {
-                path: Some(PathBuf::from(path)),
-                src: String::new(),
+                path: Some(path),
                 message: error.to_string(),
-                span: None,
+                ..Error::default()
             });
         }
 
@@ -58,14 +56,14 @@ impl Compiler {
     }
 
     /// Run the compilation process.
-    pub fn compile(mut self) -> Result<AstNode> {
+    pub fn compile(&mut self) -> Result<AstNode> {
         self.normalize_newlines();
 
         let tokens = lexer::lex(&self.src);
         if let Err(e) = &tokens {
             return Err(Error {
-                path: self.path,
-                src: String::from(&self.src),
+                path: self.path.as_deref(),
+                src: &self.src,
                 message: e.to_string(),
                 span: e.span(),
             });
@@ -74,8 +72,8 @@ impl Compiler {
         let ast = parser::parse(tokens.unwrap());
         if let Err(e) = &ast {
             return Err(Error {
-                path: self.path,
-                src: self.src,
+                path: self.path.as_deref(),
+                src: &self.src,
                 message: e.to_string(),
                 span: e.span(),
             });
@@ -83,8 +81,8 @@ impl Compiler {
 
         if let Err(e) = semantic::check(ast.as_ref().unwrap()) {
             return Err(Error {
-                path: self.path,
-                src: self.src,
+                path: self.path.as_deref(),
+                src: &self.src,
                 message: e.to_string(),
                 span: Some(e.span().clone()),
             });
