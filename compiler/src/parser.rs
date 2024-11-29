@@ -25,7 +25,7 @@ struct Parser {
 }
 
 impl Parser {
-    fn new(tokens: Vec<Token>) -> Self {
+    const fn new(tokens: Vec<Token>) -> Self {
         Self { tokens, cursor: 0 }
     }
 

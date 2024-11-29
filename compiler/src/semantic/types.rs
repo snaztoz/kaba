@@ -119,7 +119,7 @@ impl Type {
         matches!(self, Self::Identifier(id) if id == "Bool")
     }
 
-    fn is_callable(&self) -> bool {
+    const fn is_callable(&self) -> bool {
         matches!(self, Self::Callable { .. })
     }
 

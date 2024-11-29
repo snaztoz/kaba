@@ -261,7 +261,7 @@ impl AstNode {
         }
     }
 
-    pub fn is_valid_assignment_lhs(&self) -> bool {
+    pub const fn is_valid_assignment_lhs(&self) -> bool {
         matches!(self, Self::Identifier { .. })
     }
 

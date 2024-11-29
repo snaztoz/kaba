@@ -18,7 +18,7 @@ pub struct FunctionDeclarationChecker<'a> {
 }
 
 impl<'a> FunctionDeclarationChecker<'a> {
-    pub fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
 }
@@ -111,7 +111,7 @@ pub struct FunctionDefinitionChecker<'a> {
 }
 
 impl<'a> FunctionDefinitionChecker<'a> {
-    pub fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
 }

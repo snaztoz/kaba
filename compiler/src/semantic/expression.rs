@@ -13,7 +13,7 @@ pub struct ExpressionChecker<'a> {
 }
 
 impl<'a> ExpressionChecker<'a> {
-    pub fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
 }
@@ -125,7 +125,7 @@ struct FunctionCallChecker<'a> {
 }
 
 impl<'a> FunctionCallChecker<'a> {
-    fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+    const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
 }

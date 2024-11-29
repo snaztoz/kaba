@@ -11,7 +11,7 @@ pub struct BodyChecker<'a> {
 }
 
 impl<'a> BodyChecker<'a> {
-    pub fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
 }
