@@ -74,7 +74,7 @@ impl ExpressionChecker<'_> {
         let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
         let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
 
-        Type::assert_comparable(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
+        Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
         Ok(Type::new("Bool"))
     }
@@ -83,7 +83,7 @@ impl ExpressionChecker<'_> {
         let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
         let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
 
-        Type::assert_comparable(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
+        Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
         Type::assert_number(&lhs_t, || lhs.span().clone())?;
         Type::assert_number(&rhs_t, || rhs.span().clone())?;

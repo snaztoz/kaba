@@ -21,12 +21,6 @@ pub enum Error {
         span: Span,
     },
 
-    UnableToCompareTypes {
-        type_a: Type,
-        type_b: Type,
-        span: Span,
-    },
-
     SymbolAlreadyExist {
         id: String,
         span: Span,
@@ -82,7 +76,6 @@ impl Error {
             Self::VoidTypeVariable { span, .. }
             | Self::UnableToAssignValueType { span, .. }
             | Self::InvalidAssignmentLhs { span, .. }
-            | Self::UnableToCompareTypes { span, .. }
             | Self::SymbolAlreadyExist { span, .. }
             | Self::SymbolDoesNotExist { span, .. }
             | Self::NotANumber { span, .. }
@@ -111,12 +104,6 @@ impl Display for Error {
             }
             Self::InvalidAssignmentLhs { lhs, .. } => {
                 write!(f, "{lhs} can not be an assignment's lhs")
-            }
-            Self::UnableToCompareTypes { type_a, type_b, .. } => {
-                write!(
-                    f,
-                    "unable to compare the value of type `{type_a}` with type `{type_b}`"
-                )
             }
             Self::SymbolAlreadyExist { id, .. } => {
                 write!(f, "`{id}` already exists in current scope")

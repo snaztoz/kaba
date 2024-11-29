@@ -111,21 +111,6 @@ impl Type {
         }
     }
 
-    pub fn assert_comparable<F>(a: &Self, b: &Self, err_span: F) -> Result<()>
-    where
-        F: FnOnce() -> Span,
-    {
-        if a == b {
-            Ok(())
-        } else {
-            Err(Error::UnableToCompareTypes {
-                type_a: a.clone(),
-                type_b: b.clone(),
-                span: err_span(),
-            })
-        }
-    }
-
     pub fn is_number(&self) -> bool {
         matches!(self, Self::Identifier(id) if id == "Int" || id == "Float")
     }
