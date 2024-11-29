@@ -107,11 +107,10 @@ impl VariableDeclarationChecker<'_> {
     }
 
     fn save_symbol(&self, id: &str, t: Type, span: &Span) -> Result<()> {
-        self.ss
-            .save_symbol_or_else(id, t, || Error::VariableAlreadyExist {
-                id: String::from(id),
-                span: span.clone(),
-            })
+        self.ss.save_symbol_or_else(id, t, || Error::AlreadyExist {
+            id: String::from(id),
+            span: span.clone(),
+        })
     }
 }
 

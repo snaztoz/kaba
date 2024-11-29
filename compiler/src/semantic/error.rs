@@ -27,7 +27,7 @@ pub enum Error {
         span: Span,
     },
 
-    VariableAlreadyExist {
+    AlreadyExist {
         id: String,
         span: Span,
     },
@@ -56,11 +56,6 @@ pub enum Error {
 
     UnexpectedStatement {
         stmt_str: String,
-        span: Span,
-    },
-
-    FunctionAlreadyExist {
-        id: String,
         span: Span,
     },
 
@@ -93,13 +88,12 @@ impl Error {
             | Self::InvalidAssignmentLhs { span, .. }
             | Self::UnableToCompareTypes { span, .. }
             | Self::VariableNotExist { span, .. }
-            | Self::VariableAlreadyExist { span, .. }
+            | Self::AlreadyExist { span, .. }
             | Self::TypeNotExist { span, .. }
             | Self::NotANumber { span, .. }
             | Self::NotABoolean { span, .. }
             | Self::NotAFunction { span, .. }
             | Self::UnexpectedStatement { span, .. }
-            | Self::FunctionAlreadyExist { span, .. }
             | Self::InvalidFunctionCallArgument { span, .. }
             | Self::FunctionNotReturningValue { span, .. }
             | Self::ReturnTypeMismatch { span, .. }
@@ -129,8 +123,8 @@ impl Display for Error {
                     "unable to compare the value of type `{type_a}` with type `{type_b}`"
                 )
             }
-            Self::VariableAlreadyExist { id, .. } => {
-                write!(f, "variable `{id}` already exists in current scope")
+            Self::AlreadyExist { id, .. } => {
+                write!(f, "`{id}` already exists in current scope")
             }
             Self::VariableNotExist { id, .. } => {
                 write!(f, "variable `{id}` is not exist in current scope")
@@ -149,9 +143,6 @@ impl Display for Error {
             }
             Self::UnexpectedStatement { stmt_str, .. } => {
                 write!(f, "unexpected {stmt_str}")
-            }
-            Self::FunctionAlreadyExist { id, .. } => {
-                write!(f, "function `{id}` is already exists")
             }
             Self::InvalidFunctionCallArgument { args, .. } => {
                 write!(

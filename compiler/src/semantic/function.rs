@@ -70,7 +70,7 @@ impl FunctionDeclarationChecker<'_> {
     fn save_fn_t_to_stack(&self, fn_t: Type) -> Result<()> {
         let (id, id_span) = self.id().unwrap_identifier();
         self.ss
-            .save_symbol_or_else(&id, fn_t.clone(), || Error::FunctionAlreadyExist {
+            .save_symbol_or_else(&id, fn_t.clone(), || Error::AlreadyExist {
                 id: id.clone(),
                 span: id_span,
             })
@@ -146,7 +146,7 @@ impl FunctionDefinitionChecker<'_> {
     fn save_params_to_stack(&self, params: &[((String, Span), Type)]) -> Result<()> {
         for ((id, id_span), t) in params {
             self.ss
-                .save_symbol_or_else(id, t.clone(), || Error::VariableAlreadyExist {
+                .save_symbol_or_else(id, t.clone(), || Error::AlreadyExist {
                     id: id.clone(),
                     span: id_span.clone(),
                 })?;
