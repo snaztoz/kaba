@@ -13,7 +13,7 @@ pub struct TypeNotationChecker<'a> {
 }
 
 impl<'a> TypeNotationChecker<'a> {
-    pub fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self {
             ss,
             node,
@@ -21,7 +21,7 @@ impl<'a> TypeNotationChecker<'a> {
         }
     }
 
-    pub fn new_with_void_allowed(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+    pub const fn new_with_void_allowed(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self {
             ss,
             node,

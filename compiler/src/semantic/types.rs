@@ -119,7 +119,7 @@ impl Type {
         matches!(self, Self::Identifier(id) if id == "Bool")
     }
 
-    fn is_callable(&self) -> bool {
+    const fn is_callable(&self) -> bool {
         matches!(self, Self::Callable { .. })
     }
 
@@ -150,7 +150,7 @@ impl Display for Type {
                     .map(|t| t.to_string())
                     .collect::<Vec<_>>()
                     .join(",");
-                write!(f, "({}) -> {}", params_t, return_t)
+                write!(f, "({params_t}) -> {return_t}")
             }
         }
     }

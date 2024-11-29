@@ -173,8 +173,7 @@ impl Display for Error {
             Self::InvalidFunctionCallArgument { args, .. } => {
                 write!(
                     f,
-                    "unable to call function with argument(s) of type {:?}",
-                    args
+                    "unable to call function with argument(s) of type {args:?}"
                 )
             }
             Self::FunctionNotReturningValue { expect, .. } => {

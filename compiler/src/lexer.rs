@@ -137,7 +137,7 @@ pub enum TokenKind {
 }
 
 impl TokenKind {
-    fn is_comment(&self) -> bool {
+    const fn is_comment(&self) -> bool {
         matches!(self, Self::Comment(_))
     }
 }

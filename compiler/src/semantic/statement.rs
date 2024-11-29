@@ -20,7 +20,7 @@ pub struct StatementChecker<'a> {
 }
 
 impl<'a> StatementChecker<'a> {
-    pub fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
 }
@@ -133,7 +133,7 @@ struct VariableDeclarationChecker<'a> {
 }
 
 impl<'a> VariableDeclarationChecker<'a> {
-    fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+    const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
 }
@@ -271,7 +271,7 @@ struct ConditionalBranchChecker<'a> {
 }
 
 impl<'a> ConditionalBranchChecker<'a> {
-    fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+    const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
 }
@@ -380,7 +380,7 @@ struct WhileLoopChecker<'a> {
 }
 
 impl<'a> WhileLoopChecker<'a> {
-    fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+    const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
 }
@@ -457,7 +457,7 @@ struct AssignmentChecker<'a> {
 }
 
 impl<'a> AssignmentChecker<'a> {
-    fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+    const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
         Self { ss, node }
     }
 }

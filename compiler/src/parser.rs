@@ -25,17 +25,14 @@ struct Parser {
 }
 
 impl Parser {
-    fn new(tokens: Vec<Token>) -> Self {
+    const fn new(tokens: Vec<Token>) -> Self {
         Self { tokens, cursor: 0 }
     }
 
     fn parse(&mut self) -> Result<AstNode> {
         let mut body = vec![];
 
-        loop {
-            if self.current_token_is(&TokenKind::Eof) {
-                break;
-            }
+        while !self.current_token_is(&TokenKind::Eof) {
             let stmt = self.parse_statement()?;
             body.push(stmt)
         }
