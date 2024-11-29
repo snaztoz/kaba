@@ -268,7 +268,7 @@ impl<'a> Runtime<'a> {
 
     fn run_debug_statement(&self, expr: &AstNode) -> Result<()> {
         let val = self.run_expression(expr)?;
-        writeln!(self.streams.output(), "{}", val).unwrap();
+        writeln!(self.streams.output(), "{val}").unwrap();
         Ok(())
     }
 

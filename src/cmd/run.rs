@@ -16,7 +16,7 @@ pub fn handle(file_path: &Path) {
 
     let res = Runtime::new(ast, streams).run();
     if let Err(e) = res {
-        eprintln!("{}", e);
+        eprintln!("{e}");
         process::exit(1);
     }
 }

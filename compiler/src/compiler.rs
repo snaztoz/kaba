@@ -111,7 +111,7 @@ impl Display for SourceCodeError {
                 write!(f, "Kaba source code file must have '.kaba' extension")
             }
             Self::FileNotExist { path } => {
-                write!(f, "file '{}' is not exist", path.display())
+                write!(f, "file '{}' does not exist", path.display())
             }
         }
     }

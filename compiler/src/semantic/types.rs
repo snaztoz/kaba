@@ -150,7 +150,7 @@ impl Display for Type {
                     .map(|t| t.to_string())
                     .collect::<Vec<_>>()
                     .join(",");
-                write!(f, "({}) -> {}", params_t, return_t)
+                write!(f, "({params_t}) -> {return_t}")
             }
         }
     }

@@ -269,10 +269,7 @@ impl AstNode {
         if let AstNode::Identifier { name, span } = self {
             (name.clone(), span.clone())
         } else {
-            panic!(
-                "calling `unwrap_identifier` on non-identifier AstNode: {:?}",
-                self
-            )
+            panic!("calling `unwrap_identifier` on non-identifier AstNode: {self:?}")
         }
     }
 
