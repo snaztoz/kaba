@@ -76,10 +76,13 @@ impl StatementChecker<'_> {
             .map(|expr| ExpressionChecker::new(self.ss, expr).check())
             .unwrap_or(Ok(Type::new("Void")))?;
 
-        let return_t = self
-            .ss
-            .current_function_return_type()
-            .ok_or_else(|| Error::UnexpectedReturnStatement { span: span.clone() })?;
+        let return_t =
+            self.ss
+                .current_function_return_type()
+                .ok_or_else(|| Error::UnexpectedStatement {
+                    stmt_str: self.node.to_string(),
+                    span: span.clone(),
+                })?;
 
         Type::assert_assignable(&expr_t, &return_t, || span.clone())
             .map_err(|err| Error::ReturnTypeMismatch {

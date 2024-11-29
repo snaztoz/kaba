@@ -74,10 +74,6 @@ pub enum Error {
         span: Span,
     },
 
-    UnexpectedReturnStatement {
-        span: Span,
-    },
-
     ReturnTypeMismatch {
         expect: Type,
         get: Type,
@@ -110,7 +106,6 @@ impl Error {
             | Self::FunctionAlreadyExist { span, .. }
             | Self::InvalidFunctionCallArgument { span, .. }
             | Self::FunctionNotReturningValue { span, .. }
-            | Self::UnexpectedReturnStatement { span, .. }
             | Self::ReturnTypeMismatch { span, .. }
             | Self::UnexpectedLoopControl { span }
             | Self::DebugVoid { span } => span,
@@ -173,12 +168,6 @@ impl Display for Error {
                 write!(
                     f,
                     "expecting function to return a value of type {expect}, but none was returned",
-                )
-            }
-            Self::UnexpectedReturnStatement { .. } => {
-                write!(
-                    f,
-                    "the usage of `return` statement must be within a function body",
                 )
             }
             Self::ReturnTypeMismatch { expect, get, .. } => {
