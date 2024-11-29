@@ -80,10 +80,6 @@ pub enum Error {
         span: Span,
     },
 
-    UnexpectedLoopControl {
-        span: Span,
-    },
-
     DebugVoid {
         span: Span,
     },
@@ -107,7 +103,6 @@ impl Error {
             | Self::InvalidFunctionCallArgument { span, .. }
             | Self::FunctionNotReturningValue { span, .. }
             | Self::ReturnTypeMismatch { span, .. }
-            | Self::UnexpectedLoopControl { span }
             | Self::DebugVoid { span } => span,
         }
     }
@@ -174,12 +169,6 @@ impl Display for Error {
                 write!(
                     f,
                     "expecting to returning value of type `{expect}`, but get `{get}` instead",
-                )
-            }
-            Self::UnexpectedLoopControl { .. } => {
-                write!(
-                    f,
-                    "the usage of `break` and `continue` statements must be within a loop"
                 )
             }
             Self::DebugVoid { .. } => {

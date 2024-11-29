@@ -64,7 +64,10 @@ impl StatementChecker<'_> {
 
     fn check_loop_control(&self, span: &Span) -> Result<Type> {
         if !self.ss.is_inside_loop() {
-            return Err(Error::UnexpectedLoopControl { span: span.clone() });
+            return Err(Error::UnexpectedStatement {
+                stmt_str: self.node.to_string(),
+                span: span.clone(),
+            });
         }
 
         Ok(Type::new("Void"))
