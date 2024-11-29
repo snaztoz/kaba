@@ -12,7 +12,7 @@ pub enum Error {
 
     UnableToAssignValueType {
         var_t: String,
-        value_t: String,
+        val_t: String,
         span: Span,
     },
 
@@ -21,23 +21,12 @@ pub enum Error {
         span: Span,
     },
 
-    UnableToCompareTypes {
-        type_a: Type,
-        type_b: Type,
-        span: Span,
-    },
-
-    VariableAlreadyExist {
+    SymbolAlreadyExist {
         id: String,
         span: Span,
     },
 
-    VariableNotExist {
-        id: String,
-        span: Span,
-    },
-
-    TypeNotExist {
+    SymbolDoesNotExist {
         id: String,
         span: Span,
     },
@@ -54,16 +43,8 @@ pub enum Error {
         span: Span,
     },
 
-    UnexpectedStatementInGlobal {
-        span: Span,
-    },
-
-    FunctionDefinitionNotInGlobal {
-        span: Span,
-    },
-
-    FunctionAlreadyExist {
-        id: String,
+    UnexpectedStatement {
+        stmt_str: String,
         span: Span,
     },
 
@@ -72,22 +53,15 @@ pub enum Error {
         span: Span,
     },
 
-    FunctionNotReturningValue {
-        expect: Type,
-        span: Span,
-    },
-
-    UnexpectedReturnStatement {
+    TypeMismatch {
+        type_a: Type,
+        type_b: Type,
         span: Span,
     },
 
     ReturnTypeMismatch {
-        expect: Type,
+        expected: Type,
         get: Type,
-        span: Span,
-    },
-
-    UnexpectedLoopControl {
         span: Span,
     },
 
@@ -102,21 +76,15 @@ impl Error {
             Self::VoidTypeVariable { span, .. }
             | Self::UnableToAssignValueType { span, .. }
             | Self::InvalidAssignmentLhs { span, .. }
-            | Self::UnableToCompareTypes { span, .. }
-            | Self::VariableNotExist { span, .. }
-            | Self::VariableAlreadyExist { span, .. }
-            | Self::TypeNotExist { span, .. }
+            | Self::SymbolAlreadyExist { span, .. }
+            | Self::SymbolDoesNotExist { span, .. }
             | Self::NotANumber { span, .. }
             | Self::NotABoolean { span, .. }
             | Self::NotAFunction { span, .. }
-            | Self::UnexpectedStatementInGlobal { span }
-            | Self::FunctionDefinitionNotInGlobal { span, .. }
-            | Self::FunctionAlreadyExist { span, .. }
+            | Self::UnexpectedStatement { span, .. }
             | Self::InvalidFunctionCallArgument { span, .. }
-            | Self::FunctionNotReturningValue { span, .. }
-            | Self::UnexpectedReturnStatement { span, .. }
+            | Self::TypeMismatch { span, .. }
             | Self::ReturnTypeMismatch { span, .. }
-            | Self::UnexpectedLoopControl { span }
             | Self::DebugVoid { span } => span,
         }
     }
@@ -128,29 +96,20 @@ impl Display for Error {
             Self::VoidTypeVariable { .. } => {
                 write!(f, "unable to create variable with `Void` type")
             }
-            Self::UnableToAssignValueType { var_t, value_t, .. } => {
+            Self::UnableToAssignValueType { var_t, val_t, .. } => {
                 write!(
                     f,
-                    "unable to assign value of type `{value_t}` to type `{var_t}`"
+                    "unable to assign value of type `{val_t}` to type `{var_t}`"
                 )
             }
             Self::InvalidAssignmentLhs { lhs, .. } => {
                 write!(f, "{lhs} can not be an assignment's lhs")
             }
-            Self::UnableToCompareTypes { type_a, type_b, .. } => {
-                write!(
-                    f,
-                    "unable to compare the value of type `{type_a}` with type `{type_b}`"
-                )
+            Self::SymbolAlreadyExist { id, .. } => {
+                write!(f, "`{id}` already exists in current scope")
             }
-            Self::VariableAlreadyExist { id, .. } => {
-                write!(f, "variable `{id}` already exists in current scope")
-            }
-            Self::VariableNotExist { id, .. } => {
-                write!(f, "variable `{id}` is not exist in current scope")
-            }
-            Self::TypeNotExist { id, .. } => {
-                write!(f, "type `{id}` is not exist")
+            Self::SymbolDoesNotExist { id, .. } => {
+                write!(f, "`{id}` does not exist in current scope")
             }
             Self::NotANumber { .. } => {
                 write!(f, "not a number")
@@ -161,14 +120,8 @@ impl Display for Error {
             Self::NotAFunction { .. } => {
                 write!(f, "not a function")
             }
-            Self::UnexpectedStatementInGlobal { .. } => {
-                write!(f, "expecting only function definitions in global scope")
-            }
-            Self::FunctionDefinitionNotInGlobal { .. } => {
-                write!(f, "unable to define functions in non-global scope")
-            }
-            Self::FunctionAlreadyExist { id, .. } => {
-                write!(f, "function `{id}` is already exists")
+            Self::UnexpectedStatement { stmt_str, .. } => {
+                write!(f, "unexpected {stmt_str}")
             }
             Self::InvalidFunctionCallArgument { args, .. } => {
                 write!(
@@ -176,28 +129,13 @@ impl Display for Error {
                     "unable to call function with argument(s) of type {args:?}"
                 )
             }
-            Self::FunctionNotReturningValue { expect, .. } => {
-                write!(
-                    f,
-                    "expecting function to return a value of type {expect}, but none was returned",
-                )
+            Self::TypeMismatch { type_a, type_b, .. } => {
+                write!(f, "type mismatch: `{type_a}` and `{type_b}`",)
             }
-            Self::UnexpectedReturnStatement { .. } => {
+            Self::ReturnTypeMismatch { expected, get, .. } => {
                 write!(
                     f,
-                    "the usage of `return` statement must be within a function body",
-                )
-            }
-            Self::ReturnTypeMismatch { expect, get, .. } => {
-                write!(
-                    f,
-                    "expecting to returning value of type `{expect}`, but get `{get}` instead",
-                )
-            }
-            Self::UnexpectedLoopControl { .. } => {
-                write!(
-                    f,
-                    "the usage of `break` and `continue` statements must be within a loop"
+                    "expecting function to returns `{expected}`, but get `{get}` instead",
                 )
             }
             Self::DebugVoid { .. } => {

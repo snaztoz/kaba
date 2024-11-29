@@ -67,7 +67,8 @@ impl ProgramChecker<'_> {
         match stmt {
             AstNode::FunctionDefinition { .. } => Ok(()),
 
-            _ => Err(Error::UnexpectedStatementInGlobal {
+            n => Err(Error::UnexpectedStatement {
+                stmt_str: n.to_string(),
                 span: stmt.span().clone(),
             }),
         }

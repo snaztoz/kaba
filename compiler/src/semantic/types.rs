@@ -59,6 +59,21 @@ impl Type {
         }
     }
 
+    pub fn assert_same<F>(type_a: &Self, type_b: &Self, err_span: F) -> Result<()>
+    where
+        F: FnOnce() -> Span,
+    {
+        if type_a == type_b {
+            Ok(())
+        } else {
+            Err(Error::TypeMismatch {
+                type_a: type_a.clone(),
+                type_b: type_b.clone(),
+                span: err_span(),
+            })
+        }
+    }
+
     pub fn assert_boolean<F>(t: &Self, err_span: F) -> Result<()>
     where
         F: FnOnce() -> Span,
@@ -90,22 +105,7 @@ impl Type {
         } else {
             Err(Error::UnableToAssignValueType {
                 var_t: to.to_string(),
-                value_t: from.to_string(),
-                span: err_span(),
-            })
-        }
-    }
-
-    pub fn assert_comparable<F>(a: &Self, b: &Self, err_span: F) -> Result<()>
-    where
-        F: FnOnce() -> Span,
-    {
-        if a == b {
-            Ok(())
-        } else {
-            Err(Error::UnableToCompareTypes {
-                type_a: a.clone(),
-                type_b: b.clone(),
+                val_t: from.to_string(),
                 span: err_span(),
             })
         }

@@ -70,7 +70,7 @@ impl FunctionDeclarationChecker<'_> {
     fn save_fn_t_to_stack(&self, fn_t: Type) -> Result<()> {
         let (id, id_span) = self.id().unwrap_identifier();
         self.ss
-            .save_symbol_or_else(&id, fn_t.clone(), || Error::FunctionAlreadyExist {
+            .save_symbol_or_else(&id, fn_t.clone(), || Error::SymbolAlreadyExist {
                 id: id.clone(),
                 span: id_span,
             })
@@ -131,8 +131,9 @@ impl FunctionDefinitionChecker<'_> {
                 let body_t = BodyChecker::new(self.ss, self.node).check()?;
 
                 if !return_t.is_void() && body_t.is_void() {
-                    return Err(Error::FunctionNotReturningValue {
-                        expect: return_t,
+                    return Err(Error::ReturnTypeMismatch {
+                        expected: return_t,
+                        get: Type::new("Void"),
                         span: self.id().span().clone(),
                     });
                 }
@@ -146,7 +147,7 @@ impl FunctionDefinitionChecker<'_> {
     fn save_params_to_stack(&self, params: &[((String, Span), Type)]) -> Result<()> {
         for ((id, id_span), t) in params {
             self.ss
-                .save_symbol_or_else(id, t.clone(), || Error::VariableAlreadyExist {
+                .save_symbol_or_else(id, t.clone(), || Error::SymbolAlreadyExist {
                     id: id.clone(),
                     span: id_span.clone(),
                 })?;

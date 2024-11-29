@@ -41,7 +41,8 @@ impl StatementChecker<'_> {
             AstNode::Break { span } | AstNode::Continue { span } => self.check_loop_control(span),
 
             AstNode::FunctionDefinition { id, .. } => {
-                return Err(Error::FunctionDefinitionNotInGlobal {
+                return Err(Error::UnexpectedStatement {
+                    stmt_str: self.node.to_string(),
                     span: id.span().clone(),
                 })
             }
@@ -63,7 +64,10 @@ impl StatementChecker<'_> {
 
     fn check_loop_control(&self, span: &Span) -> Result<Type> {
         if !self.ss.is_inside_loop() {
-            return Err(Error::UnexpectedLoopControl { span: span.clone() });
+            return Err(Error::UnexpectedStatement {
+                stmt_str: self.node.to_string(),
+                span: span.clone(),
+            });
         }
 
         Ok(Type::new("Void"))
@@ -75,14 +79,17 @@ impl StatementChecker<'_> {
             .map(|expr| ExpressionChecker::new(self.ss, expr).check())
             .unwrap_or(Ok(Type::new("Void")))?;
 
-        let return_t = self
-            .ss
-            .current_function_return_type()
-            .ok_or_else(|| Error::UnexpectedReturnStatement { span: span.clone() })?;
+        let return_t =
+            self.ss
+                .current_function_return_type()
+                .ok_or_else(|| Error::UnexpectedStatement {
+                    stmt_str: self.node.to_string(),
+                    span: span.clone(),
+                })?;
 
         Type::assert_assignable(&expr_t, &return_t, || span.clone())
             .map_err(|err| Error::ReturnTypeMismatch {
-                expect: return_t.clone(),
+                expected: return_t.clone(),
                 get: expr_t,
                 span: err.span().clone(),
             })

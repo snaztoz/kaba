@@ -46,7 +46,7 @@ impl ExpressionChecker<'_> {
             AstNode::Identifier { name, span } => {
                 self.ss
                     .get_symbol_type(name)
-                    .ok_or_else(|| Error::VariableNotExist {
+                    .ok_or_else(|| Error::SymbolDoesNotExist {
                         id: String::from(name),
                         span: span.clone(),
                     })
@@ -74,7 +74,7 @@ impl ExpressionChecker<'_> {
         let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
         let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
 
-        Type::assert_comparable(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
+        Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
         Ok(Type::new("Bool"))
     }
@@ -83,7 +83,7 @@ impl ExpressionChecker<'_> {
         let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
         let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
 
-        Type::assert_comparable(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
+        Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
         Type::assert_number(&lhs_t, || lhs.span().clone())?;
         Type::assert_number(&rhs_t, || rhs.span().clone())?;
@@ -97,12 +97,9 @@ impl ExpressionChecker<'_> {
 
         Type::assert_number(&lhs_t, || lhs.span().clone())?;
         Type::assert_number(&rhs_t, || rhs.span().clone())?;
+        Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
-        if lhs_t == Type::new("Int") && rhs_t == Type::new("Int") {
-            Ok(Type::new("Int"))
-        } else {
-            Ok(Type::new("Float"))
-        }
+        Ok(lhs_t)
     }
 
     fn check_logical_not_operation(&self, child: &AstNode) -> Result<Type> {
@@ -153,7 +150,7 @@ impl FunctionCallChecker<'_> {
             AstNode::Identifier { name, span } => {
                 self.ss
                     .get_symbol_type(name)
-                    .ok_or_else(|| Error::VariableNotExist {
+                    .ok_or_else(|| Error::SymbolDoesNotExist {
                         id: String::from(name),
                         span: span.clone(),
                     })
@@ -242,11 +239,6 @@ mod tests {
     }
 
     #[test]
-    fn math_expression_with_int_and_float_operands() {
-        check_and_assert_type("-5 + -0.25;", Type::new("Float"));
-    }
-
-    #[test]
     fn float_modulo_operation() {
         check_and_assert_type("99.9 % 0.1;", Type::new("Float"));
     }
@@ -259,6 +251,11 @@ mod tests {
     #[test]
     fn logical_or_and_and_operations() {
         check_and_assert_type("false || !false && 50 > 0;", Type::new("Bool"));
+    }
+
+    #[test]
+    fn math_expression_with_int_and_float_operands() {
+        check_and_assert_is_err("-5 + -0.25;");
     }
 
     #[test]
@@ -278,7 +275,7 @@ mod tests {
 
     #[test]
     fn checking_equality_of_int_and_float() {
-        check_and_assert_is_err("93 != 93.0;");
+        check_and_assert_is_err("93 == 93.0;");
     }
 
     #[test]

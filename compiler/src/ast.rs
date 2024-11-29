@@ -298,11 +298,20 @@ impl Display for AstNode {
             Self::While { .. } => {
                 write!(f, "`while` statement")
             }
+            Self::FunctionDefinition { .. } => {
+                write!(f, "function definition")
+            }
             Self::Break { .. } => {
                 write!(f, "`break` statement")
             }
             Self::Continue { .. } => {
                 write!(f, "`continue` statement")
+            }
+            Self::Return { .. } => {
+                write!(f, "`return` statement")
+            }
+            Self::Debug { .. } => {
+                write!(f, "`debug` statement")
             }
             Self::Assign { .. } => {
                 write!(f, "`assign` expression")
@@ -380,7 +389,7 @@ impl Display for AstNode {
                 write!(f, "value literal")
             }
 
-            _ => unreachable!(),
+            Self::Program { .. } | Self::Group { .. } => unreachable!(),
         }
     }
 }
