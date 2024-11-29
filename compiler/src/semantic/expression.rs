@@ -46,7 +46,7 @@ impl ExpressionChecker<'_> {
             AstNode::Identifier { name, span } => {
                 self.ss
                     .get_symbol_type(name)
-                    .ok_or_else(|| Error::VariableNotExist {
+                    .ok_or_else(|| Error::SymbolDoesNotExist {
                         id: String::from(name),
                         span: span.clone(),
                     })
@@ -153,7 +153,7 @@ impl FunctionCallChecker<'_> {
             AstNode::Identifier { name, span } => {
                 self.ss
                     .get_symbol_type(name)
-                    .ok_or_else(|| Error::VariableNotExist {
+                    .ok_or_else(|| Error::SymbolDoesNotExist {
                         id: String::from(name),
                         span: span.clone(),
                     })

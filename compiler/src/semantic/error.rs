@@ -32,12 +32,7 @@ pub enum Error {
         span: Span,
     },
 
-    VariableNotExist {
-        id: String,
-        span: Span,
-    },
-
-    TypeNotExist {
+    SymbolDoesNotExist {
         id: String,
         span: Span,
     },
@@ -87,9 +82,8 @@ impl Error {
             | Self::UnableToAssignValueType { span, .. }
             | Self::InvalidAssignmentLhs { span, .. }
             | Self::UnableToCompareTypes { span, .. }
-            | Self::VariableNotExist { span, .. }
+            | Self::SymbolDoesNotExist { span, .. }
             | Self::AlreadyExist { span, .. }
-            | Self::TypeNotExist { span, .. }
             | Self::NotANumber { span, .. }
             | Self::NotABoolean { span, .. }
             | Self::NotAFunction { span, .. }
@@ -126,11 +120,8 @@ impl Display for Error {
             Self::AlreadyExist { id, .. } => {
                 write!(f, "`{id}` already exists in current scope")
             }
-            Self::VariableNotExist { id, .. } => {
-                write!(f, "variable `{id}` is not exist in current scope")
-            }
-            Self::TypeNotExist { id, .. } => {
-                write!(f, "type `{id}` is not exist")
+            Self::SymbolDoesNotExist { id, .. } => {
+                write!(f, "`{id}` does not exist in current scope")
             }
             Self::NotANumber { .. } => {
                 write!(f, "not a number")
