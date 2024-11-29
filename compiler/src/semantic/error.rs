@@ -27,7 +27,7 @@ pub enum Error {
         span: Span,
     },
 
-    AlreadyExist {
+    SymbolAlreadyExist {
         id: String,
         span: Span,
     },
@@ -82,8 +82,8 @@ impl Error {
             | Self::UnableToAssignValueType { span, .. }
             | Self::InvalidAssignmentLhs { span, .. }
             | Self::UnableToCompareTypes { span, .. }
+            | Self::SymbolAlreadyExist { span, .. }
             | Self::SymbolDoesNotExist { span, .. }
-            | Self::AlreadyExist { span, .. }
             | Self::NotANumber { span, .. }
             | Self::NotABoolean { span, .. }
             | Self::NotAFunction { span, .. }
@@ -117,7 +117,7 @@ impl Display for Error {
                     "unable to compare the value of type `{type_a}` with type `{type_b}`"
                 )
             }
-            Self::AlreadyExist { id, .. } => {
+            Self::SymbolAlreadyExist { id, .. } => {
                 write!(f, "`{id}` already exists in current scope")
             }
             Self::SymbolDoesNotExist { id, .. } => {
