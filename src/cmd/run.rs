@@ -22,9 +22,5 @@ pub fn handle(file_path: &Path) {
     let mut err_stream = io::stderr();
     let streams = RuntimeStream::new(&mut out_stream, &mut err_stream);
 
-    let res = Runtime::new(ast, streams).run();
-    if let Err(e) = res {
-        eprintln!("{e}");
-        process::exit(1);
-    }
+    exit_on_error!(Runtime::new(ast, streams).run());
 }
