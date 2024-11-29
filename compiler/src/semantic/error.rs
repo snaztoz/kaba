@@ -59,6 +59,12 @@ pub enum Error {
         span: Span,
     },
 
+    TypeMismatch {
+        type_a: Type,
+        type_b: Type,
+        span: Span,
+    },
+
     ReturnTypeMismatch {
         expected: Type,
         get: Type,
@@ -84,6 +90,7 @@ impl Error {
             | Self::NotAFunction { span, .. }
             | Self::UnexpectedStatement { span, .. }
             | Self::InvalidFunctionCallArgument { span, .. }
+            | Self::TypeMismatch { span, .. }
             | Self::ReturnTypeMismatch { span, .. }
             | Self::DebugVoid { span } => span,
         }
@@ -134,6 +141,9 @@ impl Display for Error {
                     f,
                     "unable to call function with argument(s) of type {args:?}"
                 )
+            }
+            Self::TypeMismatch { type_a, type_b, .. } => {
+                write!(f, "type mismatch: `{type_a}` and `{type_b}`",)
             }
             Self::ReturnTypeMismatch { expected, get, .. } => {
                 write!(
