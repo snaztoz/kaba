@@ -201,3 +201,93 @@ impl FunctionCallChecker<'_> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{lexer, parser};
+
+    fn check_and_assert_type(input: &str, expected_t: Type) {
+        let tokens = lexer::lex(input).unwrap();
+        let ast = parser::parse(tokens).unwrap();
+
+        let result = if let AstNode::Program { body } = &ast {
+            let scopes = ScopeStack::default();
+            ExpressionChecker::new(&scopes, &body[0]).check()
+        } else {
+            unreachable!();
+        };
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), expected_t);
+    }
+
+    fn check_and_assert_is_err(input: &str) {
+        let tokens = lexer::lex(input).unwrap();
+        let ast = parser::parse(tokens).unwrap();
+
+        let result = if let AstNode::Program { body } = &ast {
+            let scopes = ScopeStack::default();
+            ExpressionChecker::new(&scopes, &body[0]).check()
+        } else {
+            unreachable!();
+        };
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn math_expression_returning_int_type() {
+        check_and_assert_type("-5 + 50 * 200 / 7 - 999;", Type::new("Int"));
+    }
+
+    #[test]
+    fn math_expression_with_int_and_float_operands() {
+        check_and_assert_type("-5 + -0.25;", Type::new("Float"));
+    }
+
+    #[test]
+    fn float_modulo_operation() {
+        check_and_assert_type("99.9 % 0.1;", Type::new("Float"));
+    }
+
+    #[test]
+    fn comparison_and_equality_operations() {
+        check_and_assert_type("767 >= 900 == (45 < 67);", Type::new("Bool"));
+    }
+
+    #[test]
+    fn logical_or_and_and_operations() {
+        check_and_assert_type("false || !false && 50 > 0;", Type::new("Bool"));
+    }
+
+    #[test]
+    fn non_existing_identifier() {
+        check_and_assert_is_err("100 - not_exist;");
+    }
+
+    #[test]
+    fn negating_boolean_value() {
+        check_and_assert_is_err("-true;");
+    }
+
+    #[test]
+    fn comparing_boolean_values() {
+        check_and_assert_is_err("true > false;");
+    }
+
+    #[test]
+    fn checking_equality_of_int_and_float() {
+        check_and_assert_is_err("93 != 93.0;");
+    }
+
+    #[test]
+    fn negating_int_value() {
+        check_and_assert_is_err("!5;");
+    }
+
+    #[test]
+    fn logical_and_with_int_value() {
+        check_and_assert_is_err("false || !false && 50;");
+    }
+}
