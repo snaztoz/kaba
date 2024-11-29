@@ -41,7 +41,8 @@ impl StatementChecker<'_> {
             AstNode::Break { span } | AstNode::Continue { span } => self.check_loop_control(span),
 
             AstNode::FunctionDefinition { id, .. } => {
-                return Err(Error::FunctionDefinitionNotInGlobal {
+                return Err(Error::UnexpectedStatement {
+                    stmt_str: self.node.to_string(),
                     span: id.span().clone(),
                 })
             }

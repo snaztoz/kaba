@@ -54,11 +54,8 @@ pub enum Error {
         span: Span,
     },
 
-    UnexpectedStatementInGlobal {
-        span: Span,
-    },
-
-    FunctionDefinitionNotInGlobal {
+    UnexpectedStatement {
+        stmt_str: String,
         span: Span,
     },
 
@@ -109,8 +106,7 @@ impl Error {
             | Self::NotANumber { span, .. }
             | Self::NotABoolean { span, .. }
             | Self::NotAFunction { span, .. }
-            | Self::UnexpectedStatementInGlobal { span }
-            | Self::FunctionDefinitionNotInGlobal { span, .. }
+            | Self::UnexpectedStatement { span, .. }
             | Self::FunctionAlreadyExist { span, .. }
             | Self::InvalidFunctionCallArgument { span, .. }
             | Self::FunctionNotReturningValue { span, .. }
@@ -161,11 +157,8 @@ impl Display for Error {
             Self::NotAFunction { .. } => {
                 write!(f, "not a function")
             }
-            Self::UnexpectedStatementInGlobal { .. } => {
-                write!(f, "expecting only function definitions in global scope")
-            }
-            Self::FunctionDefinitionNotInGlobal { .. } => {
-                write!(f, "unable to define functions in non-global scope")
+            Self::UnexpectedStatement { stmt_str, .. } => {
+                write!(f, "unexpected {stmt_str}")
             }
             Self::FunctionAlreadyExist { id, .. } => {
                 write!(f, "function `{id}` is already exists")
