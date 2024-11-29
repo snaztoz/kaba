@@ -12,7 +12,7 @@ pub enum Error {
 
     UnableToAssignValueType {
         var_t: String,
-        value_t: String,
+        val_t: String,
         span: Span,
     },
 
@@ -128,10 +128,10 @@ impl Display for Error {
             Self::VoidTypeVariable { .. } => {
                 write!(f, "unable to create variable with `Void` type")
             }
-            Self::UnableToAssignValueType { var_t, value_t, .. } => {
+            Self::UnableToAssignValueType { var_t, val_t, .. } => {
                 write!(
                     f,
-                    "unable to assign value of type `{value_t}` to type `{var_t}`"
+                    "unable to assign value of type `{val_t}` to type `{var_t}`"
                 )
             }
             Self::InvalidAssignmentLhs { lhs, .. } => {

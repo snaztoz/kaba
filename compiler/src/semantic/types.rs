@@ -90,7 +90,7 @@ impl Type {
         } else {
             Err(Error::UnableToAssignValueType {
                 var_t: to.to_string(),
-                value_t: from.to_string(),
+                val_t: from.to_string(),
                 span: err_span(),
             })
         }
