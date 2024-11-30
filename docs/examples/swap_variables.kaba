@@ -1,0 +1,16 @@
+# Swap the value between 2 variables
+
+fn main() do
+    var x = 10;
+    var y = 20;
+
+    debug x;
+    debug y;
+
+    var temp = x;
+    x = y;
+    y = temp;
+
+    debug x;
+    debug y;
+end
