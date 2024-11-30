@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Make operations stricter on operand types (by [@snaztoz](https://github.com/snaztoz) in [#33](https://github.com/snaztoz/kaba/pull/33))
+
+### Fixed
+
+- Avoid cloning the entire source code on compiler errors (by [@null8626](https://github.com/null8626) in [#29](https://github.com/snaztoz/kaba/pull/29))
+
 ## [0.3.3] - 2024-11-28
 
 ### Fixed

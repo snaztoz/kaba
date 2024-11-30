@@ -15,7 +15,7 @@ macro_rules! exit_on_error {
 }
 
 pub fn handle(file_path: &Path) {
-    let mut compiler = exit_on_error!(Compiler::from_file(file_path));
+    let mut compiler = exit_on_error!(Compiler::try_from(file_path));
     let ast = exit_on_error!(compiler.compile());
 
     let mut out_stream = io::stdout();

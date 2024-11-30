@@ -1,5 +1,5 @@
-//! This module contains the high-level utility for the source
-//! code compilation procedure.
+//! This module contains the high-level utility for the source code compilation
+//! procedure.
 
 use crate::{ast::AstNode, lexer, parser, semantic, Error, Result};
 use std::{
@@ -8,53 +8,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
-/// Compiler instance that will handle the overall compilation
-/// process of a Kaba source code.
+/// Compiler instance that will handle the overall compilation process of a Kaba
+/// source code.
 pub struct Compiler {
     path: Option<PathBuf>,
     src: String,
 }
 
 impl Compiler {
-    /// Construct a compiler instance straight from a source code
-    /// and without file path.
-    pub fn from_src(src: &str) -> Self {
-        Self {
-            path: None,
-            src: String::from(src),
-        }
-    }
-
-    /// Construct a compiler instance from a source code file path.
-    pub fn from_file(path: &Path) -> Result<Self> {
-        let ext = path.extension().and_then(|e| e.to_str());
-        if !matches!(ext, Some("kaba")) {
-            return Err(Error {
-                path: Some(path),
-                message: SourceCodeError::WrongExtension.to_string(),
-                ..Error::default()
-            });
-        }
-
-        if !path.exists() {
-            let error = SourceCodeError::FileNotExist {
-                path: PathBuf::from(path),
-            };
-            return Err(Error {
-                path: Some(path),
-                message: error.to_string(),
-                ..Error::default()
-            });
-        }
-
-        let src = fs::read_to_string(path).unwrap();
-
-        Ok(Self {
-            path: Some(PathBuf::from(path)),
-            src,
-        })
-    }
-
     /// Run the compilation process.
     pub fn compile(&mut self) -> Result<AstNode> {
         self.normalize_newlines();
@@ -94,6 +55,49 @@ impl Compiler {
     // Normalize all newline characters to LF
     fn normalize_newlines(&mut self) {
         self.src = self.src.replace("\r\n", "\n").replace('\r', "\n");
+    }
+}
+
+impl<'a> From<&'a str> for Compiler {
+    /// Construct a compiler instance straight from a source code and without
+    /// specifying file path.
+    fn from(src: &'a str) -> Self {
+        Self {
+            path: None,
+            src: String::from(src),
+        }
+    }
+}
+
+impl<'a> TryFrom<&'a Path> for Compiler {
+    type Error = crate::Error<'a>;
+
+    /// Construct compiler instance from path to source code file.
+    fn try_from(path: &'a Path) -> Result<Self> {
+        let ext = path.extension().and_then(|e| e.to_str());
+        if !matches!(ext, Some("kaba")) {
+            return Err(Error {
+                path: Some(path),
+                message: SourceCodeError::WrongExtension.to_string(),
+                ..Error::default()
+            });
+        }
+
+        if !path.exists() {
+            let error = SourceCodeError::FileNotExist {
+                path: PathBuf::from(path),
+            };
+            return Err(Error {
+                path: Some(path),
+                message: error.to_string(),
+                ..Error::default()
+            });
+        }
+
+        Ok(Self {
+            path: Some(PathBuf::from(path)),
+            src: fs::read_to_string(path).unwrap(),
+        })
     }
 }
 

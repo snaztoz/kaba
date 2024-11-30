@@ -1,0 +1,13 @@
+# Display all positive odd numbers below 0.
+
+fn main() do
+    var i = 0;
+
+    while i < 10 do
+        if i % 2 == 1 do
+            debug i;
+        end
+
+        i += 1;
+    end
+end

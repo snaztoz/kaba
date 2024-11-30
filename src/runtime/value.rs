@@ -23,8 +23,8 @@ impl Display for RuntimeValue {
 }
 
 impl From<Literal> for RuntimeValue {
-    fn from(val: Literal) -> Self {
-        match val {
+    fn from(lit: Literal) -> Self {
+        match lit {
             Literal::Void => Self::Void,
             Literal::Integer(n) => Self::Integer(n.try_into().unwrap()),
             Literal::Float(n) => Self::Float(n),
