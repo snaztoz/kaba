@@ -34,6 +34,10 @@ See [docs/examples](docs/examples) directory for the examples of already-working
 
 Current priority is to add support for other data types, such as array and string.
 
+## ⚒️ Contributing
+
+Thank you for considering contributing to the Kaba programming language! The contribution guide can be found in the [CONTRIBUTING.md](CONTRIBUTING.md) file.
+
 ## 📃 License
 
 ```text
