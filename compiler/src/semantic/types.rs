@@ -17,37 +17,6 @@ impl Type {
         Self::Identifier(String::from(id))
     }
 
-    pub fn from_literal(lit: &Literal) -> Result<Self> {
-        match lit {
-            Literal::Void => Ok(Self::new("Void")),
-            Literal::Integer(_) => Ok(Self::new("Int")),
-            Literal::Float(_) => Ok(Self::new("Float")),
-            Literal::Boolean(_) => Ok(Self::new("Bool")),
-        }
-    }
-
-    pub fn from_tn(tn: &AstNode) -> Self {
-        if let AstNode::TypeNotation { tn, .. } = tn {
-            match tn {
-                TypeNotation::Identifier(id) => Self::new(id),
-
-                TypeNotation::Callable {
-                    params_tn,
-                    return_tn,
-                } => {
-                    let mut params_t = vec![];
-                    for tn in params_tn {
-                        params_t.push(Self::from_tn(tn));
-                    }
-                    let return_t = Box::new(Self::from_tn(return_tn));
-                    Self::Callable { params_t, return_t }
-                }
-            }
-        } else {
-            unreachable!()
-        }
-    }
-
     pub fn assert_number<F>(t: &Self, err_span: F) -> Result<()>
     where
         F: FnOnce() -> Span,
@@ -136,6 +105,41 @@ impl Type {
             (params_t, *return_t)
         } else {
             panic!("trying to unwrap callable on non-Callable type")
+        }
+    }
+}
+
+impl<'a> From<&'a AstNode> for Type {
+    fn from(value: &'a AstNode) -> Self {
+        if let AstNode::TypeNotation { tn, .. } = value {
+            match tn {
+                TypeNotation::Identifier(id) => Self::new(id),
+
+                TypeNotation::Callable {
+                    params_tn,
+                    return_tn,
+                } => {
+                    let mut params_t = vec![];
+                    for tn in params_tn {
+                        params_t.push(Self::from(tn));
+                    }
+                    let return_t = Box::new(Self::from(return_tn.as_ref()));
+                    Self::Callable { params_t, return_t }
+                }
+            }
+        } else {
+            unreachable!()
+        }
+    }
+}
+
+impl<'a> From<&'a Literal> for Type {
+    fn from(value: &'a Literal) -> Self {
+        match value {
+            Literal::Void => Self::new("Void"),
+            Literal::Integer(_) => Self::new("Int"),
+            Literal::Float(_) => Self::new("Float"),
+            Literal::Boolean(_) => Self::new("Bool"),
         }
     }
 }

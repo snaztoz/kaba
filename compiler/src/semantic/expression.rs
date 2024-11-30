@@ -52,7 +52,7 @@ impl ExpressionChecker<'_> {
                     })
             }
 
-            AstNode::Literal { lit, .. } => Type::from_literal(lit),
+            AstNode::Literal { lit, .. } => Ok(Type::from(lit)),
 
             AstNode::FunctionCall { .. } => FunctionCallChecker::new(self.ss, self.node).check(),
 
