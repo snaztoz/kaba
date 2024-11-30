@@ -7,6 +7,9 @@ use crate::{
 };
 use logos::Span;
 use std::fmt::Display;
+use stream::TokenStream;
+
+mod stream;
 
 type Result<T> = std::result::Result<T, ParsingError>;
 
@@ -20,19 +23,20 @@ pub fn parse(tokens: Vec<Token>) -> Result<AstNode> {
 }
 
 struct Parser {
-    tokens: Vec<Token>,
-    cursor: usize,
+    tokens: TokenStream,
 }
 
 impl Parser {
     const fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, cursor: 0 }
+        Self {
+            tokens: TokenStream::new(tokens),
+        }
     }
 
-    fn parse(&mut self) -> Result<AstNode> {
+    fn parse(&self) -> Result<AstNode> {
         let mut body = vec![];
 
-        while !self.current_token_is(&TokenKind::Eof) {
+        while !self.tokens.current_is(&TokenKind::Eof) {
             let stmt = self.parse_statement()?;
             body.push(stmt)
         }
@@ -63,14 +67,11 @@ impl Parser {
     ///   print(true)
     /// end
     /// ```
-    fn parse_block(
-        &mut self,
-        possible_delimiter: Option<TokenKind>,
-    ) -> Result<(Vec<AstNode>, Span)> {
+    fn parse_block(&self, possible_delimiter: Option<TokenKind>) -> Result<(Vec<AstNode>, Span)> {
         // Expecting "do"
 
-        let start = self.get_current_token().span.start;
-        self.skip(&TokenKind::Do)?;
+        let start = self.tokens.current().span.start;
+        self.tokens.skip(&TokenKind::Do)?;
 
         // Expecting 0 >= statements, delimited with "end" or
         // "additional_delimiter"
@@ -78,18 +79,18 @@ impl Parser {
         let mut stmts = vec![];
         loop {
             if let Some(tok) = &possible_delimiter {
-                if self.current_token_is(tok) {
+                if self.tokens.current_is(tok) {
                     break;
                 }
             }
 
-            if self.current_token_is(&TokenKind::End) {
+            if self.tokens.current_is(&TokenKind::End) {
                 break;
-            } else if self.current_token_is(&TokenKind::Eof) {
+            } else if self.tokens.current_is(&TokenKind::Eof) {
                 return Err(ParsingError::UnexpectedToken {
                     expect: TokenKind::End,
                     found: TokenKind::Eof,
-                    span: self.get_current_token().span,
+                    span: self.tokens.current().span,
                 });
             }
 
@@ -99,11 +100,11 @@ impl Parser {
 
         // Expecting "end" or "additional delimiter"
 
-        let end = self.get_current_token().span.end;
+        let end = self.tokens.current().span.end;
 
         // skip *only if* delimiter is not "end"
-        if self.current_token_is(&TokenKind::End) {
-            self.skip(&TokenKind::End)?;
+        if self.tokens.current_is(&TokenKind::End) {
+            self.tokens.skip(&TokenKind::End)?;
         }
 
         Ok((stmts, start..end))
@@ -127,10 +128,10 @@ impl Parser {
     ///   # this is a block
     /// end
     /// ```
-    fn parse_statement(&mut self) -> Result<AstNode> {
+    fn parse_statement(&self) -> Result<AstNode> {
         // Check if statement starts with a keyword
 
-        match self.get_current_token_kind() {
+        match self.tokens.current_kind() {
             TokenKind::Var => return self.parse_variable_declaration(),
             TokenKind::If => return self.parse_conditional_branch(),
             TokenKind::While => return self.parse_while(),
@@ -147,19 +148,19 @@ impl Parser {
 
         // Expecting ";"
 
-        self.skip(&TokenKind::Semicolon)?;
+        self.tokens.skip(&TokenKind::Semicolon)?;
 
         Ok(expr.unwrap_group())
     }
 
-    fn parse_variable_declaration(&mut self) -> Result<AstNode> {
-        let start = self.get_current_token().span.start;
+    fn parse_variable_declaration(&self) -> Result<AstNode> {
+        let start = self.tokens.current().span.start;
 
-        self.skip(&TokenKind::Var)?;
+        self.tokens.skip(&TokenKind::Var)?;
 
         // Parse identifier
 
-        let token = self.get_current_token();
+        let token = self.tokens.current();
         let id = match token.kind {
             TokenKind::Identifier(name) => Box::new(AstNode::Identifier {
                 name,
@@ -174,12 +175,12 @@ impl Parser {
             }
         };
 
-        self.advance();
+        self.tokens.advance();
 
         // Expecting ":" (optional)
 
-        let tn = if self.current_token_is(&TokenKind::Colon) {
-            self.skip(&TokenKind::Colon)?;
+        let tn = if self.tokens.current_is(&TokenKind::Colon) {
+            self.tokens.skip(&TokenKind::Colon)?;
 
             Some(Box::new(self.parse_type_notation()?))
         } else {
@@ -188,14 +189,14 @@ impl Parser {
 
         // Expecting "="
 
-        self.skip(&TokenKind::Assign)?;
+        self.tokens.skip(&TokenKind::Assign)?;
 
         let expr = self.parse_expression()?;
         let end = expr.span().end;
 
         // Expecting ";"
 
-        self.skip(&TokenKind::Semicolon)?;
+        self.tokens.skip(&TokenKind::Semicolon)?;
 
         Ok(AstNode::VariableDeclaration {
             id,
@@ -205,11 +206,11 @@ impl Parser {
         })
     }
 
-    fn parse_type_notation(&mut self) -> Result<AstNode> {
-        let token = self.get_current_token();
+    fn parse_type_notation(&self) -> Result<AstNode> {
+        let token = self.tokens.current();
         match token.kind {
             TokenKind::Identifier(name) => {
-                self.advance();
+                self.tokens.advance();
                 Ok(AstNode::TypeNotation {
                     tn: TypeNotation::Identifier(name),
                     span: token.span.clone(),
@@ -218,21 +219,21 @@ impl Parser {
 
             TokenKind::LParen => {
                 let start = token.span.start;
-                self.advance();
+                self.tokens.advance();
 
                 // Expecting >= 0 parameter type notation(s)
 
                 let mut params_tn = vec![];
-                while !self.current_token_is(&TokenKind::RParen) {
+                while !self.tokens.current_is(&TokenKind::RParen) {
                     // Expecting type notation
 
                     let tn = self.parse_type_notation()?;
                     params_tn.push(tn);
 
-                    let token = self.get_current_token();
+                    let token = self.tokens.current();
                     match token.kind {
                         TokenKind::Comma => {
-                            self.skip(&TokenKind::Comma)?;
+                            self.tokens.skip(&TokenKind::Comma)?;
                             continue;
                         }
                         TokenKind::RParen => continue,
@@ -248,11 +249,11 @@ impl Parser {
 
                 // Expecting ")"
 
-                self.skip(&TokenKind::RParen)?;
+                self.tokens.skip(&TokenKind::RParen)?;
 
                 // Expecting "->"
 
-                self.skip(&TokenKind::RightPoint)?;
+                self.tokens.skip(&TokenKind::RightPoint)?;
 
                 // Expecting return type notation
 
@@ -276,10 +277,10 @@ impl Parser {
         }
     }
 
-    fn parse_conditional_branch(&mut self) -> Result<AstNode> {
-        let start = self.get_current_token().span.start;
+    fn parse_conditional_branch(&self) -> Result<AstNode> {
+        let start = self.tokens.current().span.start;
         let mut end;
-        self.skip(&TokenKind::If)?;
+        self.tokens.skip(&TokenKind::If)?;
 
         // Expecting expression
 
@@ -292,11 +293,11 @@ impl Parser {
 
         // Expecting >= 0 "else if" or 1 "else"
 
-        let or_else = if self.current_token_is(&TokenKind::Else) {
-            let else_start = self.get_current_token().span.start;
-            self.skip(&TokenKind::Else)?;
+        let or_else = if self.tokens.current_is(&TokenKind::Else) {
+            let else_start = self.tokens.current().span.start;
+            self.tokens.skip(&TokenKind::Else)?;
 
-            let token = self.get_current_token();
+            let token = self.tokens.current();
             match token.kind {
                 TokenKind::If => {
                     // Expecting "else if ..." statement
@@ -340,9 +341,9 @@ impl Parser {
         })
     }
 
-    fn parse_while(&mut self) -> Result<AstNode> {
-        let start = self.get_current_token().span.start;
-        self.skip(&TokenKind::While)?;
+    fn parse_while(&self) -> Result<AstNode> {
+        let start = self.tokens.current().span.start;
+        self.tokens.skip(&TokenKind::While)?;
 
         // Expecting expression
 
@@ -360,8 +361,8 @@ impl Parser {
         })
     }
 
-    fn parse_loop_control(&mut self) -> Result<AstNode> {
-        let Token { kind, span, .. } = self.get_current_token();
+    fn parse_loop_control(&self) -> Result<AstNode> {
+        let Token { kind, span, .. } = self.tokens.current();
 
         // Expecting either "break" or "continue" keyword
 
@@ -371,25 +372,25 @@ impl Parser {
             _ => unreachable!(),
         };
 
-        self.advance();
+        self.tokens.advance();
 
         // Expecting ";"
 
-        self.skip(&TokenKind::Semicolon)?;
+        self.tokens.skip(&TokenKind::Semicolon)?;
 
         Ok(control)
     }
 
-    fn parse_function_definition(&mut self) -> Result<AstNode> {
-        let start = self.get_current_token().span.start;
-        self.skip(&TokenKind::Fn)?;
+    fn parse_function_definition(&self) -> Result<AstNode> {
+        let start = self.tokens.current().span.start;
+        self.tokens.skip(&TokenKind::Fn)?;
 
         // Expecting identifier
 
-        let token = self.get_current_token();
+        let token = self.tokens.current();
         let id = match token.kind {
             TokenKind::Identifier(name) => {
-                self.advance();
+                self.tokens.advance();
                 Box::new(AstNode::Identifier {
                     name,
                     span: token.span,
@@ -407,18 +408,18 @@ impl Parser {
 
         // Expecting "("
 
-        self.skip(&TokenKind::LParen)?;
+        self.tokens.skip(&TokenKind::LParen)?;
 
         // Followed by >= 0 function parameter declaration(s)
 
         let mut params = vec![];
-        while !self.current_token_is(&TokenKind::RParen) {
+        while !self.tokens.current_is(&TokenKind::RParen) {
             // Expecting identifier
 
-            let token = self.get_current_token();
+            let token = self.tokens.current();
             let id = match token.kind {
                 TokenKind::Identifier(name) => {
-                    self.advance();
+                    self.tokens.advance();
                     AstNode::Identifier {
                         name,
                         span: token.span,
@@ -436,7 +437,7 @@ impl Parser {
 
             // Expecting ":"
 
-            self.skip(&TokenKind::Colon)?;
+            self.tokens.skip(&TokenKind::Colon)?;
 
             // Expecting type notation
 
@@ -448,10 +449,10 @@ impl Parser {
 
             // Expecting either "," or ")"
 
-            let token = self.get_current_token();
+            let token = self.tokens.current();
             match token.kind {
                 TokenKind::Comma => {
-                    self.skip(&TokenKind::Comma)?;
+                    self.tokens.skip(&TokenKind::Comma)?;
                     continue;
                 }
 
@@ -469,12 +470,12 @@ impl Parser {
 
         // Expecting ")"
 
-        self.skip(&TokenKind::RParen)?;
+        self.tokens.skip(&TokenKind::RParen)?;
 
         // Expecting return type notation (optional)
 
-        let return_tn = if self.current_token_is(&TokenKind::Colon) {
-            self.skip(&TokenKind::Colon)?;
+        let return_tn = if self.tokens.current_is(&TokenKind::Colon) {
+            self.tokens.skip(&TokenKind::Colon)?;
             Some(Box::new(self.parse_type_notation()?))
         } else {
             None
@@ -493,14 +494,14 @@ impl Parser {
         })
     }
 
-    fn parse_return_statement(&mut self) -> Result<AstNode> {
-        let start = self.get_current_token().span.start;
-        let mut end = self.get_current_token().span.end;
-        self.skip(&TokenKind::Return)?;
+    fn parse_return_statement(&self) -> Result<AstNode> {
+        let start = self.tokens.current().span.start;
+        let mut end = self.tokens.current().span.end;
+        self.tokens.skip(&TokenKind::Return)?;
 
         // Expecting expression (optional)
 
-        let expr = if self.current_token_is(&TokenKind::Semicolon) {
+        let expr = if self.tokens.current_is(&TokenKind::Semicolon) {
             None
         } else {
             let expr = self.parse_expression()?;
@@ -510,7 +511,7 @@ impl Parser {
 
         // Expecting ";"
 
-        self.skip(&TokenKind::Semicolon)?;
+        self.tokens.skip(&TokenKind::Semicolon)?;
 
         Ok(AstNode::Return {
             expr,
@@ -518,9 +519,9 @@ impl Parser {
         })
     }
 
-    fn parse_debug_statement(&mut self) -> Result<AstNode> {
-        let start = self.get_current_token().span.start;
-        self.skip(&TokenKind::Debug)?;
+    fn parse_debug_statement(&self) -> Result<AstNode> {
+        let start = self.tokens.current().span.start;
+        self.tokens.skip(&TokenKind::Debug)?;
 
         // Expecting expression
 
@@ -529,7 +530,7 @@ impl Parser {
 
         // Expecting ";"
 
-        self.skip(&TokenKind::Semicolon)?;
+        self.tokens.skip(&TokenKind::Semicolon)?;
 
         Ok(AstNode::Debug {
             expr,
@@ -537,20 +538,20 @@ impl Parser {
         })
     }
 
-    fn parse_expression(&mut self) -> Result<AstNode> {
+    fn parse_expression(&self) -> Result<AstNode> {
         self.parse_assignment()
     }
 
-    fn parse_assignment(&mut self) -> Result<AstNode> {
+    fn parse_assignment(&self) -> Result<AstNode> {
         // Parse first term
 
         let lhs = self.parse_logical_and_or_expression()?;
 
         // Expecting "=", "+=", "-=", "*=", "/=", or "%=" (optional)
 
-        match self.get_current_token_kind() {
+        match self.tokens.current_kind() {
             TokenKind::Assign => {
-                self.skip(&TokenKind::Assign)?;
+                self.tokens.skip(&TokenKind::Assign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -562,7 +563,7 @@ impl Parser {
                 })
             }
             TokenKind::AddAssign => {
-                self.skip(&TokenKind::AddAssign)?;
+                self.tokens.skip(&TokenKind::AddAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -574,7 +575,7 @@ impl Parser {
                 })
             }
             TokenKind::SubAssign => {
-                self.skip(&TokenKind::SubAssign)?;
+                self.tokens.skip(&TokenKind::SubAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -586,7 +587,7 @@ impl Parser {
                 })
             }
             TokenKind::MulAssign => {
-                self.skip(&TokenKind::MulAssign)?;
+                self.tokens.skip(&TokenKind::MulAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -598,7 +599,7 @@ impl Parser {
                 })
             }
             TokenKind::DivAssign => {
-                self.skip(&TokenKind::DivAssign)?;
+                self.tokens.skip(&TokenKind::DivAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -610,7 +611,7 @@ impl Parser {
                 })
             }
             TokenKind::ModAssign => {
-                self.skip(&TokenKind::ModAssign)?;
+                self.tokens.skip(&TokenKind::ModAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -625,7 +626,7 @@ impl Parser {
         }
     }
 
-    fn parse_logical_and_or_expression(&mut self) -> Result<AstNode> {
+    fn parse_logical_and_or_expression(&self) -> Result<AstNode> {
         // Parse first term
 
         let mut lhs = self.parse_equality_expression()?;
@@ -633,9 +634,9 @@ impl Parser {
         loop {
             // Expecting "||" or "&&" (both are optional)
 
-            match self.get_current_token_kind() {
+            match self.tokens.current_kind() {
                 TokenKind::Or => {
-                    self.skip(&TokenKind::Or)?;
+                    self.tokens.skip(&TokenKind::Or)?;
 
                     let rhs = self.parse_equality_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -647,7 +648,7 @@ impl Parser {
                     };
                 }
                 TokenKind::And => {
-                    self.skip(&TokenKind::And)?;
+                    self.tokens.skip(&TokenKind::And)?;
 
                     let rhs = self.parse_equality_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -663,7 +664,7 @@ impl Parser {
         }
     }
 
-    fn parse_equality_expression(&mut self) -> Result<AstNode> {
+    fn parse_equality_expression(&self) -> Result<AstNode> {
         // Parse first term
 
         let mut lhs = self.parse_comparison_expression()?;
@@ -671,9 +672,9 @@ impl Parser {
         loop {
             // Expecting "==" or "!=" (both are optional)
 
-            match self.get_current_token_kind() {
+            match self.tokens.current_kind() {
                 TokenKind::Eq => {
-                    self.skip(&TokenKind::Eq)?;
+                    self.tokens.skip(&TokenKind::Eq)?;
 
                     let rhs = self.parse_comparison_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -685,7 +686,7 @@ impl Parser {
                     };
                 }
                 TokenKind::Neq => {
-                    self.skip(&TokenKind::Neq)?;
+                    self.tokens.skip(&TokenKind::Neq)?;
 
                     let rhs = self.parse_comparison_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -701,16 +702,16 @@ impl Parser {
         }
     }
 
-    fn parse_comparison_expression(&mut self) -> Result<AstNode> {
+    fn parse_comparison_expression(&self) -> Result<AstNode> {
         // Parse first term
 
         let lhs = self.parse_additive_expression()?;
 
         // Expecting ">", ">=", "<" or "<=" (all are optional)
 
-        match self.get_current_token_kind() {
+        match self.tokens.current_kind() {
             TokenKind::Gt => {
-                self.skip(&TokenKind::Gt)?;
+                self.tokens.skip(&TokenKind::Gt)?;
 
                 let rhs = self.parse_additive_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -722,7 +723,7 @@ impl Parser {
                 })
             }
             TokenKind::Gte => {
-                self.skip(&TokenKind::Gte)?;
+                self.tokens.skip(&TokenKind::Gte)?;
 
                 let rhs = self.parse_additive_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -734,7 +735,7 @@ impl Parser {
                 })
             }
             TokenKind::Lt => {
-                self.skip(&TokenKind::Lt)?;
+                self.tokens.skip(&TokenKind::Lt)?;
 
                 let rhs = self.parse_additive_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -746,7 +747,7 @@ impl Parser {
                 })
             }
             TokenKind::Lte => {
-                self.skip(&TokenKind::Lte)?;
+                self.tokens.skip(&TokenKind::Lte)?;
 
                 let rhs = self.parse_additive_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -761,7 +762,7 @@ impl Parser {
         }
     }
 
-    fn parse_additive_expression(&mut self) -> Result<AstNode> {
+    fn parse_additive_expression(&self) -> Result<AstNode> {
         // Parse first term
 
         let mut lhs = self.parse_multiplicative_expression()?;
@@ -769,9 +770,9 @@ impl Parser {
         loop {
             // Expecting "+" or "-" (both are optional)
 
-            match self.get_current_token_kind() {
+            match self.tokens.current_kind() {
                 TokenKind::Add => {
-                    self.skip(&TokenKind::Add)?;
+                    self.tokens.skip(&TokenKind::Add)?;
 
                     let rhs = self.parse_multiplicative_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -783,7 +784,7 @@ impl Parser {
                     };
                 }
                 TokenKind::Sub => {
-                    self.skip(&TokenKind::Sub)?;
+                    self.tokens.skip(&TokenKind::Sub)?;
 
                     let rhs = self.parse_multiplicative_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -799,7 +800,7 @@ impl Parser {
         }
     }
 
-    fn parse_multiplicative_expression(&mut self) -> Result<AstNode> {
+    fn parse_multiplicative_expression(&self) -> Result<AstNode> {
         // Parse first term
 
         let mut lhs = self.parse_unary_expression()?;
@@ -807,9 +808,9 @@ impl Parser {
         loop {
             // Expecting "*", "/" or "%" (all are optional)
 
-            match self.get_current_token_kind() {
+            match self.tokens.current_kind() {
                 TokenKind::Mul => {
-                    self.skip(&TokenKind::Mul)?;
+                    self.tokens.skip(&TokenKind::Mul)?;
 
                     let rhs = self.parse_unary_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -821,7 +822,7 @@ impl Parser {
                     };
                 }
                 TokenKind::Div => {
-                    self.skip(&TokenKind::Div)?;
+                    self.tokens.skip(&TokenKind::Div)?;
 
                     let rhs = self.parse_unary_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -833,7 +834,7 @@ impl Parser {
                     };
                 }
                 TokenKind::Mod => {
-                    self.skip(&TokenKind::Mod)?;
+                    self.tokens.skip(&TokenKind::Mod)?;
 
                     let rhs = self.parse_unary_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -849,12 +850,12 @@ impl Parser {
         }
     }
 
-    fn parse_unary_expression(&mut self) -> Result<AstNode> {
+    fn parse_unary_expression(&self) -> Result<AstNode> {
         //  Prefixed by >= 0 negation or not expression
 
-        if self.current_token_is(&TokenKind::Sub) {
+        if self.tokens.current_is(&TokenKind::Sub) {
             return self.parse_prefix_expression(&TokenKind::Sub);
-        } else if self.current_token_is(&TokenKind::Not) {
+        } else if self.tokens.current_is(&TokenKind::Not) {
             return self.parse_prefix_expression(&TokenKind::Not);
         }
 
@@ -868,15 +869,15 @@ impl Parser {
 
         #[allow(clippy::while_let_loop)] // temporary
         loop {
-            match self.get_current_token_kind() {
+            match self.tokens.current_kind() {
                 TokenKind::LParen => {
                     let callee_start = child.span().start;
-                    self.skip(&TokenKind::LParen)?;
+                    self.tokens.skip(&TokenKind::LParen)?;
 
                     let args = self.parse_function_call()?;
 
-                    let span = callee_start..self.get_current_token().span.end;
-                    self.skip(&TokenKind::RParen)?;
+                    let span = callee_start..self.tokens.current().span.end;
+                    self.tokens.skip(&TokenKind::RParen)?;
 
                     child = AstNode::FunctionCall {
                         callee: Box::new(child.unwrap_group()),
@@ -892,9 +893,9 @@ impl Parser {
         Ok(child)
     }
 
-    fn parse_prefix_expression(&mut self, token: &TokenKind) -> Result<AstNode> {
-        let start = self.get_current_token().span.start;
-        self.skip(token)?;
+    fn parse_prefix_expression(&self, token: &TokenKind) -> Result<AstNode> {
+        let start = self.tokens.current().span.start;
+        self.tokens.skip(token)?;
 
         let child = self.parse_unary_expression()?;
         let span = start..child.span().end;
@@ -913,20 +914,20 @@ impl Parser {
         }
     }
 
-    fn parse_primary_expression(&mut self) -> Result<AstNode> {
-        let token = self.get_current_token();
+    fn parse_primary_expression(&self) -> Result<AstNode> {
+        let token = self.tokens.current();
 
         Ok(match token.kind {
             TokenKind::LParen => {
                 // Parse group expression
 
                 let lparen_start = token.span.start;
-                self.skip(&TokenKind::LParen)?;
+                self.tokens.skip(&TokenKind::LParen)?;
 
                 let expression = self.parse_expression()?;
 
-                let span = lparen_start..self.get_current_token().span.end;
-                self.skip(&TokenKind::RParen)?;
+                let span = lparen_start..self.tokens.current().span.end;
+                self.tokens.skip(&TokenKind::RParen)?;
 
                 AstNode::Group {
                     child: Box::new(expression),
@@ -936,35 +937,35 @@ impl Parser {
 
             // Expecting either identifier or literals
             TokenKind::Identifier(name) => {
-                self.advance();
+                self.tokens.advance();
                 AstNode::Identifier {
                     name,
                     span: token.span,
                 }
             }
             TokenKind::Integer(n) => {
-                self.advance();
+                self.tokens.advance();
                 AstNode::Literal {
                     lit: Literal::Integer(n),
                     span: token.span,
                 }
             }
             TokenKind::Float(n) => {
-                self.advance();
+                self.tokens.advance();
                 AstNode::Literal {
                     lit: Literal::Float(n),
                     span: token.span,
                 }
             }
             TokenKind::BooleanTrue => {
-                self.advance();
+                self.tokens.advance();
                 AstNode::Literal {
                     lit: Literal::Boolean(true),
                     span: token.span,
                 }
             }
             TokenKind::BooleanFalse => {
-                self.advance();
+                self.tokens.advance();
                 AstNode::Literal {
                     lit: Literal::Boolean(false),
                     span: token.span,
@@ -981,7 +982,7 @@ impl Parser {
         })
     }
 
-    fn parse_function_call(&mut self) -> Result<Vec<AstNode>> {
+    fn parse_function_call(&self) -> Result<Vec<AstNode>> {
         // Can have >= 0 arguments
 
         let mut args = vec![];
@@ -989,7 +990,7 @@ impl Parser {
         loop {
             // Stop when encounter a closing parentheses
 
-            if self.current_token_is(&TokenKind::RParen) {
+            if self.tokens.current_is(&TokenKind::RParen) {
                 return Ok(args);
             }
 
@@ -999,10 +1000,10 @@ impl Parser {
 
             // Continue if encounter "," or break out of loop if encounter ")"
 
-            let token = self.get_current_token();
+            let token = self.tokens.current();
             match token.kind {
                 TokenKind::Comma => {
-                    self.skip(&TokenKind::Comma)?;
+                    self.tokens.skip(&TokenKind::Comma)?;
                     continue;
                 }
 
@@ -1019,41 +1020,6 @@ impl Parser {
                 }
             }
         }
-    }
-
-    fn expect_current_token(&mut self, expect: &TokenKind) -> Result<()> {
-        let current = self.get_current_token();
-        if &current.kind != expect {
-            return Err(ParsingError::UnexpectedToken {
-                expect: expect.clone(),
-                found: current.kind.clone(),
-                span: current.span,
-            });
-        }
-
-        Ok(())
-    }
-
-    fn advance(&mut self) {
-        self.cursor += 1;
-    }
-
-    fn skip(&mut self, expected_token: &TokenKind) -> Result<()> {
-        self.expect_current_token(expected_token)?;
-        self.advance();
-        Ok(())
-    }
-
-    fn get_current_token(&mut self) -> Token {
-        self.tokens.get(self.cursor).cloned().unwrap()
-    }
-
-    fn get_current_token_kind(&self) -> TokenKind {
-        self.tokens.get(self.cursor).unwrap().kind.clone()
-    }
-
-    fn current_token_is(&self, token: &TokenKind) -> bool {
-        &self.get_current_token_kind() == token
     }
 }
 
