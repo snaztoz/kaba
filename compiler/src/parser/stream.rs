@@ -1,4 +1,4 @@
-use super::{ParsingError, Result};
+use super::{error::ParsingError, Result};
 use crate::lexer::{Token, TokenKind};
 use std::cell::RefCell;
 
