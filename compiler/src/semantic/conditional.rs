@@ -147,12 +147,12 @@ impl ConditionalBranchChecker<'_> {
 
 #[cfg(test)]
 mod tests {
-    use crate::semantic::test_util::{check_and_assert_is_err, check_and_assert_is_ok};
+    use crate::semantic::test_util::{assert_is_err, assert_is_ok};
     use indoc::indoc;
 
     #[test]
     fn if_else_statements() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     var condition1 = 5 < 10;
                     var condition2 = 0.5 < 0.75;
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn nested_if_statements() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     if 1 + 1 == 2 do
                         if 2 + 2 == 4 do
@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn using_variable_declared_inside_conditional_scope_from_outside() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn main() do
                     if true do
                         var x = 50;
@@ -201,7 +201,7 @@ mod tests {
 
     #[test]
     fn using_math_expression_as_condition_in_if_statement() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn main() do
                     if 1 + 1 do
                         debug 1;
@@ -212,7 +212,7 @@ mod tests {
 
     #[test]
     fn using_variable_declared_in_sibling_branch_scope() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn main() do
                     if true do
                         var x = 50;

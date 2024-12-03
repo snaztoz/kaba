@@ -100,12 +100,12 @@ impl StatementChecker<'_> {
 
 #[cfg(test)]
 mod tests {
-    use crate::semantic::test_util::{check_and_assert_is_err, check_and_assert_is_ok};
+    use crate::semantic::test_util::{assert_is_err, assert_is_ok};
     use indoc::indoc;
 
     #[test]
     fn debug_expression() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     debug 17 * 5;
                 end
@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn debug_expression_with_void_type() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn main() do
                     debug this_is_void();
                 end

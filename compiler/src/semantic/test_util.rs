@@ -5,7 +5,7 @@ use crate::{
     semantic::{expression::ExpressionChecker, scope::ScopeStack, ProgramChecker},
 };
 
-pub fn check_and_assert_is_ok(input: &str) {
+pub fn assert_is_ok(input: &str) {
     let tokens = lexer::lex(input).unwrap();
     let ast = parser::parse(tokens).unwrap();
 
@@ -14,7 +14,7 @@ pub fn check_and_assert_is_ok(input: &str) {
     assert!(result.is_ok());
 }
 
-pub fn check_and_assert_is_err(input: &str) {
+pub fn assert_is_err(input: &str) {
     let tokens = lexer::lex(input).unwrap();
     let ast = parser::parse(tokens).unwrap();
 

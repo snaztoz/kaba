@@ -130,12 +130,12 @@ impl AssignmentChecker<'_> {
 
 #[cfg(test)]
 mod tests {
-    use crate::semantic::test_util::{check_and_assert_is_err, check_and_assert_is_ok};
+    use crate::semantic::test_util::{assert_is_err, assert_is_ok};
     use indoc::indoc;
 
     #[test]
     fn assigning_variables() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     var x = 0;
                     x = 10;
@@ -151,7 +151,7 @@ mod tests {
 
     #[test]
     fn assigning_variable_using_shorthand_forms() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     var i = 0;
                     i += 1;
@@ -165,7 +165,7 @@ mod tests {
 
     #[test]
     fn mod_assign_with_float_value() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     var i = 5.0;
                     i %= 2.5;
@@ -174,8 +174,58 @@ mod tests {
     }
 
     #[test]
+    fn assigning_value_with_non_existing_variable() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    var x: Float = 5.0;
+                    x = y;
+                end
+            "})
+    }
+
+    #[test]
+    fn using_math_expression_as_lhs_in_assignment() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    1 + 1 = 5;
+                end
+            "})
+    }
+
+    #[test]
+    fn using_boolean_expression_as_lhs_in_assignment() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    true || false = false;
+                end
+            "})
+    }
+
+    #[test]
+    fn using_integer_grouped_expression_as_lhs_in_assignment() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    (50) = true;
+                end
+            "})
+    }
+
+    #[test]
+    fn using_boolean_type_in_shorthand_assignment() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    true += true;
+                end
+            "})
+    }
+
+    //
+    // Arrays
+    //
+
+    #[test]
     fn assign_to_array_element() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     var arr = [true, false, true];
 
@@ -186,58 +236,12 @@ mod tests {
 
     #[test]
     fn shorthand_assign_to_array_element() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     var arr = [0.5, 1.1, 2.3];
 
                     arr[0] += 5.5;
                 end
             "});
-    }
-
-    #[test]
-    fn assigning_value_with_non_existing_variable() {
-        check_and_assert_is_err(indoc! {"
-                fn main() do
-                    var x: Float = 5.0;
-                    x = y;
-                end
-            "})
-    }
-
-    #[test]
-    fn using_math_expression_as_lhs_in_assignment() {
-        check_and_assert_is_err(indoc! {"
-                fn main() do
-                    1 + 1 = 5;
-                end
-            "})
-    }
-
-    #[test]
-    fn using_boolean_expression_as_lhs_in_assignment() {
-        check_and_assert_is_err(indoc! {"
-                fn main() do
-                    true || false = false;
-                end
-            "})
-    }
-
-    #[test]
-    fn using_integer_grouped_expression_as_lhs_in_assignment() {
-        check_and_assert_is_err(indoc! {"
-                fn main() do
-                    (50) = true;
-                end
-            "})
-    }
-
-    #[test]
-    fn using_boolean_type_in_shorthand_assignment() {
-        check_and_assert_is_err(indoc! {"
-                fn main() do
-                    true += true;
-                end
-            "})
     }
 }
