@@ -22,13 +22,14 @@ impl Display for RuntimeValue {
     }
 }
 
-impl From<Literal> for RuntimeValue {
-    fn from(lit: Literal) -> Self {
+impl<'a> From<&'a Literal> for RuntimeValue {
+    fn from(lit: &'a Literal) -> Self {
         match lit {
             Literal::Void => Self::Void,
-            Literal::Integer(n) => Self::Integer(n.try_into().unwrap()),
-            Literal::Float(n) => Self::Float(n),
-            Literal::Boolean(b) => Self::Boolean(b),
+            Literal::Integer(n) => Self::Integer((*n).try_into().unwrap()),
+            Literal::Float(n) => Self::Float(*n),
+            Literal::Boolean(b) => Self::Boolean(*b),
+            _ => todo!(),
         }
     }
 }

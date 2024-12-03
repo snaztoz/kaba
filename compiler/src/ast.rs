@@ -403,6 +403,10 @@ pub struct FunctionParam {
 #[derive(Debug, PartialEq)]
 pub enum TypeNotation {
     Identifier(String),
+    Array {
+        size: Option<usize>,
+        elem_tn: Box<AstNode>,
+    },
     Callable {
         params_tn: Vec<AstNode>,
         return_tn: Box<AstNode>,
@@ -413,6 +417,16 @@ impl Display for TypeNotation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Identifier(id) => write!(f, "{id}"),
+
+            Self::Array { size, elem_tn } => {
+                let size = if let Some(n) = size {
+                    n.to_string()
+                } else {
+                    String::from("_")
+                };
+
+                write!(f, "[{size}]{elem_tn}")
+            }
 
             Self::Callable {
                 params_tn,
@@ -429,17 +443,19 @@ impl Display for TypeNotation {
     }
 }
 
-/// The representation of each value that may exists in a Kaba
-/// source code, such as integer or string.
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+/// The representation of each value that may exists in a Kaba source code,
+/// such as integer or string.
+#[derive(Debug, PartialEq)]
 pub enum Literal {
-    // A temporary value while the runtime is still using
-    // a tree-walk interpreter mode
+    // A temporary value while the runtime is still using a tree-walk
+    // interpreter mode
     Void,
 
     Integer(u32),
     Float(f64),
     Boolean(bool),
+
+    Array(Vec<AstNode>),
 }
 
 impl Display for Literal {
@@ -449,6 +465,14 @@ impl Display for Literal {
             Self::Integer(n) => write!(f, "{n}"),
             Self::Float(n) => write!(f, "{n}"),
             Self::Boolean(b) => write!(f, "{b}"),
+            Self::Array(arr) => {
+                let joined = arr
+                    .iter()
+                    .map(|tn| tn.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "[{joined}]")
+            }
         }
     }
 }
