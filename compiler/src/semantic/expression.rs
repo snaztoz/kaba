@@ -139,7 +139,7 @@ impl<'a> FunctionCallChecker<'a> {
 
 impl FunctionCallChecker<'_> {
     fn check(&self) -> Result<Type> {
-        let fn_t = self.fn_t()?;
+        let fn_t = ExpressionChecker::new(self.ss, self.callee()).check()?;
         Type::assert_callable(&fn_t, || self.callee().span().clone())?;
 
         let args_t = self.args_t()?;
@@ -157,25 +157,6 @@ impl FunctionCallChecker<'_> {
         Ok(return_t)
     }
 
-    fn fn_t(&self) -> Result<Type> {
-        match self.callee() {
-            AstNode::Identifier { name, span } => {
-                self.ss
-                    .get_symbol_type(name)
-                    .ok_or_else(|| Error::SymbolDoesNotExist {
-                        id: String::from(name),
-                        span: span.clone(),
-                    })
-            }
-
-            AstNode::FunctionCall { .. } => {
-                FunctionCallChecker::new(self.ss, self.callee()).check()
-            }
-
-            _ => todo!("functions stored in array, method, etc"),
-        }
-    }
-
     // Transform arguments into their respective type
     fn args_t(&self) -> Result<Vec<Type>> {
         let mut args_t = vec![];
@@ -183,6 +164,7 @@ impl FunctionCallChecker<'_> {
             let t = ExpressionChecker::new(self.ss, arg).check()?;
             args_t.push(t);
         }
+
         Ok(args_t)
     }
 
