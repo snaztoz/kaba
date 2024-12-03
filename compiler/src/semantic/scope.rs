@@ -20,7 +20,9 @@ impl ScopeStack {
 
     pub fn has_type(&self, t: &Type) -> bool {
         match t {
-            Type::Callable { .. } => true,
+            Type::Callable { params_t, return_t } => {
+                params_t.iter().all(|t| self.has_type(t)) && self.has_type(return_t)
+            }
 
             Type::Array { elem_t, .. } => {
                 let elem_t = elem_t.as_ref().unwrap();

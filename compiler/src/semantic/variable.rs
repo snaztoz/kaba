@@ -157,6 +157,47 @@ mod tests {
     }
 
     #[test]
+    fn declaring_variable_with_void_type() {
+        check_and_assert_is_err(indoc! {"
+                fn main() do
+                    var x: Void = 5;
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_incompatible_type() {
+        check_and_assert_is_err(indoc! {"
+                fn main() do
+                    var x: Int = 5.0;
+                end
+            "})
+    }
+
+    #[test]
+    fn declaring_variable_with_non_existing_type() {
+        check_and_assert_is_err(indoc! {"
+                fn main() do
+                    var x: NonExistingType = 10;
+                end
+            "})
+    }
+
+    #[test]
+    fn redeclaring_variable_in_the_same_scope() {
+        check_and_assert_is_err(indoc! {"
+                fn main() do
+                    var x = 5;
+                    var x = 10;
+                end
+            "})
+    }
+
+    //
+    // Functions
+    //
+
+    #[test]
     fn declaring_variable_with_function_pointer_as_value() {
         check_and_assert_is_ok(indoc! {"
                 fn main() do
@@ -170,6 +211,32 @@ mod tests {
                 end
             "});
     }
+
+    #[test]
+    fn declaring_callable_type_variable_with_non_existing_param_type() {
+        check_and_assert_is_err(indoc! {"
+                fn main() do
+                end
+
+                fn produce(f: (NotExist) -> Void) do
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_callable_type_variable_with_non_existing_return_type() {
+        check_and_assert_is_err(indoc! {"
+                fn main() do
+                end
+
+                fn produce(f: () -> NotExist) do
+                end
+            "});
+    }
+
+    //
+    // Arrays
+    //
 
     #[test]
     fn declaring_variable_with_array_literal() {
@@ -267,43 +334,6 @@ mod tests {
                     return 6;
                 end
             "});
-    }
-
-    #[test]
-    fn declaring_variable_with_void_type() {
-        check_and_assert_is_err(indoc! {"
-                fn main() do
-                    var x: Void = 5;
-                end
-            "});
-    }
-
-    #[test]
-    fn declaring_variable_with_incompatible_type() {
-        check_and_assert_is_err(indoc! {"
-                fn main() do
-                    var x: Int = 5.0;
-                end
-            "})
-    }
-
-    #[test]
-    fn declaring_variable_with_non_existing_type() {
-        check_and_assert_is_err(indoc! {"
-                fn main() do
-                    var x: NonExistingType = 10;
-                end
-            "})
-    }
-
-    #[test]
-    fn redeclaring_variable_in_the_same_scope() {
-        check_and_assert_is_err(indoc! {"
-                fn main() do
-                    var x = 5;
-                    var x = 10;
-                end
-            "})
     }
 
     #[test]
