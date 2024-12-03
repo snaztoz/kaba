@@ -73,7 +73,7 @@ impl StatementChecker<'_> {
 
         let return_t =
             self.ss
-                .current_function_return_type()
+                .current_function_return_t()
                 .ok_or_else(|| Error::UnexpectedStatement {
                     stmt_str: self.node.to_string(),
                     span: span.clone(),

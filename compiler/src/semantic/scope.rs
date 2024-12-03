@@ -35,7 +35,7 @@ impl ScopeStack {
         }
     }
 
-    pub fn current_function_return_type(&self) -> Option<Type> {
+    pub fn current_function_return_t(&self) -> Option<Type> {
         self.find_reversed(|s| match &s.scope_t {
             ScopeType::Function { return_t } => Some(return_t.clone()),
             _ => None,
