@@ -434,6 +434,8 @@ impl ExpressionParser<'_> {
                 })
             }
 
+            TokenKind::LBrack => self.parse_array_literal(),
+
             kind => Err(ParsingError::UnexpectedToken {
                 expect: TokenKind::Identifier(String::from("foo")),
                 found: kind.clone(),
@@ -474,6 +476,54 @@ impl ExpressionParser<'_> {
                 }
             }
         }
+    }
+
+    fn parse_array_literal(&self) -> Result<AstNode> {
+        let start = self.tokens.current().span.start;
+
+        // Expecting "["
+        self.tokens.skip(&TokenKind::LBrack)?;
+
+        // Can have >= 0 elements
+        let mut elems = vec![];
+        loop {
+            // Stop when encounter a closing bracket
+            if self.tokens.current_is(&TokenKind::RBrack) {
+                break;
+            }
+
+            // Parse element
+            elems.push(self.parse()?);
+
+            // Continue if encounter "," or break out of loop if encounter ")"
+            match self.tokens.current_kind() {
+                TokenKind::Comma => {
+                    self.tokens.skip(&TokenKind::Comma)?;
+                    continue;
+                }
+
+                TokenKind::RBrack => continue,
+
+                kind => {
+                    // Error if encountering neither "," or ")"
+                    return Err(ParsingError::UnexpectedToken {
+                        expect: TokenKind::RBrack,
+                        found: kind.clone(),
+                        span: self.tokens.current().span,
+                    });
+                }
+            }
+        }
+
+        let end = self.tokens.current().span.end;
+
+        // Expecting "]"
+        self.tokens.skip(&TokenKind::RBrack)?;
+
+        Ok(AstNode::Literal {
+            lit: Literal::Array(elems),
+            span: start..end,
+        })
     }
 }
 
@@ -949,6 +999,51 @@ mod tests {
                 span: 0..23,
             },
         );
+    }
+
+    #[test]
+    fn empty_array() {
+        parse_and_assert_result(
+            "[];",
+            AstNode::Literal {
+                lit: Literal::Array(vec![]),
+                span: 0..2,
+            },
+        )
+    }
+
+    #[test]
+    fn array_with_single_element() {
+        parse_and_assert_result(
+            "[5,];",
+            AstNode::Literal {
+                lit: Literal::Array(vec![AstNode::Literal {
+                    lit: Literal::Integer(5),
+                    span: 1..2,
+                }]),
+                span: 0..4,
+            },
+        );
+    }
+
+    #[test]
+    fn nested_arrays() {
+        parse_and_assert_result(
+            "[[], []];",
+            AstNode::Literal {
+                lit: Literal::Array(vec![
+                    AstNode::Literal {
+                        lit: Literal::Array(vec![]),
+                        span: 1..3,
+                    },
+                    AstNode::Literal {
+                        lit: Literal::Array(vec![]),
+                        span: 5..7,
+                    },
+                ]),
+                span: 0..8,
+            },
+        )
     }
 
     #[test]

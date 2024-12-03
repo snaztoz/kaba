@@ -31,6 +31,7 @@ impl TypeNotationParser<'_> {
                 Ok(tn)
             }
 
+            TokenKind::LBrack => self.parse_array_tn(),
             TokenKind::LParen => self.parse_function_tn(),
 
             _ => Err(ParsingError::UnexpectedToken {
@@ -39,6 +40,47 @@ impl TypeNotationParser<'_> {
                 span: self.tokens.current().span,
             }),
         }
+    }
+
+    fn parse_array_tn(&self) -> Result<AstNode> {
+        let start = self.tokens.current().span.start;
+
+        // Expecting "["
+        self.tokens.skip(&TokenKind::LBrack)?;
+
+        // Expecting either integer or "_" identifier
+        let size = match self.tokens.current_kind() {
+            TokenKind::Identifier(id) if id == "_" => None,
+            TokenKind::Integer(n) => {
+                Some(usize::try_from(n).expect("`usize` is smaller than `u32`"))
+            }
+
+            kind => {
+                return Err(ParsingError::UnexpectedToken {
+                    expect: TokenKind::RParen,
+                    found: kind.clone(),
+                    span: self.tokens.current().span,
+                });
+            }
+        };
+
+        self.tokens.advance();
+
+        // Expecting "]"
+        self.tokens.skip(&TokenKind::RBrack)?;
+
+        // Parse array element type
+        let elem_tn = self.parse()?;
+
+        let end = elem_tn.span().end;
+
+        Ok(AstNode::TypeNotation {
+            tn: TypeNotation::Array {
+                size,
+                elem_tn: Box::new(elem_tn),
+            },
+            span: start..end,
+        })
     }
 
     fn parse_function_tn(&self) -> Result<AstNode> {

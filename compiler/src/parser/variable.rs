@@ -261,4 +261,38 @@ mod tests {
             },
         );
     }
+
+    #[test]
+    fn variable_declaration_with_array_type() {
+        parse_and_assert_result(
+            "var x: [_][5]Int = foo;",
+            AstNode::VariableDeclaration {
+                id: Box::from(AstNode::Identifier {
+                    name: String::from("x"),
+                    span: 4..5,
+                }),
+                tn: Some(Box::new(AstNode::TypeNotation {
+                    tn: TypeNotation::Array {
+                        size: None,
+                        elem_tn: Box::new(AstNode::TypeNotation {
+                            tn: TypeNotation::Array {
+                                size: Some(5),
+                                elem_tn: Box::new(AstNode::TypeNotation {
+                                    tn: TypeNotation::Identifier(String::from("Int")),
+                                    span: 13..16,
+                                }),
+                            },
+                            span: 10..16,
+                        }),
+                    },
+                    span: 7..16,
+                })),
+                val: Box::new(AstNode::Identifier {
+                    name: String::from("foo"),
+                    span: 19..22,
+                }),
+                span: 0..22,
+            },
+        );
+    }
 }
