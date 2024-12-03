@@ -39,10 +39,6 @@ pub enum Error {
         span: Span,
     },
 
-    NotAFunction {
-        span: Span,
-    },
-
     UnexpectedStatement {
         stmt_str: String,
         span: Span,
@@ -50,6 +46,11 @@ pub enum Error {
 
     InvalidFunctionCallArgument {
         args: Vec<Type>,
+        span: Span,
+    },
+
+    NonCallableType {
+        t: Type,
         span: Span,
     },
 
@@ -85,9 +86,9 @@ impl Error {
             | Self::SymbolDoesNotExist { span, .. }
             | Self::NotANumber { span, .. }
             | Self::NotABoolean { span, .. }
-            | Self::NotAFunction { span, .. }
             | Self::UnexpectedStatement { span, .. }
             | Self::InvalidFunctionCallArgument { span, .. }
+            | Self::NonCallableType { span, .. }
             | Self::NonIndexableType { span, .. }
             | Self::TypeMismatch { span, .. }
             | Self::ReturnTypeMismatch { span, .. }
@@ -123,9 +124,6 @@ impl Display for Error {
             Self::NotABoolean { .. } => {
                 write!(f, "not a boolean")
             }
-            Self::NotAFunction { .. } => {
-                write!(f, "not a function")
-            }
             Self::UnexpectedStatement { stmt_str, .. } => {
                 write!(f, "unexpected {stmt_str}")
             }
@@ -134,6 +132,9 @@ impl Display for Error {
                     f,
                     "unable to call function with argument(s) of type {args:?}"
                 )
+            }
+            Self::NonCallableType { t, .. } => {
+                write!(f, "unable to call a non-callable type: `{t}`")
             }
             Self::NonIndexableType { t, .. } => {
                 write!(

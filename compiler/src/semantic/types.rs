@@ -70,7 +70,10 @@ impl Type {
         if t.is_callable() {
             Ok(())
         } else {
-            Err(Error::NotAFunction { span: err_span() })
+            Err(Error::NonCallableType {
+                t: t.clone(),
+                span: err_span(),
+            })
         }
     }
 
