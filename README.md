@@ -12,15 +12,31 @@ If you want to build Kaba from source, consult the ["Building Kaba" guide](docs/
 
 ## 🚀 Usage
 
-First, [install](#-install) or [build](docs/build.md) Kaba binary.
+First, make sure Kaba binary is already [installed](#-install).
 
-Then create a [Kaba program file](docs/features.md) (the extension **must be** `.kaba`). Let's say that we name it `count.kaba`.
+Then create a [Kaba program file](docs/features.md) (the extension **must be** `.kaba`). For example, let's create a file called `math.kaba` with the following code:
 
-Run the following command:
+```text
+fn main() do
+    debug 5 + 7;
+end
+```
+
+Now we run the following shell command:
 
 ```bash
-kaba run count.kaba
+kaba run math.kaba
+
+# Or use:
+#   ./target/release/kaba run ...
+#
+# Or:
+#   ./kaba run ...
+#
+# (Adjust on where the binary file is located)
 ```
+
+It will print `12` in the screen🤯
 
 ## ❓ Features
 
