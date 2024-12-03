@@ -74,6 +74,20 @@ impl Type {
         }
     }
 
+    pub fn assert_indexable<F>(t: &Self, err_span: F) -> Result<()>
+    where
+        F: FnOnce() -> Span,
+    {
+        if t.is_array() {
+            Ok(())
+        } else {
+            Err(Error::NonIndexableType {
+                t: t.clone(),
+                span: err_span(),
+            })
+        }
+    }
+
     pub fn assert_assignable<F>(from: &Self, to: &Self, err_span: F) -> Result<()>
     where
         F: FnOnce() -> Span,
@@ -97,7 +111,7 @@ impl Type {
         matches!(self, Self::Identifier(id) if id == "Bool")
     }
 
-    const fn is_array(&self) -> bool {
+    pub const fn is_array(&self) -> bool {
         matches!(self, Type::Array { .. })
     }
 

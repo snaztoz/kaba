@@ -195,6 +195,12 @@ pub enum AstNode {
         span: Span,
     },
 
+    IndexAccess {
+        object: Box<AstNode>,
+        index: Box<AstNode>,
+        span: Span,
+    },
+
     // This variant is only used as the span information holder and then will be
     // removed. It won't be present in the final resulting ASTs.
     Group {
@@ -254,6 +260,7 @@ impl AstNode {
             | Self::Not { span, .. }
             | Self::Neg { span, .. }
             | Self::FunctionCall { span, .. }
+            | Self::IndexAccess { span, .. }
             | Self::Group { span, .. }
             | Self::Identifier { span, .. }
             | Self::TypeNotation { span, .. }
@@ -262,7 +269,7 @@ impl AstNode {
     }
 
     pub const fn is_valid_assignment_lhs(&self) -> bool {
-        matches!(self, Self::Identifier { .. })
+        matches!(self, Self::Identifier { .. }) || matches!(self, Self::IndexAccess { .. })
     }
 
     pub fn unwrap_identifier(&self) -> (String, Span) {
@@ -378,6 +385,9 @@ impl Display for AstNode {
             }
             Self::FunctionCall { .. } => {
                 write!(f, "function call expression")
+            }
+            Self::IndexAccess { .. } => {
+                write!(f, "index access expression")
             }
             Self::Identifier { .. } => {
                 write!(f, "identifier")

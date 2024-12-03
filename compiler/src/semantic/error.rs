@@ -53,6 +53,11 @@ pub enum Error {
         span: Span,
     },
 
+    NonIndexableType {
+        t: Type,
+        span: Span,
+    },
+
     TypeMismatch {
         type_a: Type,
         type_b: Type,
@@ -83,6 +88,7 @@ impl Error {
             | Self::NotAFunction { span, .. }
             | Self::UnexpectedStatement { span, .. }
             | Self::InvalidFunctionCallArgument { span, .. }
+            | Self::NonIndexableType { span, .. }
             | Self::TypeMismatch { span, .. }
             | Self::ReturnTypeMismatch { span, .. }
             | Self::DebugVoid { span } => span,
@@ -127,6 +133,12 @@ impl Display for Error {
                 write!(
                     f,
                     "unable to call function with argument(s) of type {args:?}"
+                )
+            }
+            Self::NonIndexableType { t, .. } => {
+                write!(
+                    f,
+                    "unable to access the index of a non-indexable type: `{t}`"
                 )
             }
             Self::TypeMismatch { type_a, type_b, .. } => {

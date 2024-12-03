@@ -328,22 +328,46 @@ impl ExpressionParser<'_> {
 
         // Followed by >= 0 function call, field access, or indexed access
         //
-        // TODO: field access and indexed access
-        #[allow(clippy::while_let_loop)] // temporary
+        // TODO: field access
         loop {
             match self.tokens.current_kind() {
                 TokenKind::LParen => {
                     let callee_start = child.span().start;
+
+                    // Expecting "("
                     self.tokens.skip(&TokenKind::LParen)?;
 
                     let args = self.parse_function_call()?;
 
                     let span = callee_start..self.tokens.current().span.end;
+
+                    // Expecting ")"
                     self.tokens.skip(&TokenKind::RParen)?;
 
                     child = AstNode::FunctionCall {
                         callee: Box::new(child.unwrap_group()),
                         args,
+                        span,
+                    };
+                }
+
+                TokenKind::LBrack => {
+                    let callee_start = child.span().start;
+
+                    // Expecting "("
+                    self.tokens.skip(&TokenKind::LBrack)?;
+
+                    // Expecting expression
+                    let index = self.parse()?;
+
+                    let span = callee_start..self.tokens.current().span.end;
+
+                    // Expecting ")"
+                    self.tokens.skip(&TokenKind::RBrack)?;
+
+                    child = AstNode::IndexAccess {
+                        object: Box::new(child.unwrap_group()),
+                        index: Box::new(index),
                         span,
                     };
                 }
@@ -935,6 +959,49 @@ mod tests {
                 span: 0..15,
             },
         );
+    }
+
+    #[test]
+    fn index_access() {
+        parse_and_assert_result(
+            "foo[3];",
+            AstNode::IndexAccess {
+                object: Box::new(AstNode::Identifier {
+                    name: String::from("foo"),
+                    span: 0..3,
+                }),
+                index: Box::new(AstNode::Literal {
+                    lit: Literal::Integer(3),
+                    span: 4..5,
+                }),
+                span: 0..6,
+            },
+        )
+    }
+
+    #[test]
+    fn nested_index_access() {
+        parse_and_assert_result(
+            "foo[3][10];",
+            AstNode::IndexAccess {
+                object: Box::new(AstNode::IndexAccess {
+                    object: Box::new(AstNode::Identifier {
+                        name: String::from("foo"),
+                        span: 0..3,
+                    }),
+                    index: Box::new(AstNode::Literal {
+                        lit: Literal::Integer(3),
+                        span: 4..5,
+                    }),
+                    span: 0..6,
+                }),
+                index: Box::new(AstNode::Literal {
+                    lit: Literal::Integer(10),
+                    span: 7..9,
+                }),
+                span: 0..10,
+            },
+        )
     }
 
     #[test]

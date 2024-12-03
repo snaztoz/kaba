@@ -61,6 +61,8 @@ impl<'a> AssignmentChecker<'a> {
 
 impl AssignmentChecker<'_> {
     pub fn check(&self) -> Result<Type> {
+        self.check_lhs()?;
+
         match self.node {
             AstNode::Assign { lhs, rhs, span } => self.check_assignment(lhs, rhs, span),
 
@@ -76,14 +78,18 @@ impl AssignmentChecker<'_> {
         }
     }
 
-    fn check_assignment(&self, lhs: &AstNode, rhs: &AstNode, span: &Span) -> Result<Type> {
-        if !lhs.is_valid_assignment_lhs() {
+    fn check_lhs(&self) -> Result<()> {
+        if !self.lhs().is_valid_assignment_lhs() {
             return Err(Error::InvalidAssignmentLhs {
-                lhs: lhs.to_string(),
-                span: lhs.span().clone(),
+                lhs: self.lhs().to_string(),
+                span: self.lhs().span().clone(),
             });
         }
 
+        Ok(())
+    }
+
+    fn check_assignment(&self, lhs: &AstNode, rhs: &AstNode, span: &Span) -> Result<Type> {
         let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
         let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
 
@@ -103,8 +109,22 @@ impl AssignmentChecker<'_> {
 
         Type::assert_number(&lhs_t, || lhs.span().clone())?;
         Type::assert_number(&rhs_t, || rhs.span().clone())?;
+        Type::assert_assignable(&rhs_t, &lhs_t, || span.clone())?;
 
-        self.check_assignment(lhs, rhs, span)
+        Ok(Type::new("Void"))
+    }
+
+    fn lhs(&self) -> &AstNode {
+        match self.node {
+            AstNode::Assign { lhs, .. }
+            | AstNode::AddAssign { lhs, .. }
+            | AstNode::SubAssign { lhs, .. }
+            | AstNode::MulAssign { lhs, .. }
+            | AstNode::DivAssign { lhs, .. }
+            | AstNode::ModAssign { lhs, .. } => lhs,
+
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -151,6 +171,28 @@ mod tests {
                     i %= 2.5;
                 end
             "})
+    }
+
+    #[test]
+    fn assign_to_array_element() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    var arr = [true, false, true];
+
+                    arr[1] = true;
+                end
+            "});
+    }
+
+    #[test]
+    fn shorthand_assign_to_array_element() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    var arr = [0.5, 1.1, 2.3];
+
+                    arr[0] += 5.5;
+                end
+            "});
     }
 
     #[test]

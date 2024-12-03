@@ -64,6 +64,7 @@ impl ExpressionChecker<'_> {
             AstNode::Literal { lit, .. } => LiteralChecker::new(self.ss, lit).check(),
 
             AstNode::FunctionCall { .. } => FunctionCallChecker::new(self.ss, self.node).check(),
+            AstNode::IndexAccess { .. } => IndexAccessChecker::new(self.ss, self.node).check(),
 
             _ => unreachable!(),
         }
@@ -210,6 +211,50 @@ impl FunctionCallChecker<'_> {
     }
 }
 
+/// Checker for index access expression rule.
+struct IndexAccessChecker<'a> {
+    ss: &'a ScopeStack,
+    node: &'a AstNode,
+}
+
+impl<'a> IndexAccessChecker<'a> {
+    const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+        Self { ss, node }
+    }
+}
+
+impl IndexAccessChecker<'_> {
+    fn check(&self) -> Result<Type> {
+        let obj_t = ExpressionChecker::new(self.ss, self.obj()).check()?;
+        Type::assert_indexable(&obj_t, || self.obj().span().clone())?;
+
+        let index_t = ExpressionChecker::new(self.ss, self.index()).check()?;
+        Type::assert_number(&index_t, || self.index().span().clone())?;
+
+        match obj_t {
+            Type::Array { elem_t, .. } => Ok(*elem_t.unwrap()),
+
+            _ => unreachable!(),
+        }
+    }
+
+    fn obj(&self) -> &AstNode {
+        if let AstNode::IndexAccess { object, .. } = self.node {
+            object
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn index(&self) -> &AstNode {
+        if let AstNode::IndexAccess { index, .. } = self.node {
+            index
+        } else {
+            unreachable!()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::semantic::{
@@ -235,6 +280,17 @@ mod tests {
     #[test]
     fn logical_or_and_and_operations() {
         assert_expression_type("false || !false && 50 > 0;", Type::new("Bool"));
+    }
+
+    #[test]
+    fn index_accessing() {
+        assert_expression_type(
+            "[[1, 2]][0];",
+            Type::Array {
+                size: Some(2),
+                elem_t: Some(Box::new(Type::new("Int"))),
+            },
+        );
     }
 
     #[test]
