@@ -19,10 +19,18 @@ impl ScopeStack {
     }
 
     pub fn has_type(&self, t: &Type) -> bool {
-        matches!(t, Type::Callable { .. })
-            || self
+        match t {
+            Type::Callable { .. } => true,
+
+            Type::Array { elem_t, .. } => {
+                let elem_t = elem_t.as_ref().unwrap();
+                self.has_type(elem_t)
+            }
+
+            t => self
                 .find_reversed(|s| if s.types.contains(t) { Some(()) } else { None })
-                .is_some()
+                .is_some(),
+        }
     }
 
     pub fn current_function_return_type(&self) -> Option<Type> {

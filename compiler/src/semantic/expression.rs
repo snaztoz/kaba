@@ -1,5 +1,6 @@
 use super::{
     error::{Error, Result},
+    literal::LiteralChecker,
     scope::ScopeStack,
     types::Type,
 };
@@ -52,7 +53,7 @@ impl ExpressionChecker<'_> {
                     })
             }
 
-            AstNode::Literal { lit, .. } => Ok(Type::from(lit)),
+            AstNode::Literal { lit, .. } => LiteralChecker::new(self.ss, lit).check(),
 
             AstNode::FunctionCall { .. } => FunctionCallChecker::new(self.ss, self.node).check(),
 
@@ -135,11 +136,13 @@ impl FunctionCallChecker<'_> {
         let args_t = self.args_t()?;
         let (params_t, return_t) = fn_t.unwrap_callable();
 
-        if params_t != args_t {
-            return Err(Error::InvalidFunctionCallArgument {
-                args: args_t,
-                span: self.span().clone(),
-            });
+        for (param_t, arg_t) in params_t.iter().zip(&args_t) {
+            if !arg_t.is_assignable_to(param_t) {
+                return Err(Error::InvalidFunctionCallArgument {
+                    args: args_t,
+                    span: self.span().clone(),
+                });
+            }
         }
 
         Ok(return_t)
@@ -201,90 +204,63 @@ impl FunctionCallChecker<'_> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{lexer, parser};
-
-    fn check_and_assert_type(input: &str, expected_t: Type) {
-        let tokens = lexer::lex(input).unwrap();
-        let ast = parser::parse(tokens).unwrap();
-
-        let result = if let AstNode::Program { body } = &ast {
-            let scopes = ScopeStack::default();
-            ExpressionChecker::new(&scopes, &body[0]).check()
-        } else {
-            unreachable!();
-        };
-
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), expected_t);
-    }
-
-    fn check_and_assert_is_err(input: &str) {
-        let tokens = lexer::lex(input).unwrap();
-        let ast = parser::parse(tokens).unwrap();
-
-        let result = if let AstNode::Program { body } = &ast {
-            let scopes = ScopeStack::default();
-            ExpressionChecker::new(&scopes, &body[0]).check()
-        } else {
-            unreachable!();
-        };
-
-        assert!(result.is_err());
-    }
+    use crate::semantic::{
+        test_util::{assert_expression_is_err, assert_expression_type},
+        types::Type,
+    };
 
     #[test]
     fn math_expression_returning_int_type() {
-        check_and_assert_type("-5 + 50 * 200 / 7 - 999;", Type::new("Int"));
+        assert_expression_type("-5 + 50 * 200 / 7 - 999;", Type::new("Int"));
     }
 
     #[test]
     fn float_modulo_operation() {
-        check_and_assert_type("99.9 % 0.1;", Type::new("Float"));
+        assert_expression_type("99.9 % 0.1;", Type::new("Float"));
     }
 
     #[test]
     fn comparison_and_equality_operations() {
-        check_and_assert_type("767 >= 900 == (45 < 67);", Type::new("Bool"));
+        assert_expression_type("767 >= 900 == (45 < 67);", Type::new("Bool"));
     }
 
     #[test]
     fn logical_or_and_and_operations() {
-        check_and_assert_type("false || !false && 50 > 0;", Type::new("Bool"));
+        assert_expression_type("false || !false && 50 > 0;", Type::new("Bool"));
     }
 
     #[test]
     fn math_expression_with_int_and_float_operands() {
-        check_and_assert_is_err("-5 + -0.25;");
+        assert_expression_is_err("-5 + -0.25;");
     }
 
     #[test]
     fn non_existing_identifier() {
-        check_and_assert_is_err("100 - not_exist;");
+        assert_expression_is_err("100 - not_exist;");
     }
 
     #[test]
     fn negating_boolean_value() {
-        check_and_assert_is_err("-true;");
+        assert_expression_is_err("-true;");
     }
 
     #[test]
     fn comparing_boolean_values() {
-        check_and_assert_is_err("true > false;");
+        assert_expression_is_err("true > false;");
     }
 
     #[test]
     fn checking_equality_of_int_and_float() {
-        check_and_assert_is_err("93 == 93.0;");
+        assert_expression_is_err("93 == 93.0;");
     }
 
     #[test]
     fn negating_int_value() {
-        check_and_assert_is_err("!5;");
+        assert_expression_is_err("!5;");
     }
 
     #[test]
     fn logical_and_with_int_value() {
-        check_and_assert_is_err("false || !false && 50;");
+        assert_expression_is_err("false || !false && 50;");
     }
 }

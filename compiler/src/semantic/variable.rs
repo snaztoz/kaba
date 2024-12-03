@@ -172,6 +172,104 @@ mod tests {
     }
 
     #[test]
+    fn declaring_variable_with_array_literal() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    var arr = [1];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_empty_array_literal() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    var arr = [];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_empty_array_literal_and_type_notation() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    var arr: [_]Int = [];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_array_literal_and_zero_sized_type_notation() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    var arr: [0]Int = [];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_auto_and_zero_type_notation() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    var arr: [_][0][_]Int = [[], []];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_array_type_notation() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    var arr: [1]Int = [9];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_auto_array_sized() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    var arr: [_]Int = [5, 9, 10];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_auto_array_sized_of_array_elements() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    var arr: [_][3]Int = [[5, 9, 10], [1, 2, 3]];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_auto_array_sized_of_auto_array_sized_elements() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    var arr: [_][_]Int = [[5, 9, 10], [1, 2, 3]];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_array_literal_of_function_types() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    var arr = [five, six];
+                end
+
+                fn five(): Int do
+                    return 5;
+                end
+
+                fn six(): Int do
+                    return 6;
+                end
+            "});
+    }
+
+    #[test]
     fn declaring_variable_with_void_type() {
         check_and_assert_is_err(indoc! {"
                 fn main() do
@@ -204,6 +302,24 @@ mod tests {
                 fn main() do
                     var x = 5;
                     var x = 10;
+                end
+            "})
+    }
+
+    #[test]
+    fn declaring_variable_with_incompatible_element_types() {
+        check_and_assert_is_err(indoc! {"
+                fn main() do
+                    var arr = [1, 0.5,];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_non_existing_array_type() {
+        check_and_assert_is_err(indoc! {"
+                fn main() do
+                    var arr: [0]NotExist = [];
                 end
             "})
     }

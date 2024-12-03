@@ -367,6 +367,34 @@ mod tests {
     }
 
     #[test]
+    fn calling_function_with_array_parameter() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    foo([1, 2, 3]);
+                end
+
+                fn foo(arr: [3]Int) do
+                end
+            "});
+    }
+
+    #[test]
+    fn calling_function_with_auto_array_parameter() {
+        check_and_assert_is_ok(indoc! {"
+                fn main() do
+                    #foo([1, 2, 3]);
+
+                    foo([]);
+
+                    #foo([1,]);
+                end
+
+                fn foo(arr: [_]Int) do
+                end
+            "});
+    }
+
+    #[test]
     fn defining_function_not_in_global_scope() {
         check_and_assert_is_err(indoc! {"
                 fn main() do
