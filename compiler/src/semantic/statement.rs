@@ -1,5 +1,4 @@
 use super::{
-    assignment::AssignmentChecker,
     conditional::ConditionalBranchChecker,
     error::{Error, Result},
     expression::ExpressionChecker,
@@ -50,13 +49,6 @@ impl StatementChecker<'_> {
             AstNode::Return { expr, span } => self.check_return(expr, span),
 
             AstNode::Debug { expr, span } => self.check_debug(expr, span),
-
-            AstNode::Assign { .. }
-            | AstNode::AddAssign { .. }
-            | AstNode::SubAssign { .. }
-            | AstNode::MulAssign { .. }
-            | AstNode::DivAssign { .. }
-            | AstNode::ModAssign { .. } => AssignmentChecker::new(self.ss, self.node).check(),
 
             expr => ExpressionChecker::new(self.ss, expr).check(),
         }

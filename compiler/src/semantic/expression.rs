@@ -1,4 +1,5 @@
 use super::{
+    assignment::AssignmentChecker,
     error::{Error, Result},
     literal::LiteralChecker,
     scope::ScopeStack,
@@ -22,6 +23,13 @@ impl<'a> ExpressionChecker<'a> {
 impl ExpressionChecker<'_> {
     pub fn check(&self) -> Result<Type> {
         match self.node {
+            AstNode::Assign { .. }
+            | AstNode::AddAssign { .. }
+            | AstNode::SubAssign { .. }
+            | AstNode::MulAssign { .. }
+            | AstNode::DivAssign { .. }
+            | AstNode::ModAssign { .. } => AssignmentChecker::new(self.ss, self.node).check(),
+
             AstNode::Eq { lhs, rhs, .. } | AstNode::Neq { lhs, rhs, .. } => {
                 self.check_equality_operation(lhs, rhs)
             }
