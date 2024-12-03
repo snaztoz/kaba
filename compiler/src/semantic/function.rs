@@ -382,11 +382,11 @@ mod tests {
     fn calling_function_with_auto_array_parameter() {
         check_and_assert_is_ok(indoc! {"
                 fn main() do
-                    #foo([1, 2, 3]);
+                    foo([1, 2, 3]);
 
                     foo([]);
 
-                    #foo([1,]);
+                    foo([1,]);
                 end
 
                 fn foo(arr: [_]Int) do
