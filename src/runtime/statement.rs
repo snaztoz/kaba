@@ -1,6 +1,6 @@
 use super::{
-    body::BodyRunner, expression::ExpressionRunner, state::RuntimeState, value::RuntimeValue,
-    Result,
+    body::BodyRunner, error::Result, expression::ExpressionRunner, state::RuntimeState,
+    value::RuntimeValue,
 };
 use compiler::ast::AstNode;
 use std::collections::HashMap;

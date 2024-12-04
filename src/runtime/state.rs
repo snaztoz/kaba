@@ -1,8 +1,10 @@
-use super::{stream::RuntimeStream, value::RuntimeValue, Result, Scope};
+use super::{error::Result, stream::RuntimeStream, value::RuntimeValue};
 use std::{
     cell::{Ref, RefCell},
     collections::HashMap,
 };
+
+pub type Scope = HashMap<String, RuntimeValue>;
 
 pub struct RuntimeState<'a> {
     stop_exec: RefCell<bool>,

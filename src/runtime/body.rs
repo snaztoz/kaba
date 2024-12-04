@@ -1,4 +1,4 @@
-use super::{state::RuntimeState, statement::StatementRunner, Result};
+use super::{error::Result, state::RuntimeState, statement::StatementRunner};
 use compiler::ast::AstNode;
 
 pub struct BodyRunner<'a> {

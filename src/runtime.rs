@@ -1,15 +1,11 @@
 //! A temporary prototype of the runtime that currently being used.
 //!
-//! It accept the raw AST as is and should be replaced by a real
-//! runtime that operates on bytecodes (TODO).
+//! It accept the raw AST as is and should be replaced by a real runtime that
+//! operates on bytecodes (TODO).
 
-use self::{error::RuntimeError, state::RuntimeState, stream::RuntimeStream, value::RuntimeValue};
+use self::{error::Result, state::RuntimeState, stream::RuntimeStream, value::RuntimeValue};
 use compiler::ast::AstNode;
 use expression::ExpressionRunner;
-use std::collections::HashMap;
-
-type Result<T> = std::result::Result<T, RuntimeError>;
-type Scope = HashMap<String, RuntimeValue>;
 
 mod assignment;
 mod body;
@@ -424,6 +420,40 @@ mod tests {
                 end
             "},
             "0\n4\n2\n".as_bytes(),
+        );
+    }
+
+    #[test]
+    fn calling_array_elements() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
+                    var arr = [
+                        add_one,
+                        add_two,
+                        add_three,
+                    ];
+
+                    var i = 0;
+                    while i < 3 do
+                        debug arr[i](5);
+                        i += 1;
+                    end
+                end
+
+                fn add_one(n: Int): Int do
+                    return n + 1;
+                end
+
+                fn add_two(n: Int): Int do
+                    return n + 2;
+                end
+
+                fn add_three(n: Int): Int do
+                    return n + 3;
+                end
+            "},
+            "6\n7\n8\n".as_bytes(),
         );
     }
 }
