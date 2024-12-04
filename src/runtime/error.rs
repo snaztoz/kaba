@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+pub type Result<T> = std::result::Result<T, RuntimeError>;
+
 #[derive(Debug, PartialEq)]
 pub enum RuntimeError {
     // TODO: division by zero error, etc.

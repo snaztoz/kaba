@@ -1,8 +1,9 @@
+use super::{
+    assignment::AssignmentRunner, error::Result, state::RuntimeState, value::RuntimeValue,
+};
 use crate::runtime::body::BodyRunner;
 use compiler::ast::{AstNode, FunctionParam, Literal};
 use std::collections::HashMap;
-
-use super::{assignment::AssignmentRunner, state::RuntimeState, value::RuntimeValue, Result};
 
 pub struct ExpressionRunner<'a> {
     ast: &'a AstNode,
@@ -21,8 +22,9 @@ impl<'a> ExpressionRunner<'a> {
             AstNode::Identifier { name, .. } => self.state.get_value(name).unwrap(),
 
             AstNode::FunctionCall { callee, args, .. } => self.run_function_call(callee, args)?,
+            AstNode::IndexAccess { object, index, .. } => self.run_index_access(object, index)?,
 
-            _ => todo!("function callee"),
+            c => todo!("{c}"),
         };
 
         let mut evaluated_args: Vec<RuntimeValue> = vec![];
