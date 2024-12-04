@@ -48,7 +48,7 @@ See [docs/examples](docs/examples) directory for the examples of already-working
 
 ## 🎯 Next Goals
 
-Current priority is to add support for other data types, such as array and string.
+Current priority is to add support for other data types, such as string.
 
 ## ⚒️ Contributing
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add support for array type (by [@snaztoz](https://github.com/snaztoz) in [#35](https://github.com/snaztoz/kaba/pull/35))
+
 ### Changed
 
 - Make operations stricter on operand types (by [@snaztoz](https://github.com/snaztoz) in [#33](https://github.com/snaztoz/kaba/pull/33))

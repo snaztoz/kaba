@@ -90,7 +90,7 @@ fn main() do
 end
 ```
 
-The value must be always specified. The variable's type can be inferred from it.
+The value must always be specified, while the variable's type can be inferred from it.
 
 If you want to specify the type manually, use the following syntax:
 
@@ -100,11 +100,34 @@ fn main() do
 end
 ```
 
-If the value type is incompatible with the variable, the compiler will throw an error:
+If value type is incompatible with the variable, the compiler will throw an error:
 
 ```text
 fn main() do
     var x: Int = 10.0;  # ERROR
+end
+```
+
+## Displaying value with `debug` statement
+
+To display value to `stdout`, use the `debug` statement:
+
+```text
+fn main() do
+    var x = 101;
+
+    debug x;
+end
+```
+
+Note that the compiler will reject if the expression evaluates to `Void` type:
+
+```text
+fn main() do
+    debug my_void_fn();  # ERROR
+end
+
+fn my_void_fn() do
 end
 ```
 
@@ -116,6 +139,7 @@ Currently, Kaba only support these (non-`Void`) data types:
 2. Float (`Float`)
 3. Boolean (`Bool`)
 4. Callable
+5. Array
 
 (... more to come!)
 
@@ -128,9 +152,57 @@ fn main() do
     var c: Bool = false;
 
     var d: () -> Void = foo;
+
+    var e: [2]Int = [99, 101];
 end
 
 fn foo() do
+end
+```
+
+### More on array type
+
+Array has a **fixed** size, so that it can't be changed after it was created.
+
+If two arrays have different size, even though their elements are the same type, they will still be considered as different types.
+
+For example, `[2]Int` is not the same as `[1]Int`.
+
+Kaba can infer the type of an array:
+
+```text
+fn main do
+    var arr = [false, true, true];
+
+    # The type of `arr` is `[3]Bool`
+
+    debug arr[1];   // `true`
+end
+```
+
+Kaba can also infer the array size automatically:
+
+```text
+fn main do
+    var arr: [_]Int = [1, 4, 6, 7];
+
+    # The type of `arr` is `[4]Int`
+end
+```
+
+More complex scenarios are also supported:
+
+```text
+fn main() do
+    var arr = [[4, 5]];
+    foo(arr);
+
+    arr[0][1] = 10;
+    foo(arr);
+end
+
+fn foo(arr: [_][_]Int) do
+    debug arr[0][1];
 end
 ```
 
@@ -161,29 +233,6 @@ fn main() do
     x *= 2;
     x /= 4;
     x %= 2;
-end
-```
-
-## Displaying value with `debug` statement
-
-To display value to `stdout`, use the `debug` statement:
-
-```text
-fn main() do
-    var x = 101;
-
-    debug x;
-end
-```
-
-Note that the compiler will reject if the expression evaluated to `Void` type:
-
-```text
-fn main() do
-    debug my_void_fn();  # ERROR
-end
-
-fn my_void_fn() do
 end
 ```
 
@@ -281,7 +330,7 @@ fn main() do
 end
 ```
 
-While to skip a loop, use the `continue` statement:
+While to skip an iteration, use the `continue` statement:
 
 ```text
 fn main() do
