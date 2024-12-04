@@ -1,5 +1,5 @@
 use crate::runtime::body::BodyRunner;
-use compiler::ast::{AstNode, FunctionParam};
+use compiler::ast::{AstNode, FunctionParam, Literal};
 use std::collections::HashMap;
 
 use super::{assignment::AssignmentRunner, state::RuntimeState, value::RuntimeValue, Result};
@@ -32,6 +32,50 @@ impl<'a> ExpressionRunner<'a> {
         }
 
         self.run_function_ptr_call(f_ptr, &evaluated_args)
+    }
+
+    fn run_index_access(&self, object: &'a AstNode, index: &'a AstNode) -> Result<RuntimeValue> {
+        let object_arr = ExpressionRunner::new(object, self.root, self.state).run()?;
+        let index = ExpressionRunner::new(index, self.root, self.state).run()?;
+
+        if let RuntimeValue::Array(ptr) = object_arr {
+            if let RuntimeValue::Integer(i) = index {
+                let arr = &self.state.array_arena.borrow()[ptr];
+                let i = usize::try_from(i).unwrap();
+
+                if i >= arr.len() {
+                    todo!("index out of bound")
+                }
+
+                return Ok(arr[i]);
+            }
+        }
+
+        unreachable!()
+    }
+
+    fn literal_to_value(&self, lit: &'a Literal) -> Result<RuntimeValue> {
+        let val = match lit {
+            Literal::Void => RuntimeValue::Void,
+            Literal::Integer(n) => RuntimeValue::Integer((*n).try_into().unwrap()),
+            Literal::Float(n) => RuntimeValue::Float(*n),
+            Literal::Boolean(b) => RuntimeValue::Boolean(*b),
+
+            Literal::Array(arr) => {
+                let mut elems = vec![];
+                for elem in arr {
+                    let val = ExpressionRunner::new(elem, self.root, self.state).run()?;
+                    elems.push(val);
+                }
+
+                self.state.array_arena.borrow_mut().push(elems);
+                let ptr = self.state.array_arena.borrow().len() - 1;
+
+                RuntimeValue::Array(ptr)
+            }
+        };
+
+        Ok(val)
     }
 }
 
@@ -73,9 +117,10 @@ impl ExpressionRunner<'_> {
             }
 
             AstNode::FunctionCall { callee, args, .. } => self.run_function_call(callee, args),
+            AstNode::IndexAccess { object, index, .. } => self.run_index_access(object, index),
 
             AstNode::Identifier { name, .. } => self.state.get_value(name),
-            AstNode::Literal { lit, .. } => Ok(RuntimeValue::from(lit)),
+            AstNode::Literal { lit, .. } => self.literal_to_value(lit),
 
             _ => unreachable!(),
         }
@@ -315,7 +360,7 @@ impl ExpressionRunner<'_> {
                 let val = self.state.return_value();
                 self.state.ss.borrow_mut().pop();
 
-                return Ok(val);
+                return Ok(*val);
             }
         }
 

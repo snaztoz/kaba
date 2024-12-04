@@ -386,4 +386,44 @@ mod tests {
             "25\n".as_bytes(),
         );
     }
+
+    #[test]
+    fn debug_array() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
+                    debug [[1, 2], [3, 4]][1][0];
+
+                    var arr = [1, 3];
+                    var x = 98;
+                    debug arr[99 - x] + 5;
+                end
+            "},
+            "3\n8\n".as_bytes(),
+        );
+    }
+
+    #[test]
+    fn assign_to_array() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
+                    var arr = [0, 1, 2];
+
+                    arr[0] = 99;
+
+                    arr[1] += 5;
+                    arr[1] -= 2;
+                    arr[2] *= 3;
+                    arr[2] /= 3;
+                    arr[0] %= 3;
+
+                    debug arr[0];
+                    debug arr[1];
+                    debug arr[2];
+                end
+            "},
+            "0\n4\n2\n".as_bytes(),
+        );
+    }
 }

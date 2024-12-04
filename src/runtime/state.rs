@@ -1,10 +1,19 @@
 use super::{stream::RuntimeStream, value::RuntimeValue, Result, Scope};
-use std::{cell::RefCell, collections::HashMap};
+use std::{
+    cell::{Ref, RefCell},
+    collections::HashMap,
+};
 
 pub struct RuntimeState<'a> {
     stop_exec: RefCell<bool>,
     exit_loop: RefCell<bool>,
     return_val: RefCell<RuntimeValue>,
+
+    // All array allocation will be stored here.
+    //
+    // This is temporary solution, so there is no automatic cleanup for arrays
+    // that are no longer in use.
+    pub array_arena: RefCell<Vec<Vec<RuntimeValue>>>,
 
     pub ss: RefCell<Vec<Scope>>,
     pub streams: RefCell<RuntimeStream<'a>>,
@@ -16,6 +25,8 @@ impl<'a> RuntimeState<'a> {
             stop_exec: RefCell::new(false),
             exit_loop: RefCell::new(false),
             return_val: RefCell::new(RuntimeValue::Void),
+
+            array_arena: RefCell::new(vec![]),
 
             ss: RefCell::new(vec![
                 HashMap::new(), // global scope
@@ -50,8 +61,8 @@ impl RuntimeState<'_> {
         *self.exit_loop.borrow_mut() = false;
     }
 
-    pub fn return_value(&self) -> RuntimeValue {
-        *self.return_val.borrow()
+    pub fn return_value(&self) -> Ref<RuntimeValue> {
+        self.return_val.borrow()
     }
 
     pub fn set_return_value(&self, val: RuntimeValue) {
@@ -59,16 +70,14 @@ impl RuntimeState<'_> {
     }
 
     pub fn get_value(&self, id: &str) -> Result<RuntimeValue> {
-        Ok(self
-            .ss
-            .borrow()
+        let ss = self.ss.borrow();
+        let scope = ss
             .iter()
             .rev()
             .find(|scope| scope.contains_key(id))
-            .unwrap()
-            .get(id)
-            .copied()
-            .unwrap())
+            .unwrap();
+
+        Ok(*scope.get(id).unwrap())
     }
 
     pub fn store_value(&self, id: &str, val: RuntimeValue) {
