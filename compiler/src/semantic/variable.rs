@@ -117,12 +117,12 @@ impl VariableDeclarationChecker<'_> {
 
 #[cfg(test)]
 mod tests {
-    use crate::semantic::test_util::{check_and_assert_is_err, check_and_assert_is_ok};
+    use crate::semantic::test_util::{assert_is_err, assert_is_ok};
     use indoc::indoc;
 
     #[test]
     fn declaring_variable_with_type_annotation_and_initial_value() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     var x: Int = 5;
                 end
@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn declaring_variable_with_type_inferring() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     var x = 5;
                 end
@@ -140,7 +140,7 @@ mod tests {
 
     #[test]
     fn declaring_variable_with_float_literal() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     var x = -0.5;
                 end
@@ -149,7 +149,7 @@ mod tests {
 
     #[test]
     fn declaring_variable_with_bool_literal() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     var x = true;
                 end
@@ -157,8 +157,49 @@ mod tests {
     }
 
     #[test]
+    fn declaring_variable_with_void_type() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    var x: Void = 5;
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_incompatible_type() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    var x: Int = 5.0;
+                end
+            "})
+    }
+
+    #[test]
+    fn declaring_variable_with_non_existing_type() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    var x: NonExistingType = 10;
+                end
+            "})
+    }
+
+    #[test]
+    fn redeclaring_variable_in_the_same_scope() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    var x = 5;
+                    var x = 10;
+                end
+            "})
+    }
+
+    //
+    // Functions
+    //
+
+    #[test]
     fn declaring_variable_with_function_pointer_as_value() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     var x: () -> Int = produce;
 
@@ -172,38 +213,143 @@ mod tests {
     }
 
     #[test]
-    fn declaring_variable_with_void_type() {
-        check_and_assert_is_err(indoc! {"
+    fn declaring_callable_type_variable_with_non_existing_param_type() {
+        assert_is_err(indoc! {"
                 fn main() do
-                    var x: Void = 5;
+                end
+
+                fn produce(f: (NotExist) -> Void) do
                 end
             "});
     }
 
     #[test]
-    fn declaring_variable_with_incompatible_type() {
-        check_and_assert_is_err(indoc! {"
+    fn declaring_callable_type_variable_with_non_existing_return_type() {
+        assert_is_err(indoc! {"
                 fn main() do
-                    var x: Int = 5.0;
                 end
-            "})
+
+                fn produce(f: () -> NotExist) do
+                end
+            "});
+    }
+
+    //
+    // Arrays
+    //
+
+    #[test]
+    fn declaring_variable_with_array_literal() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    var arr = [1];
+                end
+            "});
     }
 
     #[test]
-    fn declaring_variable_with_non_existing_type() {
-        check_and_assert_is_err(indoc! {"
+    fn declaring_variable_with_empty_array_literal() {
+        assert_is_ok(indoc! {"
                 fn main() do
-                    var x: NonExistingType = 10;
+                    var arr = [];
                 end
-            "})
+            "});
     }
 
     #[test]
-    fn redeclaring_variable_in_the_same_scope() {
-        check_and_assert_is_err(indoc! {"
+    fn declaring_variable_with_empty_array_literal_and_type_notation() {
+        assert_is_ok(indoc! {"
                 fn main() do
-                    var x = 5;
-                    var x = 10;
+                    var arr: [_]Int = [];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_array_literal_and_zero_sized_type_notation() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    var arr: [0]Int = [];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_auto_and_zero_type_notation() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    var arr: [_][0][_]Int = [[], []];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_array_type_notation() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    var arr: [1]Int = [9];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_auto_array_sized() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    var arr: [_]Int = [5, 9, 10];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_auto_array_sized_of_array_elements() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    var arr: [_][3]Int = [[5, 9, 10], [1, 2, 3]];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_auto_array_sized_of_auto_array_sized_elements() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    var arr: [_][_]Int = [[5, 9, 10], [1, 2, 3]];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_array_literal_of_function_types() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    var arr = [five, six];
+                end
+
+                fn five(): Int do
+                    return 5;
+                end
+
+                fn six(): Int do
+                    return 6;
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_incompatible_element_types() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    var arr = [1, 0.5,];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_non_existing_array_type() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    var arr: [0]NotExist = [];
                 end
             "})
     }

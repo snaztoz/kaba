@@ -14,18 +14,28 @@ pub struct ScopeStack {
 }
 
 impl ScopeStack {
-    pub fn get_symbol_type(&self, name: &str) -> Option<Type> {
+    pub fn get_symbol_t(&self, name: &str) -> Option<Type> {
         self.find_reversed(|s| s.symbols.get(name).cloned())
     }
 
-    pub fn has_type(&self, t: &Type) -> bool {
-        matches!(t, Type::Callable { .. })
-            || self
+    pub fn has_t(&self, t: &Type) -> bool {
+        match t {
+            Type::Callable { params_t, return_t } => {
+                params_t.iter().all(|t| self.has_t(t)) && self.has_t(return_t)
+            }
+
+            Type::Array { elem_t, .. } => {
+                let elem_t = elem_t.as_ref().unwrap();
+                self.has_t(elem_t)
+            }
+
+            t => self
                 .find_reversed(|s| if s.types.contains(t) { Some(()) } else { None })
-                .is_some()
+                .is_some(),
+        }
     }
 
-    pub fn current_function_return_type(&self) -> Option<Type> {
+    pub fn current_function_return_t(&self) -> Option<Type> {
         self.find_reversed(|s| match &s.scope_t {
             ScopeType::Function { return_t } => Some(return_t.clone()),
             _ => None,

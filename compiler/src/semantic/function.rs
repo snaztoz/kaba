@@ -178,7 +178,7 @@ impl FunctionDefinitionChecker<'_> {
     fn fn_t(&self) -> Type {
         if let AstNode::FunctionDefinition { id, .. } = self.node {
             let id_str = &id.unwrap_identifier().0;
-            self.ss.get_symbol_type(id_str).unwrap()
+            self.ss.get_symbol_t(id_str).unwrap()
         } else {
             unreachable!()
         }
@@ -198,19 +198,19 @@ impl FunctionDefinitionChecker<'_> {
 
 #[cfg(test)]
 mod tests {
-    use crate::semantic::test_util::{check_and_assert_is_err, check_and_assert_is_ok};
+    use crate::semantic::test_util::{assert_is_err, assert_is_ok};
     use indoc::indoc;
 
     #[test]
     fn defining_function_without_parameter_or_return_type() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn add() do end
             "});
     }
 
     #[test]
     fn defining_duplicated_functions() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn print_sum_of(a: Int, b: Int,) do
                     debug a + b;
                 end
@@ -223,7 +223,7 @@ mod tests {
 
     #[test]
     fn defining_functions_both_with_parameters_and_return_type() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn sum(x: Int, y: Int): Int do
                     return x + y;
                 end
@@ -232,7 +232,7 @@ mod tests {
 
     #[test]
     fn recursive_fibonacci_function() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn fibonacci(n: Int): Int do
                     if n == 0 do
                         return 0;
@@ -246,7 +246,7 @@ mod tests {
 
     #[test]
     fn recursive_functions_with_void_return_type() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn count_to_zero(n: Int) do
                     debug n;
                     if n == 0 do
@@ -263,7 +263,7 @@ mod tests {
 
     #[test]
     fn returning_from_functions_with_conditional_and_loop_statements() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn first(): Int do
                     return 5;
                 end
@@ -302,7 +302,7 @@ mod tests {
 
     #[test]
     fn defining_functions_not_in_order() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     call_foo();
                 end
@@ -319,7 +319,7 @@ mod tests {
 
     #[test]
     fn aliasing_function_identifier() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     var aliased = return_two;
 
@@ -334,7 +334,7 @@ mod tests {
 
     #[test]
     fn using_function_type_as_function_parameter() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     debug get_num(produce);
                 end
@@ -351,7 +351,7 @@ mod tests {
 
     #[test]
     fn calling_function_returned_by_another_function_call() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     debug foo()();
                 end
@@ -367,8 +367,36 @@ mod tests {
     }
 
     #[test]
+    fn calling_function_with_array_parameter() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    foo([1, 2, 3]);
+                end
+
+                fn foo(arr: [3]Int) do
+                end
+            "});
+    }
+
+    #[test]
+    fn calling_function_with_auto_array_parameter() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    foo([1, 2, 3]);
+
+                    foo([]);
+
+                    foo([1,]);
+                end
+
+                fn foo(arr: [_]Int) do
+                end
+            "});
+    }
+
+    #[test]
     fn defining_function_not_in_global_scope() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn main() do
                     if true do
                         fn foo() do end
@@ -379,35 +407,35 @@ mod tests {
 
     #[test]
     fn defining_function_with_a_non_existing_return_type() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn foo(): NonExistingType do end
             "});
     }
 
     #[test]
     fn defining_function_with_duplicated_parameter_name() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn add_sum_of(x: Int, x: Int) do end
             "});
     }
 
     #[test]
     fn defining_function_with_a_non_existing_parameter_type() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn foo(x: NonExistingType) do end
             "});
     }
 
     #[test]
     fn defining_function_with_void_parameter_type() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn foo(x: Void) do end
             "});
     }
 
     #[test]
     fn returning_value_from_function_with_void_return_type() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn foo() do
                     return 5;
                 end
@@ -416,7 +444,7 @@ mod tests {
 
     #[test]
     fn returning_value_from_function_with_mismatched_return_type() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn sum(x: Int, y: Int): Int do
                     return 5.0;
                 end
@@ -425,7 +453,7 @@ mod tests {
 
     #[test]
     fn invalid_statement_after_return() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn get_five(): Int do
                     return 5;
                     1 + true; # should be error
@@ -435,7 +463,7 @@ mod tests {
 
     #[test]
     fn returning_non_existing_variable() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn foo(): Int do
                     return not_exist;
                 end
@@ -444,7 +472,7 @@ mod tests {
 
     #[test]
     fn defining_function_with_missing_return_in_other_branches() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn foo(): Int do
                     if false do
                         return 5;
@@ -455,7 +483,7 @@ mod tests {
 
     #[test]
     fn defining_function_with_missing_return_in_else_branch_or_outer_scope() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn foo(): Int do
                     if false do
                         return 0;
@@ -468,7 +496,7 @@ mod tests {
 
     #[test]
     fn defining_function_with_missing_return_in_outer_scope_of_while_statement() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn foo(): Int do
                     while false do
                         return 0;

@@ -2,6 +2,43 @@
 
 As Kaba is still actively under development, this file is considered as a living document that will be updated as needed.
 
+## Overview
+
+Kaba is a:
+
+1. Statically typed language, where every type violations will be caught before the program is actually run.
+
+    ```text
+    var x: Int = 5;
+
+    x = false;  # ERROR
+    ```
+
+2. Strongly typed language, where operations between different types can't be done without going through certain procedure.
+
+    ```text
+    5 + 5.0;    # ERROR
+    ```
+
+Kaba is mainly consisted of 2 parts:
+
+1. [Compiler](../compiler/), where the architecture is briefly explained at the [README](../compiler/README.md) file.
+2. [Runtime](../src/runtime.rs), which currently is still a prototype.
+
+To run a Kaba program, the `run` command may be used:
+
+```bash
+kaba run my-program.kaba
+```
+
+## Program file
+
+Kaba program files **must** have `.kaba` extension. For example, `math.kaba`.
+
+The file also must contains a [main function](#main-function), which acts as the entrypoint to the program.
+
+> There is a [known bug](https://github.com/snaztoz/kaba/issues/28) that will make Kaba display a relatively *unreadable* error message if the program file does not contains `main()` function.
+
 ## Comments
 
 Kaba only supports single-line comment, which is prefixed by the `#` symbol:

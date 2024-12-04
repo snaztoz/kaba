@@ -1,5 +1,4 @@
 use super::{
-    assignment::AssignmentChecker,
     conditional::ConditionalBranchChecker,
     error::{Error, Result},
     expression::ExpressionChecker,
@@ -51,13 +50,6 @@ impl StatementChecker<'_> {
 
             AstNode::Debug { expr, span } => self.check_debug(expr, span),
 
-            AstNode::Assign { .. }
-            | AstNode::AddAssign { .. }
-            | AstNode::SubAssign { .. }
-            | AstNode::MulAssign { .. }
-            | AstNode::DivAssign { .. }
-            | AstNode::ModAssign { .. } => AssignmentChecker::new(self.ss, self.node).check(),
-
             expr => ExpressionChecker::new(self.ss, expr).check(),
         }
     }
@@ -81,7 +73,7 @@ impl StatementChecker<'_> {
 
         let return_t =
             self.ss
-                .current_function_return_type()
+                .current_function_return_t()
                 .ok_or_else(|| Error::UnexpectedStatement {
                     stmt_str: self.node.to_string(),
                     span: span.clone(),
@@ -99,7 +91,7 @@ impl StatementChecker<'_> {
     fn check_debug(&self, expr: &AstNode, span: &Span) -> Result<Type> {
         let expr_t = ExpressionChecker::new(self.ss, expr).check()?;
         if expr_t.is_void() {
-            return Err(Error::DebugVoid { span: span.clone() });
+            return Err(Error::UnexpectedVoidTypeExpression { span: span.clone() });
         }
 
         Ok(Type::new("Void"))
@@ -108,12 +100,12 @@ impl StatementChecker<'_> {
 
 #[cfg(test)]
 mod tests {
-    use crate::semantic::test_util::{check_and_assert_is_err, check_and_assert_is_ok};
+    use crate::semantic::test_util::{assert_is_err, assert_is_ok};
     use indoc::indoc;
 
     #[test]
     fn debug_expression() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     debug 17 * 5;
                 end
@@ -122,7 +114,7 @@ mod tests {
 
     #[test]
     fn debug_expression_with_void_type() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn main() do
                     debug this_is_void();
                 end

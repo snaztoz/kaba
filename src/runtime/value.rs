@@ -1,5 +1,4 @@
-use compiler::ast::Literal;
-use std::{convert::From, fmt::Display};
+use std::fmt::Display;
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub enum RuntimeValue {
@@ -8,6 +7,25 @@ pub enum RuntimeValue {
     Float(f64),
     Boolean(bool),
     Function(usize),
+    Array(usize),
+}
+
+impl RuntimeValue {
+    pub fn unwrap_integer(&self) -> usize {
+        if let RuntimeValue::Integer(i) = self {
+            usize::try_from(*i).unwrap()
+        } else {
+            panic!()
+        }
+    }
+
+    pub fn unwrap_array_ptr(&self) -> usize {
+        if let Self::Array(ptr) = self {
+            *ptr
+        } else {
+            panic!()
+        }
+    }
 }
 
 impl Display for RuntimeValue {
@@ -17,18 +35,9 @@ impl Display for RuntimeValue {
             Self::Integer(n) => write!(f, "{n}"),
             Self::Float(n) => write!(f, "{n}"),
             Self::Boolean(b) => write!(f, "{b}"),
-            Self::Function(p) => write!(f, "<function #{p}>"),
-        }
-    }
-}
 
-impl From<Literal> for RuntimeValue {
-    fn from(lit: Literal) -> Self {
-        match lit {
-            Literal::Void => Self::Void,
-            Literal::Integer(n) => Self::Integer(n.try_into().unwrap()),
-            Literal::Float(n) => Self::Float(n),
-            Literal::Boolean(b) => Self::Boolean(b),
+            Self::Function(p) => write!(f, "<function #{p}>"),
+            Self::Array(p) => write!(f, "<array #{p}>"),
         }
     }
 }

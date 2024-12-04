@@ -77,12 +77,12 @@ impl WhileLoopChecker<'_> {
 
 #[cfg(test)]
 mod tests {
-    use crate::semantic::test_util::{check_and_assert_is_err, check_and_assert_is_ok};
+    use crate::semantic::test_util::{assert_is_err, assert_is_ok};
     use indoc::indoc;
 
     #[test]
     fn while_loop_statements() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     while 2 > 5 do
                         debug 1;
@@ -101,7 +101,7 @@ mod tests {
 
     #[test]
     fn using_math_expression_as_condition_in_while_statement() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn main() do
                     while 5 + 5 do end
                 end
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn using_break_statement_not_in_loop_scope() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn main() do
                     if true do
                         break;
@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn using_invalid_statement_after_loop_control() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn main() do
                     while true do
                         break;

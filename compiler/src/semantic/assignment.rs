@@ -61,6 +61,8 @@ impl<'a> AssignmentChecker<'a> {
 
 impl AssignmentChecker<'_> {
     pub fn check(&self) -> Result<Type> {
+        self.check_lhs()?;
+
         match self.node {
             AstNode::Assign { lhs, rhs, span } => self.check_assignment(lhs, rhs, span),
 
@@ -76,14 +78,18 @@ impl AssignmentChecker<'_> {
         }
     }
 
-    fn check_assignment(&self, lhs: &AstNode, rhs: &AstNode, span: &Span) -> Result<Type> {
-        if !lhs.is_valid_assignment_lhs() {
+    fn check_lhs(&self) -> Result<()> {
+        if !self.lhs().is_valid_assignment_lhs() {
             return Err(Error::InvalidAssignmentLhs {
-                lhs: lhs.to_string(),
-                span: lhs.span().clone(),
+                lhs: self.lhs().to_string(),
+                span: self.lhs().span().clone(),
             });
         }
 
+        Ok(())
+    }
+
+    fn check_assignment(&self, lhs: &AstNode, rhs: &AstNode, span: &Span) -> Result<Type> {
         let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
         let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
 
@@ -103,19 +109,33 @@ impl AssignmentChecker<'_> {
 
         Type::assert_number(&lhs_t, || lhs.span().clone())?;
         Type::assert_number(&rhs_t, || rhs.span().clone())?;
+        Type::assert_assignable(&rhs_t, &lhs_t, || span.clone())?;
 
-        self.check_assignment(lhs, rhs, span)
+        Ok(Type::new("Void"))
+    }
+
+    fn lhs(&self) -> &AstNode {
+        match self.node {
+            AstNode::Assign { lhs, .. }
+            | AstNode::AddAssign { lhs, .. }
+            | AstNode::SubAssign { lhs, .. }
+            | AstNode::MulAssign { lhs, .. }
+            | AstNode::DivAssign { lhs, .. }
+            | AstNode::ModAssign { lhs, .. } => lhs,
+
+            _ => unreachable!(),
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::semantic::test_util::{check_and_assert_is_err, check_and_assert_is_ok};
+    use crate::semantic::test_util::{assert_is_err, assert_is_ok};
     use indoc::indoc;
 
     #[test]
     fn assigning_variables() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     var x = 0;
                     x = 10;
@@ -131,7 +151,7 @@ mod tests {
 
     #[test]
     fn assigning_variable_using_shorthand_forms() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     var i = 0;
                     i += 1;
@@ -145,7 +165,7 @@ mod tests {
 
     #[test]
     fn mod_assign_with_float_value() {
-        check_and_assert_is_ok(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
                     var i = 5.0;
                     i %= 2.5;
@@ -155,7 +175,7 @@ mod tests {
 
     #[test]
     fn assigning_value_with_non_existing_variable() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn main() do
                     var x: Float = 5.0;
                     x = y;
@@ -165,7 +185,7 @@ mod tests {
 
     #[test]
     fn using_math_expression_as_lhs_in_assignment() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn main() do
                     1 + 1 = 5;
                 end
@@ -174,7 +194,7 @@ mod tests {
 
     #[test]
     fn using_boolean_expression_as_lhs_in_assignment() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn main() do
                     true || false = false;
                 end
@@ -183,7 +203,7 @@ mod tests {
 
     #[test]
     fn using_integer_grouped_expression_as_lhs_in_assignment() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn main() do
                     (50) = true;
                 end
@@ -192,10 +212,36 @@ mod tests {
 
     #[test]
     fn using_boolean_type_in_shorthand_assignment() {
-        check_and_assert_is_err(indoc! {"
+        assert_is_err(indoc! {"
                 fn main() do
                     true += true;
                 end
             "})
+    }
+
+    //
+    // Arrays
+    //
+
+    #[test]
+    fn assign_to_array_element() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    var arr = [true, false, true];
+
+                    arr[1] = true;
+                end
+            "});
+    }
+
+    #[test]
+    fn shorthand_assign_to_array_element() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    var arr = [0.5, 1.1, 2.3];
+
+                    arr[0] += 5.5;
+                end
+            "});
     }
 }

@@ -15,6 +15,7 @@ mod conditional;
 mod error;
 mod expression;
 mod function;
+mod literal;
 mod scope;
 mod statement;
 #[cfg(test)]

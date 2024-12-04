@@ -195,6 +195,12 @@ pub enum AstNode {
         span: Span,
     },
 
+    IndexAccess {
+        object: Box<AstNode>,
+        index: Box<AstNode>,
+        span: Span,
+    },
+
     // This variant is only used as the span information holder and then will be
     // removed. It won't be present in the final resulting ASTs.
     Group {
@@ -254,6 +260,7 @@ impl AstNode {
             | Self::Not { span, .. }
             | Self::Neg { span, .. }
             | Self::FunctionCall { span, .. }
+            | Self::IndexAccess { span, .. }
             | Self::Group { span, .. }
             | Self::Identifier { span, .. }
             | Self::TypeNotation { span, .. }
@@ -262,7 +269,7 @@ impl AstNode {
     }
 
     pub const fn is_valid_assignment_lhs(&self) -> bool {
-        matches!(self, Self::Identifier { .. })
+        matches!(self, Self::Identifier { .. }) || matches!(self, Self::IndexAccess { .. })
     }
 
     pub fn unwrap_identifier(&self) -> (String, Span) {
@@ -379,6 +386,9 @@ impl Display for AstNode {
             Self::FunctionCall { .. } => {
                 write!(f, "function call expression")
             }
+            Self::IndexAccess { .. } => {
+                write!(f, "index access expression")
+            }
             Self::Identifier { .. } => {
                 write!(f, "identifier")
             }
@@ -403,6 +413,10 @@ pub struct FunctionParam {
 #[derive(Debug, PartialEq)]
 pub enum TypeNotation {
     Identifier(String),
+    Array {
+        size: Option<usize>,
+        elem_tn: Box<AstNode>,
+    },
     Callable {
         params_tn: Vec<AstNode>,
         return_tn: Box<AstNode>,
@@ -413,6 +427,16 @@ impl Display for TypeNotation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Identifier(id) => write!(f, "{id}"),
+
+            Self::Array { size, elem_tn } => {
+                let size = if let Some(n) = size {
+                    n.to_string()
+                } else {
+                    String::from("_")
+                };
+
+                write!(f, "[{size}]{elem_tn}")
+            }
 
             Self::Callable {
                 params_tn,
@@ -429,17 +453,19 @@ impl Display for TypeNotation {
     }
 }
 
-/// The representation of each value that may exists in a Kaba
-/// source code, such as integer or string.
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+/// The representation of each value that may exists in a Kaba source code,
+/// such as integer or string.
+#[derive(Debug, PartialEq)]
 pub enum Literal {
-    // A temporary value while the runtime is still using
-    // a tree-walk interpreter mode
+    // A temporary value while the runtime is still using a tree-walk
+    // interpreter mode
     Void,
 
     Integer(u32),
     Float(f64),
     Boolean(bool),
+
+    Array(Vec<AstNode>),
 }
 
 impl Display for Literal {
@@ -449,6 +475,14 @@ impl Display for Literal {
             Self::Integer(n) => write!(f, "{n}"),
             Self::Float(n) => write!(f, "{n}"),
             Self::Boolean(b) => write!(f, "{b}"),
+            Self::Array(arr) => {
+                let joined = arr
+                    .iter()
+                    .map(|tn| tn.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "[{joined}]")
+            }
         }
     }
 }

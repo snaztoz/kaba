@@ -105,6 +105,8 @@ pub enum TokenKind {
     #[token(",")] Comma,
     #[token("(")] LParen,
     #[token(")")] RParen,
+    #[token("[")] LBrack,
+    #[token("]")] RBrack,
 
     #[token("=")]  Assign,
     #[token("+=")] AddAssign,
@@ -173,6 +175,8 @@ impl Display for TokenKind {
             Self::Comma => write!(f, "comma (`,`)"),
             Self::LParen => write!(f, "left parentheses (`(`)"),
             Self::RParen => write!(f, "right parentheses (`)`)"),
+            Self::LBrack => write!(f, "left bracket (`[`)"),
+            Self::RBrack => write!(f, "right bracket (`]`)"),
             Self::Assign => write!(f, "assign operator (`=`)"),
             Self::AddAssign => write!(f, "add assign operator (`+=`)"),
             Self::SubAssign => write!(f, "sub assign operator (`-=`)"),

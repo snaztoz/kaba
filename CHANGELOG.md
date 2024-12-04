@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Avoid cloning the entire source code on compiler errors (by [@null8626](https://github.com/null8626) in [#29](https://github.com/snaztoz/kaba/pull/29))
+- Prevent non-existing types in callable parameters and return type.
 
 ## [0.3.3] - 2024-11-28
 
@@ -48,13 +49,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Auto-casting behaviour in number types is disabled.
-- `Any` type is removed.
 - Operators for indicating blocks are changed to `do ... end`
 - Use `#` to write comments.
 
 ### Removed
 
+- Auto-casting behaviour in number types is removed.
+- `Any` type is removed.
 - Multi-line comments.
 - `//` operator.
 - Built-in `print` function.
@@ -89,8 +90,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Change integer literal limit from 64 bits to 32 bits.
-- Change error message format
+- Integer literal limit is changed from 64 bits to 32 bits.
+- Error message displaying format
 
 ## [0.1.2] - 2023-12-27
 
