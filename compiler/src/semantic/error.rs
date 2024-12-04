@@ -10,7 +10,18 @@ pub enum Error {
         span: Span,
     },
 
-    UnableToAssignValueType {
+    TypeMismatch {
+        type_a: Type,
+        type_b: Type,
+        span: Span,
+    },
+
+    UnexpectedStatement {
+        stmt_str: String,
+        span: Span,
+    },
+
+    InvalidAssignmentType {
         var_t: String,
         val_t: String,
         span: Span,
@@ -31,21 +42,11 @@ pub enum Error {
         span: Span,
     },
 
-    NotANumber {
+    NonNumberType {
         span: Span,
     },
 
-    NotABoolean {
-        span: Span,
-    },
-
-    UnexpectedStatement {
-        stmt_str: String,
-        span: Span,
-    },
-
-    InvalidFunctionCallArgument {
-        args: Vec<Type>,
+    NonBooleanType {
         span: Span,
     },
 
@@ -59,9 +60,8 @@ pub enum Error {
         span: Span,
     },
 
-    TypeMismatch {
-        type_a: Type,
-        type_b: Type,
+    InvalidFunctionCallArgument {
+        args: Vec<Type>,
         span: Span,
     },
 
@@ -71,7 +71,7 @@ pub enum Error {
         span: Span,
     },
 
-    DebugVoid {
+    UnexpectedVoidTypeExpression {
         span: Span,
     },
 }
@@ -80,19 +80,19 @@ impl Error {
     pub fn span(&self) -> &Span {
         match self {
             Self::VoidTypeVariable { span, .. }
-            | Self::UnableToAssignValueType { span, .. }
+            | Self::InvalidAssignmentType { span, .. }
             | Self::InvalidAssignmentLhs { span, .. }
             | Self::SymbolAlreadyExist { span, .. }
             | Self::SymbolDoesNotExist { span, .. }
-            | Self::NotANumber { span, .. }
-            | Self::NotABoolean { span, .. }
+            | Self::NonNumberType { span, .. }
+            | Self::NonBooleanType { span, .. }
             | Self::UnexpectedStatement { span, .. }
             | Self::InvalidFunctionCallArgument { span, .. }
             | Self::NonCallableType { span, .. }
             | Self::NonIndexableType { span, .. }
             | Self::TypeMismatch { span, .. }
             | Self::ReturnTypeMismatch { span, .. }
-            | Self::DebugVoid { span } => span,
+            | Self::UnexpectedVoidTypeExpression { span } => span,
         }
     }
 }
@@ -103,7 +103,7 @@ impl Display for Error {
             Self::VoidTypeVariable { .. } => {
                 write!(f, "unable to create variable with `Void` type")
             }
-            Self::UnableToAssignValueType { var_t, val_t, .. } => {
+            Self::InvalidAssignmentType { var_t, val_t, .. } => {
                 write!(
                     f,
                     "unable to assign value of type `{val_t}` to type `{var_t}`"
@@ -118,10 +118,10 @@ impl Display for Error {
             Self::SymbolDoesNotExist { id, .. } => {
                 write!(f, "`{id}` does not exist in current scope")
             }
-            Self::NotANumber { .. } => {
+            Self::NonNumberType { .. } => {
                 write!(f, "not a number")
             }
-            Self::NotABoolean { .. } => {
+            Self::NonBooleanType { .. } => {
                 write!(f, "not a boolean")
             }
             Self::UnexpectedStatement { stmt_str, .. } => {
@@ -151,8 +151,8 @@ impl Display for Error {
                     "expecting function to returns `{expected}`, but get `{get}` instead",
                 )
             }
-            Self::DebugVoid { .. } => {
-                write!(f, "unable to debug expressions that has `void` type")
+            Self::UnexpectedVoidTypeExpression { .. } => {
+                write!(f, "unexpected `Void` type expression")
             }
         }
     }

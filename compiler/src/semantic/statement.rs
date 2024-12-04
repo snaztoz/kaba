@@ -91,7 +91,7 @@ impl StatementChecker<'_> {
     fn check_debug(&self, expr: &AstNode, span: &Span) -> Result<Type> {
         let expr_t = ExpressionChecker::new(self.ss, expr).check()?;
         if expr_t.is_void() {
-            return Err(Error::DebugVoid { span: span.clone() });
+            return Err(Error::UnexpectedVoidTypeExpression { span: span.clone() });
         }
 
         Ok(Type::new("Void"))

@@ -33,7 +33,7 @@ impl Type {
         if t.is_number() {
             Ok(())
         } else {
-            Err(Error::NotANumber { span: err_span() })
+            Err(Error::NonNumberType { span: err_span() })
         }
     }
 
@@ -59,7 +59,7 @@ impl Type {
         if t.is_boolean() {
             Ok(())
         } else {
-            Err(Error::NotABoolean { span: err_span() })
+            Err(Error::NonBooleanType { span: err_span() })
         }
     }
 
@@ -98,7 +98,7 @@ impl Type {
         if from.is_assignable_to(to) {
             Ok(())
         } else {
-            Err(Error::UnableToAssignValueType {
+            Err(Error::InvalidAssignmentType {
                 var_t: to.to_string(),
                 val_t: from.to_string(),
                 span: err_span(),

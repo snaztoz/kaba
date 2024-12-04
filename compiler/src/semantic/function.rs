@@ -178,7 +178,7 @@ impl FunctionDefinitionChecker<'_> {
     fn fn_t(&self) -> Type {
         if let AstNode::FunctionDefinition { id, .. } = self.node {
             let id_str = &id.unwrap_identifier().0;
-            self.ss.get_symbol_type(id_str).unwrap()
+            self.ss.get_symbol_t(id_str).unwrap()
         } else {
             unreachable!()
         }

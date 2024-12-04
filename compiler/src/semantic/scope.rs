@@ -14,19 +14,19 @@ pub struct ScopeStack {
 }
 
 impl ScopeStack {
-    pub fn get_symbol_type(&self, name: &str) -> Option<Type> {
+    pub fn get_symbol_t(&self, name: &str) -> Option<Type> {
         self.find_reversed(|s| s.symbols.get(name).cloned())
     }
 
-    pub fn has_type(&self, t: &Type) -> bool {
+    pub fn has_t(&self, t: &Type) -> bool {
         match t {
             Type::Callable { params_t, return_t } => {
-                params_t.iter().all(|t| self.has_type(t)) && self.has_type(return_t)
+                params_t.iter().all(|t| self.has_t(t)) && self.has_t(return_t)
             }
 
             Type::Array { elem_t, .. } => {
                 let elem_t = elem_t.as_ref().unwrap();
-                self.has_type(elem_t)
+                self.has_t(elem_t)
             }
 
             t => self
