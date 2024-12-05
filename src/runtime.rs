@@ -481,4 +481,26 @@ mod tests {
             "0\n0\n10\n0\n".as_bytes(),
         );
     }
+
+    #[test]
+    fn iterate_array_using_each_loop_statement() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
+                    each [1, 2, 3, 4, 5, 6] as n do
+                        if n == 3 do
+                            continue;
+                        end
+
+                        if n == 5 do
+                            break;
+                        end
+
+                        debug n * 2;
+                    end
+                end
+            "},
+            "2\n4\n8\n".as_bytes(),
+        );
+    }
 }

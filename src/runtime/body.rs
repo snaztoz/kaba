@@ -32,6 +32,7 @@ impl<'a> BodyRunner<'a> {
             | AstNode::If { body, .. }
             | AstNode::Else { body, .. }
             | AstNode::While { body, .. }
+            | AstNode::Each { body, .. }
             | AstNode::FunctionDefinition { body, .. } => body,
 
             _ => unreachable!(),
