@@ -108,6 +108,36 @@ fn main() do
 end
 ```
 
+## Value assignments
+
+Kaba is a strongly-typed language, so the type of operands in various operations must be compatible.
+
+For example, the following program will results in compilation error:
+
+```text
+fn main() do
+    var x = 5;
+
+    x = 10.0;   # ERROR!
+end
+```
+
+## Shorthand assignments
+
+Shorthand assignments are also supported:
+
+```text
+fn main() do
+    var x = 10;
+
+    x += 1;
+    x -= 0;
+    x *= 2;
+    x /= 4;
+    x %= 2;
+end
+```
+
 ## Displaying value with `debug` statement
 
 To display value to `stdout`, use the `debug` statement:
@@ -153,7 +183,7 @@ fn main() do
 
     var d: () -> Void = foo;
 
-    var e: [2]Int = [99, 101];
+    var e: []Int = [99, 101];
 end
 
 fn foo() do
@@ -164,9 +194,7 @@ end
 
 Array has a **fixed** size, so that it can't be changed after it was created.
 
-If two arrays have different size, even though their elements are the same type, they will still be considered as different types.
-
-For example, `[2]Int` is not the same as `[1]Int`.
+Array size is not included in the type system, so that `[1, 2, 3]` is considered to have the same type as `[1]`.
 
 Kaba can infer the type of an array:
 
@@ -174,19 +202,9 @@ Kaba can infer the type of an array:
 fn main do
     var arr = [false, true, true];
 
-    # The type of `arr` is `[3]Bool`
+    # The type of `arr` is `[]Bool`
 
     debug arr[1];   // `true`
-end
-```
-
-Kaba can also infer the array size automatically:
-
-```text
-fn main do
-    var arr: [_]Int = [1, 4, 6, 7];
-
-    # The type of `arr` is `[4]Int`
 end
 ```
 
@@ -201,38 +219,8 @@ fn main() do
     foo(arr);
 end
 
-fn foo(arr: [_][_]Int) do
+fn foo(arr: [][]Int) do
     debug arr[0][1];
-end
-```
-
-## Value assignments
-
-Kaba is a strongly-typed language, so the type of operands in various operations must be compatible.
-
-For example, the following program will results in compilation error:
-
-```text
-fn main() do
-    var x = 5;
-
-    x = 10.0;   # ERROR!
-end
-```
-
-## Shorthand assignments
-
-Shorthand assignments are also supported:
-
-```text
-fn main() do
-    var x = 10;
-
-    x += 1;
-    x -= 0;
-    x *= 2;
-    x /= 4;
-    x %= 2;
 end
 ```
 

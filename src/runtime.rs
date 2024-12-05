@@ -456,4 +456,29 @@ mod tests {
             "6\n7\n8\n".as_bytes(),
         );
     }
+
+    #[test]
+    fn returning_array_from_a_function() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
+                    var arr_1 = foo();
+                    var arr_2 = foo();
+
+                    debug arr_1[0];
+                    debug arr_2[0];
+
+                    arr_1[0] = 10;
+
+                    debug arr_1[0];
+                    debug arr_2[0];
+                end
+
+                fn foo(): []Int do
+                    return [0];
+                end
+            "},
+            "0\n0\n10\n0\n".as_bytes(),
+        );
+    }
 }

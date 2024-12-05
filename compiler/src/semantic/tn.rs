@@ -9,7 +9,8 @@ use logos::Span;
 pub struct TypeNotationChecker<'a> {
     ss: &'a ScopeStack,
     node: &'a AstNode,
-    allow_void: bool,
+
+    void_allowed: bool,
 }
 
 impl<'a> TypeNotationChecker<'a> {
@@ -17,16 +18,13 @@ impl<'a> TypeNotationChecker<'a> {
         Self {
             ss,
             node,
-            allow_void: false,
+            void_allowed: false,
         }
     }
 
-    pub const fn new_with_void_allowed(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self {
-            ss,
-            node,
-            allow_void: true,
-        }
+    pub const fn allow_void(mut self) -> Self {
+        self.void_allowed = true;
+        self
     }
 }
 
@@ -40,7 +38,7 @@ impl TypeNotationChecker<'_> {
             });
         }
 
-        if !self.allow_void && self.t().is_void() {
+        if !self.void_allowed && self.t().is_void() {
             return Err(Error::VoidTypeVariable {
                 span: self.span().clone(),
             });

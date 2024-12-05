@@ -25,7 +25,7 @@ impl IndexAccessChecker<'_> {
         Type::assert_number(&index_t, || self.index().span().clone())?;
 
         match obj_t {
-            Type::Array { elem_t, .. } => Ok(*elem_t.unwrap()),
+            Type::Array(elem_t) => Ok(*elem_t.unwrap()),
 
             _ => unreachable!(),
         }
@@ -57,10 +57,7 @@ mod tests {
     fn index_accessing() {
         assert_expression_type(
             "[[1, 2]][0];",
-            Type::Array {
-                size: Some(2),
-                elem_t: Some(Box::new(Type::new("Int"))),
-            },
+            Type::Array(Some(Box::new(Type::new("Int")))),
         );
     }
 }

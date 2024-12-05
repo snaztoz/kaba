@@ -47,7 +47,7 @@ impl FunctionDeclarationChecker<'_> {
 
     fn check_return_tn(&self) -> Result<()> {
         if let Some(tn) = self.return_tn() {
-            TypeNotationChecker::new_with_void_allowed(self.ss, tn).check()?;
+            TypeNotationChecker::new(self.ss, tn).allow_void().check()?;
         }
 
         Ok(())
@@ -373,13 +373,13 @@ mod tests {
                     foo([1, 2, 3]);
                 end
 
-                fn foo(arr: [3]Int) do
+                fn foo(arr: []Int) do
                 end
             "});
     }
 
     #[test]
-    fn calling_function_with_auto_array_parameter() {
+    fn calling_function_with_array_parameter_using_different_array_sizes() {
         assert_is_ok(indoc! {"
                 fn main() do
                     foo([1, 2, 3]);
@@ -389,7 +389,23 @@ mod tests {
                     foo([1,]);
                 end
 
-                fn foo(arr: [_]Int) do
+                fn foo(arr: []Int) do
+                end
+            "});
+    }
+
+    #[test]
+    fn returning_array_from_a_function() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    var arr_1: []Int = foo();
+                    var arr_2: []Int = foo();
+
+                    arr_1[0] = 10;
+                end
+
+                fn foo(): []Int do
+                    return [1, 2, 3];
                 end
             "});
     }
