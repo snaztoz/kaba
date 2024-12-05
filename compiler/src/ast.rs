@@ -424,7 +424,9 @@ pub struct FunctionParam {
 #[derive(Debug, PartialEq)]
 pub enum TypeNotation {
     Identifier(String),
-    Array(Box<AstNode>),
+    Array {
+        elem_tn: Box<AstNode>,
+    },
     Callable {
         params_tn: Vec<AstNode>,
         return_tn: Box<AstNode>,
@@ -436,7 +438,7 @@ impl Display for TypeNotation {
         match self {
             Self::Identifier(id) => write!(f, "{id}"),
 
-            Self::Array(elem_tn) => {
+            Self::Array { elem_tn } => {
                 write!(f, "[]{elem_tn}")
             }
 

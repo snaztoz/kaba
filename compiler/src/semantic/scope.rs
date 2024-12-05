@@ -24,7 +24,7 @@ impl ScopeStack {
                 params_t.iter().all(|t| self.has_t(t)) && self.has_t(return_t)
             }
 
-            Type::Array(elem_t) => {
+            Type::Array { elem_t } => {
                 let elem_t = elem_t.as_ref().unwrap();
                 self.has_t(elem_t)
             }

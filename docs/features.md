@@ -212,15 +212,31 @@ More complex scenarios are also supported:
 
 ```text
 fn main() do
-    var arr = [[4, 5]];
+    var arr = [[], [4, 5]];
     foo(arr);
 
-    arr[0][1] = 10;
+    arr[1][1] = 10;
     foo(arr);
 end
 
 fn foo(arr: [][]Int) do
-    debug arr[0][1];
+    debug arr[1][1];
+end
+```
+
+On a side note, statements such as variable declaration and `each` loop are unable to infer type from an empty array literal, so type notation is mandatory in those cases:
+
+```text
+fn main() do
+    # Use this...
+    var x: []Int = [];
+
+    # Not this...
+    var x = [];
+
+    # And also not this...
+    each [] as i do
+    end
 end
 ```
 
