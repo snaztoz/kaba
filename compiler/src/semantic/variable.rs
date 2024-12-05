@@ -257,64 +257,37 @@ mod tests {
     }
 
     #[test]
-    fn declaring_variable_with_empty_array_literal_and_type_notation() {
-        assert_is_ok(indoc! {"
-                fn main() do
-                    var arr: [_]Int = [];
-                end
-            "});
-    }
-
-    #[test]
-    fn declaring_variable_with_array_literal_and_zero_sized_type_notation() {
-        assert_is_ok(indoc! {"
-                fn main() do
-                    var arr: [0]Int = [];
-                end
-            "});
-    }
-
-    #[test]
-    fn declaring_variable_with_auto_and_zero_type_notation() {
-        assert_is_ok(indoc! {"
-                fn main() do
-                    var arr: [_][0][_]Int = [[], []];
-                end
-            "});
-    }
-
-    #[test]
     fn declaring_variable_with_array_type_notation() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr: [1]Int = [9];
+                    var arr: []Int = [5, 9, 10];
                 end
             "});
     }
 
     #[test]
-    fn declaring_variable_with_auto_array_sized() {
+    fn declaring_variable_with_empty_array_literal_and_type_notation() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr: [_]Int = [5, 9, 10];
+                    var arr: []Int = [];
                 end
             "});
     }
 
     #[test]
-    fn declaring_variable_with_auto_array_sized_of_array_elements() {
+    fn declaring_variable_with_nested_arrays_and_type_notation() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr: [_][3]Int = [[5, 9, 10], [1, 2, 3]];
+                    var arr: [][]Int = [[5, 9, 10], [1, 2, 3]];
                 end
             "});
     }
 
     #[test]
-    fn declaring_variable_with_auto_array_sized_of_auto_array_sized_elements() {
+    fn declaring_variable_with_nested_empty_arrays_and_type_notation() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr: [_][_]Int = [[5, 9, 10], [1, 2, 3]];
+                    var arr: [][][]Int = [[], []];
                 end
             "});
     }
@@ -349,7 +322,7 @@ mod tests {
     fn declaring_variable_with_non_existing_array_type() {
         assert_is_err(indoc! {"
                 fn main() do
-                    var arr: [0]NotExist = [];
+                    var arr: []NotExist = [];
                 end
             "})
     }

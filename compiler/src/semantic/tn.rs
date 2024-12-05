@@ -11,7 +11,6 @@ pub struct TypeNotationChecker<'a> {
     node: &'a AstNode,
 
     void_allowed: bool,
-    auto_sized_array_allowed: bool,
 }
 
 impl<'a> TypeNotationChecker<'a> {
@@ -20,17 +19,11 @@ impl<'a> TypeNotationChecker<'a> {
             ss,
             node,
             void_allowed: false,
-            auto_sized_array_allowed: true,
         }
     }
 
     pub const fn allow_void(mut self) -> Self {
         self.void_allowed = true;
-        self
-    }
-
-    pub const fn forbid_auto_sized_array(mut self) -> Self {
-        self.auto_sized_array_allowed = false;
         self
     }
 }
@@ -47,12 +40,6 @@ impl TypeNotationChecker<'_> {
 
         if !self.void_allowed && self.t().is_void() {
             return Err(Error::VoidTypeVariable {
-                span: self.span().clone(),
-            });
-        }
-
-        if !self.auto_sized_array_allowed && self.t().is_auto_sized_array() {
-            return Err(Error::AutoSizedArrayReturnType {
                 span: self.span().clone(),
             });
         }

@@ -71,10 +71,6 @@ pub enum Error {
         span: Span,
     },
 
-    AutoSizedArrayReturnType {
-        span: Span,
-    },
-
     UnexpectedVoidTypeExpression {
         span: Span,
     },
@@ -96,7 +92,6 @@ impl Error {
             | Self::NonIndexableType { span, .. }
             | Self::TypeMismatch { span, .. }
             | Self::ReturnTypeMismatch { span, .. }
-            | Self::AutoSizedArrayReturnType { span }
             | Self::UnexpectedVoidTypeExpression { span } => span,
         }
     }
@@ -155,9 +150,6 @@ impl Display for Error {
                     f,
                     "expecting function to returns `{expected}`, but get `{get}` instead",
                 )
-            }
-            Self::AutoSizedArrayReturnType { .. } => {
-                write!(f, "auto-sized array can't be the return type of a function")
             }
             Self::UnexpectedVoidTypeExpression { .. } => {
                 write!(f, "unexpected `Void` type expression")

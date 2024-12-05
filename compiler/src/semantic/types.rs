@@ -7,13 +7,7 @@ use std::fmt::Display;
 pub enum Type {
     Identifier(String),
 
-    Array {
-        // we use Option for the size to facilitate the possibility of user not
-        // specifying the array size directly, so that it must be inferred from
-        // the provided array literal instead.
-        size: Option<usize>,
-        elem_t: Option<Box<Type>>,
-    },
+    Array(Option<Box<Type>>),
 
     Callable {
         params_t: Vec<Type>,
@@ -118,14 +112,6 @@ impl Type {
         matches!(self, Type::Array { .. })
     }
 
-    fn is_empty_array(&self) -> bool {
-        matches!(self, Type::Array { size, .. } if *size == Some(0))
-    }
-
-    pub fn is_auto_sized_array(&self) -> bool {
-        matches!(self, Type::Array { size, .. } if size.is_none())
-    }
-
     const fn is_callable(&self) -> bool {
         matches!(self, Self::Callable { .. })
     }
@@ -136,27 +122,17 @@ impl Type {
         }
 
         if self.is_array() && target.is_array() {
-            if self.is_empty_array() && target.is_empty_array() {
-                // We are not inferring target's size, but self's type is
-                // `None`, so we just return true instead
-                return true;
-            }
+            let self_elem_t = self.unwrap_array();
+            let target_elem_t = target.unwrap_array();
 
-            let (_, self_elem_t) = self.unwrap_array();
-            let (target_size, target_elem_t) = target.unwrap_array();
-
-            if target_size.is_none() {
-                // We infer the target's size from self's size, now we check the
-                // compatibility of both element's types
-                return self_elem_t
-                    .as_ref()
-                    .unwrap_or_else(|| {
-                        // Infer self's element type from target's type, because
-                        // target_elem_t will never has `None` value.
-                        target_elem_t.as_ref().unwrap()
-                    })
-                    .is_assignable_to(target_elem_t.as_ref().unwrap());
-            }
+            return self_elem_t
+                .as_ref()
+                .unwrap_or_else(|| {
+                    // Infer self's element type from target's type, because
+                    // target_elem_t will never has `None` value.
+                    target_elem_t.as_ref().unwrap()
+                })
+                .is_assignable_to(target_elem_t.as_ref().unwrap());
         }
 
         false
@@ -166,9 +142,9 @@ impl Type {
         matches!(self, Self::Identifier(id) if id == "Void")
     }
 
-    pub fn unwrap_array(&self) -> (&Option<usize>, &Option<Box<Type>>) {
-        if let Type::Array { size, elem_t } = self {
-            (size, elem_t)
+    pub fn unwrap_array(&self) -> &Option<Box<Type>> {
+        if let Type::Array(elem_t) = self {
+            elem_t
         } else {
             panic!("trying to unwrap array on non-Array type")
         }
@@ -189,10 +165,9 @@ impl<'a> From<&'a AstNode> for Type {
             match tn {
                 TypeNotation::Identifier(id) => Self::new(id),
 
-                TypeNotation::Array { size, elem_tn } => Self::Array {
-                    size: *size,
-                    elem_t: Some(Box::new(Self::from(elem_tn.as_ref()))),
-                },
+                TypeNotation::Array(elem_tn) => {
+                    Self::Array(Some(Box::new(Self::from(elem_tn.as_ref()))))
+                }
 
                 TypeNotation::Callable {
                     params_tn,
@@ -217,20 +192,14 @@ impl Display for Type {
         match self {
             Self::Identifier(id) => write!(f, "{id}"),
 
-            Self::Array { size, elem_t } => {
-                let size = if let Some(n) = size {
-                    n.to_string()
-                } else {
-                    String::from("_")
-                };
-
+            Self::Array(elem_t) => {
                 let elem_t = if let Some(t) = elem_t {
                     t.to_string()
                 } else {
                     String::from("{unknown}")
                 };
 
-                write!(f, "[{size}]{elem_t}")
+                write!(f, "[]{elem_t}")
             }
 
             Self::Callable { params_t, return_t } => {

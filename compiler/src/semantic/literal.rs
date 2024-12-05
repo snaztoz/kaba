@@ -44,10 +44,7 @@ impl LiteralChecker<'_> {
             Type::assert_assignable(&t, elem_t.as_ref().unwrap(), || elem.span().clone())?;
         }
 
-        Ok(Type::Array {
-            size: Some(arr.len()),
-            elem_t: elem_t.map(Box::new),
-        })
+        Ok(Type::Array(elem_t.map(Box::new)))
     }
 }
 
@@ -60,48 +57,26 @@ mod tests {
 
     #[test]
     fn array_literal() {
-        assert_expression_type(
-            "[1, 2, 3];",
-            Type::Array {
-                size: Some(3),
-                elem_t: Some(Box::new(Type::new("Int"))),
-            },
-        );
+        assert_expression_type("[1, 2, 3];", Type::Array(Some(Box::new(Type::new("Int")))));
     }
 
     #[test]
     fn empty_array_literal() {
-        assert_expression_type(
-            "[];",
-            Type::Array {
-                size: Some(0),
-                elem_t: None,
-            },
-        );
+        assert_expression_type("[];", Type::Array(None));
     }
 
     #[test]
     fn array_literal_with_math_expression() {
-        assert_expression_type(
-            "[8 * 2048];",
-            Type::Array {
-                size: Some(1),
-                elem_t: Some(Box::new(Type::new("Int"))),
-            },
-        );
+        assert_expression_type("[8 * 2048];", Type::Array(Some(Box::new(Type::new("Int")))));
     }
 
     #[test]
     fn nested_array_literals() {
         assert_expression_type(
             "[[1, 3, 5], [2, 6, 3], [9, 1, 1]];",
-            Type::Array {
-                size: Some(3),
-                elem_t: Some(Box::new(Type::Array {
-                    size: Some(3),
-                    elem_t: Some(Box::new(Type::new("Int"))),
-                })),
-            },
+            Type::Array(Some(Box::new(Type::Array(Some(Box::new(Type::new(
+                "Int",
+            ))))))),
         );
     }
 
@@ -112,6 +87,11 @@ mod tests {
 
     #[test]
     fn array_literal_with_different_nested_element_types() {
-        assert_expression_is_err("[[1], []];");
+        assert_expression_type(
+            "[[1], []];",
+            Type::Array(Some(Box::new(Type::Array(Some(Box::new(Type::new(
+                "Int",
+            ))))))),
+        );
     }
 }

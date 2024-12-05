@@ -474,7 +474,7 @@ mod tests {
                     debug arr_2[0];
                 end
 
-                fn foo(): [1]Int do
+                fn foo(): []Int do
                     return [0];
                 end
             "},

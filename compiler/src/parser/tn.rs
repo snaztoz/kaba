@@ -48,24 +48,6 @@ impl TypeNotationParser<'_> {
         // Expecting "["
         self.tokens.skip(&TokenKind::LBrack)?;
 
-        // Expecting either integer or "_" identifier
-        let size = match self.tokens.current_kind() {
-            TokenKind::Identifier(id) if id == "_" => None,
-            TokenKind::Integer(n) => {
-                Some(usize::try_from(n).expect("`usize` is smaller than `u32`"))
-            }
-
-            kind => {
-                return Err(ParsingError::UnexpectedToken {
-                    expect: TokenKind::RParen,
-                    found: kind.clone(),
-                    span: self.tokens.current().span,
-                });
-            }
-        };
-
-        self.tokens.advance();
-
         // Expecting "]"
         self.tokens.skip(&TokenKind::RBrack)?;
 
@@ -75,10 +57,7 @@ impl TypeNotationParser<'_> {
         let end = elem_tn.span().end;
 
         Ok(AstNode::TypeNotation {
-            tn: TypeNotation::Array {
-                size,
-                elem_tn: Box::new(elem_tn),
-            },
+            tn: TypeNotation::Array(Box::new(elem_tn)),
             span: start..end,
         })
     }
