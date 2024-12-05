@@ -47,7 +47,10 @@ impl FunctionDeclarationChecker<'_> {
 
     fn check_return_tn(&self) -> Result<()> {
         if let Some(tn) = self.return_tn() {
-            TypeNotationChecker::new_with_void_allowed(self.ss, tn).check()?;
+            TypeNotationChecker::new(self.ss, tn)
+                .allow_void()
+                .forbid_auto_sized_array()
+                .check()?;
         }
 
         Ok(())
@@ -395,25 +398,30 @@ mod tests {
     }
 
     #[test]
-    fn returning_auto_sized_array_from_a_function() {
+    fn returning_array_from_a_function() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr_1 = foo(true);
-                    debug arr_1[0];
-
-                    var arr_2 = foo(false);
-                    debug arr_2[1];
+                    var arr_1: [_]Int = foo();
+                    var arr_2: [_]Int = foo();
 
                     arr_1[0] = 10;
-                    debug arr_1[0];
                 end
 
-                fn foo(is_true: Bool): [_]Int do
-                    if is_true do
-                        return [1, 2, 3];
-                    else do
-                        return [4, 5];
-                    end
+                fn foo(): [3]Int do
+                    return [1, 2, 3];
+                end
+            "});
+    }
+
+    #[test]
+    fn both_side_of_assignments_have_auto_sized_array() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    var arr_1: [3]Int = foo();
+                end
+
+                fn foo(): [_]Int do
+                    return [1, 2, 3];
                 end
             "});
     }

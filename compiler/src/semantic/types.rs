@@ -122,6 +122,10 @@ impl Type {
         matches!(self, Type::Array { size, .. } if *size == Some(0))
     }
 
+    pub fn is_auto_sized_array(&self) -> bool {
+        matches!(self, Type::Array { size, .. } if size.is_none())
+    }
+
     const fn is_callable(&self) -> bool {
         matches!(self, Self::Callable { .. })
     }

@@ -458,29 +458,27 @@ mod tests {
     }
 
     #[test]
-    fn returning_auto_sized_array_from_a_function() {
+    fn returning_array_from_a_function() {
         assert_output_equal(
             indoc! {"
                 fn main() do
-                    var arr_1 = foo(true);
-                    debug arr_1[0];
+                    var arr_1 = foo();
+                    var arr_2 = foo();
 
-                    var arr_2 = foo(false);
-                    debug arr_2[1];
+                    debug arr_1[0];
+                    debug arr_2[0];
 
                     arr_1[0] = 10;
+
                     debug arr_1[0];
+                    debug arr_2[0];
                 end
 
-                fn foo(is_true: Bool): [_]Int do
-                    if is_true do
-                        return [1, 2, 3];
-                    else do
-                        return [4, 5];
-                    end
+                fn foo(): [1]Int do
+                    return [0];
                 end
             "},
-            "1\n5\n10\n".as_bytes(),
+            "0\n0\n10\n0\n".as_bytes(),
         );
     }
 }
