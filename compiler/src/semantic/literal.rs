@@ -32,15 +32,39 @@ impl LiteralChecker<'_> {
             unreachable!()
         };
 
+        // Doing double checking.
+        //
+        // For example, in the case of a nested array (let's call it A) like:
+        //
+        //      [[], [1]]
+        //
+        // The array type can't be inferred based on the first element only,
+        // which is an empty array.
+        //
+        // The solution is to iterate through all elements and stop on the
+        // first non-empty array, whose type can be inferred (let's call it T).
+        //
+        // Then the type of A will be set to `[]T`.
+        //
+        // Lastly, we re-run the checking process against the type of T for
+        // every element inside the array.
+
         let mut elem_t = None;
+
         for elem in arr {
             let t = ExpressionChecker::new(self.ss, elem).check()?;
-
-            if elem_t.is_none() {
+            if !t.is_array_with_unknown_elem_t() {
                 elem_t = Some(t);
-                continue;
+                break;
             }
+        }
 
+        if elem_t.is_none() {
+            return Ok(Type::Array { elem_t: None });
+        }
+
+        for elem in arr {
+            let t = ExpressionChecker::new(self.ss, elem).check()?;
             Type::assert_assignable(&t, elem_t.as_ref().unwrap(), || elem.span().clone())?;
         }
 
@@ -100,9 +124,9 @@ mod tests {
     }
 
     #[test]
-    fn array_literal_with_different_nested_element_types() {
+    fn array_literal_with_different_nested_element_sizes() {
         assert_expression_type(
-            "[[1], []];",
+            "[[], [1]];",
             Type::Array {
                 elem_t: Some(Box::new(Type::Array {
                     elem_t: Some(Box::new(Type::new("Int"))),
