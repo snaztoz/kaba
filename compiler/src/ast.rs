@@ -39,6 +39,13 @@ pub enum AstNode {
         span: Span,
     },
 
+    Each {
+        iterable: Box<AstNode>,
+        elem_id: Box<AstNode>,
+        body: Vec<AstNode>,
+        span: Span,
+    },
+
     Break {
         span: Span,
     },
@@ -233,6 +240,7 @@ impl AstNode {
             | Self::If { span, .. }
             | Self::Else { span, .. }
             | Self::While { span, .. }
+            | Self::Each { span, .. }
             | Self::Break { span }
             | Self::Continue { span }
             | Self::FunctionDefinition { span, .. }
@@ -304,6 +312,9 @@ impl Display for AstNode {
             }
             Self::While { .. } => {
                 write!(f, "`while` statement")
+            }
+            Self::Each { .. } => {
+                write!(f, "`each` statement")
             }
             Self::FunctionDefinition { .. } => {
                 write!(f, "function definition")

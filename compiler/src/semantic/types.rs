@@ -71,6 +71,20 @@ impl Type {
         }
     }
 
+    pub fn assert_iterable<F>(t: &Self, err_span: F) -> Result<()>
+    where
+        F: FnOnce() -> Span,
+    {
+        if t.is_array() {
+            Ok(())
+        } else {
+            Err(Error::NonIterableType {
+                t: t.clone(),
+                span: err_span(),
+            })
+        }
+    }
+
     pub fn assert_indexable<F>(t: &Self, err_span: F) -> Result<()>
     where
         F: FnOnce() -> Span,

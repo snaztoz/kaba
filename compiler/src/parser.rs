@@ -11,6 +11,7 @@ use stream::TokenStream;
 
 mod block;
 mod conditional;
+mod each_loop;
 mod error;
 mod expression;
 mod function;
@@ -25,8 +26,7 @@ mod while_loop;
 /// Provide a quick way to parse Kaba tokens, without the needs to setting up
 /// and running the parser manually.
 ///
-/// Produces an AST that represents the entire source code of the given tokens
-/// (see [`crate::ast::Program`]).
+/// Produces an AST that represents the entire source code of the given tokens.
 pub fn parse(tokens: Vec<Token>) -> Result<AstNode> {
     Parser::new(tokens).parse()
 }

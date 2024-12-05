@@ -55,6 +55,11 @@ pub enum Error {
         span: Span,
     },
 
+    NonIterableType {
+        t: Type,
+        span: Span,
+    },
+
     NonIndexableType {
         t: Type,
         span: Span,
@@ -89,6 +94,7 @@ impl Error {
             | Self::UnexpectedStatement { span, .. }
             | Self::InvalidFunctionCallArgument { span, .. }
             | Self::NonCallableType { span, .. }
+            | Self::NonIterableType { span, .. }
             | Self::NonIndexableType { span, .. }
             | Self::TypeMismatch { span, .. }
             | Self::ReturnTypeMismatch { span, .. }
@@ -135,6 +141,9 @@ impl Display for Error {
             }
             Self::NonCallableType { t, .. } => {
                 write!(f, "unable to call a non-callable type: `{t}`")
+            }
+            Self::NonIterableType { t, .. } => {
+                write!(f, "unable to iterate over non-iterable type: `{t}`")
             }
             Self::NonIndexableType { t, .. } => {
                 write!(
