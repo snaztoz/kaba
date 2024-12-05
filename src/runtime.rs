@@ -456,4 +456,31 @@ mod tests {
             "6\n7\n8\n".as_bytes(),
         );
     }
+
+    #[test]
+    fn returning_auto_sized_array_from_a_function() {
+        assert_output_equal(
+            indoc! {"
+                fn main() do
+                    var arr_1 = foo(true);
+                    debug arr_1[0];
+
+                    var arr_2 = foo(false);
+                    debug arr_2[1];
+
+                    arr_1[0] = 10;
+                    debug arr_1[0];
+                end
+
+                fn foo(is_true: Bool): [_]Int do
+                    if is_true do
+                        return [1, 2, 3];
+                    else do
+                        return [4, 5];
+                    end
+                end
+            "},
+            "1\n5\n10\n".as_bytes(),
+        );
+    }
 }
