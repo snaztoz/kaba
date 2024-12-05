@@ -39,12 +39,10 @@ impl StatementChecker<'_> {
 
             AstNode::Break { span } | AstNode::Continue { span } => self.check_loop_control(span),
 
-            AstNode::FunctionDefinition { id, .. } => {
-                return Err(Error::UnexpectedStatement {
-                    stmt_str: self.node.to_string(),
-                    span: id.span().clone(),
-                })
-            }
+            AstNode::FunctionDefinition { id, .. } => Err(Error::UnexpectedStatement {
+                stmt_str: self.node.to_string(),
+                span: id.span().clone(),
+            }),
 
             AstNode::Return { expr, span } => self.check_return(expr, span),
 
