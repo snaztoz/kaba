@@ -12,6 +12,7 @@ use scope::ScopeStack;
 mod assignment;
 mod body;
 mod conditional;
+mod each_loop;
 mod error;
 mod expression;
 mod function;

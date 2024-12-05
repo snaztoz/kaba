@@ -35,7 +35,8 @@ impl BodyChecker<'_> {
             AstNode::FunctionDefinition { body, .. }
             | AstNode::If { body, .. }
             | AstNode::Else { body, .. }
-            | AstNode::While { body, .. } => body,
+            | AstNode::While { body, .. }
+            | AstNode::Each { body, .. } => body,
 
             _ => unreachable!(),
         }

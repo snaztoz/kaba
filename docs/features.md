@@ -285,9 +285,9 @@ fn main() do
 end
 ```
 
-## Loop
+## Loop with `while` statement
 
-To loop over while a condition is met, use the `while` statement:
+To looping over while a condition is met, use the `while` statement:
 
 ```text
 fn main() do
@@ -318,7 +318,7 @@ fn main() do
 end
 ```
 
-While to skip an iteration, use the `continue` statement:
+To skip an iteration, use the `continue` statement:
 
 ```text
 fn main() do
@@ -329,6 +329,36 @@ fn main() do
         if i == 5 do
             continue;  # "5" won't be printed
         end
+        debug i;
+    end
+end
+```
+
+## Loop with `each` statement
+
+To loop over each element of an iterable, use the `each` loop statement:
+
+```text
+fn main() do
+    each [1, 2, 3, 4] as n do
+        debug n * 2;
+    end
+end
+```
+
+It also supports `continue` and `break` statements:
+
+```text
+fn main() do
+    each [1, 2, 3, 4, 5, 6] as i do
+        if i == 3 do
+            continue;
+        end
+
+        if i == 5 do
+            break;
+        end
+
         debug i;
     end
 end

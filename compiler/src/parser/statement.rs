@@ -1,5 +1,5 @@
 use super::{
-    conditional::ConditionalParser, expression::ExpressionParser,
+    conditional::ConditionalParser, each_loop::EachLoopParser, expression::ExpressionParser,
     function::FunctionDefinitionParser, stream::TokenStream, variable::VariableDeclarationParser,
     while_loop::WhileLoopParser, Result,
 };
@@ -25,6 +25,7 @@ impl StatementParser<'_> {
             TokenKind::Var => return VariableDeclarationParser::new(self.tokens).parse(),
             TokenKind::If => return ConditionalParser::new(self.tokens).parse(),
             TokenKind::While => return WhileLoopParser::new(self.tokens).parse(),
+            TokenKind::Each => return EachLoopParser::new(self.tokens).parse(),
             TokenKind::Break | TokenKind::Continue => return self.parse_loop_control(),
             TokenKind::Fn => return FunctionDefinitionParser::new(self.tokens).parse(),
             TokenKind::Return => return self.parse_return_statement(),

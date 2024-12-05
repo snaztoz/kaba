@@ -1,5 +1,6 @@
 use super::{
     conditional::ConditionalBranchChecker,
+    each_loop::EachLoopChecker,
     error::{Error, Result},
     expression::ExpressionChecker,
     scope::ScopeStack,
@@ -36,6 +37,7 @@ impl StatementChecker<'_> {
             AstNode::If { .. } => ConditionalBranchChecker::new(self.ss, self.node).check(),
 
             AstNode::While { .. } => WhileLoopChecker::new(self.ss, self.node).check(),
+            AstNode::Each { .. } => EachLoopChecker::new(self.ss, self.node).check(),
 
             AstNode::Break { span } | AstNode::Continue { span } => self.check_loop_control(span),
 

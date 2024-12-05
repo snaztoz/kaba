@@ -36,6 +36,7 @@ impl StatementRunner<'_> {
             AstNode::If { .. } => self.run_conditional_branch()?,
 
             AstNode::While { .. } => self.run_while()?,
+            AstNode::Each { .. } => self.run_each()?,
 
             AstNode::Break { .. } => {
                 self.state.stop_execution();
@@ -137,6 +138,43 @@ impl StatementRunner<'_> {
             } else {
                 break;
             }
+        }
+
+        Ok(())
+    }
+
+    fn run_each(&self) -> Result<()> {
+        if let AstNode::Each {
+            iterable, elem_id, ..
+        } = self.ast
+        {
+            let val = ExpressionRunner::new(iterable, self.root, self.state).run()?;
+            let iterable = if let RuntimeValue::Array(ptr) = val {
+                &self.state.array_arena.borrow()[ptr]
+            } else {
+                unreachable!()
+            };
+
+            let id = elem_id.unwrap_identifier().0;
+
+            for item in iterable {
+                let scope = HashMap::from([(id.clone(), *item)]);
+
+                self.state.ss.borrow_mut().push(scope);
+                BodyRunner::new(self.ast, self.root, self.state).run()?;
+                self.state.ss.borrow_mut().pop();
+
+                if self.state.is_stop_executing() {
+                    self.state.resume_execution();
+                }
+
+                if self.state.is_exiting_loop() {
+                    self.state.reset_loop_state();
+                    break;
+                }
+            }
+        } else {
+            unreachable!()
         }
 
         Ok(())
