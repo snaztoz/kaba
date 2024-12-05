@@ -37,9 +37,7 @@ jobs:
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@1.81
-        with:
-          targets: ${{ matrix.target }}
+        run: rustup show
 
       - name: rustfmt check
         run: cargo fmt --check
