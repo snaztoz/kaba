@@ -57,7 +57,9 @@ impl TypeNotationParser<'_> {
         let end = elem_tn.span().end;
 
         Ok(AstNode::TypeNotation {
-            tn: TypeNotation::Array(Box::new(elem_tn)),
+            tn: TypeNotation::Array {
+                elem_tn: Box::new(elem_tn),
+            },
             span: start..end,
         })
     }

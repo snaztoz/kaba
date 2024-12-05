@@ -7,7 +7,9 @@ use std::fmt::Display;
 pub enum Type {
     Identifier(String),
 
-    Array(Option<Box<Type>>),
+    Array {
+        elem_t: Option<Box<Type>>,
+    },
 
     Callable {
         params_t: Vec<Type>,
@@ -126,6 +128,10 @@ impl Type {
         matches!(self, Type::Array { .. })
     }
 
+    pub fn is_array_with_unknown_elem_t(&self) -> bool {
+        matches!(self, Type::Array { elem_t } if elem_t.is_none())
+    }
+
     const fn is_callable(&self) -> bool {
         matches!(self, Self::Callable { .. })
     }
@@ -157,7 +163,7 @@ impl Type {
     }
 
     pub fn unwrap_array(&self) -> &Option<Box<Type>> {
-        if let Type::Array(elem_t) = self {
+        if let Type::Array { elem_t, .. } = self {
             elem_t
         } else {
             panic!("trying to unwrap array on non-Array type")
@@ -179,9 +185,9 @@ impl<'a> From<&'a AstNode> for Type {
             match tn {
                 TypeNotation::Identifier(id) => Self::new(id),
 
-                TypeNotation::Array(elem_tn) => {
-                    Self::Array(Some(Box::new(Self::from(elem_tn.as_ref()))))
-                }
+                TypeNotation::Array { elem_tn } => Self::Array {
+                    elem_t: Some(Box::new(Self::from(elem_tn.as_ref()))),
+                },
 
                 TypeNotation::Callable {
                     params_tn,
@@ -206,7 +212,7 @@ impl Display for Type {
         match self {
             Self::Identifier(id) => write!(f, "{id}"),
 
-            Self::Array(elem_t) => {
+            Self::Array { elem_t, .. } => {
                 let elem_t = if let Some(t) = elem_t {
                     t.to_string()
                 } else {

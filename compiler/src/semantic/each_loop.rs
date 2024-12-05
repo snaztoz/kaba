@@ -1,6 +1,6 @@
 use super::{
     body::BodyChecker,
-    error::Result,
+    error::{Error, Result},
     expression::ExpressionChecker,
     scope::{Scope, ScopeStack},
     types::Type,
@@ -51,10 +51,16 @@ impl<'a> EachLoopChecker<'a> {
 
 impl EachLoopChecker<'_> {
     pub fn check(&self) -> Result<Type> {
-        // Expecting array type for the expression
-
         let expr_t = ExpressionChecker::new(self.ss, self.iterable()).check()?;
+
         Type::assert_iterable(&expr_t, || self.iterable().span().clone())?;
+
+        // Make sure the array element's type is known
+        if expr_t.is_array_with_unknown_elem_t() {
+            return Err(Error::UnableToInferType {
+                span: self.elem_id().span().clone(),
+            });
+        }
 
         let elem_id = self.elem_id().unwrap_identifier().0;
         let elem_t = expr_t.unwrap_array().as_ref().unwrap().as_ref();
@@ -129,6 +135,16 @@ mod tests {
                     end
 
                     debug n;
+                end
+            "});
+    }
+
+    #[test]
+    fn iterating_over_an_empty_array_of_unknown_type() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    each [] as n do
+                    end
                 end
             "});
     }

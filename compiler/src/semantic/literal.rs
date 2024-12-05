@@ -44,7 +44,9 @@ impl LiteralChecker<'_> {
             Type::assert_assignable(&t, elem_t.as_ref().unwrap(), || elem.span().clone())?;
         }
 
-        Ok(Type::Array(elem_t.map(Box::new)))
+        Ok(Type::Array {
+            elem_t: elem_t.map(Box::new),
+        })
     }
 }
 
@@ -57,26 +59,38 @@ mod tests {
 
     #[test]
     fn array_literal() {
-        assert_expression_type("[1, 2, 3];", Type::Array(Some(Box::new(Type::new("Int")))));
+        assert_expression_type(
+            "[1, 2, 3];",
+            Type::Array {
+                elem_t: Some(Box::new(Type::new("Int"))),
+            },
+        );
     }
 
     #[test]
     fn empty_array_literal() {
-        assert_expression_type("[];", Type::Array(None));
+        assert_expression_type("[];", Type::Array { elem_t: None });
     }
 
     #[test]
     fn array_literal_with_math_expression() {
-        assert_expression_type("[8 * 2048];", Type::Array(Some(Box::new(Type::new("Int")))));
+        assert_expression_type(
+            "[8 * 2048];",
+            Type::Array {
+                elem_t: Some(Box::new(Type::new("Int"))),
+            },
+        );
     }
 
     #[test]
     fn nested_array_literals() {
         assert_expression_type(
             "[[1, 3, 5], [2, 6, 3], [9, 1, 1]];",
-            Type::Array(Some(Box::new(Type::Array(Some(Box::new(Type::new(
-                "Int",
-            ))))))),
+            Type::Array {
+                elem_t: Some(Box::new(Type::Array {
+                    elem_t: Some(Box::new(Type::new("Int"))),
+                })),
+            },
         );
     }
 
@@ -89,9 +103,11 @@ mod tests {
     fn array_literal_with_different_nested_element_types() {
         assert_expression_type(
             "[[1], []];",
-            Type::Array(Some(Box::new(Type::Array(Some(Box::new(Type::new(
-                "Int",
-            ))))))),
+            Type::Array {
+                elem_t: Some(Box::new(Type::Array {
+                    elem_t: Some(Box::new(Type::new("Int"))),
+                })),
+            },
         );
     }
 }

@@ -57,6 +57,11 @@ impl VariableDeclarationChecker<'_> {
             let t = self.check_tn(tn, &val_t)?;
             Some(t)
         } else {
+            if val_t.is_array_with_unknown_elem_t() {
+                return Err(Error::UnableToInferType {
+                    span: self.id().span().clone(),
+                });
+            }
             None
         };
 
@@ -72,6 +77,14 @@ impl VariableDeclarationChecker<'_> {
         Type::assert_assignable(val_t, &t, || self.span().clone())?;
 
         Ok(t)
+    }
+
+    fn id(&self) -> &AstNode {
+        if let AstNode::VariableDeclaration { id, .. } = self.node {
+            id
+        } else {
+            unreachable!()
+        }
     }
 
     fn id_string(&self) -> String {
@@ -249,7 +262,7 @@ mod tests {
 
     #[test]
     fn declaring_variable_with_empty_array_literal() {
-        assert_is_ok(indoc! {"
+        assert_is_err(indoc! {"
                 fn main() do
                     var arr = [];
                 end

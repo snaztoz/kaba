@@ -272,13 +272,17 @@ mod tests {
                     span: 4..5,
                 }),
                 tn: Some(Box::new(AstNode::TypeNotation {
-                    tn: TypeNotation::Array(Box::new(AstNode::TypeNotation {
-                        tn: TypeNotation::Array(Box::new(AstNode::TypeNotation {
-                            tn: TypeNotation::Identifier(String::from("Int")),
-                            span: 11..14,
-                        })),
-                        span: 9..14,
-                    })),
+                    tn: TypeNotation::Array {
+                        elem_tn: Box::new(AstNode::TypeNotation {
+                            tn: TypeNotation::Array {
+                                elem_tn: Box::new(AstNode::TypeNotation {
+                                    tn: TypeNotation::Identifier(String::from("Int")),
+                                    span: 11..14,
+                                }),
+                            },
+                            span: 9..14,
+                        }),
+                    },
                     span: 7..14,
                 })),
                 val: Box::new(AstNode::Identifier {
