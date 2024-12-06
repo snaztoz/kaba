@@ -40,8 +40,8 @@ pub enum AstNode {
     },
 
     Each {
-        iterable: Box<AstNode>,
         elem_id: Box<AstNode>,
+        iterable: Box<AstNode>,
         body: Vec<AstNode>,
         span: Span,
     },

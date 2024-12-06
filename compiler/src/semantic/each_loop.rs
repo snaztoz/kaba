@@ -104,12 +104,12 @@ mod tests {
     fn each_loop_statements() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    each [1, 2, 3] as n do
+                    each n in [1, 2, 3] do
                         debug n;
                     end
 
                     var arr = [4, 5, 6];
-                    each arr as n do
+                    each n in arr do
                         debug n;
                     end
                 end
@@ -120,7 +120,7 @@ mod tests {
     fn each_loop_statement_with_non_array_expression() {
         assert_is_err(indoc! {"
                 fn main() do
-                    each true as n do
+                    each n in true do
                         debug n;
                     end
                 end
@@ -131,7 +131,7 @@ mod tests {
     fn accessing_elem_id_outside_scope() {
         assert_is_err(indoc! {"
                 fn main() do
-                    each [1, 2] as n do
+                    each n in [1, 2] do
                     end
 
                     debug n;
@@ -143,7 +143,7 @@ mod tests {
     fn iterating_over_an_empty_array_of_unknown_type() {
         assert_is_err(indoc! {"
                 fn main() do
-                    each [] as n do
+                    each n in [] do
                     end
                 end
             "});
