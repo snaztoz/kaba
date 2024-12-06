@@ -12,12 +12,12 @@ pub struct Cmd {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Run Kaba program.
+    /// Run a Kaba program directly without manually compiling first.
     Run(RunArgs),
 }
 
 #[derive(Args)]
 pub struct RunArgs {
-    /// Kaba program source code. The file's extension must be `.kaba`.
-    pub file: PathBuf,
+    /// Path to source code. The extension itself must be `.kaba`.
+    pub path: PathBuf,
 }

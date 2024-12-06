@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2024-12-06
+
 ### Added
 
 - Add support for array type (by [@snaztoz](https://github.com/snaztoz) in [#35](https://github.com/snaztoz/kaba/pull/35))
+- Add support for `each` loop statement (by [@snaztoz](https://github.com/snaztoz) in [#39](https://github.com/snaztoz/kaba/pull/39) and [#41](https://github.com/snaztoz/kaba/pull/41))
 
 ### Changed
 
