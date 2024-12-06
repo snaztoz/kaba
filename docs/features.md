@@ -235,7 +235,7 @@ fn main() do
     var x = [];
 
     # And also not this...
-    each [] as i do
+    each i in [] do
     end
 end
 ```
@@ -356,7 +356,7 @@ To loop over each element of an iterable, use the `each` loop statement:
 
 ```text
 fn main() do
-    each [1, 2, 3, 4] as n do
+    each n in [1, 2, 3, 4] do
         debug n * 2;
     end
 end
@@ -366,7 +366,7 @@ It also supports `continue` and `break` statements:
 
 ```text
 fn main() do
-    each [1, 2, 3, 4, 5, 6] as i do
+    each i in [1, 2, 3, 4, 5, 6] do
         if i == 3 do
             continue;
         end
