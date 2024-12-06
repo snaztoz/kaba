@@ -4,9 +4,7 @@ use clap::Parser;
 mod cmd;
 
 fn main() {
-    let cli = Cmd::parse();
-
-    match &cli.command {
-        Commands::Run(args) => run::handle(args.file.as_path()),
+    match Cmd::parse().command {
+        Commands::Run(args) => run::handle(args.path.as_path()),
     }
 }
