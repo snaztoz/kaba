@@ -36,11 +36,8 @@ jobs:
         shell: bash
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
-      - name: Install Rust toolchain (rust-toolchain.toml)
-        uses: actions-rs/toolchain@v1
-        with:
-          override: true
-          profile: minimal
+      - name: Install Rust
+        run: rustup show
 
       - name: Add target for cross-compilation
         run: rustup target add ${{ matrix.target }}
