@@ -487,7 +487,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 fn main() do
-                    each [1, 2, 3, 4, 5, 6] as n do
+                    each n in [1, 2, 3, 4, 5, 6] do
                         if n == 3 do
                             continue;
                         end

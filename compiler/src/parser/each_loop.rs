@@ -18,17 +18,17 @@ impl EachLoopParser<'_> {
     pub fn parse(&self) -> Result<AstNode> {
         let start = self.tokens.current().span.start;
 
-        // Expecting "while" keyword
+        // Expecting "each" keyword
         self.tokens.skip(&TokenKind::Each)?;
-
-        // Expecting expression
-        let arr = ExpressionParser::new(self.tokens).parse()?;
-
-        // Expecting "as" keyword
-        self.tokens.skip(&TokenKind::As)?;
 
         // Expecting element identifier
         let elem_id = self.parse_id()?;
+
+        // Expecting "in" keyword
+        self.tokens.skip(&TokenKind::In)?;
+
+        // Expecting expression
+        let arr = ExpressionParser::new(self.tokens).parse()?;
 
         // Expecting block
         let block = BlockParser::new(self.tokens).parse()?;
@@ -70,15 +70,15 @@ mod tests {
     #[test]
     fn each_statement() {
         parse_and_assert_result(
-            "each arr as elem do end",
+            "each elem in arr do end",
             AstNode::Each {
-                iterable: Box::new(AstNode::Identifier {
-                    name: String::from("arr"),
-                    span: 5..8,
-                }),
                 elem_id: Box::new(AstNode::Identifier {
                     name: String::from("elem"),
-                    span: 12..16,
+                    span: 5..9,
+                }),
+                iterable: Box::new(AstNode::Identifier {
+                    name: String::from("arr"),
+                    span: 13..16,
                 }),
                 body: vec![],
                 span: 0..23,
