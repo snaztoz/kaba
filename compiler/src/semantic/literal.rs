@@ -17,7 +17,7 @@ impl LiteralChecker<'_> {
     pub fn check(&self) -> Result<Type> {
         match self.lit {
             Literal::Void => Ok(Type::new("Void")),
-            Literal::Integer(_) => Ok(Type::new("Int")),
+            Literal::Integer(_) => Ok(Type::UIntLiteral),
             Literal::Float(_) => Ok(Type::new("Float")),
             Literal::Boolean(_) => Ok(Type::new("Bool")),
 
@@ -86,7 +86,7 @@ mod tests {
         assert_expression_type(
             "[1, 2, 3];",
             Type::Array {
-                elem_t: Some(Box::new(Type::new("Int"))),
+                elem_t: Some(Box::new(Type::UIntLiteral)),
             },
         );
     }
@@ -101,7 +101,7 @@ mod tests {
         assert_expression_type(
             "[8 * 2048];",
             Type::Array {
-                elem_t: Some(Box::new(Type::new("Int"))),
+                elem_t: Some(Box::new(Type::UIntLiteral)),
             },
         );
     }
@@ -112,7 +112,7 @@ mod tests {
             "[[1, 3, 5], [2, 6, 3], [9, 1, 1]];",
             Type::Array {
                 elem_t: Some(Box::new(Type::Array {
-                    elem_t: Some(Box::new(Type::new("Int"))),
+                    elem_t: Some(Box::new(Type::UIntLiteral)),
                 })),
             },
         );
@@ -129,7 +129,7 @@ mod tests {
             "[[], [1]];",
             Type::Array {
                 elem_t: Some(Box::new(Type::Array {
-                    elem_t: Some(Box::new(Type::new("Int"))),
+                    elem_t: Some(Box::new(Type::UIntLiteral)),
                 })),
             },
         );

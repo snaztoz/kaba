@@ -97,10 +97,9 @@ impl ExpressionChecker<'_> {
         let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
         let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
 
-        Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
-
         Type::assert_number(&lhs_t, || lhs.span().clone())?;
         Type::assert_number(&rhs_t, || rhs.span().clone())?;
+        Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
         Ok(Type::new("Bool"))
     }
@@ -113,19 +112,32 @@ impl ExpressionChecker<'_> {
         Type::assert_number(&rhs_t, || rhs.span().clone())?;
         Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
+        if lhs_t == Type::UIntLiteral && rhs_t == Type::UIntLiteral {
+            return Ok(Type::UIntLiteral);
+        }
+
         Ok(lhs_t)
     }
 
     fn check_logical_not_operation(&self, child: &AstNode) -> Result<Type> {
         let child_t = ExpressionChecker::new(self.ss, child).check()?;
+
         Type::assert_boolean(&child_t, || child.span().clone())?;
+
         Ok(Type::new("Bool"))
     }
 
     fn check_neg_operation(&self, child: &AstNode) -> Result<Type> {
         let child_t = ExpressionChecker::new(self.ss, child).check()?;
-        Type::assert_number(&child_t, || child.span().clone())?;
-        Ok(child_t)
+
+        Type::assert_signable_number(&child_t, || child.span().clone())?;
+
+        if child_t.is_number_literal() {
+            // Must change into signed integer
+            Ok(Type::IntLiteral)
+        } else {
+            Ok(child_t)
+        }
     }
 }
 
@@ -138,7 +150,7 @@ mod tests {
 
     #[test]
     fn math_expression_returning_int_type() {
-        assert_expression_type("-5 + 50 * 200 / 7 - 999;", Type::new("Int"));
+        assert_expression_type("-5 + 50 * 200 / 7 - 999;", Type::IntLiteral);
     }
 
     #[test]
