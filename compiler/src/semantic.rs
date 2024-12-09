@@ -56,7 +56,7 @@ impl ProgramChecker<'_> {
             FunctionDefinitionChecker::new(&self.ss, stmt).check()?;
         }
 
-        Ok(Type::new("Void"))
+        Ok(Type::Void)
     }
 
     fn ensure_global_statement(&self, stmt: &AstNode) -> Result<()> {

@@ -119,12 +119,7 @@ impl Scope {
     pub fn new_builtin_scope() -> Self {
         Self {
             symbols: HashMap::new(),
-            types: HashSet::from([
-                Type::new("Void"),
-                Type::new("Int"),
-                Type::new("Float"),
-                Type::new("Bool"),
-            ]),
+            types: HashSet::from([Type::Void, Type::Int, Type::Float, Type::Bool]),
             scope_t: ScopeType::Builtin,
         }
     }

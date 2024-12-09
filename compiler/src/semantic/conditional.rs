@@ -92,7 +92,7 @@ impl ConditionalBranchChecker<'_> {
 
         if self.or_else().is_none() {
             // Non-exhaustive branches, set to "Void"
-            return Ok(Type::new("Void"));
+            return Ok(Type::Void);
         }
 
         match self.or_else().unwrap() {
@@ -106,7 +106,7 @@ impl ConditionalBranchChecker<'_> {
                 if !return_t.is_void() && !branch_return_t.is_void() {
                     Ok(return_t)
                 } else {
-                    Ok(Type::new("Void"))
+                    Ok(Type::Void)
                 }
             }
 
@@ -120,7 +120,7 @@ impl ConditionalBranchChecker<'_> {
                 if !return_t.is_void() && !branch_return_t.is_void() {
                     Ok(return_t)
                 } else {
-                    Ok(Type::new("Void"))
+                    Ok(Type::Void)
                 }
             }
 

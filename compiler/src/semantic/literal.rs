@@ -16,10 +16,11 @@ impl<'a> LiteralChecker<'a> {
 impl LiteralChecker<'_> {
     pub fn check(&self) -> Result<Type> {
         match self.lit {
-            Literal::Void => Ok(Type::new("Void")),
+            Literal::Void => Ok(Type::Void),
+
             Literal::Integer(_) => Ok(Type::UIntLiteral),
-            Literal::Float(_) => Ok(Type::new("Float")),
-            Literal::Boolean(_) => Ok(Type::new("Bool")),
+            Literal::Float(_) => Ok(Type::Float),
+            Literal::Boolean(_) => Ok(Type::Bool),
 
             Literal::Array(_) => self.check_array(),
         }

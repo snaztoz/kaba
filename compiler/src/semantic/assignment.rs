@@ -95,7 +95,7 @@ impl AssignmentChecker<'_> {
 
         Type::assert_assignable(&rhs_t, &lhs_t, || span.clone())?;
 
-        Ok(Type::new("Void"))
+        Ok(Type::Void)
     }
 
     fn check_shorthand_assignment(
@@ -111,7 +111,7 @@ impl AssignmentChecker<'_> {
         Type::assert_number(&rhs_t, || rhs.span().clone())?;
         Type::assert_assignable(&rhs_t, &lhs_t, || span.clone())?;
 
-        Ok(Type::new("Void"))
+        Ok(Type::Void)
     }
 
     fn lhs(&self) -> &AstNode {

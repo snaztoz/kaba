@@ -63,7 +63,7 @@ impl WhileLoopChecker<'_> {
             BodyChecker::new(self.ss, self.node).check()
         })?;
 
-        Ok(Type::new("Void"))
+        Ok(Type::Void)
     }
 
     fn cond(&self) -> &AstNode {

@@ -67,7 +67,7 @@ impl VariableDeclarationChecker<'_> {
 
         self.save_symbol(&self.id_string(), var_t.unwrap_or(val_t), self.span())?;
 
-        Ok(Type::new("Void"))
+        Ok(Type::Void)
     }
 
     fn check_tn(&self, tn: &AstNode, val_t: &Type) -> Result<Type> {

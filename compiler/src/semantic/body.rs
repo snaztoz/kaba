@@ -18,7 +18,7 @@ impl<'a> BodyChecker<'a> {
 
 impl BodyChecker<'_> {
     pub fn check(&self) -> Result<Type> {
-        let mut body_t = Type::new("Void");
+        let mut body_t = Type::Void;
 
         for stmt in self.body() {
             let t = StatementChecker::new(self.ss, stmt).check()?;

@@ -81,7 +81,7 @@ impl ExpressionChecker<'_> {
         Type::assert_boolean(&lhs_t, || lhs.span().clone())?;
         Type::assert_boolean(&rhs_t, || rhs.span().clone())?;
 
-        Ok(Type::new("Bool"))
+        Ok(Type::Bool)
     }
 
     fn check_equality_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
@@ -90,7 +90,7 @@ impl ExpressionChecker<'_> {
 
         Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
-        Ok(Type::new("Bool"))
+        Ok(Type::Bool)
     }
 
     fn check_comparison_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
@@ -101,7 +101,7 @@ impl ExpressionChecker<'_> {
         Type::assert_number(&rhs_t, || rhs.span().clone())?;
         Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
-        Ok(Type::new("Bool"))
+        Ok(Type::Bool)
     }
 
     fn check_math_binary_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
@@ -124,7 +124,7 @@ impl ExpressionChecker<'_> {
 
         Type::assert_boolean(&child_t, || child.span().clone())?;
 
-        Ok(Type::new("Bool"))
+        Ok(Type::Bool)
     }
 
     fn check_neg_operation(&self, child: &AstNode) -> Result<Type> {
@@ -155,17 +155,17 @@ mod tests {
 
     #[test]
     fn float_modulo_operation() {
-        assert_expression_type("99.9 % 0.1;", Type::new("Float"));
+        assert_expression_type("99.9 % 0.1;", Type::Float);
     }
 
     #[test]
     fn comparison_and_equality_operations() {
-        assert_expression_type("767 >= 900 == (45 < 67);", Type::new("Bool"));
+        assert_expression_type("767 >= 900 == (45 < 67);", Type::Bool);
     }
 
     #[test]
     fn logical_or_and_and_operations() {
-        assert_expression_type("false || !false && 50 > 0;", Type::new("Bool"));
+        assert_expression_type("false || !false && 50 > 0;", Type::Bool);
     }
 
     #[test]

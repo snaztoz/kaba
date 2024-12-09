@@ -5,7 +5,13 @@ use std::fmt::Display;
 
 #[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub enum Type {
-    Identifier(String),
+    Void,
+    Bool,
+
+    UInt,
+    Int,
+
+    Float,
 
     // We specifically differentiate the type of literals to accommodate their
     // assignment into various types.
@@ -20,6 +26,8 @@ pub enum Type {
     UIntLiteral,
     IntLiteral,
 
+    Identifier(String),
+
     Array {
         elem_t: Option<Box<Type>>,
     },
@@ -31,10 +39,6 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn new(id: &str) -> Self {
-        Self::Identifier(String::from(id))
-    }
-
     pub fn assert_number<F>(t: &Self, err_span: F) -> Result<()>
     where
         F: FnOnce() -> Span,
@@ -144,8 +148,7 @@ impl Type {
     }
 
     pub fn is_number(&self) -> bool {
-        matches!(self, Self::Identifier(id) if id == "Int" || id == "Float")
-            || self.is_number_literal()
+        [Self::UInt, Self::Int, Self::Float].contains(self) || self.is_number_literal()
     }
 
     pub fn is_number_literal(&self) -> bool {
@@ -153,12 +156,11 @@ impl Type {
     }
 
     fn is_signable_number(&self) -> bool {
-        matches!(self, Self::Identifier(id) if id == "Int" || id == "Float")
-            || self.is_number_literal()
+        [Self::UInt, Self::Int, Self::Float].contains(self) || self.is_number_literal()
     }
 
     pub fn is_boolean(&self) -> bool {
-        matches!(self, Self::Identifier(id) if id == "Bool")
+        matches!(self, Self::Bool)
     }
 
     pub const fn is_array(&self) -> bool {
@@ -200,11 +202,11 @@ impl Type {
     // For example, unsigned integer literals are morphable into `Byte`,
     // `Short`, `Int`, etc.
     fn is_morphable_to(&self, target: &Type) -> bool {
-        self == &Type::UIntLiteral && [Type::new("Int"), Type::IntLiteral].contains(target)
+        self == &Type::UIntLiteral && [Type::Int, Type::IntLiteral].contains(target)
     }
 
     pub fn is_void(&self) -> bool {
-        matches!(self, Self::Identifier(id) if id == "Void")
+        matches!(self, Self::Void)
     }
 
     pub fn unwrap_array(&self) -> &Option<Box<Type>> {
@@ -228,7 +230,15 @@ impl<'a> From<&'a AstNode> for Type {
     fn from(value: &'a AstNode) -> Self {
         if let AstNode::TypeNotation { tn, .. } = value {
             match tn {
-                TypeNotation::Identifier(id) => Self::new(id),
+                TypeNotation::Identifier(id) if id == "Void" => Self::Void,
+                TypeNotation::Identifier(id) if id == "Bool" => Self::Bool,
+
+                TypeNotation::Identifier(id) if id == "UInt" => Self::UInt,
+                TypeNotation::Identifier(id) if id == "Int" => Self::Int,
+
+                TypeNotation::Identifier(id) if id == "Float" => Self::Float,
+
+                TypeNotation::Identifier(id) => Self::Identifier(id.to_string()),
 
                 TypeNotation::Array { elem_tn } => Self::Array {
                     elem_t: Some(Box::new(Self::from(elem_tn.as_ref()))),
@@ -255,10 +265,18 @@ impl<'a> From<&'a AstNode> for Type {
 impl Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Identifier(id) => write!(f, "{id}"),
+            Self::Void => write!(f, "Void"),
+            Self::Bool => write!(f, "Bool"),
+
+            Self::UInt => write!(f, "UInt"),
+            Self::Int => write!(f, "Int"),
+
+            Self::Float => write!(f, "Float"),
 
             Self::UIntLiteral => write!(f, "UInt"),
             Self::IntLiteral => write!(f, "Int"),
+
+            Self::Identifier(id) => write!(f, "{id}"),
 
             Self::Array { elem_t, .. } => {
                 let elem_t = if let Some(t) = elem_t {
