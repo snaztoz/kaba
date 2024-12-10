@@ -120,16 +120,16 @@ mod tests {
             AstNode::Debug {
                 expr: Box::new(AstNode::Add {
                     lhs: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(5),
+                        lit: Literal::Int(5),
                         span: 6..7,
                     }),
                     rhs: Box::new(AstNode::Mul {
                         lhs: Box::new(AstNode::Literal {
-                            lit: Literal::Integer(5),
+                            lit: Literal::Int(5),
                             span: 10..11,
                         }),
                         rhs: Box::new(AstNode::Literal {
-                            lit: Literal::Integer(7),
+                            lit: Literal::Int(7),
                             span: 14..15,
                         }),
                         span: 10..15,

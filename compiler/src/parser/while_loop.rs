@@ -47,7 +47,7 @@ mod tests {
             "while true do end",
             AstNode::While {
                 cond: Box::new(AstNode::Literal {
-                    lit: Literal::Boolean(true),
+                    lit: Literal::Bool(true),
                     span: 6..10,
                 }),
                 body: vec![],
@@ -62,7 +62,7 @@ mod tests {
             "while true do continue; break; end",
             AstNode::While {
                 cond: Box::new(AstNode::Literal {
-                    lit: Literal::Boolean(true),
+                    lit: Literal::Bool(true),
                     span: 6..10,
                 }),
                 body: vec![

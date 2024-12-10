@@ -231,7 +231,7 @@ mod tests {
                 })),
                 body: vec![AstNode::Return {
                     expr: Some(Box::new(AstNode::Literal {
-                        lit: Literal::Integer(5),
+                        lit: Literal::Int(5),
                         span: 24..25,
                     })),
                     span: 17..25,

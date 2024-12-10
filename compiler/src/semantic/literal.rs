@@ -17,10 +17,10 @@ impl LiteralChecker<'_> {
     pub fn check(&self) -> Result<Type> {
         match self.lit {
             Literal::Void => Ok(Type::Void),
+            Literal::Bool(_) => Ok(Type::Bool),
 
-            Literal::Integer(_) => Ok(Type::UIntLiteral),
+            Literal::Int(_) => Ok(Type::UIntLiteral),
             Literal::Float(_) => Ok(Type::Float),
-            Literal::Boolean(_) => Ok(Type::Bool),
 
             Literal::Array(_) => self.check_array(),
         }

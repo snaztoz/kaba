@@ -99,7 +99,7 @@ mod tests {
                 tn: None,
                 val: Box::new(AstNode::Mul {
                     lhs: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(123),
+                        lit: Literal::Int(123),
                         span: 10..13,
                     }),
                     rhs: Box::new(AstNode::Identifier {
@@ -125,11 +125,11 @@ mod tests {
                 tn: None,
                 val: Box::new(AstNode::Add {
                     lhs: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(123),
+                        lit: Literal::Int(123),
                         span: 9..12,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(50),
+                        lit: Literal::Int(50),
                         span: 15..17,
                     }),
                     span: 9..17,
@@ -177,7 +177,7 @@ mod tests {
                     span: 7..10,
                 })),
                 val: Box::new(AstNode::Literal {
-                    lit: Literal::Integer(5),
+                    lit: Literal::Int(5),
                     span: 13..14,
                 }),
                 span: 0..14,
