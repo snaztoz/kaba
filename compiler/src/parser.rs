@@ -49,6 +49,9 @@ impl Parser {
             body.push(stmt)
         }
 
-        Ok(AstNode::Program { body })
+        Ok(AstNode::Program {
+            body,
+            span: 0..self.tokens.current().span.end,
+        })
     }
 }

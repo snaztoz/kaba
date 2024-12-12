@@ -28,7 +28,7 @@ impl<'a> BodyRunner<'a> {
 
     fn body(&self) -> &'a [AstNode] {
         match self.ast {
-            AstNode::Program { body }
+            AstNode::Program { body, .. }
             | AstNode::If { body, .. }
             | AstNode::Else { body, .. }
             | AstNode::While { body, .. }

@@ -12,6 +12,7 @@ pub enum AstNode {
     // The root of all other AstNode variants
     Program {
         body: Vec<AstNode>,
+        span: Span,
     },
 
     VariableDeclaration {
@@ -234,9 +235,8 @@ pub enum AstNode {
 impl AstNode {
     pub fn span(&self) -> &Span {
         match self {
-            Self::Program { .. } => unreachable!(),
-
-            Self::VariableDeclaration { span, .. }
+            Self::Program { span, .. }
+            | Self::VariableDeclaration { span, .. }
             | Self::If { span, .. }
             | Self::Else { span, .. }
             | Self::While { span, .. }

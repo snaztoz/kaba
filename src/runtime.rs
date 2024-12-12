@@ -30,7 +30,7 @@ impl<'a> Runtime<'a> {
     }
 
     pub fn run(&'a self) -> Result<()> {
-        let body = if let AstNode::Program { body } = &self.ast.as_ref().unwrap() {
+        let body = if let AstNode::Program { body, .. } = &self.ast.as_ref().unwrap() {
             body
         } else {
             unreachable!()

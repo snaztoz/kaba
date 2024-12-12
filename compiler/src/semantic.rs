@@ -77,7 +77,7 @@ impl ProgramChecker<'_> {
     }
 
     fn body(&self) -> &[AstNode] {
-        if let AstNode::Program { body } = self.program {
+        if let AstNode::Program { body, .. } = self.program {
             body
         } else {
             unreachable!()

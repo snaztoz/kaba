@@ -340,7 +340,7 @@ impl ExpressionRunner<'_> {
         args: &[RuntimeValue],
     ) -> Result<RuntimeValue> {
         if let RuntimeValue::Function(ptr) = f_ptr {
-            let top_level_body = if let AstNode::Program { body } = &self.root {
+            let top_level_body = if let AstNode::Program { body, .. } = &self.root {
                 body
             } else {
                 unreachable!()
