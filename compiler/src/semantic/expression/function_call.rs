@@ -3,7 +3,7 @@ use crate::{
     ast::AstNode,
     semantic::{
         error::{Error, Result},
-        scope::ScopeStack,
+        state::SharedState,
         types::Type,
     },
 };
@@ -11,19 +11,19 @@ use logos::Span;
 
 /// Checker for function call expression rule.
 pub struct FunctionCallChecker<'a> {
-    ss: &'a ScopeStack,
     node: &'a AstNode,
+    state: &'a SharedState,
 }
 
 impl<'a> FunctionCallChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self { ss, node }
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+        Self { node, state }
     }
 }
 
 impl FunctionCallChecker<'_> {
     pub fn check(&self) -> Result<Type> {
-        let fn_t = ExpressionChecker::new(self.ss, self.callee()).check()?;
+        let fn_t = ExpressionChecker::new(self.callee(), self.state).check()?;
         Type::assert_callable(&fn_t, || self.callee().span().clone())?;
 
         let args_t = self.args_t()?;
@@ -45,7 +45,7 @@ impl FunctionCallChecker<'_> {
     fn args_t(&self) -> Result<Vec<Type>> {
         let mut args_t = vec![];
         for arg in self.args() {
-            let t = ExpressionChecker::new(self.ss, arg).check()?;
+            let t = ExpressionChecker::new(arg, self.state).check()?;
             args_t.push(t);
         }
 

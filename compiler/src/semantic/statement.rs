@@ -3,7 +3,7 @@ use super::{
     each_loop::EachLoopChecker,
     error::{Error, Result},
     expression::ExpressionChecker,
-    scope::ScopeStack,
+    state::SharedState,
     types::Type,
     variable::VariableDeclarationChecker,
     while_loop::WhileLoopChecker,
@@ -17,13 +17,13 @@ use logos::Span;
 /// an aggregate for another (more specific) statement checkers, such as the
 /// AssignmentChecker.
 pub struct StatementChecker<'a> {
-    ss: &'a ScopeStack,
     node: &'a AstNode,
+    state: &'a SharedState,
 }
 
 impl<'a> StatementChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self { ss, node }
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+        Self { node, state }
     }
 }
 
@@ -31,13 +31,13 @@ impl StatementChecker<'_> {
     pub fn check(&self) -> Result<Type> {
         match self.node {
             AstNode::VariableDeclaration { .. } => {
-                VariableDeclarationChecker::new(self.ss, self.node).check()
+                VariableDeclarationChecker::new(self.node, self.state).check()
             }
 
-            AstNode::If { .. } => ConditionalBranchChecker::new(self.ss, self.node).check(),
+            AstNode::If { .. } => ConditionalBranchChecker::new(self.node, self.state).check(),
 
-            AstNode::While { .. } => WhileLoopChecker::new(self.ss, self.node).check(),
-            AstNode::Each { .. } => EachLoopChecker::new(self.ss, self.node).check(),
+            AstNode::While { .. } => WhileLoopChecker::new(self.node, self.state).check(),
+            AstNode::Each { .. } => EachLoopChecker::new(self.node, self.state).check(),
 
             AstNode::Break { span } | AstNode::Continue { span } => self.check_loop_control(span),
 
@@ -50,12 +50,12 @@ impl StatementChecker<'_> {
 
             AstNode::Debug { expr, span } => self.check_debug(expr, span),
 
-            expr => ExpressionChecker::new(self.ss, expr).check(),
+            expr => ExpressionChecker::new(expr, self.state).check(),
         }
     }
 
     fn check_loop_control(&self, span: &Span) -> Result<Type> {
-        if !self.ss.is_inside_loop() {
+        if !self.state.ss.is_inside_loop() {
             return Err(Error::UnexpectedStatement {
                 stmt_str: self.node.to_string(),
                 span: span.clone(),
@@ -68,16 +68,15 @@ impl StatementChecker<'_> {
     fn check_return(&self, expr: &Option<Box<AstNode>>, span: &Span) -> Result<Type> {
         let expr_t = expr
             .as_ref()
-            .map(|expr| ExpressionChecker::new(self.ss, expr).check())
+            .map(|expr| ExpressionChecker::new(expr, self.state).check())
             .unwrap_or(Ok(Type::Void))?;
 
-        let return_t =
-            self.ss
-                .current_function_return_t()
-                .ok_or_else(|| Error::UnexpectedStatement {
-                    stmt_str: self.node.to_string(),
-                    span: span.clone(),
-                })?;
+        let return_t = self.state.ss.current_function_return_t().ok_or_else(|| {
+            Error::UnexpectedStatement {
+                stmt_str: self.node.to_string(),
+                span: span.clone(),
+            }
+        })?;
 
         Type::assert_assignable(&expr_t, &return_t, || span.clone())
             .map_err(|err| Error::ReturnTypeMismatch {
@@ -89,7 +88,7 @@ impl StatementChecker<'_> {
     }
 
     fn check_debug(&self, expr: &AstNode, span: &Span) -> Result<Type> {
-        let expr_t = ExpressionChecker::new(self.ss, expr).check()?;
+        let expr_t = ExpressionChecker::new(expr, self.state).check()?;
         if expr_t.is_void() {
             return Err(Error::UnexpectedVoidTypeExpression { span: span.clone() });
         }

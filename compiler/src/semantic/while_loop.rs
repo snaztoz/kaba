@@ -1,9 +1,6 @@
 use super::{
-    body::BodyChecker,
-    error::Result,
-    expression::ExpressionChecker,
-    scope::{Scope, ScopeStack},
-    types::Type,
+    body::BodyChecker, error::Result, expression::ExpressionChecker, scope::Scope,
+    state::SharedState, types::Type,
 };
 use crate::ast::AstNode;
 
@@ -40,13 +37,13 @@ use crate::ast::AstNode;
 /// end
 /// ```
 pub struct WhileLoopChecker<'a> {
-    ss: &'a ScopeStack,
     node: &'a AstNode,
+    state: &'a SharedState,
 }
 
 impl<'a> WhileLoopChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self { ss, node }
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+        Self { node, state }
     }
 }
 
@@ -54,13 +51,13 @@ impl WhileLoopChecker<'_> {
     pub fn check(&self) -> Result<Type> {
         // Expecting boolean type for the condition
 
-        let cond_t = ExpressionChecker::new(self.ss, self.cond()).check()?;
+        let cond_t = ExpressionChecker::new(self.cond(), self.state).check()?;
         Type::assert_boolean(&cond_t, || self.cond().span().clone())?;
 
         // Check all statements inside the body with a new scope
 
-        self.ss.with_scope(Scope::new_loop_scope(), || {
-            BodyChecker::new(self.ss, self.node).check()
+        self.state.ss.with_scope(Scope::new_loop_scope(), || {
+            BodyChecker::new(self.node, self.state).check()
         })?;
 
         Ok(Type::Void)

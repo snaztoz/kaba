@@ -7,7 +7,7 @@ use self::{
 };
 use crate::ast::AstNode;
 use function::{FunctionDeclarationChecker, FunctionDefinitionChecker};
-use scope::ScopeStack;
+use state::SharedState;
 
 mod assignment;
 mod body;
@@ -18,6 +18,7 @@ mod expression;
 mod function;
 mod literal;
 mod scope;
+mod state;
 mod statement;
 #[cfg(test)]
 mod test_util;
@@ -32,15 +33,15 @@ pub fn check(program: &AstNode) -> Result<Type> {
 }
 
 struct ProgramChecker<'a> {
-    ss: ScopeStack,
     program: &'a AstNode,
+    state: SharedState,
 }
 
 impl<'a> ProgramChecker<'a> {
     fn new(program: &'a AstNode) -> Self {
         Self {
-            ss: ScopeStack::default(),
             program,
+            state: SharedState::default(),
         }
     }
 }
@@ -49,11 +50,11 @@ impl ProgramChecker<'_> {
     fn check(&self) -> Result<Type> {
         for stmt in self.body() {
             self.ensure_global_statement(stmt)?;
-            FunctionDeclarationChecker::new(&self.ss, stmt).check()?;
+            FunctionDeclarationChecker::new(stmt, &self.state).check()?;
         }
 
         for stmt in self.body() {
-            FunctionDefinitionChecker::new(&self.ss, stmt).check()?;
+            FunctionDefinitionChecker::new(stmt, &self.state).check()?;
         }
 
         Ok(Type::Void)

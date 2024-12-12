@@ -2,7 +2,7 @@ use super::types::Type;
 use crate::{
     ast::AstNode,
     lexer, parser,
-    semantic::{expression::ExpressionChecker, scope::ScopeStack, ProgramChecker},
+    semantic::{expression::ExpressionChecker, state::SharedState, ProgramChecker},
 };
 
 pub fn assert_is_ok(input: &str) {
@@ -28,8 +28,8 @@ pub fn assert_expression_type(input: &str, expected_t: Type) {
     let ast = parser::parse(tokens).unwrap();
 
     let result = if let AstNode::Program { body, .. } = &ast {
-        let scopes = ScopeStack::default();
-        ExpressionChecker::new(&scopes, &body[0]).check()
+        let state = SharedState::default();
+        ExpressionChecker::new(&body[0], &state).check()
     } else {
         unreachable!();
     };
@@ -43,8 +43,8 @@ pub fn assert_expression_is_err(input: &str) {
     let ast = parser::parse(tokens).unwrap();
 
     let result = if let AstNode::Program { body, .. } = &ast {
-        let scopes = ScopeStack::default();
-        ExpressionChecker::new(&scopes, &body[0]).check()
+        let state = SharedState::default();
+        ExpressionChecker::new(&body[0], &state).check()
     } else {
         unreachable!();
     };

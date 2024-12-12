@@ -2,7 +2,7 @@ use super::{
     assignment::AssignmentChecker,
     error::{Error, Result},
     literal::LiteralChecker,
-    scope::ScopeStack,
+    state::SharedState,
     types::Type,
 };
 use crate::ast::AstNode;
@@ -14,13 +14,13 @@ mod index_access;
 
 /// Checker for expression rules.
 pub struct ExpressionChecker<'a> {
-    ss: &'a ScopeStack,
     node: &'a AstNode,
+    state: &'a SharedState,
 }
 
 impl<'a> ExpressionChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self { ss, node }
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+        Self { node, state }
     }
 }
 
@@ -32,7 +32,7 @@ impl ExpressionChecker<'_> {
             | AstNode::SubAssign { .. }
             | AstNode::MulAssign { .. }
             | AstNode::DivAssign { .. }
-            | AstNode::ModAssign { .. } => AssignmentChecker::new(self.ss, self.node).check(),
+            | AstNode::ModAssign { .. } => AssignmentChecker::new(self.node, self.state).check(),
 
             AstNode::Eq { lhs, rhs, .. } | AstNode::Neq { lhs, rhs, .. } => {
                 self.check_equality_operation(lhs, rhs)
@@ -57,7 +57,8 @@ impl ExpressionChecker<'_> {
             AstNode::Neg { child, .. } => self.check_neg_operation(child),
 
             AstNode::Identifier { name, span } => {
-                self.ss
+                self.state
+                    .ss
                     .get_symbol_t(name)
                     .ok_or_else(|| Error::SymbolDoesNotExist {
                         id: String::from(name),
@@ -65,18 +66,18 @@ impl ExpressionChecker<'_> {
                     })
             }
 
-            AstNode::Literal { lit, .. } => LiteralChecker::new(self.ss, lit).check(),
+            AstNode::Literal { lit, .. } => LiteralChecker::new(lit, self.state).check(),
 
-            AstNode::FunctionCall { .. } => FunctionCallChecker::new(self.ss, self.node).check(),
-            AstNode::IndexAccess { .. } => IndexAccessChecker::new(self.ss, self.node).check(),
+            AstNode::FunctionCall { .. } => FunctionCallChecker::new(self.node, self.state).check(),
+            AstNode::IndexAccess { .. } => IndexAccessChecker::new(self.node, self.state).check(),
 
             _ => unreachable!(),
         }
     }
 
     fn check_logical_and_or_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
-        let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
-        let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
+        let lhs_t = ExpressionChecker::new(lhs, self.state).check()?;
+        let rhs_t = ExpressionChecker::new(rhs, self.state).check()?;
 
         Type::assert_boolean(&lhs_t, || lhs.span().clone())?;
         Type::assert_boolean(&rhs_t, || rhs.span().clone())?;
@@ -85,8 +86,8 @@ impl ExpressionChecker<'_> {
     }
 
     fn check_equality_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
-        let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
-        let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
+        let lhs_t = ExpressionChecker::new(lhs, self.state).check()?;
+        let rhs_t = ExpressionChecker::new(rhs, self.state).check()?;
 
         Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
@@ -94,8 +95,8 @@ impl ExpressionChecker<'_> {
     }
 
     fn check_comparison_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
-        let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
-        let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
+        let lhs_t = ExpressionChecker::new(lhs, self.state).check()?;
+        let rhs_t = ExpressionChecker::new(rhs, self.state).check()?;
 
         Type::assert_number(&lhs_t, || lhs.span().clone())?;
         Type::assert_number(&rhs_t, || rhs.span().clone())?;
@@ -105,8 +106,8 @@ impl ExpressionChecker<'_> {
     }
 
     fn check_math_binary_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
-        let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
-        let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
+        let lhs_t = ExpressionChecker::new(lhs, self.state).check()?;
+        let rhs_t = ExpressionChecker::new(rhs, self.state).check()?;
 
         Type::assert_number(&lhs_t, || lhs.span().clone())?;
         Type::assert_number(&rhs_t, || rhs.span().clone())?;
@@ -120,7 +121,7 @@ impl ExpressionChecker<'_> {
     }
 
     fn check_logical_not_operation(&self, child: &AstNode) -> Result<Type> {
-        let child_t = ExpressionChecker::new(self.ss, child).check()?;
+        let child_t = ExpressionChecker::new(child, self.state).check()?;
 
         Type::assert_boolean(&child_t, || child.span().clone())?;
 
@@ -128,7 +129,7 @@ impl ExpressionChecker<'_> {
     }
 
     fn check_neg_operation(&self, child: &AstNode) -> Result<Type> {
-        let child_t = ExpressionChecker::new(self.ss, child).check()?;
+        let child_t = ExpressionChecker::new(child, self.state).check()?;
 
         Type::assert_signable_number(&child_t, || child.span().clone())?;
 

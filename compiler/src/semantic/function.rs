@@ -1,7 +1,8 @@
 use super::{
     body::BodyChecker,
     error::{Error, Result},
-    scope::{Scope, ScopeStack},
+    scope::Scope,
+    state::SharedState,
     tn::TypeNotationChecker,
     types::Type,
 };
@@ -13,13 +14,13 @@ use logos::Span;
 /// This checker assumes that the data from function declarations (i.e. function
 /// signature informations) are already stored in the ScopeStack.
 pub struct FunctionDeclarationChecker<'a> {
-    ss: &'a ScopeStack,
     node: &'a AstNode,
+    state: &'a SharedState,
 }
 
 impl<'a> FunctionDeclarationChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self { ss, node }
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+        Self { node, state }
     }
 }
 
@@ -39,7 +40,7 @@ impl FunctionDeclarationChecker<'_> {
 
     fn check_params_tn(&self) -> Result<()> {
         for FunctionParam { tn, .. } in self.params() {
-            TypeNotationChecker::new(self.ss, tn).check()?;
+            TypeNotationChecker::new(tn, self.state).check()?;
         }
 
         Ok(())
@@ -47,7 +48,9 @@ impl FunctionDeclarationChecker<'_> {
 
     fn check_return_tn(&self) -> Result<()> {
         if let Some(tn) = self.return_tn() {
-            TypeNotationChecker::new(self.ss, tn).allow_void().check()?;
+            TypeNotationChecker::new(tn, self.state)
+                .allow_void()
+                .check()?;
         }
 
         Ok(())
@@ -69,7 +72,8 @@ impl FunctionDeclarationChecker<'_> {
     // Save function information to the ScopeStack.
     fn save_fn_t_to_stack(&self, fn_t: Type) -> Result<()> {
         let (id, id_span) = self.id().unwrap_identifier();
-        self.ss
+        self.state
+            .ss
             .save_symbol_or_else(&id, fn_t.clone(), || Error::SymbolAlreadyExist {
                 id: id.clone(),
                 span: id_span,
@@ -106,20 +110,21 @@ impl FunctionDeclarationChecker<'_> {
 /// This checker assumes that the data from function declarations (i.e. function
 /// signature informations) are already stored in the ScopeStack.
 pub struct FunctionDefinitionChecker<'a> {
-    ss: &'a ScopeStack,
     node: &'a AstNode,
+    state: &'a SharedState,
 }
 
 impl<'a> FunctionDefinitionChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self { ss, node }
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+        Self { node, state }
     }
 }
 
 impl FunctionDefinitionChecker<'_> {
     pub fn check(&self) -> Result<Type> {
         let return_t = self.fn_t().unwrap_callable().1;
-        self.ss
+        self.state
+            .ss
             .with_scope(Scope::new_function_scope(return_t.clone()), || {
                 self.save_params_to_stack(&self.params())?;
 
@@ -128,7 +133,7 @@ impl FunctionDefinitionChecker<'_> {
                 // We do this last in order to accommodate features such as
                 // recursive function call.
 
-                let body_t = BodyChecker::new(self.ss, self.node).check()?;
+                let body_t = BodyChecker::new(self.node, self.state).check()?;
 
                 if !return_t.is_void() && body_t.is_void() {
                     return Err(Error::ReturnTypeMismatch {
@@ -146,7 +151,8 @@ impl FunctionDefinitionChecker<'_> {
 
     fn save_params_to_stack(&self, params: &[((String, Span), Type)]) -> Result<()> {
         for ((id, id_span), t) in params {
-            self.ss
+            self.state
+                .ss
                 .save_symbol_or_else(id, t.clone(), || Error::SymbolAlreadyExist {
                     id: id.clone(),
                     span: id_span.clone(),
@@ -178,7 +184,7 @@ impl FunctionDefinitionChecker<'_> {
     fn fn_t(&self) -> Type {
         if let AstNode::FunctionDefinition { id, .. } = self.node {
             let id_str = &id.unwrap_identifier().0;
-            self.ss.get_symbol_t(id_str).unwrap()
+            self.state.ss.get_symbol_t(id_str).unwrap()
         } else {
             unreachable!()
         }

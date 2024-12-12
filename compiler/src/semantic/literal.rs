@@ -1,15 +1,15 @@
-use super::{error::Result, expression::ExpressionChecker, scope::ScopeStack, types::Type};
+use super::{error::Result, expression::ExpressionChecker, state::SharedState, types::Type};
 use crate::ast::Literal;
 
 /// Checker for a literal expressions, such as numbers or arrays.
 pub struct LiteralChecker<'a> {
-    ss: &'a ScopeStack,
     lit: &'a Literal,
+    state: &'a SharedState,
 }
 
 impl<'a> LiteralChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, lit: &'a Literal) -> Self {
-        Self { ss, lit }
+    pub const fn new(lit: &'a Literal, state: &'a SharedState) -> Self {
+        Self { lit, state }
     }
 }
 
@@ -53,7 +53,7 @@ impl LiteralChecker<'_> {
         let mut elem_t = None;
 
         for elem in arr {
-            let t = ExpressionChecker::new(self.ss, elem).check()?;
+            let t = ExpressionChecker::new(elem, self.state).check()?;
             if !t.is_array_with_unknown_elem_t() {
                 elem_t = Some(t);
                 break;
@@ -65,7 +65,7 @@ impl LiteralChecker<'_> {
         }
 
         for elem in arr {
-            let t = ExpressionChecker::new(self.ss, elem).check()?;
+            let t = ExpressionChecker::new(elem, self.state).check()?;
             Type::assert_assignable(&t, elem_t.as_ref().unwrap(), || elem.span().clone())?;
         }
 

@@ -1,7 +1,7 @@
 use super::{
     error::{Error, Result},
     expression::ExpressionChecker,
-    scope::ScopeStack,
+    state::SharedState,
     types::Type,
 };
 use crate::ast::AstNode;
@@ -49,13 +49,13 @@ use logos::Span;
 /// x += false;
 /// ```
 pub struct AssignmentChecker<'a> {
-    ss: &'a ScopeStack,
     node: &'a AstNode,
+    state: &'a SharedState,
 }
 
 impl<'a> AssignmentChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self { ss, node }
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+        Self { node, state }
     }
 }
 
@@ -90,8 +90,8 @@ impl AssignmentChecker<'_> {
     }
 
     fn check_assignment(&self, lhs: &AstNode, rhs: &AstNode, span: &Span) -> Result<Type> {
-        let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
-        let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
+        let lhs_t = ExpressionChecker::new(lhs, self.state).check()?;
+        let rhs_t = ExpressionChecker::new(rhs, self.state).check()?;
 
         Type::assert_assignable(&rhs_t, &lhs_t, || span.clone())?;
 
@@ -104,8 +104,8 @@ impl AssignmentChecker<'_> {
         rhs: &AstNode,
         span: &Span,
     ) -> Result<Type> {
-        let lhs_t = ExpressionChecker::new(self.ss, lhs).check()?;
-        let rhs_t = ExpressionChecker::new(self.ss, rhs).check()?;
+        let lhs_t = ExpressionChecker::new(lhs, self.state).check()?;
+        let rhs_t = ExpressionChecker::new(rhs, self.state).check()?;
 
         Type::assert_number(&lhs_t, || lhs.span().clone())?;
         Type::assert_number(&rhs_t, || rhs.span().clone())?;

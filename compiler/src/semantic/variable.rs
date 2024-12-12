@@ -1,7 +1,7 @@
 use super::{
     error::{Error, Result},
     expression::ExpressionChecker,
-    scope::ScopeStack,
+    state::SharedState,
     tn::TypeNotationChecker,
     types::Type,
 };
@@ -39,19 +39,19 @@ use logos::Span;
 /// var x: Int = 5.0;
 /// ```
 pub struct VariableDeclarationChecker<'a> {
-    ss: &'a ScopeStack,
     node: &'a AstNode,
+    state: &'a SharedState,
 }
 
 impl<'a> VariableDeclarationChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self { ss, node }
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+        Self { node, state }
     }
 }
 
 impl VariableDeclarationChecker<'_> {
     pub fn check(&self) -> Result<Type> {
-        let val_t = ExpressionChecker::new(self.ss, self.val()).check()?;
+        let val_t = ExpressionChecker::new(self.val(), self.state).check()?;
 
         let var_t = if let Some(tn) = self.tn() {
             let t = self.check_tn(tn, &val_t)?;
@@ -71,7 +71,7 @@ impl VariableDeclarationChecker<'_> {
     }
 
     fn check_tn(&self, tn: &AstNode, val_t: &Type) -> Result<Type> {
-        let t = TypeNotationChecker::new(self.ss, tn).check()?;
+        let t = TypeNotationChecker::new(tn, self.state).check()?;
 
         // Check if the value type is compatible with the variable
         Type::assert_assignable(val_t, &t, || self.span().clone())?;
@@ -120,7 +120,8 @@ impl VariableDeclarationChecker<'_> {
     }
 
     fn save_symbol(&self, id: &str, t: Type, span: &Span) -> Result<()> {
-        self.ss
+        self.state
+            .ss
             .save_symbol_or_else(id, t, || Error::SymbolAlreadyExist {
                 id: String::from(id),
                 span: span.clone(),

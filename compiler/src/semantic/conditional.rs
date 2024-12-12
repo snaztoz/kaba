@@ -1,9 +1,6 @@
 use super::{
-    body::BodyChecker,
-    error::Result,
-    expression::ExpressionChecker,
-    scope::{Scope, ScopeStack},
-    types::Type,
+    body::BodyChecker, error::Result, expression::ExpressionChecker, scope::Scope,
+    state::SharedState, types::Type,
 };
 use crate::ast::AstNode;
 
@@ -69,26 +66,29 @@ use crate::ast::AstNode;
 /// end
 /// ```
 pub struct ConditionalBranchChecker<'a> {
-    ss: &'a ScopeStack,
     node: &'a AstNode,
+    state: &'a SharedState,
 }
 
 impl<'a> ConditionalBranchChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self { ss, node }
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+        Self { node, state }
     }
 }
 
 impl ConditionalBranchChecker<'_> {
     pub fn check(&self) -> Result<Type> {
-        let cond_t = ExpressionChecker::new(self.ss, self.cond()).check()?;
+        let cond_t = ExpressionChecker::new(self.cond(), self.state).check()?;
         Type::assert_boolean(&cond_t, || self.cond().span().clone())?;
 
         // Check all statements inside the body with a new scope
 
-        let return_t = self.ss.with_scope(Scope::new_conditional_scope(), || {
-            BodyChecker::new(self.ss, self.node).check()
-        })?;
+        let return_t = self
+            .state
+            .ss
+            .with_scope(Scope::new_conditional_scope(), || {
+                BodyChecker::new(self.node, self.state).check()
+            })?;
 
         if self.or_else().is_none() {
             // Non-exhaustive branches, set to "Void"
@@ -101,7 +101,7 @@ impl ConditionalBranchChecker<'_> {
                 // for this statement to be considered as returning value
 
                 let branch_return_t =
-                    ConditionalBranchChecker::new(self.ss, self.or_else().unwrap()).check()?;
+                    ConditionalBranchChecker::new(self.or_else().unwrap(), self.state).check()?;
 
                 if !return_t.is_void() && !branch_return_t.is_void() {
                     Ok(return_t)
@@ -113,9 +113,12 @@ impl ConditionalBranchChecker<'_> {
             AstNode::Else { .. } => {
                 // Check all statements inside the body with a new scope
 
-                let branch_return_t = self.ss.with_scope(Scope::new_conditional_scope(), || {
-                    BodyChecker::new(self.ss, self.or_else().unwrap()).check()
-                })?;
+                let branch_return_t = self
+                    .state
+                    .ss
+                    .with_scope(Scope::new_conditional_scope(), || {
+                        BodyChecker::new(self.or_else().unwrap(), self.state).check()
+                    })?;
 
                 if !return_t.is_void() && !branch_return_t.is_void() {
                     Ok(return_t)

@@ -1,23 +1,23 @@
 use super::{
     error::{Error, Result},
-    scope::ScopeStack,
+    state::SharedState,
     types::Type,
 };
 use crate::ast::AstNode;
 use logos::Span;
 
 pub struct TypeNotationChecker<'a> {
-    ss: &'a ScopeStack,
     node: &'a AstNode,
+    state: &'a SharedState,
 
     void_allowed: bool,
 }
 
 impl<'a> TypeNotationChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
         Self {
-            ss,
             node,
+            state,
             void_allowed: false,
         }
     }
@@ -31,7 +31,7 @@ impl<'a> TypeNotationChecker<'a> {
 impl TypeNotationChecker<'_> {
     pub fn check(&self) -> Result<Type> {
         // The provided type must exist in the current scope
-        if !self.ss.has_t(&self.t()) {
+        if !self.state.ss.has_t(&self.t()) {
             return Err(Error::SymbolDoesNotExist {
                 id: self.t().to_string(),
                 span: self.span().clone(),

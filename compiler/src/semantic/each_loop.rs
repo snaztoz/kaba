@@ -2,7 +2,8 @@ use super::{
     body::BodyChecker,
     error::{Error, Result},
     expression::ExpressionChecker,
-    scope::{Scope, ScopeStack},
+    scope::Scope,
+    state::SharedState,
     types::Type,
 };
 use crate::ast::AstNode;
@@ -39,19 +40,19 @@ use crate::ast::AstNode;
 /// end
 /// ```
 pub struct EachLoopChecker<'a> {
-    ss: &'a ScopeStack,
     node: &'a AstNode,
+    state: &'a SharedState,
 }
 
 impl<'a> EachLoopChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self { ss, node }
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+        Self { node, state }
     }
 }
 
 impl EachLoopChecker<'_> {
     pub fn check(&self) -> Result<Type> {
-        let expr_t = ExpressionChecker::new(self.ss, self.iterable()).check()?;
+        let expr_t = ExpressionChecker::new(self.iterable(), self.state).check()?;
 
         Type::assert_iterable(&expr_t, || self.iterable().span().clone())?;
 
@@ -67,12 +68,13 @@ impl EachLoopChecker<'_> {
 
         // Check all statements inside the body with a new scope
 
-        self.ss.with_scope(Scope::new_loop_scope(), || {
-            self.ss
+        self.state.ss.with_scope(Scope::new_loop_scope(), || {
+            self.state
+                .ss
                 .save_symbol_or_else(&elem_id, elem_t.clone(), || unreachable!())
                 .unwrap();
 
-            BodyChecker::new(self.ss, self.node).check()
+            BodyChecker::new(self.node, self.state).check()
         })?;
 
         Ok(Type::Void)

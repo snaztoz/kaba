@@ -1,4 +1,4 @@
-use super::{error::Result, scope::ScopeStack, statement::StatementChecker, types::Type};
+use super::{error::Result, state::SharedState, statement::StatementChecker, types::Type};
 use crate::ast::AstNode;
 
 /// Checker for a statement body.
@@ -6,13 +6,13 @@ use crate::ast::AstNode;
 /// Statement bodies are consist of `>= 0` statements, so this checker will call
 /// the StatementChecker on each statement found in current body.
 pub struct BodyChecker<'a> {
-    ss: &'a ScopeStack,
     node: &'a AstNode,
+    state: &'a SharedState,
 }
 
 impl<'a> BodyChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self { ss, node }
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+        Self { node, state }
     }
 }
 
@@ -21,7 +21,7 @@ impl BodyChecker<'_> {
         let mut body_t = Type::Void;
 
         for stmt in self.body() {
-            let t = StatementChecker::new(self.ss, stmt).check()?;
+            let t = StatementChecker::new(stmt, self.state).check()?;
             if body_t.is_void() {
                 body_t = t;
             }

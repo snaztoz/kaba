@@ -1,27 +1,27 @@
 use super::ExpressionChecker;
 use crate::{
     ast::AstNode,
-    semantic::{error::Result, scope::ScopeStack, types::Type},
+    semantic::{error::Result, state::SharedState, types::Type},
 };
 
 /// Checker for index access expression rule.
 pub struct IndexAccessChecker<'a> {
-    ss: &'a ScopeStack,
     node: &'a AstNode,
+    state: &'a SharedState,
 }
 
 impl<'a> IndexAccessChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self { ss, node }
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+        Self { node, state }
     }
 }
 
 impl IndexAccessChecker<'_> {
     pub fn check(&self) -> Result<Type> {
-        let obj_t = ExpressionChecker::new(self.ss, self.obj()).check()?;
+        let obj_t = ExpressionChecker::new(self.obj(), self.state).check()?;
         Type::assert_indexable(&obj_t, || self.obj().span().clone())?;
 
-        let index_t = ExpressionChecker::new(self.ss, self.index()).check()?;
+        let index_t = ExpressionChecker::new(self.index(), self.state).check()?;
         Type::assert_number(&index_t, || self.index().span().clone())?;
 
         match obj_t {
