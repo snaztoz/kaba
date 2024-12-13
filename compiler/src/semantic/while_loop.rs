@@ -1,6 +1,9 @@
 use super::{
-    body::BodyChecker, error::Result, expression::ExpressionChecker, scope::Scope,
-    state::SharedState, types::Type,
+    body::BodyChecker,
+    error::Result,
+    expression::ExpressionChecker,
+    state::{scope::Scope, SharedState},
+    types::Type,
 };
 use crate::ast::AstNode;
 

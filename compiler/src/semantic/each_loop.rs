@@ -2,8 +2,7 @@ use super::{
     body::BodyChecker,
     error::{Error, Result},
     expression::ExpressionChecker,
-    scope::Scope,
-    state::SharedState,
+    state::{scope::Scope, SharedState},
     types::Type,
 };
 use crate::ast::AstNode;

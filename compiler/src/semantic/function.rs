@@ -1,8 +1,7 @@
 use super::{
     body::BodyChecker,
     error::{Error, Result},
-    scope::Scope,
-    state::SharedState,
+    state::{scope::Scope, SharedState},
     tn::TypeNotationChecker,
     types::Type,
 };

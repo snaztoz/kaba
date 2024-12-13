@@ -1,4 +1,4 @@
-use super::{
+use crate::semantic::{
     error::{Error, Result},
     types::Type,
 };
