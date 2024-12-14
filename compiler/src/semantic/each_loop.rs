@@ -2,7 +2,7 @@ use super::{
     body::BodyChecker,
     error::{Error, Result},
     expression::ExpressionChecker,
-    state::{scope::Scope, SharedState},
+    state::{scope::ScopeVariant, SharedState},
     types::Type,
 };
 use crate::ast::AstNode;
@@ -67,10 +67,9 @@ impl EachLoopChecker<'_> {
 
         // Check all statements inside the body with a new scope
 
-        self.state.ss.with_scope(Scope::new_loop_scope(), || {
+        self.state.with_scope(ScopeVariant::Loop, || {
             self.state
-                .ss
-                .save_symbol_or_else(&elem_id, elem_t.clone(), || unreachable!())
+                .save_sym_or_else(&elem_id, elem_t.clone(), || unreachable!())
                 .unwrap();
 
             BodyChecker::new(self.node, self.state).check()

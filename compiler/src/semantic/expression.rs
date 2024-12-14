@@ -58,8 +58,7 @@ impl ExpressionChecker<'_> {
 
             AstNode::Identifier { name, span } => {
                 self.state
-                    .ss
-                    .get_symbol_t(name)
+                    .get_sym_t(name)
                     .ok_or_else(|| Error::SymbolDoesNotExist {
                         id: String::from(name),
                         span: span.clone(),

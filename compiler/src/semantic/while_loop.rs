@@ -2,7 +2,7 @@ use super::{
     body::BodyChecker,
     error::Result,
     expression::ExpressionChecker,
-    state::{scope::Scope, SharedState},
+    state::{scope::ScopeVariant, SharedState},
     types::Type,
 };
 use crate::ast::AstNode;
@@ -59,7 +59,7 @@ impl WhileLoopChecker<'_> {
 
         // Check all statements inside the body with a new scope
 
-        self.state.ss.with_scope(Scope::new_loop_scope(), || {
+        self.state.with_scope(ScopeVariant::Loop, || {
             BodyChecker::new(self.node, self.state).check()
         })?;
 

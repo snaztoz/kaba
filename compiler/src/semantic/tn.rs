@@ -31,7 +31,7 @@ impl<'a> TypeNotationChecker<'a> {
 impl TypeNotationChecker<'_> {
     pub fn check(&self) -> Result<Type> {
         // The provided type must exist in the current scope
-        if !self.state.ss.has_t(&self.t()) {
+        if !self.state.has_t(&self.t()) {
             return Err(Error::SymbolDoesNotExist {
                 id: self.t().to_string(),
                 span: self.span().clone(),

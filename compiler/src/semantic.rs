@@ -40,7 +40,7 @@ impl<'a> ProgramChecker<'a> {
     fn new(program: &'a AstNode) -> Self {
         Self {
             program,
-            state: SharedState::default(),
+            state: SharedState::new(),
         }
     }
 }

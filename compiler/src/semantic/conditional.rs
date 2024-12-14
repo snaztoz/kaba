@@ -2,7 +2,7 @@ use super::{
     body::BodyChecker,
     error::Result,
     expression::ExpressionChecker,
-    state::{scope::Scope, SharedState},
+    state::{scope::ScopeVariant, SharedState},
     types::Type,
 };
 use crate::ast::AstNode;
@@ -86,12 +86,9 @@ impl ConditionalBranchChecker<'_> {
 
         // Check all statements inside the body with a new scope
 
-        let return_t = self
-            .state
-            .ss
-            .with_scope(Scope::new_conditional_scope(), || {
-                BodyChecker::new(self.node, self.state).check()
-            })?;
+        let return_t = self.state.with_scope(ScopeVariant::Conditional, || {
+            BodyChecker::new(self.node, self.state).check()
+        })?;
 
         if self.or_else().is_none() {
             // Non-exhaustive branches, set to "Void"
@@ -116,12 +113,9 @@ impl ConditionalBranchChecker<'_> {
             AstNode::Else { .. } => {
                 // Check all statements inside the body with a new scope
 
-                let branch_return_t = self
-                    .state
-                    .ss
-                    .with_scope(Scope::new_conditional_scope(), || {
-                        BodyChecker::new(self.or_else().unwrap(), self.state).check()
-                    })?;
+                let branch_return_t = self.state.with_scope(ScopeVariant::Conditional, || {
+                    BodyChecker::new(self.or_else().unwrap(), self.state).check()
+                })?;
 
                 if !return_t.is_void() && !branch_return_t.is_void() {
                     Ok(return_t)

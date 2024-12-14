@@ -55,7 +55,7 @@ impl StatementChecker<'_> {
     }
 
     fn check_loop_control(&self, span: &Span) -> Result<Type> {
-        if !self.state.ss.is_inside_loop() {
+        if !self.state.is_inside_loop() {
             return Err(Error::UnexpectedStatement {
                 stmt_str: self.node.to_string(),
                 span: span.clone(),
@@ -71,12 +71,13 @@ impl StatementChecker<'_> {
             .map(|expr| ExpressionChecker::new(expr, self.state).check())
             .unwrap_or(Ok(Type::Void))?;
 
-        let return_t = self.state.ss.current_function_return_t().ok_or_else(|| {
-            Error::UnexpectedStatement {
+        let return_t = self
+            .state
+            .nearest_return_t()
+            .ok_or_else(|| Error::UnexpectedStatement {
                 stmt_str: self.node.to_string(),
                 span: span.clone(),
-            }
-        })?;
+            })?;
 
         Type::assert_assignable(&expr_t, &return_t, || span.clone())
             .map_err(|err| Error::ReturnTypeMismatch {

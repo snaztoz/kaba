@@ -1,7 +1,7 @@
 use super::{
     body::BodyChecker,
     error::{Error, Result},
-    state::{scope::Scope, SharedState},
+    state::{scope::ScopeVariant, SharedState},
     tn::TypeNotationChecker,
     types::Type,
 };
@@ -72,8 +72,7 @@ impl FunctionDeclarationChecker<'_> {
     fn save_fn_t_to_stack(&self, fn_t: Type) -> Result<()> {
         let (id, id_span) = self.id().unwrap_identifier();
         self.state
-            .ss
-            .save_symbol_or_else(&id, fn_t.clone(), || Error::SymbolAlreadyExist {
+            .save_sym_or_else(&id, fn_t.clone(), || Error::SymbolAlreadyExist {
                 id: id.clone(),
                 span: id_span,
             })
@@ -122,9 +121,11 @@ impl<'a> FunctionDefinitionChecker<'a> {
 impl FunctionDefinitionChecker<'_> {
     pub fn check(&self) -> Result<Type> {
         let return_t = self.fn_t().unwrap_callable().1;
-        self.state
-            .ss
-            .with_scope(Scope::new_function_scope(return_t.clone()), || {
+        self.state.with_scope(
+            ScopeVariant::Function {
+                return_t: return_t.clone(),
+            },
+            || {
                 self.save_params_to_stack(&self.params())?;
 
                 // Check function body
@@ -143,7 +144,8 @@ impl FunctionDefinitionChecker<'_> {
                 }
 
                 Ok(())
-            })?;
+            },
+        )?;
 
         Ok(Type::Void)
     }
@@ -151,8 +153,7 @@ impl FunctionDefinitionChecker<'_> {
     fn save_params_to_stack(&self, params: &[((String, Span), Type)]) -> Result<()> {
         for ((id, id_span), t) in params {
             self.state
-                .ss
-                .save_symbol_or_else(id, t.clone(), || Error::SymbolAlreadyExist {
+                .save_sym_or_else(id, t.clone(), || Error::SymbolAlreadyExist {
                     id: id.clone(),
                     span: id_span.clone(),
                 })?;
@@ -183,7 +184,7 @@ impl FunctionDefinitionChecker<'_> {
     fn fn_t(&self) -> Type {
         if let AstNode::FunctionDefinition { id, .. } = self.node {
             let id_str = &id.unwrap_identifier().0;
-            self.state.ss.get_symbol_t(id_str).unwrap()
+            self.state.get_sym_t(id_str).unwrap()
         } else {
             unreachable!()
         }

@@ -1,167 +1,97 @@
-use crate::semantic::{
-    error::{Error, Result},
-    types::Type,
-};
+use crate::semantic::types::Type;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
+    rc::{Rc, Weak},
 };
 
-/// ScopeStack (or often abbreviated as `ss`) represents the stack of scopes
-/// found in the program.
-pub struct ScopeStack {
-    stack: RefCell<Vec<Scope>>,
-}
+pub type WeakScopeRef = Weak<RefCell<Scope>>;
+pub type ScopeRef = Rc<RefCell<Scope>>;
 
-impl ScopeStack {
-    pub fn get_symbol_t(&self, name: &str) -> Option<Type> {
-        self.find_reversed(|s| s.symbols.get(name).cloned())
-    }
-
-    pub fn has_t(&self, t: &Type) -> bool {
-        match t {
-            Type::Callable { params_t, return_t } => {
-                params_t.iter().all(|t| self.has_t(t)) && self.has_t(return_t)
-            }
-
-            Type::Array { elem_t } => {
-                let elem_t = elem_t.as_ref().unwrap();
-                self.has_t(elem_t)
-            }
-
-            t => self
-                .find_reversed(|s| if s.types.contains(t) { Some(()) } else { None })
-                .is_some(),
-        }
-    }
-
-    pub fn current_function_return_t(&self) -> Option<Type> {
-        self.find_reversed(|s| match &s.scope_t {
-            ScopeType::Function { return_t } => Some(return_t.clone()),
-            _ => None,
-        })
-    }
-
-    pub fn is_inside_loop(&self) -> bool {
-        self.any_reversed(|s| s.scope_t == ScopeType::Loop)
-    }
-
-    pub fn save_symbol_or_else<F>(&self, name: &str, sym_t: Type, err: F) -> Result<()>
-    where
-        F: FnOnce() -> Error,
-    {
-        self.with_current_scope(|s| {
-            if s.symbols.contains_key(name) {
-                return Err(err());
-            }
-            s.symbols.insert(String::from(name), sym_t);
-            Ok(())
-        })
-    }
-
-    pub fn with_scope<U, F>(&self, scope: Scope, callback: F) -> U
-    where
-        F: FnOnce() -> U,
-    {
-        self.push_scope(scope);
-        let result = callback();
-        self.pop_scope();
-        result
-    }
-
-    fn find_reversed<U, F>(&self, finder: F) -> Option<U>
-    where
-        F: FnMut(&Scope) -> Option<U>,
-    {
-        self.stack.borrow().iter().rev().find_map(finder)
-    }
-
-    fn any_reversed<F>(&self, cond: F) -> bool
-    where
-        F: FnMut(&Scope) -> bool,
-    {
-        self.stack.borrow().iter().rev().any(cond)
-    }
-
-    fn with_current_scope<F>(&self, action: F) -> Result<()>
-    where
-        F: FnOnce(&mut Scope) -> Result<()>,
-    {
-        let mut stack = self.stack.borrow_mut();
-        let s = stack.last_mut().unwrap();
-        action(s)
-    }
-
-    fn push_scope(&self, scope: Scope) {
-        self.stack.borrow_mut().push(scope);
-    }
-
-    fn pop_scope(&self) {
-        self.stack.borrow_mut().pop();
-    }
-}
-
-impl Default for ScopeStack {
-    fn default() -> Self {
-        Self {
-            stack: RefCell::new(vec![Scope::new_builtin_scope(), Scope::new_global_scope()]),
-        }
-    }
-}
-
+/// Represents the scopes found in a Kaba program.
+///
+/// For example, an `each` loop will be represented by the `ScopeVariant::Loop`
+/// variant.
+///
+/// A scope may contain type definitions, symbols, and also types associated
+/// with the symbols. Using the previous example, if a variable called `x` is
+/// declared within a loop scope, this variable will belongs to the scope, and
+/// is reachable from the same or its children scopes only.
+#[derive(Debug)]
 pub struct Scope {
-    pub symbols: HashMap<String, Type>,
-    pub types: HashSet<Type>,
-    pub scope_t: ScopeType,
+    variant: ScopeVariant,
+    symbols: HashMap<String, Type>,
+    types: HashSet<Type>,
+
+    pub parent: Option<WeakScopeRef>,
+    pub children: Vec<ScopeRef>,
 }
 
 impl Scope {
-    pub fn new_builtin_scope() -> Self {
-        Self {
-            symbols: HashMap::new(),
-            types: HashSet::from([Type::Void, Type::Int, Type::Float, Type::Bool]),
-            scope_t: ScopeType::Builtin,
-        }
-    }
-
-    pub fn new_global_scope() -> Self {
-        Self {
+    /// Create a new [`Scope`] instance with `variant` variant.
+    pub fn new(variant: ScopeVariant) -> ScopeRef {
+        Rc::new(RefCell::new(Scope {
+            variant,
             symbols: HashMap::new(),
             types: HashSet::new(),
-            scope_t: ScopeType::Global,
-        }
+            parent: None,
+            children: vec![],
+        }))
     }
 
-    pub fn new_conditional_scope() -> Self {
-        Self {
-            symbols: HashMap::new(),
-            types: HashSet::new(),
-            scope_t: ScopeType::Conditional,
-        }
+    /// Save a symbol and its associated type inside the scope.
+    pub fn save_sym(&mut self, sym: &str, t: Type) {
+        self.symbols.insert(String::from(sym), t);
     }
 
-    pub fn new_loop_scope() -> Self {
-        Self {
-            symbols: HashMap::new(),
-            types: HashSet::new(),
-            scope_t: ScopeType::Loop,
-        }
+    /// Check if the scope contains a symbol named `sym`.
+    pub fn has_sym(&self, sym: &str) -> bool {
+        self.symbols.contains_key(sym)
     }
 
-    pub fn new_function_scope(return_t: Type) -> Self {
-        Self {
-            symbols: HashMap::new(),
-            types: HashSet::new(),
-            scope_t: ScopeType::Function { return_t },
+    /// Get the type of a symbol inside the scope.
+    pub fn get_sym_t(&self, sym: &str) -> Type {
+        self.symbols.get(sym).cloned().unwrap()
+    }
+
+    /// Add a new type definition in the scope.
+    pub fn add_t(&mut self, t: Type) {
+        self.types.insert(t);
+    }
+
+    /// Check if the scope contains a type named `t`.
+    pub fn has_t(&self, t: &Type) -> bool {
+        self.types.contains(t)
+    }
+
+    /// Check if the scope variant is a `ScopeVariant::Function`.
+    pub fn is_function(&self) -> bool {
+        matches!(self.variant, ScopeVariant::Function { .. })
+    }
+
+    /// Check if the scope variant is a `ScopeVariant::Loop`.
+    pub fn is_loop(&self) -> bool {
+        self.variant == ScopeVariant::Loop
+    }
+
+    /// Retrieve the return type of the scope.
+    ///
+    /// It assumes that the scope has variant of `ScopeVariant::Function`.
+    pub fn function_return_t(&self) -> Type {
+        if let ScopeVariant::Function { return_t } = &self.variant {
+            return_t.clone()
+        } else {
+            unreachable!()
         }
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum ScopeType {
+/// Represents different variant of scopes.
+#[derive(Debug, Eq, PartialEq)]
+pub enum ScopeVariant {
     Builtin,
     Global,
+    Function { return_t: Type },
     Conditional,
     Loop,
-    Function { return_t: Type },
 }

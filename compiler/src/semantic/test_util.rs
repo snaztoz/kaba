@@ -28,7 +28,7 @@ pub fn assert_expression_type(input: &str, expected_t: Type) {
     let ast = parser::parse(tokens).unwrap();
 
     let result = if let AstNode::Program { body, .. } = &ast {
-        let state = SharedState::default();
+        let state = SharedState::new();
         ExpressionChecker::new(&body[0], &state).check()
     } else {
         unreachable!();
@@ -43,7 +43,7 @@ pub fn assert_expression_is_err(input: &str) {
     let ast = parser::parse(tokens).unwrap();
 
     let result = if let AstNode::Program { body, .. } = &ast {
-        let state = SharedState::default();
+        let state = SharedState::new();
         ExpressionChecker::new(&body[0], &state).check()
     } else {
         unreachable!();
