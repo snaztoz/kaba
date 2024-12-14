@@ -11,7 +11,7 @@ pub mod symtable;
 
 /// Contains data that is shared across multiple analyzers.
 pub struct SharedState {
-    pub _st: SymTable,
+    st: SymTable,
 
     // Current active scope
     current_scope: RefCell<WeakScopeRef>,
@@ -24,9 +24,13 @@ impl SharedState {
         let current_scope = Rc::downgrade(&st.root);
 
         Self {
-            _st: st,
+            st,
             current_scope: RefCell::new(current_scope),
         }
+    }
+
+    pub fn take_st(self) -> SymTable {
+        self.st
     }
 
     /// Get the type associated with a `sym` in the current active scope or its

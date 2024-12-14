@@ -254,11 +254,13 @@ pub enum LexingError {
 }
 
 impl LexingError {
-    pub fn span(&self) -> Option<Span> {
+    pub fn span(&self) -> Span {
         match self {
-            Self::IdentifierStartsWithNumber { span, .. } => Some(span.clone()),
-            Self::UnknownToken { span, .. } => Some(span.clone()),
-            _ => None,
+            Self::IdentifierStartsWithNumber { span, .. } | Self::UnknownToken { span, .. } => {
+                span.clone()
+            }
+
+            _ => unreachable!(),
         }
     }
 }

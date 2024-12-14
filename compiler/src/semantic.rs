@@ -1,13 +1,10 @@
 //! This module contains the implementation for type checking stage of the
 //! compiler.
 
-use self::{
-    error::{Error, Result},
-    types::Type,
-};
+use self::error::{Error, Result};
 use crate::ast::AstNode;
 use function::{FunctionDeclarationChecker, FunctionDefinitionChecker};
-use state::SharedState;
+use state::{symtable::SymTable, SharedState};
 
 mod assignment;
 mod body;
@@ -27,7 +24,7 @@ mod variable;
 mod while_loop;
 
 /// Provides a quick way to run semantic analysis on a Kaba AST.
-pub fn check(program: &AstNode) -> Result<Type> {
+pub fn check(program: &AstNode) -> Result<SymTable> {
     ProgramChecker::new(program).check()
 }
 
@@ -46,7 +43,7 @@ impl<'a> ProgramChecker<'a> {
 }
 
 impl ProgramChecker<'_> {
-    fn check(&self) -> Result<Type> {
+    fn check(self) -> Result<SymTable> {
         for stmt in self.body() {
             self.ensure_global_statement(stmt)?;
             FunctionDeclarationChecker::new(stmt, &self.state).check()?;
@@ -56,7 +53,7 @@ impl ProgramChecker<'_> {
             FunctionDefinitionChecker::new(stmt, &self.state).check()?;
         }
 
-        Ok(Type::Void)
+        Ok(self.state.take_st())
     }
 
     fn ensure_global_statement(&self, stmt: &AstNode) -> Result<()> {
