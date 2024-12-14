@@ -21,7 +21,9 @@ impl SharedState {
     /// Creates a new [`SharedState`] instance.
     pub fn new() -> Self {
         let st = SymTable::new();
-        let current_scope = Rc::downgrade(&st.root);
+
+        // Initialize current active scope to global
+        let current_scope = Rc::downgrade(&st.root.as_ref().borrow().children[0]);
 
         Self {
             st,
