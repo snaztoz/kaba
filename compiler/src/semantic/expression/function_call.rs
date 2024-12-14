@@ -1,4 +1,4 @@
-use super::ExpressionChecker;
+use super::ExpressionAnalyzer;
 use crate::{
     ast::AstNode,
     semantic::{
@@ -9,21 +9,21 @@ use crate::{
 };
 use logos::Span;
 
-/// Checker for function call expression rule.
-pub struct FunctionCallChecker<'a> {
+/// Analyzer for function call expression rule.
+pub struct FunctionCallAnalyzer<'a> {
     node: &'a AstNode,
     state: &'a SharedState,
 }
 
-impl<'a> FunctionCallChecker<'a> {
+impl<'a> FunctionCallAnalyzer<'a> {
     pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
         Self { node, state }
     }
 }
 
-impl FunctionCallChecker<'_> {
-    pub fn check(&self) -> Result<Type> {
-        let fn_t = ExpressionChecker::new(self.callee(), self.state).check()?;
+impl FunctionCallAnalyzer<'_> {
+    pub fn analyze(&self) -> Result<Type> {
+        let fn_t = ExpressionAnalyzer::new(self.callee(), self.state).analyze()?;
         Type::assert_callable(&fn_t, || self.callee().span().clone())?;
 
         let args_t = self.args_t()?;
@@ -45,7 +45,7 @@ impl FunctionCallChecker<'_> {
     fn args_t(&self) -> Result<Vec<Type>> {
         let mut args_t = vec![];
         for arg in self.args() {
-            let t = ExpressionChecker::new(arg, self.state).check()?;
+            let t = ExpressionAnalyzer::new(arg, self.state).analyze()?;
             args_t.push(t);
         }
 

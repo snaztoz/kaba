@@ -1,20 +1,20 @@
-use super::{error::Result, expression::ExpressionChecker, state::SharedState, types::Type};
+use super::{error::Result, expression::ExpressionAnalyzer, state::SharedState, types::Type};
 use crate::ast::Literal;
 
-/// Checker for a literal expressions, such as numbers or arrays.
-pub struct LiteralChecker<'a> {
+/// Analyzer for a literal expressions, such as numbers or arrays.
+pub struct LiteralAnalyzer<'a> {
     lit: &'a Literal,
     state: &'a SharedState,
 }
 
-impl<'a> LiteralChecker<'a> {
+impl<'a> LiteralAnalyzer<'a> {
     pub const fn new(lit: &'a Literal, state: &'a SharedState) -> Self {
         Self { lit, state }
     }
 }
 
-impl LiteralChecker<'_> {
-    pub fn check(&self) -> Result<Type> {
+impl LiteralAnalyzer<'_> {
+    pub fn analyze(&self) -> Result<Type> {
         match self.lit {
             Literal::Void => Ok(Type::Void),
             Literal::Bool(_) => Ok(Type::Bool),
@@ -22,18 +22,18 @@ impl LiteralChecker<'_> {
             Literal::Int(_) => Ok(Type::UIntLiteral),
             Literal::Float(_) => Ok(Type::Float),
 
-            Literal::Array(_) => self.check_array(),
+            Literal::Array(_) => self.analyze_array(),
         }
     }
 
-    fn check_array(&self) -> Result<Type> {
+    fn analyze_array(&self) -> Result<Type> {
         let arr = if let Literal::Array(arr) = self.lit {
             arr
         } else {
             unreachable!()
         };
 
-        // Doing double checking.
+        // Doing double analyzing.
         //
         // For example, in the case of a nested array (let's call it A) like:
         //
@@ -47,13 +47,13 @@ impl LiteralChecker<'_> {
         //
         // Then the type of A will be set to `[]T`.
         //
-        // Lastly, we re-run the checking process against the type of T for
+        // Lastly, we re-run the analyzing process against the type of T for
         // every element inside the array.
 
         let mut elem_t = None;
 
         for elem in arr {
-            let t = ExpressionChecker::new(elem, self.state).check()?;
+            let t = ExpressionAnalyzer::new(elem, self.state).analyze()?;
             if !t.is_array_with_unknown_elem_t() {
                 elem_t = Some(t);
                 break;
@@ -65,7 +65,7 @@ impl LiteralChecker<'_> {
         }
 
         for elem in arr {
-            let t = ExpressionChecker::new(elem, self.state).check()?;
+            let t = ExpressionAnalyzer::new(elem, self.state).analyze()?;
             Type::assert_assignable(&t, elem_t.as_ref().unwrap(), || elem.span().clone())?;
         }
 

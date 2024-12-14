@@ -1,9 +1,9 @@
-//! This module contains the implementation for type checking stage of the
+//! This module contains the implementation for semantic analyzing stage of the
 //! compiler.
 
 use self::error::{Error, Result};
 use crate::ast::AstNode;
-use function::{FunctionDeclarationChecker, FunctionDefinitionChecker};
+use function::{FunctionDeclarationAnalyzer, FunctionDefinitionAnalyzer};
 use state::{symtable::SymTable, SharedState};
 
 mod assignment;
@@ -24,16 +24,16 @@ mod variable;
 mod while_loop;
 
 /// Provides a quick way to run semantic analysis on a Kaba AST.
-pub fn check(program: &AstNode) -> Result<SymTable> {
-    ProgramChecker::new(program).check()
+pub fn analyze(program: &AstNode) -> Result<SymTable> {
+    ProgramAnalyzer::new(program).analyze()
 }
 
-struct ProgramChecker<'a> {
+struct ProgramAnalyzer<'a> {
     program: &'a AstNode,
     state: SharedState,
 }
 
-impl<'a> ProgramChecker<'a> {
+impl<'a> ProgramAnalyzer<'a> {
     fn new(program: &'a AstNode) -> Self {
         Self {
             program,
@@ -42,15 +42,15 @@ impl<'a> ProgramChecker<'a> {
     }
 }
 
-impl ProgramChecker<'_> {
-    fn check(self) -> Result<SymTable> {
+impl ProgramAnalyzer<'_> {
+    fn analyze(self) -> Result<SymTable> {
         for stmt in self.body() {
             self.ensure_global_statement(stmt)?;
-            FunctionDeclarationChecker::new(stmt, &self.state).check()?;
+            FunctionDeclarationAnalyzer::new(stmt, &self.state).analyze()?;
         }
 
         for stmt in self.body() {
-            FunctionDefinitionChecker::new(stmt, &self.state).check()?;
+            FunctionDefinitionAnalyzer::new(stmt, &self.state).analyze()?;
         }
 
         Ok(self.state.take_st())

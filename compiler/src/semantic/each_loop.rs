@@ -1,13 +1,13 @@
 use super::{
-    body::BodyChecker,
+    body::BodyAnalyzer,
     error::{Error, Result},
-    expression::ExpressionChecker,
+    expression::ExpressionAnalyzer,
     state::{scope::ScopeVariant, SharedState},
     types::Type,
 };
 use crate::ast::AstNode;
 
-/// Checker for `each` loop statement.
+/// Analyzer for `each` loop statement.
 ///
 /// ### ✅ Valid Examples
 ///
@@ -38,20 +38,20 @@ use crate::ast::AstNode;
 ///     # Invalid
 /// end
 /// ```
-pub struct EachLoopChecker<'a> {
+pub struct EachLoopAnalyzer<'a> {
     node: &'a AstNode,
     state: &'a SharedState,
 }
 
-impl<'a> EachLoopChecker<'a> {
+impl<'a> EachLoopAnalyzer<'a> {
     pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
         Self { node, state }
     }
 }
 
-impl EachLoopChecker<'_> {
-    pub fn check(&self) -> Result<Type> {
-        let expr_t = ExpressionChecker::new(self.iterable(), self.state).check()?;
+impl EachLoopAnalyzer<'_> {
+    pub fn analyze(&self) -> Result<Type> {
+        let expr_t = ExpressionAnalyzer::new(self.iterable(), self.state).analyze()?;
 
         Type::assert_iterable(&expr_t, || self.iterable().span().clone())?;
 
@@ -72,7 +72,7 @@ impl EachLoopChecker<'_> {
                 .save_sym_or_else(&elem_id, elem_t.clone(), || unreachable!())
                 .unwrap();
 
-            BodyChecker::new(self.node, self.state).check()
+            BodyAnalyzer::new(self.node, self.state).analyze()
         })?;
 
         Ok(Type::Void)

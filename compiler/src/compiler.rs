@@ -34,7 +34,7 @@ impl Compiler {
             span: Some(e.span()),
         })?;
 
-        let _sym_table = semantic::check(&ast).map_err(|e| Error {
+        let _sym_table = semantic::analyze(&ast).map_err(|e| Error {
             path: self.path.as_deref(),
             src: &self.src,
             message: e.to_string(),

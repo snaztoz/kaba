@@ -1,13 +1,13 @@
 use super::{
-    body::BodyChecker,
+    body::BodyAnalyzer,
     error::Result,
-    expression::ExpressionChecker,
+    expression::ExpressionAnalyzer,
     state::{scope::ScopeVariant, SharedState},
     types::Type,
 };
 use crate::ast::AstNode;
 
-/// Checker for `while` loop statement.
+/// Analyzer for `while` loop statement.
 ///
 /// ### ✅ Valid Examples
 ///
@@ -39,28 +39,28 @@ use crate::ast::AstNode;
 ///     # Invalid
 /// end
 /// ```
-pub struct WhileLoopChecker<'a> {
+pub struct WhileLoopAnalyzer<'a> {
     node: &'a AstNode,
     state: &'a SharedState,
 }
 
-impl<'a> WhileLoopChecker<'a> {
+impl<'a> WhileLoopAnalyzer<'a> {
     pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
         Self { node, state }
     }
 }
 
-impl WhileLoopChecker<'_> {
-    pub fn check(&self) -> Result<Type> {
+impl WhileLoopAnalyzer<'_> {
+    pub fn analyze(&self) -> Result<Type> {
         // Expecting boolean type for the condition
 
-        let cond_t = ExpressionChecker::new(self.cond(), self.state).check()?;
+        let cond_t = ExpressionAnalyzer::new(self.cond(), self.state).analyze()?;
         Type::assert_boolean(&cond_t, || self.cond().span().clone())?;
 
         // Check all statements inside the body with a new scope
 
         self.state.with_scope(ScopeVariant::Loop, || {
-            BodyChecker::new(self.node, self.state).check()
+            BodyAnalyzer::new(self.node, self.state).analyze()
         })?;
 
         Ok(Type::Void)

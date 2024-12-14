@@ -1,32 +1,32 @@
 use super::{
-    body::BodyChecker,
+    body::BodyAnalyzer,
     error::{Error, Result},
     state::{scope::ScopeVariant, SharedState},
-    tn::TypeNotationChecker,
+    tn::TypeNotationAnalyzer,
     types::Type,
 };
 use crate::ast::{AstNode, FunctionParam};
 use logos::Span;
 
-/// Checker for function declarations.
+/// Analyzer for function declarations.
 ///
-/// This checker assumes that the data from function declarations (i.e. function
-/// signature informations) are already stored in the ScopeStack.
-pub struct FunctionDeclarationChecker<'a> {
+/// This analyzer assumes that the data from function declarations (i.e.
+/// function signature informations) are already stored in the [`SharedState`].
+pub struct FunctionDeclarationAnalyzer<'a> {
     node: &'a AstNode,
     state: &'a SharedState,
 }
 
-impl<'a> FunctionDeclarationChecker<'a> {
+impl<'a> FunctionDeclarationAnalyzer<'a> {
     pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
         Self { node, state }
     }
 }
 
-impl FunctionDeclarationChecker<'_> {
-    pub fn check(&self) -> Result<Type> {
-        self.check_params_tn()?;
-        self.check_return_tn()?;
+impl FunctionDeclarationAnalyzer<'_> {
+    pub fn analyze(&self) -> Result<Type> {
+        self.analyze_params_tn()?;
+        self.analyze_return_tn()?;
 
         let params_t = self.params_t();
         let return_t = Box::new(self.return_t());
@@ -37,19 +37,19 @@ impl FunctionDeclarationChecker<'_> {
         Ok(fn_t)
     }
 
-    fn check_params_tn(&self) -> Result<()> {
+    fn analyze_params_tn(&self) -> Result<()> {
         for FunctionParam { tn, .. } in self.params() {
-            TypeNotationChecker::new(tn, self.state).check()?;
+            TypeNotationAnalyzer::new(tn, self.state).analyze()?;
         }
 
         Ok(())
     }
 
-    fn check_return_tn(&self) -> Result<()> {
+    fn analyze_return_tn(&self) -> Result<()> {
         if let Some(tn) = self.return_tn() {
-            TypeNotationChecker::new(tn, self.state)
+            TypeNotationAnalyzer::new(tn, self.state)
                 .allow_void()
-                .check()?;
+                .analyze()?;
         }
 
         Ok(())
@@ -103,23 +103,23 @@ impl FunctionDeclarationChecker<'_> {
     }
 }
 
-/// Checker for function definition.
+/// Analyzer for function definition.
 ///
-/// This checker assumes that the data from function declarations (i.e. function
+/// This analyzer assumes that the data from function declarations (i.e. function
 /// signature informations) are already stored in the ScopeStack.
-pub struct FunctionDefinitionChecker<'a> {
+pub struct FunctionDefinitionAnalyzer<'a> {
     node: &'a AstNode,
     state: &'a SharedState,
 }
 
-impl<'a> FunctionDefinitionChecker<'a> {
+impl<'a> FunctionDefinitionAnalyzer<'a> {
     pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
         Self { node, state }
     }
 }
 
-impl FunctionDefinitionChecker<'_> {
-    pub fn check(&self) -> Result<Type> {
+impl FunctionDefinitionAnalyzer<'_> {
+    pub fn analyze(&self) -> Result<Type> {
         let return_t = self.fn_t().unwrap_callable().1;
         self.state.with_scope(
             ScopeVariant::Function {
@@ -128,12 +128,12 @@ impl FunctionDefinitionChecker<'_> {
             || {
                 self.save_params_to_stack(&self.params())?;
 
-                // Check function body
+                // Analyze function body
                 //
                 // We do this last in order to accommodate features such as
                 // recursive function call.
 
-                let body_t = BodyChecker::new(self.node, self.state).check()?;
+                let body_t = BodyAnalyzer::new(self.node, self.state).analyze()?;
 
                 if !return_t.is_void() && body_t.is_void() {
                     return Err(Error::ReturnTypeMismatch {

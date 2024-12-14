@@ -1,16 +1,15 @@
 use super::{
     error::{Error, Result},
-    expression::ExpressionChecker,
+    expression::ExpressionAnalyzer,
     state::SharedState,
     types::Type,
 };
 use crate::ast::AstNode;
 use logos::Span;
 
-/// Checker for assignment statements.
+/// Analyzer for assignment statements.
 ///
-/// This checker handles the checking of plain assignment and also shorthand
-/// assignment.
+/// It handles the analyzing of plain and shorthand assignment operations.
 ///
 /// ### ✅ Valid Examples
 ///
@@ -48,37 +47,37 @@ use logos::Span;
 /// var x = true;
 /// x += false;
 /// ```
-pub struct AssignmentChecker<'a> {
+pub struct AssignmentAnalyzer<'a> {
     node: &'a AstNode,
     state: &'a SharedState,
 }
 
-impl<'a> AssignmentChecker<'a> {
+impl<'a> AssignmentAnalyzer<'a> {
     pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
         Self { node, state }
     }
 }
 
-impl AssignmentChecker<'_> {
-    pub fn check(&self) -> Result<Type> {
-        self.check_lhs()?;
+impl AssignmentAnalyzer<'_> {
+    pub fn analyze(&self) -> Result<Type> {
+        self.analyze_lhs()?;
 
         match self.node {
-            AstNode::Assign { lhs, rhs, span } => self.check_assignment(lhs, rhs, span),
+            AstNode::Assign { lhs, rhs, span } => self.analyze_assignment(lhs, rhs, span),
 
             AstNode::AddAssign { lhs, rhs, span }
             | AstNode::SubAssign { lhs, rhs, span }
             | AstNode::MulAssign { lhs, rhs, span }
             | AstNode::DivAssign { lhs, rhs, span }
             | AstNode::ModAssign { lhs, rhs, span } => {
-                self.check_shorthand_assignment(lhs, rhs, span)
+                self.analyze_shorthand_assignment(lhs, rhs, span)
             }
 
             _ => unreachable!(),
         }
     }
 
-    fn check_lhs(&self) -> Result<()> {
+    fn analyze_lhs(&self) -> Result<()> {
         if !self.lhs().is_valid_assignment_lhs() {
             return Err(Error::InvalidAssignmentLhs {
                 lhs: self.lhs().to_string(),
@@ -89,23 +88,23 @@ impl AssignmentChecker<'_> {
         Ok(())
     }
 
-    fn check_assignment(&self, lhs: &AstNode, rhs: &AstNode, span: &Span) -> Result<Type> {
-        let lhs_t = ExpressionChecker::new(lhs, self.state).check()?;
-        let rhs_t = ExpressionChecker::new(rhs, self.state).check()?;
+    fn analyze_assignment(&self, lhs: &AstNode, rhs: &AstNode, span: &Span) -> Result<Type> {
+        let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
+        let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
         Type::assert_assignable(&rhs_t, &lhs_t, || span.clone())?;
 
         Ok(Type::Void)
     }
 
-    fn check_shorthand_assignment(
+    fn analyze_shorthand_assignment(
         &self,
         lhs: &AstNode,
         rhs: &AstNode,
         span: &Span,
     ) -> Result<Type> {
-        let lhs_t = ExpressionChecker::new(lhs, self.state).check()?;
-        let rhs_t = ExpressionChecker::new(rhs, self.state).check()?;
+        let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
+        let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
         Type::assert_number(&lhs_t, || lhs.span().clone())?;
         Type::assert_number(&rhs_t, || rhs.span().clone())?;

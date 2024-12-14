@@ -1,14 +1,14 @@
 use super::{
     error::{Error, Result},
-    expression::ExpressionChecker,
+    expression::ExpressionAnalyzer,
     state::SharedState,
-    tn::TypeNotationChecker,
+    tn::TypeNotationAnalyzer,
     types::Type,
 };
 use crate::ast::AstNode;
 use logos::Span;
 
-/// Checker for variable declaration statement.
+/// Analyzer for variable declaration statement.
 ///
 /// ### ✅ Valid Examples
 ///
@@ -38,23 +38,23 @@ use logos::Span;
 /// ```text
 /// var x: Int = 5.0;
 /// ```
-pub struct VariableDeclarationChecker<'a> {
+pub struct VariableDeclarationAnalyzer<'a> {
     node: &'a AstNode,
     state: &'a SharedState,
 }
 
-impl<'a> VariableDeclarationChecker<'a> {
+impl<'a> VariableDeclarationAnalyzer<'a> {
     pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
         Self { node, state }
     }
 }
 
-impl VariableDeclarationChecker<'_> {
-    pub fn check(&self) -> Result<Type> {
-        let val_t = ExpressionChecker::new(self.val(), self.state).check()?;
+impl VariableDeclarationAnalyzer<'_> {
+    pub fn analyze(&self) -> Result<Type> {
+        let val_t = ExpressionAnalyzer::new(self.val(), self.state).analyze()?;
 
         let var_t = if let Some(tn) = self.tn() {
-            let t = self.check_tn(tn, &val_t)?;
+            let t = self.analyze_tn(tn, &val_t)?;
             Some(t)
         } else {
             if val_t.is_array_with_unknown_elem_t() {
@@ -70,8 +70,8 @@ impl VariableDeclarationChecker<'_> {
         Ok(Type::Void)
     }
 
-    fn check_tn(&self, tn: &AstNode, val_t: &Type) -> Result<Type> {
-        let t = TypeNotationChecker::new(tn, self.state).check()?;
+    fn analyze_tn(&self, tn: &AstNode, val_t: &Type) -> Result<Type> {
+        let t = TypeNotationAnalyzer::new(tn, self.state).analyze()?;
 
         // Check if the value type is compatible with the variable
         Type::assert_assignable(val_t, &t, || self.span().clone())?;
