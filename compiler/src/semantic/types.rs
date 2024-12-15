@@ -5,14 +5,6 @@ use std::fmt::Display;
 
 #[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub enum Type {
-    Void,
-    Bool,
-
-    UInt,
-    Int,
-
-    Float,
-
     // We specifically differentiate the type of literals to accommodate their
     // assignment into various types.
     //
@@ -146,8 +138,28 @@ impl Type {
         }
     }
 
+    pub fn void() -> Type {
+        Type::Identifier(String::from("void"))
+    }
+
+    pub fn bool() -> Type {
+        Type::Identifier(String::from("bool"))
+    }
+
+    pub fn uint() -> Type {
+        Type::Identifier(String::from("uint"))
+    }
+
+    pub fn int() -> Type {
+        Type::Identifier(String::from("int"))
+    }
+
+    pub fn float() -> Type {
+        Type::Identifier(String::from("float"))
+    }
+
     pub fn is_number(&self) -> bool {
-        [Self::UInt, Self::Int, Self::Float].contains(self) || self.is_number_literal()
+        [Self::uint(), Self::int(), Self::float()].contains(self) || self.is_number_literal()
     }
 
     pub fn is_number_literal(&self) -> bool {
@@ -156,11 +168,11 @@ impl Type {
     }
 
     fn is_signable_number(&self) -> bool {
-        [Self::UInt, Self::Int, Self::Float].contains(self) || self.is_number_literal()
+        [Self::uint(), Self::int(), Self::float()].contains(self) || self.is_number_literal()
     }
 
-    pub const fn is_boolean(&self) -> bool {
-        matches!(self, Self::Bool)
+    pub fn is_boolean(&self) -> bool {
+        self == &Self::bool()
     }
 
     pub const fn is_array(&self) -> bool {
@@ -202,17 +214,19 @@ impl Type {
     // For example, unsigned integer literals are morphable into `Byte`,
     // `Short`, `Int`, etc.
     fn is_morphable_to(&self, target: &Type) -> bool {
-        self == &Type::Literal(LiteralType::UnsignedInt)
-            && [Type::Int, Type::Literal(LiteralType::Int)].contains(target)
+        self == &Self::Literal(LiteralType::UnsignedInt)
+            && [Self::int(), Self::Literal(LiteralType::Int)].contains(target)
     }
 
-    pub const fn is_void(&self) -> bool {
-        matches!(self, Self::Void)
+    pub fn is_void(&self) -> bool {
+        self == &Self::void()
     }
 
     pub fn morph_default(&self) -> Type {
         match self {
-            Type::Literal(LiteralType::UnsignedInt) | Type::Literal(LiteralType::Int) => Self::Int,
+            Type::Literal(LiteralType::UnsignedInt) | Type::Literal(LiteralType::Int) => {
+                Self::int()
+            }
 
             Self::Array { elem_t } => Self::Array {
                 elem_t: elem_t.as_ref().map(|t| Box::new(t.morph_default())),
@@ -243,14 +257,6 @@ impl<'a> From<&'a AstNode> for Type {
     fn from(value: &'a AstNode) -> Self {
         if let AstNode::TypeNotation { tn, .. } = value {
             match tn {
-                TypeNotation::Identifier(id) if id == "void" => Self::Void,
-                TypeNotation::Identifier(id) if id == "bool" => Self::Bool,
-
-                TypeNotation::Identifier(id) if id == "uint" => Self::UInt,
-                TypeNotation::Identifier(id) if id == "int" => Self::Int,
-
-                TypeNotation::Identifier(id) if id == "float" => Self::Float,
-
                 TypeNotation::Identifier(id) => Self::Identifier(id.to_string()),
 
                 TypeNotation::Array { elem_tn } => Self::Array {
@@ -278,14 +284,6 @@ impl<'a> From<&'a AstNode> for Type {
 impl Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Void => write!(f, "void"),
-            Self::Bool => write!(f, "bool"),
-
-            Self::UInt => write!(f, "uint"),
-            Self::Int => write!(f, "int"),
-
-            Self::Float => write!(f, "float"),
-
             Self::Literal(LiteralType::UnsignedInt) => write!(f, "uint"),
             Self::Literal(LiteralType::Int) => write!(f, "int"),
 

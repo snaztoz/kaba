@@ -21,11 +21,11 @@ impl<'a> LiteralAnalyzer<'a> {
 impl LiteralAnalyzer<'_> {
     pub fn analyze(&self) -> Result<Type> {
         match self.lit {
-            Literal::Void => Ok(Type::Void),
-            Literal::Bool(_) => Ok(Type::Bool),
+            Literal::Void => Ok(Type::void()),
+            Literal::Bool(_) => Ok(Type::bool()),
 
             Literal::Int(_) => Ok(Type::Literal(LiteralType::UnsignedInt)),
-            Literal::Float(_) => Ok(Type::Float),
+            Literal::Float(_) => Ok(Type::float()),
 
             Literal::Array(_) => self.analyze_array(),
         }

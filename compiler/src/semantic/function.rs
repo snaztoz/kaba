@@ -65,7 +65,7 @@ impl FunctionDeclarationAnalyzer<'_> {
     }
 
     fn return_t(&self) -> Type {
-        self.return_tn().map_or(Type::Void, Type::from)
+        self.return_tn().map_or(Type::void(), Type::from)
     }
 
     // Save function information to the ScopeStack.
@@ -138,7 +138,7 @@ impl FunctionDefinitionAnalyzer<'_> {
                 if !return_t.is_void() && body_t.is_void() {
                     return Err(Error::ReturnTypeMismatch {
                         expected: return_t,
-                        get: Type::Void,
+                        get: Type::void(),
                         span: self.id().span().clone(),
                     });
                 }
@@ -147,7 +147,7 @@ impl FunctionDefinitionAnalyzer<'_> {
             },
         )?;
 
-        Ok(Type::Void)
+        Ok(Type::void())
     }
 
     fn save_params_to_stack(&self, params: &[((String, Span), Type)]) -> Result<()> {

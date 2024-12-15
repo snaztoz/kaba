@@ -18,7 +18,7 @@ impl<'a> BodyAnalyzer<'a> {
 
 impl BodyAnalyzer<'_> {
     pub fn analyze(&self) -> Result<Type> {
-        let mut body_t = Type::Void;
+        let mut body_t = Type::void();
 
         for stmt in self.body() {
             let t = StatementAnalyzer::new(stmt, self.state).analyze()?;

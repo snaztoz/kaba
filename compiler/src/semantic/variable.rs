@@ -66,7 +66,7 @@ impl VariableDeclarationAnalyzer<'_> {
 
         self.save_symbol(&self.id_string(), var_t, self.span())?;
 
-        Ok(Type::Void)
+        Ok(Type::void())
     }
 
     fn analyze_tn(&self, tn: &AstNode, val_t: &Type) -> Result<Type> {

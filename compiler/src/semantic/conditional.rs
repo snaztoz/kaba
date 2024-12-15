@@ -92,7 +92,7 @@ impl ConditionalBranchAnalyzer<'_> {
 
         if self.or_else().is_none() {
             // Non-exhaustive branches, set to "Void"
-            return Ok(Type::Void);
+            return Ok(Type::void());
         }
 
         match self.or_else().unwrap() {
@@ -107,7 +107,7 @@ impl ConditionalBranchAnalyzer<'_> {
                 if !return_t.is_void() && !branch_return_t.is_void() {
                     Ok(return_t)
                 } else {
-                    Ok(Type::Void)
+                    Ok(Type::void())
                 }
             }
 
@@ -121,7 +121,7 @@ impl ConditionalBranchAnalyzer<'_> {
                 if !return_t.is_void() && !branch_return_t.is_void() {
                     Ok(return_t)
                 } else {
-                    Ok(Type::Void)
+                    Ok(Type::void())
                 }
             }
 

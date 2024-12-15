@@ -24,10 +24,10 @@ impl SymTable {
     /// `Type::Int`).
     pub fn new() -> Self {
         let builtin = Scope::new(ScopeVariant::Builtin);
-        builtin.borrow_mut().add_t(Type::Void);
-        builtin.borrow_mut().add_t(Type::Int);
-        builtin.borrow_mut().add_t(Type::Float);
-        builtin.borrow_mut().add_t(Type::Bool);
+        builtin.borrow_mut().add_t(Type::void());
+        builtin.borrow_mut().add_t(Type::int());
+        builtin.borrow_mut().add_t(Type::float());
+        builtin.borrow_mut().add_t(Type::bool());
 
         let global = Scope::new(ScopeVariant::Global);
 

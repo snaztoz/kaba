@@ -94,7 +94,7 @@ impl AssignmentAnalyzer<'_> {
 
         Type::assert_assignable(&rhs_t, &lhs_t, || span.clone())?;
 
-        Ok(Type::Void)
+        Ok(Type::void())
     }
 
     fn analyze_shorthand_assignment(
@@ -110,7 +110,7 @@ impl AssignmentAnalyzer<'_> {
         Type::assert_number(&rhs_t, || rhs.span().clone())?;
         Type::assert_assignable(&rhs_t, &lhs_t, || span.clone())?;
 
-        Ok(Type::Void)
+        Ok(Type::void())
     }
 
     fn lhs(&self) -> &AstNode {
