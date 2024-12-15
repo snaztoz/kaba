@@ -51,14 +51,14 @@ impl IndexAccessAnalyzer<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::semantic::test_util::assert_expression_type;
+    use crate::semantic::{test_util::assert_expression_type, types::LiteralType};
 
     #[test]
     fn index_accessing() {
         assert_expression_type(
             "[[1, 2]][0];",
             Type::Array {
-                elem_t: Some(Box::new(Type::UIntLiteral)),
+                elem_t: Some(Box::new(Type::Literal(LiteralType::UnsignedInt))),
             },
         );
     }

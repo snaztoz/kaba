@@ -3,7 +3,7 @@ use super::{
     error::{Error, Result},
     literal::LiteralAnalyzer,
     state::SharedState,
-    types::Type,
+    types::{LiteralType, Type},
 };
 use crate::ast::AstNode;
 use function_call::FunctionCallAnalyzer;
@@ -116,8 +116,10 @@ impl ExpressionAnalyzer<'_> {
         Type::assert_number(&rhs_t, || rhs.span().clone())?;
         Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
-        if lhs_t == Type::UIntLiteral && rhs_t == Type::UIntLiteral {
-            return Ok(Type::UIntLiteral);
+        if lhs_t == Type::Literal(LiteralType::UnsignedInt)
+            && rhs_t == Type::Literal(LiteralType::UnsignedInt)
+        {
+            return Ok(Type::Literal(LiteralType::UnsignedInt));
         }
 
         Ok(lhs_t)
@@ -138,7 +140,7 @@ impl ExpressionAnalyzer<'_> {
 
         if child_t.is_number_literal() {
             // Must change into signed integer
-            Ok(Type::IntLiteral)
+            Ok(Type::Literal(LiteralType::Int))
         } else {
             Ok(child_t)
         }
@@ -149,12 +151,12 @@ impl ExpressionAnalyzer<'_> {
 mod tests {
     use crate::semantic::{
         test_util::{assert_expression_is_err, assert_expression_type},
-        types::Type,
+        types::{LiteralType, Type},
     };
 
     #[test]
     fn math_expression_returning_int_type() {
-        assert_expression_type("-5 + 50 * 200 / 7 - 999;", Type::IntLiteral);
+        assert_expression_type("-5 + 50 * 200 / 7 - 999;", Type::Literal(LiteralType::Int));
     }
 
     #[test]

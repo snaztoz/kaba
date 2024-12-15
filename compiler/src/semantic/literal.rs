@@ -1,4 +1,9 @@
-use super::{error::Result, expression::ExpressionAnalyzer, state::SharedState, types::Type};
+use super::{
+    error::Result,
+    expression::ExpressionAnalyzer,
+    state::SharedState,
+    types::{LiteralType, Type},
+};
 use crate::ast::Literal;
 
 /// Analyzer for a literal expressions, such as numbers or arrays.
@@ -19,7 +24,7 @@ impl LiteralAnalyzer<'_> {
             Literal::Void => Ok(Type::Void),
             Literal::Bool(_) => Ok(Type::Bool),
 
-            Literal::Int(_) => Ok(Type::UIntLiteral),
+            Literal::Int(_) => Ok(Type::Literal(LiteralType::UnsignedInt)),
             Literal::Float(_) => Ok(Type::Float),
 
             Literal::Array(_) => self.analyze_array(),
@@ -79,7 +84,7 @@ impl LiteralAnalyzer<'_> {
 mod tests {
     use crate::semantic::{
         test_util::{assert_expression_is_err, assert_expression_type},
-        types::Type,
+        types::{LiteralType, Type},
     };
 
     #[test]
@@ -87,7 +92,7 @@ mod tests {
         assert_expression_type(
             "[1, 2, 3];",
             Type::Array {
-                elem_t: Some(Box::new(Type::UIntLiteral)),
+                elem_t: Some(Box::new(Type::Literal(LiteralType::UnsignedInt))),
             },
         );
     }
@@ -102,7 +107,7 @@ mod tests {
         assert_expression_type(
             "[8 * 2048];",
             Type::Array {
-                elem_t: Some(Box::new(Type::UIntLiteral)),
+                elem_t: Some(Box::new(Type::Literal(LiteralType::UnsignedInt))),
             },
         );
     }
@@ -113,7 +118,7 @@ mod tests {
             "[[1, 3, 5], [2, 6, 3], [9, 1, 1]];",
             Type::Array {
                 elem_t: Some(Box::new(Type::Array {
-                    elem_t: Some(Box::new(Type::UIntLiteral)),
+                    elem_t: Some(Box::new(Type::Literal(LiteralType::UnsignedInt))),
                 })),
             },
         );
@@ -130,7 +135,7 @@ mod tests {
             "[[], [1]];",
             Type::Array {
                 elem_t: Some(Box::new(Type::Array {
-                    elem_t: Some(Box::new(Type::UIntLiteral)),
+                    elem_t: Some(Box::new(Type::Literal(LiteralType::UnsignedInt))),
                 })),
             },
         );

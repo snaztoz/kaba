@@ -23,8 +23,7 @@ pub enum Type {
     //
     // If the `16` is Self::Identifier("Int"), then the assignment into the
     // `Byte` type variable should results in error. We want to avoid that.
-    UIntLiteral,
-    IntLiteral,
+    Literal(LiteralType),
 
     Identifier(String),
 
@@ -152,7 +151,8 @@ impl Type {
     }
 
     pub fn is_number_literal(&self) -> bool {
-        [Self::UIntLiteral, Self::IntLiteral].contains(self)
+        matches!(self, Self::Literal(LiteralType::UnsignedInt))
+            || matches!(self, Self::Literal(LiteralType::Int))
     }
 
     fn is_signable_number(&self) -> bool {
@@ -202,7 +202,8 @@ impl Type {
     // For example, unsigned integer literals are morphable into `Byte`,
     // `Short`, `Int`, etc.
     fn is_morphable_to(&self, target: &Type) -> bool {
-        self == &Type::UIntLiteral && [Type::Int, Type::IntLiteral].contains(target)
+        self == &Type::Literal(LiteralType::UnsignedInt)
+            && [Type::Int, Type::Literal(LiteralType::Int)].contains(target)
     }
 
     pub const fn is_void(&self) -> bool {
@@ -211,7 +212,7 @@ impl Type {
 
     pub fn morph_default(&self) -> Type {
         match self {
-            Self::UIntLiteral | Self::IntLiteral => Self::Int,
+            Type::Literal(LiteralType::UnsignedInt) | Type::Literal(LiteralType::Int) => Self::Int,
 
             Self::Array { elem_t } => Self::Array {
                 elem_t: elem_t.as_ref().map(|t| Box::new(t.morph_default())),
@@ -285,8 +286,8 @@ impl Display for Type {
 
             Self::Float => write!(f, "Float"),
 
-            Self::UIntLiteral => write!(f, "UInt"),
-            Self::IntLiteral => write!(f, "Int"),
+            Self::Literal(LiteralType::UnsignedInt) => write!(f, "UInt"),
+            Self::Literal(LiteralType::Int) => write!(f, "Int"),
 
             Self::Identifier(id) => write!(f, "{id}"),
 
@@ -310,4 +311,10 @@ impl Display for Type {
             }
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
+pub enum LiteralType {
+    UnsignedInt,
+    Int,
 }
