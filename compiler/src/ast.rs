@@ -12,6 +12,7 @@ pub enum AstNode {
     // The root of all other AstNode variants
     Program {
         body: Vec<AstNode>,
+        span: Span,
     },
 
     VariableDeclaration {
@@ -234,9 +235,8 @@ pub enum AstNode {
 impl AstNode {
     pub fn span(&self) -> &Span {
         match self {
-            Self::Program { .. } => unreachable!(),
-
-            Self::VariableDeclaration { span, .. }
+            Self::Program { span, .. }
+            | Self::VariableDeclaration { span, .. }
             | Self::If { span, .. }
             | Self::Else { span, .. }
             | Self::While { span, .. }
@@ -464,10 +464,10 @@ pub enum Literal {
     // A temporary value while the runtime is still using a tree-walk
     // interpreter mode
     Void,
+    Bool(bool),
 
-    Integer(u32),
+    Int(u32),
     Float(f64),
-    Boolean(bool),
 
     Array(Vec<AstNode>),
 }
@@ -476,9 +476,11 @@ impl Display for Literal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Void => write!(f, "void"),
-            Self::Integer(n) => write!(f, "{n}"),
+            Self::Bool(b) => write!(f, "{b}"),
+
+            Self::Int(n) => write!(f, "{n}"),
             Self::Float(n) => write!(f, "{n}"),
-            Self::Boolean(b) => write!(f, "{b}"),
+
             Self::Array(arr) => {
                 let joined = arr
                     .iter()

@@ -1,13 +1,10 @@
-//! This module contains the implementation for type checking stage of the
+//! This module contains the implementation for semantic analyzing stage of the
 //! compiler.
 
-use self::{
-    error::{Error, Result},
-    types::Type,
-};
+use self::error::{Error, Result};
 use crate::ast::AstNode;
-use function::{FunctionDeclarationChecker, FunctionDefinitionChecker};
-use scope::ScopeStack;
+use function::{FunctionDeclarationAnalyzer, FunctionDefinitionAnalyzer};
+use state::{symtable::SymTable, SharedState};
 
 mod assignment;
 mod body;
@@ -17,7 +14,7 @@ mod error;
 mod expression;
 mod function;
 mod literal;
-mod scope;
+mod state;
 mod statement;
 #[cfg(test)]
 mod test_util;
@@ -27,36 +24,36 @@ mod variable;
 mod while_loop;
 
 /// Provides a quick way to run semantic analysis on a Kaba AST.
-pub fn check(program: &AstNode) -> Result<Type> {
-    ProgramChecker::new(program).check()
+pub fn analyze(program: &AstNode) -> Result<SymTable> {
+    ProgramAnalyzer::new(program).analyze()
 }
 
-struct ProgramChecker<'a> {
-    ss: ScopeStack,
+struct ProgramAnalyzer<'a> {
     program: &'a AstNode,
+    state: SharedState,
 }
 
-impl<'a> ProgramChecker<'a> {
+impl<'a> ProgramAnalyzer<'a> {
     fn new(program: &'a AstNode) -> Self {
         Self {
-            ss: ScopeStack::default(),
             program,
+            state: SharedState::new(),
         }
     }
 }
 
-impl ProgramChecker<'_> {
-    fn check(&self) -> Result<Type> {
+impl ProgramAnalyzer<'_> {
+    fn analyze(self) -> Result<SymTable> {
         for stmt in self.body() {
             self.ensure_global_statement(stmt)?;
-            FunctionDeclarationChecker::new(&self.ss, stmt).check()?;
+            FunctionDeclarationAnalyzer::new(stmt, &self.state).analyze()?;
         }
 
         for stmt in self.body() {
-            FunctionDefinitionChecker::new(&self.ss, stmt).check()?;
+            FunctionDefinitionAnalyzer::new(stmt, &self.state).analyze()?;
         }
 
-        Ok(Type::new("Void"))
+        Ok(self.state.take_st())
     }
 
     fn ensure_global_statement(&self, stmt: &AstNode) -> Result<()> {
@@ -77,7 +74,7 @@ impl ProgramChecker<'_> {
     }
 
     fn body(&self) -> &[AstNode] {
-        if let AstNode::Program { body } = self.program {
+        if let AstNode::Program { body, .. } = self.program {
             body
         } else {
             unreachable!()

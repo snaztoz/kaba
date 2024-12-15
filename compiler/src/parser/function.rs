@@ -144,7 +144,7 @@ mod tests {
     #[test]
     fn function_definition_with_parameters_and_trailing_comma() {
         parse_and_assert_result(
-            "fn foo(x: Int, y: Bool,) do end",
+            "fn foo(x: int, y: bool,) do end",
             AstNode::FunctionDefinition {
                 id: Box::new(AstNode::Identifier {
                     name: String::from("foo"),
@@ -157,7 +157,7 @@ mod tests {
                             span: 7..8,
                         },
                         tn: AstNode::TypeNotation {
-                            tn: TypeNotation::Identifier(String::from("Int")),
+                            tn: TypeNotation::Identifier(String::from("int")),
                             span: 10..13,
                         },
                     },
@@ -167,7 +167,7 @@ mod tests {
                             span: 15..16,
                         },
                         tn: AstNode::TypeNotation {
-                            tn: TypeNotation::Identifier(String::from("Bool")),
+                            tn: TypeNotation::Identifier(String::from("bool")),
                             span: 18..22,
                         },
                     },
@@ -182,7 +182,7 @@ mod tests {
     #[test]
     fn function_definition_with_parameter_and_body() {
         parse_and_assert_result(
-            "fn write(x: Int) do print(x); end",
+            "fn write(x: int) do print(x); end",
             AstNode::FunctionDefinition {
                 id: Box::new(AstNode::Identifier {
                     name: String::from("write"),
@@ -194,7 +194,7 @@ mod tests {
                         span: 9..10,
                     },
                     tn: AstNode::TypeNotation {
-                        tn: TypeNotation::Identifier(String::from("Int")),
+                        tn: TypeNotation::Identifier(String::from("int")),
                         span: 12..15,
                     },
                 }],
@@ -218,7 +218,7 @@ mod tests {
     #[test]
     fn function_definition_with_return_statement() {
         parse_and_assert_result(
-            "fn foo(): Int do return 5; end",
+            "fn foo(): int do return 5; end",
             AstNode::FunctionDefinition {
                 id: Box::new(AstNode::Identifier {
                     name: String::from("foo"),
@@ -226,12 +226,12 @@ mod tests {
                 }),
                 params: vec![],
                 return_tn: Some(Box::new(AstNode::TypeNotation {
-                    tn: TypeNotation::Identifier(String::from("Int")),
+                    tn: TypeNotation::Identifier(String::from("int")),
                     span: 10..13,
                 })),
                 body: vec![AstNode::Return {
                     expr: Some(Box::new(AstNode::Literal {
-                        lit: Literal::Integer(5),
+                        lit: Literal::Int(5),
                         span: 24..25,
                     })),
                     span: 17..25,

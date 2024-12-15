@@ -1,32 +1,32 @@
 use super::{
-    body::BodyChecker,
+    body::BodyAnalyzer,
     error::{Error, Result},
-    scope::{Scope, ScopeStack},
-    tn::TypeNotationChecker,
+    state::{scope::ScopeVariant, SharedState},
+    tn::TypeNotationAnalyzer,
     types::Type,
 };
 use crate::ast::{AstNode, FunctionParam};
 use logos::Span;
 
-/// Checker for function declarations.
+/// Analyzer for function declarations.
 ///
-/// This checker assumes that the data from function declarations (i.e. function
-/// signature informations) are already stored in the ScopeStack.
-pub struct FunctionDeclarationChecker<'a> {
-    ss: &'a ScopeStack,
+/// This analyzer assumes that the data from function declarations (i.e.
+/// function signature informations) are already stored in the [`SharedState`].
+pub struct FunctionDeclarationAnalyzer<'a> {
     node: &'a AstNode,
+    state: &'a SharedState,
 }
 
-impl<'a> FunctionDeclarationChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self { ss, node }
+impl<'a> FunctionDeclarationAnalyzer<'a> {
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+        Self { node, state }
     }
 }
 
-impl FunctionDeclarationChecker<'_> {
-    pub fn check(&self) -> Result<Type> {
-        self.check_params_tn()?;
-        self.check_return_tn()?;
+impl FunctionDeclarationAnalyzer<'_> {
+    pub fn analyze(&self) -> Result<Type> {
+        self.analyze_params_tn()?;
+        self.analyze_return_tn()?;
 
         let params_t = self.params_t();
         let return_t = Box::new(self.return_t());
@@ -37,17 +37,19 @@ impl FunctionDeclarationChecker<'_> {
         Ok(fn_t)
     }
 
-    fn check_params_tn(&self) -> Result<()> {
+    fn analyze_params_tn(&self) -> Result<()> {
         for FunctionParam { tn, .. } in self.params() {
-            TypeNotationChecker::new(self.ss, tn).check()?;
+            TypeNotationAnalyzer::new(tn, self.state).analyze()?;
         }
 
         Ok(())
     }
 
-    fn check_return_tn(&self) -> Result<()> {
+    fn analyze_return_tn(&self) -> Result<()> {
         if let Some(tn) = self.return_tn() {
-            TypeNotationChecker::new(self.ss, tn).allow_void().check()?;
+            TypeNotationAnalyzer::new(tn, self.state)
+                .allow_void()
+                .analyze()?;
         }
 
         Ok(())
@@ -63,14 +65,14 @@ impl FunctionDeclarationChecker<'_> {
     }
 
     fn return_t(&self) -> Type {
-        self.return_tn().map_or(Type::new("Void"), Type::from)
+        self.return_tn().map_or(Type::void(), Type::from)
     }
 
     // Save function information to the ScopeStack.
     fn save_fn_t_to_stack(&self, fn_t: Type) -> Result<()> {
         let (id, id_span) = self.id().unwrap_identifier();
-        self.ss
-            .save_symbol_or_else(&id, fn_t.clone(), || Error::SymbolAlreadyExist {
+        self.state
+            .save_sym_or_else(&id, fn_t.clone(), || Error::SymbolAlreadyExist {
                 id: id.clone(),
                 span: id_span,
             })
@@ -101,53 +103,57 @@ impl FunctionDeclarationChecker<'_> {
     }
 }
 
-/// Checker for function definition.
+/// Analyzer for function definition.
 ///
-/// This checker assumes that the data from function declarations (i.e. function
+/// This analyzer assumes that the data from function declarations (i.e. function
 /// signature informations) are already stored in the ScopeStack.
-pub struct FunctionDefinitionChecker<'a> {
-    ss: &'a ScopeStack,
+pub struct FunctionDefinitionAnalyzer<'a> {
     node: &'a AstNode,
+    state: &'a SharedState,
 }
 
-impl<'a> FunctionDefinitionChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self { ss, node }
+impl<'a> FunctionDefinitionAnalyzer<'a> {
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+        Self { node, state }
     }
 }
 
-impl FunctionDefinitionChecker<'_> {
-    pub fn check(&self) -> Result<Type> {
+impl FunctionDefinitionAnalyzer<'_> {
+    pub fn analyze(&self) -> Result<Type> {
         let return_t = self.fn_t().unwrap_callable().1;
-        self.ss
-            .with_scope(Scope::new_function_scope(return_t.clone()), || {
+        self.state.with_scope(
+            ScopeVariant::Function {
+                return_t: return_t.clone(),
+            },
+            || {
                 self.save_params_to_stack(&self.params())?;
 
-                // Check function body
+                // Analyze function body
                 //
                 // We do this last in order to accommodate features such as
                 // recursive function call.
 
-                let body_t = BodyChecker::new(self.ss, self.node).check()?;
+                let body_t = BodyAnalyzer::new(self.node, self.state).analyze()?;
 
                 if !return_t.is_void() && body_t.is_void() {
                     return Err(Error::ReturnTypeMismatch {
                         expected: return_t,
-                        get: Type::new("Void"),
+                        get: Type::void(),
                         span: self.id().span().clone(),
                     });
                 }
 
                 Ok(())
-            })?;
+            },
+        )?;
 
-        Ok(Type::new("Void"))
+        Ok(Type::void())
     }
 
     fn save_params_to_stack(&self, params: &[((String, Span), Type)]) -> Result<()> {
         for ((id, id_span), t) in params {
-            self.ss
-                .save_symbol_or_else(id, t.clone(), || Error::SymbolAlreadyExist {
+            self.state
+                .save_sym_or_else(id, t.clone(), || Error::SymbolAlreadyExist {
                     id: id.clone(),
                     span: id_span.clone(),
                 })?;
@@ -178,7 +184,7 @@ impl FunctionDefinitionChecker<'_> {
     fn fn_t(&self) -> Type {
         if let AstNode::FunctionDefinition { id, .. } = self.node {
             let id_str = &id.unwrap_identifier().0;
-            self.ss.get_symbol_t(id_str).unwrap()
+            self.state.get_sym_t(id_str).unwrap()
         } else {
             unreachable!()
         }
@@ -211,11 +217,11 @@ mod tests {
     #[test]
     fn defining_duplicated_functions() {
         assert_is_err(indoc! {"
-                fn print_sum_of(a: Int, b: Int,) do
+                fn print_sum_of(a: int, b: int,) do
                     debug a + b;
                 end
 
-                fn print_sum_of(a: Float, b: Float) do
+                fn print_sum_of(a: float, b: float) do
                     debug a + b;
                 end
             "});
@@ -224,7 +230,7 @@ mod tests {
     #[test]
     fn defining_functions_both_with_parameters_and_return_type() {
         assert_is_ok(indoc! {"
-                fn sum(x: Int, y: Int): Int do
+                fn sum(x: int, y: int): int do
                     return x + y;
                 end
             "});
@@ -233,7 +239,7 @@ mod tests {
     #[test]
     fn recursive_fibonacci_function() {
         assert_is_ok(indoc! {"
-                fn fibonacci(n: Int): Int do
+                fn fibonacci(n: int): int do
                     if n == 0 do
                         return 0;
                     else if n == 1 || n == 2 do
@@ -247,7 +253,7 @@ mod tests {
     #[test]
     fn recursive_functions_with_void_return_type() {
         assert_is_ok(indoc! {"
-                fn count_to_zero(n: Int) do
+                fn count_to_zero(n: int) do
                     debug n;
                     if n == 0 do
                         return;
@@ -264,11 +270,11 @@ mod tests {
     #[test]
     fn returning_from_functions_with_conditional_and_loop_statements() {
         assert_is_ok(indoc! {"
-                fn first(): Int do
+                fn first(): int do
                     return 5;
                 end
 
-                fn second(): Int do
+                fn second(): int do
                     if false do
                         return 0;
                     else do
@@ -276,21 +282,21 @@ mod tests {
                     end
                 end
 
-                fn third(): Int do
+                fn third(): int do
                     if false do
                         return 0;
                     end
                     return 1;
                 end
 
-                fn fourth(): Int do
+                fn fourth(): int do
                     while false do
                         return 0;
                     end
                     return 1;
                 end
 
-                fn fifth(): Int do
+                fn fifth(): int do
                     return 1;
 
                     if false do
@@ -326,7 +332,7 @@ mod tests {
                     debug aliased();
                 end
 
-                fn return_two(): Int do
+                fn return_two(): int do
                     return 2;
                 end
             "});
@@ -339,11 +345,11 @@ mod tests {
                     debug get_num(produce);
                 end
 
-                fn get_num(producer: () -> Int): Int do
+                fn get_num(producer: () -> int): int do
                     return producer() + 5;
                 end
 
-                fn produce(): Int do
+                fn produce(): int do
                     return 10;
                 end
             "});
@@ -356,11 +362,11 @@ mod tests {
                     debug foo()();
                 end
 
-                fn foo(): () -> Int do
+                fn foo(): () -> int do
                     return bar;
                 end
 
-                fn bar(): Int do
+                fn bar(): int do
                     return 25;
                 end
             "});
@@ -373,7 +379,7 @@ mod tests {
                     foo([1, 2, 3]);
                 end
 
-                fn foo(arr: []Int) do
+                fn foo(arr: []int) do
                 end
             "});
     }
@@ -389,7 +395,7 @@ mod tests {
                     foo([1,]);
                 end
 
-                fn foo(arr: []Int) do
+                fn foo(arr: []int) do
                 end
             "});
     }
@@ -398,13 +404,13 @@ mod tests {
     fn returning_array_from_a_function() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr_1: []Int = foo();
-                    var arr_2: []Int = foo();
+                    var arr_1: []int = foo();
+                    var arr_2: []int = foo();
 
                     arr_1[0] = 10;
                 end
 
-                fn foo(): []Int do
+                fn foo(): []int do
                     return [1, 2, 3];
                 end
             "});
@@ -431,7 +437,7 @@ mod tests {
     #[test]
     fn defining_function_with_duplicated_parameter_name() {
         assert_is_err(indoc! {"
-                fn add_sum_of(x: Int, x: Int) do end
+                fn add_sum_of(x: int, x: int) do end
             "});
     }
 
@@ -461,7 +467,7 @@ mod tests {
     #[test]
     fn returning_value_from_function_with_mismatched_return_type() {
         assert_is_err(indoc! {"
-                fn sum(x: Int, y: Int): Int do
+                fn sum(x: int, y: int): int do
                     return 5.0;
                 end
             "});
@@ -470,7 +476,7 @@ mod tests {
     #[test]
     fn invalid_statement_after_return() {
         assert_is_err(indoc! {"
-                fn get_five(): Int do
+                fn get_five(): int do
                     return 5;
                     1 + true; # should be error
                 end
@@ -480,7 +486,7 @@ mod tests {
     #[test]
     fn returning_non_existing_variable() {
         assert_is_err(indoc! {"
-                fn foo(): Int do
+                fn foo(): int do
                     return not_exist;
                 end
             "});
@@ -489,7 +495,7 @@ mod tests {
     #[test]
     fn defining_function_with_missing_return_in_other_branches() {
         assert_is_err(indoc! {"
-                fn foo(): Int do
+                fn foo(): int do
                     if false do
                         return 5;
                     end
@@ -500,7 +506,7 @@ mod tests {
     #[test]
     fn defining_function_with_missing_return_in_else_branch_or_outer_scope() {
         assert_is_err(indoc! {"
-                fn foo(): Int do
+                fn foo(): int do
                     if false do
                         return 0;
                     else if !true do
@@ -513,7 +519,7 @@ mod tests {
     #[test]
     fn defining_function_with_missing_return_in_outer_scope_of_while_statement() {
         assert_is_err(indoc! {"
-                fn foo(): Int do
+                fn foo(): int do
                     while false do
                         return 0;
                     end

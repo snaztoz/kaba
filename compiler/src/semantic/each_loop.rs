@@ -1,13 +1,13 @@
 use super::{
-    body::BodyChecker,
+    body::BodyAnalyzer,
     error::{Error, Result},
-    expression::ExpressionChecker,
-    scope::{Scope, ScopeStack},
+    expression::ExpressionAnalyzer,
+    state::{scope::ScopeVariant, SharedState},
     types::Type,
 };
 use crate::ast::AstNode;
 
-/// Checker for `each` loop statement.
+/// Analyzer for `each` loop statement.
 ///
 /// ### ✅ Valid Examples
 ///
@@ -38,20 +38,20 @@ use crate::ast::AstNode;
 ///     # Invalid
 /// end
 /// ```
-pub struct EachLoopChecker<'a> {
-    ss: &'a ScopeStack,
+pub struct EachLoopAnalyzer<'a> {
     node: &'a AstNode,
+    state: &'a SharedState,
 }
 
-impl<'a> EachLoopChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self { ss, node }
+impl<'a> EachLoopAnalyzer<'a> {
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+        Self { node, state }
     }
 }
 
-impl EachLoopChecker<'_> {
-    pub fn check(&self) -> Result<Type> {
-        let expr_t = ExpressionChecker::new(self.ss, self.iterable()).check()?;
+impl EachLoopAnalyzer<'_> {
+    pub fn analyze(&self) -> Result<Type> {
+        let expr_t = ExpressionAnalyzer::new(self.iterable(), self.state).analyze()?;
 
         Type::assert_iterable(&expr_t, || self.iterable().span().clone())?;
 
@@ -67,15 +67,15 @@ impl EachLoopChecker<'_> {
 
         // Check all statements inside the body with a new scope
 
-        self.ss.with_scope(Scope::new_loop_scope(), || {
-            self.ss
-                .save_symbol_or_else(&elem_id, elem_t.clone(), || unreachable!())
+        self.state.with_scope(ScopeVariant::Loop, || {
+            self.state
+                .save_sym_or_else(&elem_id, elem_t.clone(), || unreachable!())
                 .unwrap();
 
-            BodyChecker::new(self.ss, self.node).check()
+            BodyAnalyzer::new(self.node, self.state).analyze()
         })?;
 
-        Ok(Type::new("Void"))
+        Ok(Type::void())
     }
 
     fn iterable(&self) -> &AstNode {

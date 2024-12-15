@@ -14,9 +14,9 @@ pub enum ParsingError {
 }
 
 impl ParsingError {
-    pub fn span(&self) -> Option<Span> {
+    pub fn span(&self) -> Span {
         match self {
-            Self::UnexpectedToken { span, .. } => Some(span.clone()),
+            Self::UnexpectedToken { span, .. } => span.clone(),
         }
     }
 }

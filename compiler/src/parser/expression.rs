@@ -429,10 +429,10 @@ impl ExpressionParser<'_> {
                     span: token.span,
                 })
             }
-            TokenKind::Integer(n) => {
+            TokenKind::Int(n) => {
                 self.tokens.advance();
                 Ok(AstNode::Literal {
-                    lit: Literal::Integer(n),
+                    lit: Literal::Int(n),
                     span: token.span,
                 })
             }
@@ -443,17 +443,17 @@ impl ExpressionParser<'_> {
                     span: token.span,
                 })
             }
-            TokenKind::BooleanTrue => {
+            TokenKind::BoolTrue => {
                 self.tokens.advance();
                 Ok(AstNode::Literal {
-                    lit: Literal::Boolean(true),
+                    lit: Literal::Bool(true),
                     span: token.span,
                 })
             }
-            TokenKind::BooleanFalse => {
+            TokenKind::BoolFalse => {
                 self.tokens.advance();
                 Ok(AstNode::Literal {
-                    lit: Literal::Boolean(false),
+                    lit: Literal::Bool(false),
                     span: token.span,
                 })
             }
@@ -571,11 +571,11 @@ mod tests {
                     }),
                     rhs: Box::new(AstNode::Mul {
                         lhs: Box::new(AstNode::Literal {
-                            lit: Literal::Integer(512),
+                            lit: Literal::Int(512),
                             span: 6..9,
                         }),
                         rhs: Box::new(AstNode::Literal {
-                            lit: Literal::Integer(200),
+                            lit: Literal::Int(200),
                             span: 12..15,
                         }),
                         span: 6..15,
@@ -588,7 +588,7 @@ mod tests {
                         span: 18..21,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(3),
+                        lit: Literal::Int(3),
                         span: 24..25,
                     }),
                     span: 18..25,
@@ -609,7 +609,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Mul {
                     lhs: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(123),
+                        lit: Literal::Int(123),
                         span: 6..9,
                     }),
                     rhs: Box::new(AstNode::Identifier {
@@ -634,7 +634,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(5),
+                        lit: Literal::Int(5),
                         span: 6..7,
                     }),
                     span: 5..7,
@@ -655,7 +655,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(5),
+                        lit: Literal::Int(5),
                         span: 7..8,
                     }),
                     span: 6..8,
@@ -676,7 +676,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(5),
+                        lit: Literal::Int(5),
                         span: 7..8,
                     }),
                     span: 6..8,
@@ -697,7 +697,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(5),
+                        lit: Literal::Int(5),
                         span: 7..8,
                     }),
                     span: 6..8,
@@ -718,7 +718,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(5),
+                        lit: Literal::Int(5),
                         span: 7..8,
                     }),
                     span: 6..8,
@@ -739,7 +739,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Neg {
                     child: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(5),
+                        lit: Literal::Int(5),
                         span: 7..8,
                     }),
                     span: 6..8,
@@ -774,17 +774,17 @@ mod tests {
             AstNode::Mul {
                 lhs: Box::new(AstNode::Sub {
                     lhs: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(123),
+                        lit: Literal::Int(123),
                         span: 1..4,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(53),
+                        lit: Literal::Int(53),
                         span: 7..9,
                     }),
                     span: 1..9,
                 }),
                 rhs: Box::new(AstNode::Literal {
-                    lit: Literal::Integer(7),
+                    lit: Literal::Int(7),
                     span: 13..14,
                 }),
                 span: 0..14,
@@ -798,7 +798,7 @@ mod tests {
             "123 + (foo - 50);",
             AstNode::Add {
                 lhs: Box::new(AstNode::Literal {
-                    lit: Literal::Integer(123),
+                    lit: Literal::Int(123),
                     span: 0..3,
                 }),
                 rhs: Box::new(AstNode::Sub {
@@ -807,7 +807,7 @@ mod tests {
                         span: 7..10,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(50),
+                        lit: Literal::Int(50),
                         span: 13..15,
                     }),
                     span: 7..15,
@@ -822,7 +822,7 @@ mod tests {
         parse_and_assert_result(
             "(((75)));",
             AstNode::Literal {
-                lit: Literal::Integer(75),
+                lit: Literal::Int(75),
                 span: 3..5,
             },
         );
@@ -840,16 +840,16 @@ mod tests {
                     }),
                     args: vec![
                         AstNode::Literal {
-                            lit: Literal::Integer(123),
+                            lit: Literal::Int(123),
                             span: 4..7,
                         },
                         AstNode::Add {
                             lhs: Box::new(AstNode::Literal {
-                                lit: Literal::Integer(50),
+                                lit: Literal::Int(50),
                                 span: 9..11,
                             }),
                             rhs: Box::new(AstNode::Literal {
-                                lit: Literal::Integer(2),
+                                lit: Literal::Int(2),
                                 span: 14..15,
                             }),
                             span: 9..15,
@@ -858,7 +858,7 @@ mod tests {
                     span: 0..16,
                 }),
                 rhs: Box::new(AstNode::Literal {
-                    lit: Literal::Integer(7),
+                    lit: Literal::Int(7),
                     span: 19..20,
                 }),
                 span: 0..20,
@@ -882,11 +882,11 @@ mod tests {
                     }),
                     args: vec![
                         AstNode::Literal {
-                            lit: Literal::Integer(123),
+                            lit: Literal::Int(123),
                             span: 8..11,
                         },
                         AstNode::Literal {
-                            lit: Literal::Integer(456),
+                            lit: Literal::Int(456),
                             span: 13..16,
                         },
                     ],
@@ -912,7 +912,7 @@ mod tests {
                 rhs: Box::new(AstNode::Mul {
                     lhs: Box::new(AstNode::Neg {
                         child: Box::new(AstNode::Literal {
-                            lit: Literal::Integer(5),
+                            lit: Literal::Int(5),
                             span: 10..11,
                         }),
                         span: 8..12,
@@ -920,7 +920,7 @@ mod tests {
                     rhs: Box::new(AstNode::Neg {
                         child: Box::new(AstNode::Neg {
                             child: Box::new(AstNode::Literal {
-                                lit: Literal::Integer(7),
+                                lit: Literal::Int(7),
                                 span: 19..20,
                             }),
                             span: 18..20,
@@ -971,7 +971,7 @@ mod tests {
                     span: 0..3,
                 }),
                 index: Box::new(AstNode::Literal {
-                    lit: Literal::Integer(3),
+                    lit: Literal::Int(3),
                     span: 4..5,
                 }),
                 span: 0..6,
@@ -990,13 +990,13 @@ mod tests {
                         span: 0..3,
                     }),
                     index: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(3),
+                        lit: Literal::Int(3),
                         span: 4..5,
                     }),
                     span: 0..6,
                 }),
                 index: Box::new(AstNode::Literal {
-                    lit: Literal::Integer(10),
+                    lit: Literal::Int(10),
                     span: 7..9,
                 }),
                 span: 0..10,
@@ -1009,7 +1009,7 @@ mod tests {
         parse_and_assert_result(
             "true;",
             AstNode::Literal {
-                lit: Literal::Boolean(true),
+                lit: Literal::Bool(true),
                 span: 0..4,
             },
         );
@@ -1022,17 +1022,17 @@ mod tests {
             AstNode::Eq {
                 lhs: Box::new(AstNode::Gte {
                     lhs: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(1),
+                        lit: Literal::Int(1),
                         span: 0..1,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(5),
+                        lit: Literal::Int(5),
                         span: 5..6,
                     }),
                     span: 0..6,
                 }),
                 rhs: Box::new(AstNode::Literal {
-                    lit: Literal::Boolean(true),
+                    lit: Literal::Bool(true),
                     span: 10..14,
                 }),
                 span: 0..14,
@@ -1047,12 +1047,12 @@ mod tests {
             AstNode::And {
                 lhs: Box::new(AstNode::Or {
                     lhs: Box::new(AstNode::Literal {
-                        lit: Literal::Boolean(false),
+                        lit: Literal::Bool(false),
                         span: 0..5,
                     }),
                     rhs: Box::new(AstNode::Not {
                         child: Box::new(AstNode::Literal {
-                            lit: Literal::Boolean(false),
+                            lit: Literal::Bool(false),
                             span: 10..15,
                         }),
                         span: 9..15,
@@ -1060,7 +1060,7 @@ mod tests {
                     span: 0..15,
                 }),
                 rhs: Box::new(AstNode::Literal {
-                    lit: Literal::Boolean(true),
+                    lit: Literal::Bool(true),
                     span: 19..23,
                 }),
                 span: 0..23,
@@ -1085,7 +1085,7 @@ mod tests {
             "[5,];",
             AstNode::Literal {
                 lit: Literal::Array(vec![AstNode::Literal {
-                    lit: Literal::Integer(5),
+                    lit: Literal::Int(5),
                     span: 1..2,
                 }]),
                 span: 0..4,

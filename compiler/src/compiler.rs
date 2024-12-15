@@ -20,36 +20,28 @@ impl Compiler {
     pub fn compile(&mut self) -> Result<AstNode> {
         self.normalize_newlines();
 
-        let tokens = lexer::lex(&self.src);
-        if let Err(e) = &tokens {
-            return Err(Error {
-                path: self.path.as_deref(),
-                src: &self.src,
-                message: e.to_string(),
-                span: e.span(),
-            });
-        }
+        let tokens = lexer::lex(&self.src).map_err(|e| Error {
+            path: self.path.as_deref(),
+            src: &self.src,
+            message: e.to_string(),
+            span: Some(e.span()),
+        })?;
 
-        let ast = parser::parse(tokens.unwrap());
-        if let Err(e) = &ast {
-            return Err(Error {
-                path: self.path.as_deref(),
-                src: &self.src,
-                message: e.to_string(),
-                span: e.span(),
-            });
-        }
+        let ast = parser::parse(tokens).map_err(|e| Error {
+            path: self.path.as_deref(),
+            src: &self.src,
+            message: e.to_string(),
+            span: Some(e.span()),
+        })?;
 
-        if let Err(e) = semantic::check(ast.as_ref().unwrap()) {
-            return Err(Error {
-                path: self.path.as_deref(),
-                src: &self.src,
-                message: e.to_string(),
-                span: Some(e.span().clone()),
-            });
-        }
+        let _sym_table = semantic::analyze(&ast).map_err(|e| Error {
+            path: self.path.as_deref(),
+            src: &self.src,
+            message: e.to_string(),
+            span: Some(e.span().clone()),
+        })?;
 
-        Ok(ast.unwrap())
+        Ok(ast)
     }
 
     // Normalize all newline characters to LF

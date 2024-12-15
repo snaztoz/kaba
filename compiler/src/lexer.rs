@@ -63,16 +63,16 @@ pub enum TokenKind {
     //
 
     #[regex("[0-9]+", priority = 2, callback = lex_integer)]
-    Integer(u32),
+    Int(u32),
 
     #[regex(r"[0-9]+\.[0-9]+", callback = lex_float)]
     Float(f64),
 
     #[token("true")]
-    BooleanTrue,
+    BoolTrue,
 
     #[token("false")]
-    BooleanFalse,
+    BoolFalse,
 
     //
     // Keywords
@@ -151,10 +151,10 @@ impl Display for TokenKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Identifier(_) => write!(f, "identifier"),
-            Self::Integer(_) => write!(f, "integer"),
+            Self::Int(_) => write!(f, "integer"),
             Self::Float(_) => write!(f, "float"),
-            Self::BooleanTrue => write!(f, "true"),
-            Self::BooleanFalse => write!(f, "false"),
+            Self::BoolTrue => write!(f, "true"),
+            Self::BoolFalse => write!(f, "false"),
 
             Self::Var => write!(f, "`var` keyword"),
             Self::If => write!(f, "`if` keyword"),
@@ -254,11 +254,13 @@ pub enum LexingError {
 }
 
 impl LexingError {
-    pub fn span(&self) -> Option<Span> {
+    pub fn span(&self) -> Span {
         match self {
-            Self::IdentifierStartsWithNumber { span, .. } => Some(span.clone()),
-            Self::UnknownToken { span, .. } => Some(span.clone()),
-            _ => None,
+            Self::IdentifierStartsWithNumber { span, .. } | Self::UnknownToken { span, .. } => {
+                span.clone()
+            }
+
+            _ => unreachable!(),
         }
     }
 }
@@ -337,19 +339,19 @@ mod tests {
     #[test]
     fn test_lexing_an_integer_literal() {
         let input = "123";
-        lex_and_assert_result(input, TokenKind::Integer(input.parse().unwrap()));
+        lex_and_assert_result(input, TokenKind::Int(input.parse().unwrap()));
     }
 
     #[test]
     fn test_lexing_a_zero_literal() {
         let input = "0";
-        lex_and_assert_result(input, TokenKind::Integer(input.parse().unwrap()));
+        lex_and_assert_result(input, TokenKind::Int(input.parse().unwrap()));
     }
 
     #[test]
     fn test_lexing_a_big_integer_literal() {
         let input = "2147483647";
-        lex_and_assert_result(input, TokenKind::Integer(input.parse().unwrap()));
+        lex_and_assert_result(input, TokenKind::Int(input.parse().unwrap()));
     }
 
     //

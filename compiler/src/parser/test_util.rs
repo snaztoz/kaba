@@ -5,7 +5,13 @@ pub fn parse_and_assert_result(input: &str, expect: AstNode) {
     let result = parse(tokens);
 
     assert!(result.is_ok());
-    assert_eq!(result.unwrap(), AstNode::Program { body: vec![expect] });
+    assert_eq!(
+        result.unwrap(),
+        AstNode::Program {
+            body: vec![expect],
+            span: 0..input.len(),
+        }
+    );
 }
 
 pub fn parse_and_assert_error(input: &str) {

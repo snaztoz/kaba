@@ -50,6 +50,11 @@ pub enum Error {
         span: Span,
     },
 
+    NonSignableNumberType {
+        t: Type,
+        span: Span,
+    },
+
     NonBooleanType {
         span: Span,
     },
@@ -95,6 +100,7 @@ impl Error {
             | Self::SymbolAlreadyExist { span, .. }
             | Self::SymbolDoesNotExist { span, .. }
             | Self::NonNumberType { span, .. }
+            | Self::NonSignableNumberType { span, .. }
             | Self::NonBooleanType { span, .. }
             | Self::UnexpectedStatement { span, .. }
             | Self::InvalidFunctionCallArgument { span, .. }
@@ -134,6 +140,9 @@ impl Display for Error {
             }
             Self::NonNumberType { .. } => {
                 write!(f, "not a number")
+            }
+            Self::NonSignableNumberType { t, .. } => {
+                write!(f, "not a signable number: `{t}`")
             }
             Self::NonBooleanType { .. } => {
                 write!(f, "not a boolean")

@@ -100,11 +100,11 @@ mod tests {
             AstNode::If {
                 cond: Box::new(AstNode::Gt {
                     lhs: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(15),
+                        lit: Literal::Int(15),
                         span: 3..5,
                     }),
                     rhs: Box::new(AstNode::Literal {
-                        lit: Literal::Integer(10),
+                        lit: Literal::Int(10),
                         span: 8..10,
                     }),
                     span: 3..10,
@@ -115,7 +115,7 @@ mod tests {
                         span: 14..19,
                     }),
                     args: vec![AstNode::Literal {
-                        lit: Literal::Integer(1),
+                        lit: Literal::Int(1),
                         span: 20..21,
                     }],
                     span: 14..22,
@@ -132,13 +132,13 @@ mod tests {
             "if false do else if false do else do end",
             AstNode::If {
                 cond: Box::new(AstNode::Literal {
-                    lit: Literal::Boolean(false),
+                    lit: Literal::Bool(false),
                     span: 3..8,
                 }),
                 body: vec![],
                 or_else: Some(Box::new(AstNode::If {
                     cond: Box::new(AstNode::Literal {
-                        lit: Literal::Boolean(false),
+                        lit: Literal::Bool(false),
                         span: 20..25,
                     }),
                     body: vec![],

@@ -1,38 +1,44 @@
-use super::{error::Result, expression::ExpressionChecker, scope::ScopeStack, types::Type};
+use super::{
+    error::Result,
+    expression::ExpressionAnalyzer,
+    state::SharedState,
+    types::{LiteralType, Type},
+};
 use crate::ast::Literal;
 
-/// Checker for a literal expressions, such as numbers or arrays.
-pub struct LiteralChecker<'a> {
-    ss: &'a ScopeStack,
+/// Analyzer for a literal expressions, such as numbers or arrays.
+pub struct LiteralAnalyzer<'a> {
     lit: &'a Literal,
+    state: &'a SharedState,
 }
 
-impl<'a> LiteralChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, lit: &'a Literal) -> Self {
-        Self { ss, lit }
+impl<'a> LiteralAnalyzer<'a> {
+    pub const fn new(lit: &'a Literal, state: &'a SharedState) -> Self {
+        Self { lit, state }
     }
 }
 
-impl LiteralChecker<'_> {
-    pub fn check(&self) -> Result<Type> {
+impl LiteralAnalyzer<'_> {
+    pub fn analyze(&self) -> Result<Type> {
         match self.lit {
-            Literal::Void => Ok(Type::new("Void")),
-            Literal::Integer(_) => Ok(Type::new("Int")),
-            Literal::Float(_) => Ok(Type::new("Float")),
-            Literal::Boolean(_) => Ok(Type::new("Bool")),
+            Literal::Void => Ok(Type::void()),
+            Literal::Bool(_) => Ok(Type::bool()),
 
-            Literal::Array(_) => self.check_array(),
+            Literal::Int(_) => Ok(Type::Literal(LiteralType::UnsignedInt)),
+            Literal::Float(_) => Ok(Type::float()),
+
+            Literal::Array(_) => self.analyze_array(),
         }
     }
 
-    fn check_array(&self) -> Result<Type> {
+    fn analyze_array(&self) -> Result<Type> {
         let arr = if let Literal::Array(arr) = self.lit {
             arr
         } else {
             unreachable!()
         };
 
-        // Doing double checking.
+        // Doing double analyzing.
         //
         // For example, in the case of a nested array (let's call it A) like:
         //
@@ -46,13 +52,13 @@ impl LiteralChecker<'_> {
         //
         // Then the type of A will be set to `[]T`.
         //
-        // Lastly, we re-run the checking process against the type of T for
+        // Lastly, we re-run the analyzing process against the type of T for
         // every element inside the array.
 
         let mut elem_t = None;
 
         for elem in arr {
-            let t = ExpressionChecker::new(self.ss, elem).check()?;
+            let t = ExpressionAnalyzer::new(elem, self.state).analyze()?;
             if !t.is_array_with_unknown_elem_t() {
                 elem_t = Some(t);
                 break;
@@ -64,7 +70,7 @@ impl LiteralChecker<'_> {
         }
 
         for elem in arr {
-            let t = ExpressionChecker::new(self.ss, elem).check()?;
+            let t = ExpressionAnalyzer::new(elem, self.state).analyze()?;
             Type::assert_assignable(&t, elem_t.as_ref().unwrap(), || elem.span().clone())?;
         }
 
@@ -78,7 +84,7 @@ impl LiteralChecker<'_> {
 mod tests {
     use crate::semantic::{
         test_util::{assert_expression_is_err, assert_expression_type},
-        types::Type,
+        types::{LiteralType, Type},
     };
 
     #[test]
@@ -86,7 +92,7 @@ mod tests {
         assert_expression_type(
             "[1, 2, 3];",
             Type::Array {
-                elem_t: Some(Box::new(Type::new("Int"))),
+                elem_t: Some(Box::new(Type::Literal(LiteralType::UnsignedInt))),
             },
         );
     }
@@ -101,7 +107,7 @@ mod tests {
         assert_expression_type(
             "[8 * 2048];",
             Type::Array {
-                elem_t: Some(Box::new(Type::new("Int"))),
+                elem_t: Some(Box::new(Type::Literal(LiteralType::UnsignedInt))),
             },
         );
     }
@@ -112,7 +118,7 @@ mod tests {
             "[[1, 3, 5], [2, 6, 3], [9, 1, 1]];",
             Type::Array {
                 elem_t: Some(Box::new(Type::Array {
-                    elem_t: Some(Box::new(Type::new("Int"))),
+                    elem_t: Some(Box::new(Type::Literal(LiteralType::UnsignedInt))),
                 })),
             },
         );
@@ -129,7 +135,7 @@ mod tests {
             "[[], [1]];",
             Type::Array {
                 elem_t: Some(Box::new(Type::Array {
-                    elem_t: Some(Box::new(Type::new("Int"))),
+                    elem_t: Some(Box::new(Type::Literal(LiteralType::UnsignedInt))),
                 })),
             },
         );

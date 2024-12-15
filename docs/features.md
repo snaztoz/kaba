@@ -9,7 +9,7 @@ Kaba is a:
 1. Statically typed language, where every type violations will be caught before the program is actually run.
 
     ```text
-    var x: Int = 5;
+    var x: int = 5;
 
     x = false;  # ERROR
     ```
@@ -57,12 +57,12 @@ fn foo() do
 end
 ```
 
-From the example above, `foo()` return type is `Void` (not returning anything).
+From the example above, `foo()` return type is `void` (not returning anything).
 
 To return a value from functions, use the `return` keyword (and don't forget to specify the type notation as well):
 
 ```text
-fn yield_five(): Int do
+fn yield_five(): int do
     return 5;
 end
 ```
@@ -96,7 +96,7 @@ If you want to specify the type manually, use the following syntax:
 
 ```text
 fn main() do
-    var x: Int = 5;
+    var x: int = 5;
 end
 ```
 
@@ -104,7 +104,7 @@ If value type is incompatible with the variable, the compiler will throw an erro
 
 ```text
 fn main() do
-    var x: Int = 10.0;  # ERROR
+    var x: int = 10.0;  # ERROR
 end
 ```
 
@@ -150,7 +150,7 @@ fn main() do
 end
 ```
 
-Note that the compiler will reject if the expression evaluates to `Void` type:
+Note that the compiler will reject if the expression evaluates to `void` type:
 
 ```text
 fn main() do
@@ -163,11 +163,11 @@ end
 
 ## Data types
 
-Currently, Kaba only support these (non-`Void`) data types:
+Currently, Kaba only support these (non-`void`) data types:
 
-1. Integer (`Int`)
-2. Float (`Float`)
-3. Boolean (`Bool`)
+1. Integer (`int`)
+2. Float (`float`)
+3. Boolean (`bool`)
 4. Callable
 5. Array
 
@@ -175,15 +175,15 @@ Currently, Kaba only support these (non-`Void`) data types:
 
 ```text
 fn main() do
-    var a: Int = 10;
+    var a: int = 10;
 
-    var b: Float = 5.0;
+    var b: float = 5.0;
 
-    var c: Bool = false;
+    var c: bool = false;
 
-    var d: () -> Void = foo;
+    var d: () -> void = foo;
 
-    var e: []Int = [99, 101];
+    var e: []int = [99, 101];
 end
 
 fn foo() do
@@ -202,7 +202,7 @@ Kaba can infer the type of an array:
 fn main do
     var arr = [false, true, true];
 
-    # The type of `arr` is `[]Bool`
+    # The type of `arr` is `[]bool`
 
     debug arr[1];   // `true`
 end
@@ -219,7 +219,7 @@ fn main() do
     foo(arr);
 end
 
-fn foo(arr: [][]Int) do
+fn foo(arr: [][]int) do
     debug arr[1][1];
 end
 ```
@@ -229,7 +229,7 @@ On a side note, statements such as variable declaration and `each` loop are unab
 ```text
 fn main() do
     # Use this...
-    var x: []Int = [];
+    var x: []int = [];
 
     # Not this...
     var x = [];

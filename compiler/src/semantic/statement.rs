@@ -1,83 +1,83 @@
 use super::{
-    conditional::ConditionalBranchChecker,
-    each_loop::EachLoopChecker,
+    conditional::ConditionalBranchAnalyzer,
+    each_loop::EachLoopAnalyzer,
     error::{Error, Result},
-    expression::ExpressionChecker,
-    scope::ScopeStack,
+    expression::ExpressionAnalyzer,
+    state::SharedState,
     types::Type,
-    variable::VariableDeclarationChecker,
-    while_loop::WhileLoopChecker,
+    variable::VariableDeclarationAnalyzer,
+    while_loop::WhileLoopAnalyzer,
 };
 use crate::ast::AstNode;
 use logos::Span;
 
-/// Checker for a single statement.
+/// Analyzer for a single statement.
 ///
-/// It checks simple statements, such as loop control checking, and also acts as
-/// an aggregate for another (more specific) statement checkers, such as the
-/// AssignmentChecker.
-pub struct StatementChecker<'a> {
-    ss: &'a ScopeStack,
+/// It analyzes simple statements, such as loop control analyzeing, and also acts as
+/// an aggregate for another (more specific) statement analyzers, such as the
+/// AssignmentAnalyzer.
+pub struct StatementAnalyzer<'a> {
     node: &'a AstNode,
+    state: &'a SharedState,
 }
 
-impl<'a> StatementChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self { ss, node }
+impl<'a> StatementAnalyzer<'a> {
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+        Self { node, state }
     }
 }
 
-impl StatementChecker<'_> {
-    pub fn check(&self) -> Result<Type> {
+impl StatementAnalyzer<'_> {
+    pub fn analyze(&self) -> Result<Type> {
         match self.node {
             AstNode::VariableDeclaration { .. } => {
-                VariableDeclarationChecker::new(self.ss, self.node).check()
+                VariableDeclarationAnalyzer::new(self.node, self.state).analyze()
             }
 
-            AstNode::If { .. } => ConditionalBranchChecker::new(self.ss, self.node).check(),
+            AstNode::If { .. } => ConditionalBranchAnalyzer::new(self.node, self.state).analyze(),
 
-            AstNode::While { .. } => WhileLoopChecker::new(self.ss, self.node).check(),
-            AstNode::Each { .. } => EachLoopChecker::new(self.ss, self.node).check(),
+            AstNode::While { .. } => WhileLoopAnalyzer::new(self.node, self.state).analyze(),
+            AstNode::Each { .. } => EachLoopAnalyzer::new(self.node, self.state).analyze(),
 
-            AstNode::Break { span } | AstNode::Continue { span } => self.check_loop_control(span),
+            AstNode::Break { span } | AstNode::Continue { span } => self.analyze_loop_control(span),
 
             AstNode::FunctionDefinition { id, .. } => Err(Error::UnexpectedStatement {
                 stmt_str: self.node.to_string(),
                 span: id.span().clone(),
             }),
 
-            AstNode::Return { expr, span } => self.check_return(expr, span),
+            AstNode::Return { expr, span } => self.analyze_return(expr, span),
 
-            AstNode::Debug { expr, span } => self.check_debug(expr, span),
+            AstNode::Debug { expr, span } => self.analyze_debug(expr, span),
 
-            expr => ExpressionChecker::new(self.ss, expr).check(),
+            expr => ExpressionAnalyzer::new(expr, self.state).analyze(),
         }
     }
 
-    fn check_loop_control(&self, span: &Span) -> Result<Type> {
-        if !self.ss.is_inside_loop() {
+    fn analyze_loop_control(&self, span: &Span) -> Result<Type> {
+        if !self.state.is_inside_loop() {
             return Err(Error::UnexpectedStatement {
                 stmt_str: self.node.to_string(),
                 span: span.clone(),
             });
         }
 
-        Ok(Type::new("Void"))
+        Ok(Type::void())
     }
 
-    fn check_return(&self, expr: &Option<Box<AstNode>>, span: &Span) -> Result<Type> {
+    fn analyze_return(&self, expr: &Option<Box<AstNode>>, span: &Span) -> Result<Type> {
         let expr_t = expr
             .as_ref()
-            .map(|expr| ExpressionChecker::new(self.ss, expr).check())
-            .unwrap_or(Ok(Type::new("Void")))?;
+            .map(|expr| ExpressionAnalyzer::new(expr, self.state).analyze())
+            .unwrap_or(Ok(Type::void()))?;
 
-        let return_t =
-            self.ss
-                .current_function_return_t()
-                .ok_or_else(|| Error::UnexpectedStatement {
-                    stmt_str: self.node.to_string(),
-                    span: span.clone(),
-                })?;
+        let return_t = self
+            .state
+            .nearest_return_t()
+            .ok_or_else(|| Error::UnexpectedStatement {
+                stmt_str: self.node.to_string(),
+                span: span.clone(),
+            })?;
 
         Type::assert_assignable(&expr_t, &return_t, || span.clone())
             .map_err(|err| Error::ReturnTypeMismatch {
@@ -88,13 +88,13 @@ impl StatementChecker<'_> {
             .map(|_| return_t)
     }
 
-    fn check_debug(&self, expr: &AstNode, span: &Span) -> Result<Type> {
-        let expr_t = ExpressionChecker::new(self.ss, expr).check()?;
+    fn analyze_debug(&self, expr: &AstNode, span: &Span) -> Result<Type> {
+        let expr_t = ExpressionAnalyzer::new(expr, self.state).analyze()?;
         if expr_t.is_void() {
             return Err(Error::UnexpectedVoidTypeExpression { span: span.clone() });
         }
 
-        Ok(Type::new("Void"))
+        Ok(Type::void())
     }
 }
 

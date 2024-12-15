@@ -30,7 +30,7 @@ impl<'a> Runtime<'a> {
     }
 
     pub fn run(&'a self) -> Result<()> {
-        let body = if let AstNode::Program { body } = &self.ast.as_ref().unwrap() {
+        let body = if let AstNode::Program { body, .. } = &self.ast.as_ref().unwrap() {
             body
         } else {
             unreachable!()
@@ -251,11 +251,11 @@ mod tests {
                     debug add_two(5);
                 end
 
-                fn add_two(n: Int): Int do
+                fn add_two(n: int): int do
                     return n + get_two();
                 end
 
-                fn get_two(): Int do
+                fn get_two(): int do
                     return 2;
                 end
             "},
@@ -272,7 +272,7 @@ mod tests {
                     dbg(x);
                 end
 
-                fn dbg(n: Int) do
+                fn dbg(n: int) do
                     debug n;
                 end
             "},
@@ -288,11 +288,11 @@ mod tests {
                     debug one() + two();
                 end
 
-                fn one(): Int do
+                fn one(): int do
                     return 1;
                 end
 
-                fn two(): Int do
+                fn two(): int do
                     return 2;
                 end
             "},
@@ -308,7 +308,7 @@ mod tests {
                     debug fibonacci(3);
                 end
 
-                fn fibonacci(n: Int): Int do
+                fn fibonacci(n: int): int do
                     if n == 1 || n == 2 do
                         return 1;
                     end
@@ -327,7 +327,7 @@ mod tests {
                     count_to_zero(5);
                 end
 
-                fn count_to_zero(n: Int) do
+                fn count_to_zero(n: int) do
                     if n < 0 do
                         return;
                     end
@@ -347,15 +347,15 @@ mod tests {
                     print(produce);
                 end
 
-                fn print(producer: () -> Int) do
-                    var x: () -> Int = producer;
+                fn print(producer: () -> int) do
+                    var x: () -> int = producer;
                     debug x();
 
                     var y = producer;
                     debug y();
                 end
 
-                fn produce(): Int do
+                fn produce(): int do
                     return 5;
                 end
             "},
@@ -371,11 +371,11 @@ mod tests {
                     debug foo()();
                 end
 
-                fn foo(): () -> Int do
+                fn foo(): () -> int do
                     return bar;
                 end
 
-                fn bar(): Int do
+                fn bar(): int do
                     return 25;
                 end
             "},
@@ -441,15 +441,15 @@ mod tests {
                     end
                 end
 
-                fn add_one(n: Int): Int do
+                fn add_one(n: int): int do
                     return n + 1;
                 end
 
-                fn add_two(n: Int): Int do
+                fn add_two(n: int): int do
                     return n + 2;
                 end
 
-                fn add_three(n: Int): Int do
+                fn add_three(n: int): int do
                     return n + 3;
                 end
             "},
@@ -474,7 +474,7 @@ mod tests {
                     debug arr_2[0];
                 end
 
-                fn foo(): []Int do
+                fn foo(): []int do
                     return [0];
                 end
             "},

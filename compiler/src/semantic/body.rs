@@ -1,27 +1,27 @@
-use super::{error::Result, scope::ScopeStack, statement::StatementChecker, types::Type};
+use super::{error::Result, state::SharedState, statement::StatementAnalyzer, types::Type};
 use crate::ast::AstNode;
 
-/// Checker for a statement body.
+/// Analyzer for a statement body.
 ///
-/// Statement bodies are consist of `>= 0` statements, so this checker will call
-/// the StatementChecker on each statement found in current body.
-pub struct BodyChecker<'a> {
-    ss: &'a ScopeStack,
+/// Statement bodies are consist of `>= 0` statements, so this analyzer will
+/// call the [`StatementAnalyzer`] on each statement found in current body.
+pub struct BodyAnalyzer<'a> {
     node: &'a AstNode,
+    state: &'a SharedState,
 }
 
-impl<'a> BodyChecker<'a> {
-    pub const fn new(ss: &'a ScopeStack, node: &'a AstNode) -> Self {
-        Self { ss, node }
+impl<'a> BodyAnalyzer<'a> {
+    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+        Self { node, state }
     }
 }
 
-impl BodyChecker<'_> {
-    pub fn check(&self) -> Result<Type> {
-        let mut body_t = Type::new("Void");
+impl BodyAnalyzer<'_> {
+    pub fn analyze(&self) -> Result<Type> {
+        let mut body_t = Type::void();
 
         for stmt in self.body() {
-            let t = StatementChecker::new(self.ss, stmt).check()?;
+            let t = StatementAnalyzer::new(stmt, self.state).analyze()?;
             if body_t.is_void() {
                 body_t = t;
             }
