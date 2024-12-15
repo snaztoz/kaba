@@ -18,11 +18,11 @@ pub enum Type {
     //
     // For example, both assignments are valid:
     //
-    //      var x: Byte = 16;
-    //      var y: Int = 16;
+    //      var x: byte = 16;
+    //      var y: int = 16;
     //
-    // If the `16` is Self::Identifier("Int"), then the assignment into the
-    // `Byte` type variable should results in error. We want to avoid that.
+    // If the `16` is inferred as `uint`, then the assignment into the `byte`
+    // type variable should results in error (undesired behaviour).
     Literal(LiteralType),
 
     Identifier(String),
@@ -243,13 +243,13 @@ impl<'a> From<&'a AstNode> for Type {
     fn from(value: &'a AstNode) -> Self {
         if let AstNode::TypeNotation { tn, .. } = value {
             match tn {
-                TypeNotation::Identifier(id) if id == "Void" => Self::Void,
-                TypeNotation::Identifier(id) if id == "Bool" => Self::Bool,
+                TypeNotation::Identifier(id) if id == "void" => Self::Void,
+                TypeNotation::Identifier(id) if id == "bool" => Self::Bool,
 
-                TypeNotation::Identifier(id) if id == "UInt" => Self::UInt,
-                TypeNotation::Identifier(id) if id == "Int" => Self::Int,
+                TypeNotation::Identifier(id) if id == "uint" => Self::UInt,
+                TypeNotation::Identifier(id) if id == "int" => Self::Int,
 
-                TypeNotation::Identifier(id) if id == "Float" => Self::Float,
+                TypeNotation::Identifier(id) if id == "float" => Self::Float,
 
                 TypeNotation::Identifier(id) => Self::Identifier(id.to_string()),
 
@@ -278,16 +278,16 @@ impl<'a> From<&'a AstNode> for Type {
 impl Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Void => write!(f, "Void"),
-            Self::Bool => write!(f, "Bool"),
+            Self::Void => write!(f, "void"),
+            Self::Bool => write!(f, "bool"),
 
-            Self::UInt => write!(f, "UInt"),
-            Self::Int => write!(f, "Int"),
+            Self::UInt => write!(f, "uint"),
+            Self::Int => write!(f, "int"),
 
-            Self::Float => write!(f, "Float"),
+            Self::Float => write!(f, "float"),
 
-            Self::Literal(LiteralType::UnsignedInt) => write!(f, "UInt"),
-            Self::Literal(LiteralType::Int) => write!(f, "Int"),
+            Self::Literal(LiteralType::UnsignedInt) => write!(f, "uint"),
+            Self::Literal(LiteralType::Int) => write!(f, "int"),
 
             Self::Identifier(id) => write!(f, "{id}"),
 

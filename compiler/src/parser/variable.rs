@@ -166,14 +166,14 @@ mod tests {
     #[test]
     fn variable_declaration_with_both_type_notation_and_initial_value() {
         parse_and_assert_result(
-            "var x: Int = 5;",
+            "var x: int = 5;",
             AstNode::VariableDeclaration {
                 id: Box::from(AstNode::Identifier {
                     name: String::from("x"),
                     span: 4..5,
                 }),
                 tn: Some(Box::from(AstNode::TypeNotation {
-                    tn: TypeNotation::Identifier(String::from("Int")),
+                    tn: TypeNotation::Identifier(String::from("int")),
                     span: 7..10,
                 })),
                 val: Box::new(AstNode::Literal {
@@ -188,7 +188,7 @@ mod tests {
     #[test]
     fn variable_declaration_with_function_type_notation() {
         parse_and_assert_result(
-            "var x: (Int) -> Void = foo;",
+            "var x: (int) -> void = foo;",
             AstNode::VariableDeclaration {
                 id: Box::from(AstNode::Identifier {
                     name: String::from("x"),
@@ -197,11 +197,11 @@ mod tests {
                 tn: Some(Box::from(AstNode::TypeNotation {
                     tn: TypeNotation::Callable {
                         params_tn: vec![AstNode::TypeNotation {
-                            tn: TypeNotation::Identifier(String::from("Int")),
+                            tn: TypeNotation::Identifier(String::from("int")),
                             span: 8..11,
                         }],
                         return_tn: Box::new(AstNode::TypeNotation {
-                            tn: TypeNotation::Identifier(String::from("Void")),
+                            tn: TypeNotation::Identifier(String::from("void")),
                             span: 16..20,
                         }),
                     },
@@ -219,7 +219,7 @@ mod tests {
     #[test]
     fn variable_declaration_with_nested_function_type_notation() {
         parse_and_assert_result(
-            "var x: (Int, Bool) -> (Int,) -> Void = foo;",
+            "var x: (int, bool) -> (int,) -> void = foo;",
             AstNode::VariableDeclaration {
                 id: Box::from(AstNode::Identifier {
                     name: String::from("x"),
@@ -229,22 +229,22 @@ mod tests {
                     tn: TypeNotation::Callable {
                         params_tn: vec![
                             AstNode::TypeNotation {
-                                tn: TypeNotation::Identifier(String::from("Int")),
+                                tn: TypeNotation::Identifier(String::from("int")),
                                 span: 8..11,
                             },
                             AstNode::TypeNotation {
-                                tn: TypeNotation::Identifier(String::from("Bool")),
+                                tn: TypeNotation::Identifier(String::from("bool")),
                                 span: 13..17,
                             },
                         ],
                         return_tn: Box::new(AstNode::TypeNotation {
                             tn: TypeNotation::Callable {
                                 params_tn: vec![AstNode::TypeNotation {
-                                    tn: TypeNotation::Identifier(String::from("Int")),
+                                    tn: TypeNotation::Identifier(String::from("int")),
                                     span: 23..26,
                                 }],
                                 return_tn: Box::new(AstNode::TypeNotation {
-                                    tn: TypeNotation::Identifier(String::from("Void")),
+                                    tn: TypeNotation::Identifier(String::from("void")),
                                     span: 32..36,
                                 }),
                             },
@@ -265,7 +265,7 @@ mod tests {
     #[test]
     fn variable_declaration_with_array_type() {
         parse_and_assert_result(
-            "var x: [][]Int = foo;",
+            "var x: [][]int = foo;",
             AstNode::VariableDeclaration {
                 id: Box::from(AstNode::Identifier {
                     name: String::from("x"),
@@ -276,7 +276,7 @@ mod tests {
                         elem_tn: Box::new(AstNode::TypeNotation {
                             tn: TypeNotation::Array {
                                 elem_tn: Box::new(AstNode::TypeNotation {
-                                    tn: TypeNotation::Identifier(String::from("Int")),
+                                    tn: TypeNotation::Identifier(String::from("int")),
                                     span: 11..14,
                                 }),
                             },

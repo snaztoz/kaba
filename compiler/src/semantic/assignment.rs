@@ -139,7 +139,7 @@ mod tests {
                     var x = 0;
                     x = 10;
 
-                    var y: Float = 0.0;
+                    var y: float = 0.0;
                     y = 5.0;
 
                     var z = false;
@@ -176,7 +176,7 @@ mod tests {
     fn assigning_value_with_non_existing_variable() {
         assert_is_err(indoc! {"
                 fn main() do
-                    var x: Float = 5.0;
+                    var x: float = 5.0;
                     x = y;
                 end
             "})

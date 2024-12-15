@@ -15,7 +15,7 @@ use logos::Span;
 /// * Below is the example of a valid, full-form variable declaration:
 ///
 /// ```text
-/// var x: Int = 5;
+/// var x: int = 5;
 /// ```
 ///
 /// * The type can also be inferred:
@@ -29,14 +29,14 @@ use logos::Span;
 /// * Variable can't be created without providing the initial value:
 ///
 /// ```text
-/// var x: Int;
+/// var x: int;
 /// ```
 ///
 /// * If type notation presents, the provided initial value must also be
 ///   assignable to the type:
 ///
 /// ```text
-/// var x: Int = 5.0;
+/// var x: int = 5.0;
 /// ```
 pub struct VariableDeclarationAnalyzer<'a> {
     node: &'a AstNode,
@@ -136,7 +136,7 @@ mod tests {
     fn declaring_variable_with_type_annotation_and_initial_value() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var x: Int = 5;
+                    var x: int = 5;
                 end
             "});
     }
@@ -181,7 +181,7 @@ mod tests {
     fn declaring_variable_with_incompatible_type() {
         assert_is_err(indoc! {"
                 fn main() do
-                    var x: Int = 5.0;
+                    var x: int = 5.0;
                 end
             "})
     }
@@ -213,12 +213,12 @@ mod tests {
     fn declaring_variable_with_function_pointer_as_value() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var x: () -> Int = produce;
+                    var x: () -> int = produce;
 
                     debug x();
                 end
 
-                fn produce(): Int do
+                fn produce(): int do
                     return 5;
                 end
             "});
@@ -272,7 +272,7 @@ mod tests {
     fn declaring_variable_with_array_type_notation() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr: []Int = [5, 9, 10];
+                    var arr: []int = [5, 9, 10];
                 end
             "});
     }
@@ -281,7 +281,7 @@ mod tests {
     fn declaring_variable_with_empty_array_literal_and_type_notation() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr: []Int = [];
+                    var arr: []int = [];
                 end
             "});
     }
@@ -290,7 +290,7 @@ mod tests {
     fn declaring_variable_with_nested_arrays_and_type_notation() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr: [][]Int = [[5, 9, 10], [1, 2, 3]];
+                    var arr: [][]int = [[5, 9, 10], [1, 2, 3]];
                 end
             "});
     }
@@ -299,7 +299,7 @@ mod tests {
     fn declaring_variable_with_nested_empty_arrays_and_type_notation() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr: [][][]Int = [[], []];
+                    var arr: [][][]int = [[], []];
                 end
             "});
     }
@@ -311,11 +311,11 @@ mod tests {
                     var arr = [five, six];
                 end
 
-                fn five(): Int do
+                fn five(): int do
                     return 5;
                 end
 
-                fn six(): Int do
+                fn six(): int do
                     return 6;
                 end
             "});

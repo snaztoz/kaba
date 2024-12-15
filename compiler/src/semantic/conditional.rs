@@ -34,7 +34,7 @@ use crate::ast::AstNode;
 /// * It can be the last statement of a function:
 ///
 /// ```text
-/// fn foo(): Int do
+/// fn foo(): int do
 ///     if false do
 ///         return 5;
 ///     else do
@@ -60,7 +60,7 @@ use crate::ast::AstNode;
 ///   the function:
 ///
 /// ```text
-/// fn foo(): Int do
+/// fn foo(): int do
 ///     if !true do
 ///         return 1;
 ///     else do
