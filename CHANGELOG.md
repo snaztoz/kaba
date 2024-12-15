@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Rename built-in types to lowercase version (by [@snaztoz](https://github.com/snaztoz) in [#43](https://github.com/snaztoz/kaba/pull/43))
+- (Internal) replace semantic analyzer's scope stack with symbol tree (by [@snaztoz](https://github.com/snaztoz) in [#43](https://github.com/snaztoz/kaba/pull/43))
+
 ## [0.4.0] - 2024-12-06
 
 ### Added
