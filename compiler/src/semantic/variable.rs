@@ -54,18 +54,17 @@ impl VariableDeclarationAnalyzer<'_> {
         let val_t = ExpressionAnalyzer::new(self.val(), self.state).analyze()?;
 
         let var_t = if let Some(tn) = self.tn() {
-            let t = self.analyze_tn(tn, &val_t)?;
-            Some(t)
+            self.analyze_tn(tn, &val_t)?
         } else {
             if val_t.is_array_with_unknown_elem_t() {
                 return Err(Error::UnableToInferType {
                     span: self.id().span().clone(),
                 });
             }
-            None
+            val_t.morph_default()
         };
 
-        self.save_symbol(&self.id_string(), var_t.unwrap_or(val_t), self.span())?;
+        self.save_symbol(&self.id_string(), var_t, self.span())?;
 
         Ok(Type::Void)
     }

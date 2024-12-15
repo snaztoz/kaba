@@ -159,7 +159,7 @@ impl Type {
         [Self::UInt, Self::Int, Self::Float].contains(self) || self.is_number_literal()
     }
 
-    pub fn is_boolean(&self) -> bool {
+    pub const fn is_boolean(&self) -> bool {
         matches!(self, Self::Bool)
     }
 
@@ -205,8 +205,20 @@ impl Type {
         self == &Type::UIntLiteral && [Type::Int, Type::IntLiteral].contains(target)
     }
 
-    pub fn is_void(&self) -> bool {
+    pub const fn is_void(&self) -> bool {
         matches!(self, Self::Void)
+    }
+
+    pub fn morph_default(&self) -> Type {
+        match self {
+            Self::UIntLiteral | Self::IntLiteral => Self::Int,
+
+            Self::Array { elem_t } => Self::Array {
+                elem_t: elem_t.as_ref().map(|t| Box::new(t.morph_default())),
+            },
+
+            t => t.clone(),
+        }
     }
 
     pub fn unwrap_array(&self) -> &Option<Box<Type>> {
