@@ -1,4 +1,9 @@
-use super::{error::Result, expression::ExpressionAnalyzer, state::SharedState, types::Type};
+use super::{
+    error::Result,
+    expression::ExpressionAnalyzer,
+    state::SharedState,
+    types::{assert, Type},
+};
 use crate::ast::Literal;
 
 /// Analyzer for a literal expressions, such as numbers or arrays.
@@ -66,7 +71,7 @@ impl LiteralAnalyzer<'_> {
 
         for elem in arr {
             let t = ExpressionAnalyzer::new(elem, self.state).analyze()?;
-            Type::assert_assignable(&t, elem_t.as_ref().unwrap(), || elem.span().clone())?;
+            assert::is_assignable(&t, elem_t.as_ref().unwrap(), || elem.span().clone())?;
         }
 
         Ok(Type::Array {

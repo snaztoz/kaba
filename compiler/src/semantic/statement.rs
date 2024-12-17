@@ -4,7 +4,7 @@ use super::{
     error::{Error, Result},
     expression::ExpressionAnalyzer,
     state::SharedState,
-    types::Type,
+    types::{assert, Type},
     variable::VariableDeclarationAnalyzer,
     while_loop::WhileLoopAnalyzer,
 };
@@ -79,7 +79,7 @@ impl StatementAnalyzer<'_> {
                 span: span.clone(),
             })?;
 
-        Type::assert_assignable(&expr_t, &return_t, || span.clone())
+        assert::is_assignable(&expr_t, &return_t, || span.clone())
             .map_err(|err| Error::ReturnTypeMismatch {
                 expected: return_t.clone(),
                 get: expr_t,

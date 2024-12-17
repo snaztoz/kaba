@@ -2,7 +2,7 @@ use super::{
     error::{Error, Result},
     expression::ExpressionAnalyzer,
     state::SharedState,
-    types::Type,
+    types::{assert, Type},
 };
 use crate::ast::AstNode;
 use logos::Span;
@@ -92,7 +92,7 @@ impl AssignmentAnalyzer<'_> {
         let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
         let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
-        Type::assert_assignable(&rhs_t, &lhs_t, || span.clone())?;
+        assert::is_assignable(&rhs_t, &lhs_t, || span.clone())?;
 
         Ok(Type::void())
     }
@@ -106,9 +106,9 @@ impl AssignmentAnalyzer<'_> {
         let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
         let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
-        Type::assert_number(&lhs_t, || lhs.span().clone())?;
-        Type::assert_number(&rhs_t, || rhs.span().clone())?;
-        Type::assert_assignable(&rhs_t, &lhs_t, || span.clone())?;
+        assert::is_number(&lhs_t, || lhs.span().clone())?;
+        assert::is_number(&rhs_t, || rhs.span().clone())?;
+        assert::is_assignable(&rhs_t, &lhs_t, || span.clone())?;
 
         Ok(Type::void())
     }

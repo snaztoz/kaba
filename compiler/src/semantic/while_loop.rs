@@ -3,7 +3,7 @@ use super::{
     error::Result,
     expression::ExpressionAnalyzer,
     state::{scope::ScopeVariant, SharedState},
-    types::Type,
+    types::{assert, Type},
 };
 use crate::ast::AstNode;
 
@@ -55,7 +55,7 @@ impl WhileLoopAnalyzer<'_> {
         // Expecting boolean type for the condition
 
         let cond_t = ExpressionAnalyzer::new(self.cond(), self.state).analyze()?;
-        Type::assert_boolean(&cond_t, || self.cond().span().clone())?;
+        assert::is_boolean(&cond_t, || self.cond().span().clone())?;
 
         // Check all statements inside the body with a new scope
 

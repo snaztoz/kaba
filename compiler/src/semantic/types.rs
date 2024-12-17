@@ -1,7 +1,7 @@
-use super::{error::Error, Result};
 use crate::ast::{AstNode, TypeNotation};
-use logos::Span;
 use std::fmt::Display;
+
+pub mod assert;
 
 #[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub enum Type {
@@ -27,114 +27,6 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn assert_number<F>(t: &Self, err_span: F) -> Result<()>
-    where
-        F: FnOnce() -> Span,
-    {
-        if t.is_number() {
-            Ok(())
-        } else {
-            Err(Error::NonNumberType { span: err_span() })
-        }
-    }
-
-    pub fn assert_signable_number<F>(t: &Self, err_span: F) -> Result<()>
-    where
-        F: FnOnce() -> Span,
-    {
-        if t.is_signable_number() {
-            Ok(())
-        } else {
-            Err(Error::NonSignableNumberType {
-                t: t.clone(),
-                span: err_span(),
-            })
-        }
-    }
-
-    pub fn assert_same<F>(type_a: &Self, type_b: &Self, err_span: F) -> Result<()>
-    where
-        F: FnOnce() -> Span,
-    {
-        if type_a == type_b || type_a.is_promotable_to(type_b) || type_b.is_promotable_to(type_a) {
-            return Ok(());
-        }
-
-        Err(Error::TypeMismatch {
-            type_a: type_a.clone(),
-            type_b: type_b.clone(),
-            span: err_span(),
-        })
-    }
-
-    pub fn assert_boolean<F>(t: &Self, err_span: F) -> Result<()>
-    where
-        F: FnOnce() -> Span,
-    {
-        if t.is_boolean() {
-            Ok(())
-        } else {
-            Err(Error::NonBooleanType { span: err_span() })
-        }
-    }
-
-    pub fn assert_callable<F>(t: &Self, err_span: F) -> Result<()>
-    where
-        F: FnOnce() -> Span,
-    {
-        if t.is_callable() {
-            Ok(())
-        } else {
-            Err(Error::NonCallableType {
-                t: t.clone(),
-                span: err_span(),
-            })
-        }
-    }
-
-    pub fn assert_iterable<F>(t: &Self, err_span: F) -> Result<()>
-    where
-        F: FnOnce() -> Span,
-    {
-        if t.is_array() {
-            Ok(())
-        } else {
-            Err(Error::NonIterableType {
-                t: t.clone(),
-                span: err_span(),
-            })
-        }
-    }
-
-    pub fn assert_indexable<F>(t: &Self, err_span: F) -> Result<()>
-    where
-        F: FnOnce() -> Span,
-    {
-        if t.is_array() {
-            Ok(())
-        } else {
-            Err(Error::NonIndexableType {
-                t: t.clone(),
-                span: err_span(),
-            })
-        }
-    }
-
-    pub fn assert_assignable<F>(from: &Self, to: &Self, err_span: F) -> Result<()>
-    where
-        F: FnOnce() -> Span,
-    {
-        if from.is_assignable_to(to) {
-            Ok(())
-        } else {
-            Err(Error::InvalidAssignmentType {
-                var_t: to.to_string(),
-                val_t: from.to_string(),
-                span: err_span(),
-            })
-        }
-    }
-
     pub fn void() -> Type {
         Type::Identifier(String::from("void"))
     }
@@ -159,7 +51,7 @@ impl Type {
         matches!(self, Type::LiteralInt)
     }
 
-    fn is_signable_number(&self) -> bool {
+    fn is_signable(&self) -> bool {
         [Self::int(), Self::float()].contains(self) || self.is_number_literal()
     }
 

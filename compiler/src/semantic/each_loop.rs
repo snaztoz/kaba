@@ -3,7 +3,7 @@ use super::{
     error::{Error, Result},
     expression::ExpressionAnalyzer,
     state::{scope::ScopeVariant, SharedState},
-    types::Type,
+    types::{assert, Type},
 };
 use crate::ast::AstNode;
 
@@ -53,7 +53,7 @@ impl EachLoopAnalyzer<'_> {
     pub fn analyze(&self) -> Result<Type> {
         let expr_t = ExpressionAnalyzer::new(self.iterable(), self.state).analyze()?;
 
-        Type::assert_iterable(&expr_t, || self.iterable().span().clone())?;
+        assert::is_iterable(&expr_t, || self.iterable().span().clone())?;
 
         // Make sure the array element's type is known
         if expr_t.is_array_with_unknown_elem_t() {

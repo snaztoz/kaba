@@ -3,7 +3,7 @@ use super::{
     error::{Error, Result},
     literal::LiteralAnalyzer,
     state::SharedState,
-    types::Type,
+    types::{assert, Type},
 };
 use crate::ast::AstNode;
 use function_call::FunctionCallAnalyzer;
@@ -82,8 +82,8 @@ impl ExpressionAnalyzer<'_> {
         let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
         let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
-        Type::assert_boolean(&lhs_t, || lhs.span().clone())?;
-        Type::assert_boolean(&rhs_t, || rhs.span().clone())?;
+        assert::is_boolean(&lhs_t, || lhs.span().clone())?;
+        assert::is_boolean(&rhs_t, || rhs.span().clone())?;
 
         Ok(Type::bool())
     }
@@ -92,7 +92,7 @@ impl ExpressionAnalyzer<'_> {
         let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
         let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
-        Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
+        assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
         Ok(Type::bool())
     }
@@ -101,9 +101,9 @@ impl ExpressionAnalyzer<'_> {
         let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
         let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
-        Type::assert_number(&lhs_t, || lhs.span().clone())?;
-        Type::assert_number(&rhs_t, || rhs.span().clone())?;
-        Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
+        assert::is_number(&lhs_t, || lhs.span().clone())?;
+        assert::is_number(&rhs_t, || rhs.span().clone())?;
+        assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
         Ok(Type::bool())
     }
@@ -112,9 +112,9 @@ impl ExpressionAnalyzer<'_> {
         let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
         let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
-        Type::assert_number(&lhs_t, || lhs.span().clone())?;
-        Type::assert_number(&rhs_t, || rhs.span().clone())?;
-        Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
+        assert::is_number(&lhs_t, || lhs.span().clone())?;
+        assert::is_number(&rhs_t, || rhs.span().clone())?;
+        assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
         // TODO: do type promotion if applicable
 
@@ -124,7 +124,7 @@ impl ExpressionAnalyzer<'_> {
     fn analyze_logical_not_operation(&self, child: &AstNode) -> Result<Type> {
         let child_t = ExpressionAnalyzer::new(child, self.state).analyze()?;
 
-        Type::assert_boolean(&child_t, || child.span().clone())?;
+        assert::is_boolean(&child_t, || child.span().clone())?;
 
         Ok(Type::bool())
     }
@@ -132,7 +132,7 @@ impl ExpressionAnalyzer<'_> {
     fn analyze_neg_operation(&self, child: &AstNode) -> Result<Type> {
         let child_t = ExpressionAnalyzer::new(child, self.state).analyze()?;
 
-        Type::assert_signable_number(&child_t, || child.span().clone())?;
+        assert::is_signable(&child_t, || child.span().clone())?;
 
         Ok(child_t)
     }

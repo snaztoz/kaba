@@ -3,7 +3,7 @@ use super::{
     expression::ExpressionAnalyzer,
     state::SharedState,
     tn::TypeNotationAnalyzer,
-    types::Type,
+    types::{assert, Type},
 };
 use crate::ast::AstNode;
 use logos::Span;
@@ -73,7 +73,7 @@ impl VariableDeclarationAnalyzer<'_> {
         let t = TypeNotationAnalyzer::new(tn, self.state).analyze()?;
 
         // Check if the value type is compatible with the variable
-        Type::assert_assignable(val_t, &t, || self.span().clone())?;
+        assert::is_assignable(val_t, &t, || self.span().clone())?;
 
         Ok(t)
     }
