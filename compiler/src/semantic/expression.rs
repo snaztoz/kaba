@@ -116,9 +116,7 @@ impl ExpressionAnalyzer<'_> {
         assert::is_number(&rhs_t, || rhs.span().clone())?;
         assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
-        // TODO: do type promotion if applicable
-
-        Ok(lhs_t)
+        Ok(Type::largest_numeric_t_between(&lhs_t, &rhs_t).clone())
     }
 
     fn analyze_logical_not_operation(&self, child: &AstNode) -> Result<Type> {
@@ -141,13 +139,21 @@ impl ExpressionAnalyzer<'_> {
 #[cfg(test)]
 mod tests {
     use crate::semantic::{
-        test_util::{assert_expression_is_err, assert_expression_type},
+        test_util::{
+            assert_expression_is_err, assert_expression_type, assert_expression_type_with_symbols,
+        },
         types::Type,
     };
 
     #[test]
-    fn math_expression_returning_int_type() {
+    fn math_expression_with_int_literals() {
         assert_expression_type("-5 + 50 * 200 / 7 - 999;", Type::LiteralInt);
+    }
+
+    #[test]
+    fn math_expression_with_int() {
+        let symbols = [("x", Type::int())];
+        assert_expression_type_with_symbols("5 + x;", &symbols, Type::int());
     }
 
     #[test]

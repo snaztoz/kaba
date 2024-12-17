@@ -43,6 +43,40 @@ impl Type {
         Type::Identifier(String::from("float"))
     }
 
+    /// Get the largest numeric type between `a` and `b`.
+    ///
+    /// Smaller numeric type can be casted into a larger numeritc type
+    /// automatically, with the ordering of the types is like the following:
+    ///
+    /// ## Signed integers
+    ///
+    /// 1. Literal int
+    /// 2. Int
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let a = Type::LiteralInt;
+    /// let b = Type::int();
+    ///
+    /// assert_eq!(Type::largest_numeric_t_between(&a, &b), &Type::int())
+    /// ```
+    pub fn largest_numeric_t_between<'a>(a: &'a Type, b: &'a Type) -> &'a Type {
+        if a == b {
+            return a;
+        }
+
+        for t in &[Type::LiteralInt, Type::int()] {
+            if t == a {
+                return b;
+            } else if t == b {
+                return a;
+            }
+        }
+
+        unreachable!()
+    }
+
     pub fn is_number(&self) -> bool {
         [Self::int(), Self::float()].contains(self) || self.is_number_literal()
     }
@@ -53,6 +87,10 @@ impl Type {
 
     fn is_signable(&self) -> bool {
         [Self::int(), Self::float()].contains(self) || self.is_number_literal()
+    }
+
+    pub fn is_void(&self) -> bool {
+        self == &Self::void()
     }
 
     pub fn is_boolean(&self) -> bool {
@@ -93,16 +131,17 @@ impl Type {
         false
     }
 
-    // Check if `self` is promotable to `target`.
-    //
-    // For example, `LiteralInt` is promotable into `byte`, `short`, `int`,
-    // etc.
+    /// Check if `self` is promotable to `target`.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let t = Type::LiteralInt;
+    ///
+    /// assert!(t.is_promotable_to(&Type::int()));
+    /// ```
     fn is_promotable_to(&self, target: &Type) -> bool {
         self == &Self::LiteralInt && [Self::int()].contains(target)
-    }
-
-    pub fn is_void(&self) -> bool {
-        self == &Self::void()
     }
 
     pub fn promote_default(&self) -> Type {
