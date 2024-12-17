@@ -61,7 +61,7 @@ impl VariableDeclarationAnalyzer<'_> {
                     span: self.id().span().clone(),
                 });
             }
-            val_t.morph_default()
+            val_t.promote_default()
         };
 
         self.save_symbol(&self.id_string(), var_t, self.span())?;

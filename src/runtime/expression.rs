@@ -61,7 +61,7 @@ impl<'a> ExpressionRunner<'a> {
             Literal::Void => RuntimeValue::Void,
             Literal::Bool(b) => RuntimeValue::Boolean(*b),
 
-            Literal::Int(n) => RuntimeValue::Integer((*n).try_into().unwrap()),
+            Literal::Int(n) => RuntimeValue::Integer(*n),
             Literal::Float(n) => RuntimeValue::Float(*n),
 
             Literal::Array(arr) => {

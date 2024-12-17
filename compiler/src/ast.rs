@@ -466,7 +466,7 @@ pub enum Literal {
     Void,
     Bool(bool),
 
-    Int(u32),
+    Int(i32),
     Float(f64),
 
     Array(Vec<AstNode>),

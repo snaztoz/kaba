@@ -5,17 +5,14 @@ use std::fmt::Display;
 
 #[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub enum Type {
-    // We specifically differentiate the type of literals to accommodate their
-    // assignment into various types.
+    // An integer type that can be promoted into other integer types. For
+    // example:
     //
-    // For example, both assignments are valid:
+    //  var x: int = 5;
     //
-    //      var x: byte = 16;
-    //      var y: int = 16;
-    //
-    // If the `16` is inferred as `uint`, then the assignment into the `byte`
-    // type variable should results in error (undesired behaviour).
-    Literal(LiteralType),
+    // Here `5` type is LiteralInt, and then it can be assigned into `x`, which
+    // has an `int` type.
+    LiteralInt,
 
     Identifier(String),
 
@@ -59,7 +56,7 @@ impl Type {
     where
         F: FnOnce() -> Span,
     {
-        if type_a == type_b || type_a.is_morphable_to(type_b) || type_b.is_morphable_to(type_a) {
+        if type_a == type_b || type_a.is_promotable_to(type_b) || type_b.is_promotable_to(type_a) {
             return Ok(());
         }
 
@@ -146,10 +143,6 @@ impl Type {
         Type::Identifier(String::from("bool"))
     }
 
-    pub fn uint() -> Type {
-        Type::Identifier(String::from("uint"))
-    }
-
     pub fn int() -> Type {
         Type::Identifier(String::from("int"))
     }
@@ -159,16 +152,15 @@ impl Type {
     }
 
     pub fn is_number(&self) -> bool {
-        [Self::uint(), Self::int(), Self::float()].contains(self) || self.is_number_literal()
+        [Self::int(), Self::float()].contains(self) || self.is_number_literal()
     }
 
-    pub fn is_number_literal(&self) -> bool {
-        matches!(self, Self::Literal(LiteralType::UnsignedInt))
-            || matches!(self, Self::Literal(LiteralType::Int))
+    pub const fn is_number_literal(&self) -> bool {
+        matches!(self, Type::LiteralInt)
     }
 
     fn is_signable_number(&self) -> bool {
-        [Self::uint(), Self::int(), Self::float()].contains(self) || self.is_number_literal()
+        [Self::int(), Self::float()].contains(self) || self.is_number_literal()
     }
 
     pub fn is_boolean(&self) -> bool {
@@ -188,7 +180,7 @@ impl Type {
     }
 
     pub fn is_assignable_to(&self, target: &Type) -> bool {
-        if self == target || self.is_morphable_to(target) {
+        if self == target || self.is_promotable_to(target) {
             return true;
         }
 
@@ -209,27 +201,24 @@ impl Type {
         false
     }
 
-    // Check if `self` is morphable to `target`
+    // Check if `self` is promotable to `target`.
     //
-    // For example, unsigned integer literals are morphable into `Byte`,
-    // `Short`, `Int`, etc.
-    fn is_morphable_to(&self, target: &Type) -> bool {
-        self == &Self::Literal(LiteralType::UnsignedInt)
-            && [Self::int(), Self::Literal(LiteralType::Int)].contains(target)
+    // For example, `LiteralInt` is promotable into `byte`, `short`, `int`,
+    // etc.
+    fn is_promotable_to(&self, target: &Type) -> bool {
+        self == &Self::LiteralInt && [Self::int()].contains(target)
     }
 
     pub fn is_void(&self) -> bool {
         self == &Self::void()
     }
 
-    pub fn morph_default(&self) -> Type {
+    pub fn promote_default(&self) -> Type {
         match self {
-            Type::Literal(LiteralType::UnsignedInt) | Type::Literal(LiteralType::Int) => {
-                Self::int()
-            }
+            Type::LiteralInt => Self::int(),
 
             Self::Array { elem_t } => Self::Array {
-                elem_t: elem_t.as_ref().map(|t| Box::new(t.morph_default())),
+                elem_t: elem_t.as_ref().map(|t| Box::new(t.promote_default())),
             },
 
             t => t.clone(),
@@ -284,8 +273,7 @@ impl<'a> From<&'a AstNode> for Type {
 impl Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Literal(LiteralType::UnsignedInt) => write!(f, "uint"),
-            Self::Literal(LiteralType::Int) => write!(f, "int"),
+            Self::LiteralInt => write!(f, "int"),
 
             Self::Identifier(id) => write!(f, "{id}"),
 
@@ -309,10 +297,4 @@ impl Display for Type {
             }
         }
     }
-}
-
-#[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
-pub enum LiteralType {
-    UnsignedInt,
-    Int,
 }
