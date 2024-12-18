@@ -10,9 +10,9 @@ pub enum Type {
     //
     //  var x: int = 5;
     //
-    // Here `5` type is LiteralInt, and then it can be assigned into `x`, which
-    // has an `int` type.
-    LiteralInt,
+    // Here the type of `5` is UnboundedInt, it can be assigned into `x`
+    // directly, which has an `int` type.
+    UnboundedInt,
 
     Identifier(String),
 
@@ -50,13 +50,13 @@ impl Type {
     ///
     /// ## Signed integers
     ///
-    /// 1. Literal int
+    /// 1. UnboundedInt
     /// 2. Int
     ///
     /// # Example
     ///
     /// ```ignore
-    /// let a = Type::LiteralInt;
+    /// let a = Type::UnboundedInt;
     /// let b = Type::int();
     ///
     /// assert_eq!(Type::largest_numeric_t_between(&a, &b), &Type::int())
@@ -66,7 +66,7 @@ impl Type {
             return a;
         }
 
-        for t in &[Type::LiteralInt, Type::int()] {
+        for t in &[Type::UnboundedInt, Type::int()] {
             if t == a {
                 return b;
             } else if t == b {
@@ -78,15 +78,15 @@ impl Type {
     }
 
     pub fn is_number(&self) -> bool {
-        [Self::int(), Self::float()].contains(self) || self.is_number_literal()
+        [Self::int(), Self::float()].contains(self) || self.is_unbounded_number()
     }
 
-    pub const fn is_number_literal(&self) -> bool {
-        matches!(self, Type::LiteralInt)
+    pub const fn is_unbounded_number(&self) -> bool {
+        matches!(self, Type::UnboundedInt)
     }
 
     fn is_signable(&self) -> bool {
-        [Self::int(), Self::float()].contains(self) || self.is_number_literal()
+        [Self::int(), Self::float()].contains(self) || self.is_unbounded_number()
     }
 
     pub fn is_void(&self) -> bool {
@@ -136,17 +136,36 @@ impl Type {
     /// # Example
     ///
     /// ```ignore
-    /// let t = Type::LiteralInt;
+    /// let t = Type::UnboundedInt;
     ///
     /// assert!(t.is_promotable_to(&Type::int()));
     /// ```
     fn is_promotable_to(&self, target: &Type) -> bool {
-        self == &Self::LiteralInt && [Self::int()].contains(target)
+        self == &Self::UnboundedInt && [Self::int()].contains(target)
     }
 
+    /// Promote some types into their default type.
+    ///
+    /// For example, unbounded integers will have the default type of `int`
+    /// when assigned into a variable:
+    ///
+    /// ```text
+    /// var x = 5;
+    /// ```
+    ///
+    /// `5` is actually has the type of `Type::UnboundedInt`, but the `x`
+    /// symbol will have the type of `Type::int()`.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let t = Type::UnboundedInt;
+    ///
+    /// assert_eq!(t.promote_default(), &Type::int());
+    /// ```
     pub fn promote_default(&self) -> Type {
         match self {
-            Type::LiteralInt => Self::int(),
+            Type::UnboundedInt => Self::int(),
 
             Self::Array { elem_t } => Self::Array {
                 elem_t: elem_t.as_ref().map(|t| Box::new(t.promote_default())),
@@ -204,7 +223,7 @@ impl<'a> From<&'a AstNode> for Type {
 impl Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::LiteralInt => write!(f, "int"),
+            Self::UnboundedInt => write!(f, "int"),
 
             Self::Identifier(id) => write!(f, "{id}"),
 

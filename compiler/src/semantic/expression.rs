@@ -35,26 +35,26 @@ impl ExpressionAnalyzer<'_> {
             | AstNode::ModAssign { .. } => AssignmentAnalyzer::new(self.node, self.state).analyze(),
 
             AstNode::Eq { lhs, rhs, .. } | AstNode::Neq { lhs, rhs, .. } => {
-                self.analyze_equality_operation(lhs, rhs)
+                self.analyze_equality_expr(lhs, rhs)
             }
 
             AstNode::Or { lhs, rhs, .. } | AstNode::And { lhs, rhs, .. } => {
-                self.analyze_logical_and_or_operation(lhs, rhs)
+                self.analyze_logical_and_or_expr(lhs, rhs)
             }
 
             AstNode::Gt { lhs, rhs, .. }
             | AstNode::Gte { lhs, rhs, .. }
             | AstNode::Lt { lhs, rhs, .. }
-            | AstNode::Lte { lhs, rhs, .. } => self.analyze_comparison_operation(lhs, rhs),
+            | AstNode::Lte { lhs, rhs, .. } => self.analyze_comparison_expr(lhs, rhs),
 
             AstNode::Add { lhs, rhs, .. }
             | AstNode::Sub { lhs, rhs, .. }
             | AstNode::Mul { lhs, rhs, .. }
             | AstNode::Div { lhs, rhs, .. }
-            | AstNode::Mod { lhs, rhs, .. } => self.analyze_math_binary_operation(lhs, rhs),
+            | AstNode::Mod { lhs, rhs, .. } => self.analyze_binary_math_expr(lhs, rhs),
 
-            AstNode::Not { child, .. } => self.analyze_logical_not_operation(child),
-            AstNode::Neg { child, .. } => self.analyze_neg_operation(child),
+            AstNode::Not { child, .. } => self.analyze_logical_not_expr(child),
+            AstNode::Neg { child, .. } => self.analyze_neg_expr(child),
 
             AstNode::Identifier { name, span } => {
                 self.state
@@ -78,7 +78,7 @@ impl ExpressionAnalyzer<'_> {
         }
     }
 
-    fn analyze_logical_and_or_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
+    fn analyze_logical_and_or_expr(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
         let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
         let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
@@ -88,7 +88,7 @@ impl ExpressionAnalyzer<'_> {
         Ok(Type::bool())
     }
 
-    fn analyze_equality_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
+    fn analyze_equality_expr(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
         let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
         let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
@@ -97,7 +97,7 @@ impl ExpressionAnalyzer<'_> {
         Ok(Type::bool())
     }
 
-    fn analyze_comparison_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
+    fn analyze_comparison_expr(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
         let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
         let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
@@ -108,7 +108,7 @@ impl ExpressionAnalyzer<'_> {
         Ok(Type::bool())
     }
 
-    fn analyze_math_binary_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
+    fn analyze_binary_math_expr(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
         let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
         let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
@@ -119,7 +119,7 @@ impl ExpressionAnalyzer<'_> {
         Ok(Type::largest_numeric_t_between(&lhs_t, &rhs_t).clone())
     }
 
-    fn analyze_logical_not_operation(&self, child: &AstNode) -> Result<Type> {
+    fn analyze_logical_not_expr(&self, child: &AstNode) -> Result<Type> {
         let child_t = ExpressionAnalyzer::new(child, self.state).analyze()?;
 
         assert::is_boolean(&child_t, || child.span().clone())?;
@@ -127,7 +127,7 @@ impl ExpressionAnalyzer<'_> {
         Ok(Type::bool())
     }
 
-    fn analyze_neg_operation(&self, child: &AstNode) -> Result<Type> {
+    fn analyze_neg_expr(&self, child: &AstNode) -> Result<Type> {
         let child_t = ExpressionAnalyzer::new(child, self.state).analyze()?;
 
         assert::is_signable(&child_t, || child.span().clone())?;
@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn math_expression_with_int_literals() {
-        assert_expression_type("-5 + 50 * 200 / 7 - 999;", Type::LiteralInt);
+        assert_expression_type("-5 + 50 * 200 / 7 - 999;", Type::UnboundedInt);
     }
 
     #[test]
@@ -157,17 +157,17 @@ mod tests {
     }
 
     #[test]
-    fn float_modulo_operation() {
+    fn float_modulo_expression() {
         assert_expression_type("99.9 % 0.1;", Type::float());
     }
 
     #[test]
-    fn comparison_and_equality_operations() {
+    fn comparison_and_equality_expressions() {
         assert_expression_type("767 >= 900 == (45 < 67);", Type::bool());
     }
 
     #[test]
-    fn logical_or_and_and_operations() {
+    fn logical_or_and_and_expressions() {
         assert_expression_type("false || !false && 50 > 0;", Type::bool());
     }
 

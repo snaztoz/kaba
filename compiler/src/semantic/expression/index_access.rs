@@ -62,7 +62,7 @@ mod tests {
         assert_expression_type(
             "[[1, 2]][0];",
             Type::Array {
-                elem_t: Some(Box::new(Type::LiteralInt)),
+                elem_t: Some(Box::new(Type::UnboundedInt)),
             },
         );
     }

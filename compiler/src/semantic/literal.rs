@@ -24,7 +24,7 @@ impl LiteralAnalyzer<'_> {
             Literal::Void => Ok(Type::void()),
             Literal::Bool(_) => Ok(Type::bool()),
 
-            Literal::Int(_) => Ok(Type::LiteralInt),
+            Literal::Int(_) => Ok(Type::UnboundedInt),
             Literal::Float(_) => Ok(Type::float()),
 
             Literal::Array(_) => self.analyze_array(),
@@ -38,7 +38,7 @@ impl LiteralAnalyzer<'_> {
             unreachable!()
         };
 
-        // Doing double analyzing.
+        // Perform double analyzing.
         //
         // For example, in the case of a nested array (let's call it A) like:
         //
@@ -92,7 +92,7 @@ mod tests {
         assert_expression_type(
             "[1, 2, 3];",
             Type::Array {
-                elem_t: Some(Box::new(Type::LiteralInt)),
+                elem_t: Some(Box::new(Type::UnboundedInt)),
             },
         );
     }
@@ -107,7 +107,7 @@ mod tests {
         assert_expression_type(
             "[8 * 2048];",
             Type::Array {
-                elem_t: Some(Box::new(Type::LiteralInt)),
+                elem_t: Some(Box::new(Type::UnboundedInt)),
             },
         );
     }
@@ -118,7 +118,7 @@ mod tests {
             "[[1, 3, 5], [2, 6, 3], [9, 1, 1]];",
             Type::Array {
                 elem_t: Some(Box::new(Type::Array {
-                    elem_t: Some(Box::new(Type::LiteralInt)),
+                    elem_t: Some(Box::new(Type::UnboundedInt)),
                 })),
             },
         );
@@ -135,7 +135,7 @@ mod tests {
             "[[], [1]];",
             Type::Array {
                 elem_t: Some(Box::new(Type::Array {
-                    elem_t: Some(Box::new(Type::LiteralInt)),
+                    elem_t: Some(Box::new(Type::UnboundedInt)),
                 })),
             },
         );
