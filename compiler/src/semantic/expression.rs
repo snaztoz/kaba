@@ -151,9 +151,38 @@ mod tests {
     }
 
     #[test]
+    fn math_expression_with_sbyte() {
+        let symbols = [("x", Type::sbyte())];
+        assert_expression_type_with_symbols("5 + x;", &symbols, Type::sbyte());
+    }
+
+    #[test]
+    fn math_expression_with_short() {
+        let symbols = [("x", Type::short())];
+        assert_expression_type_with_symbols("x + 5;", &symbols, Type::short());
+    }
+
+    #[test]
     fn math_expression_with_int() {
         let symbols = [("x", Type::int())];
         assert_expression_type_with_symbols("5 + x;", &symbols, Type::int());
+    }
+
+    #[test]
+    fn math_expression_with_long() {
+        let symbols = [("x", Type::long())];
+        assert_expression_type_with_symbols("10 + x;", &symbols, Type::long());
+    }
+
+    #[test]
+    fn math_expression_with_implicit_conversions() {
+        let symbols = [
+            ("a", Type::sbyte()),
+            ("b", Type::short()),
+            ("c", Type::int()),
+            ("d", Type::long()),
+        ];
+        assert_expression_type_with_symbols("5 + a * b - c / d;", &symbols, Type::long());
     }
 
     #[test]
@@ -192,7 +221,7 @@ mod tests {
     }
 
     #[test]
-    fn analyzeing_equality_of_int_and_float() {
+    fn analyzing_equality_of_int_and_float() {
         assert_expression_is_err("93 == 93.0;");
     }
 

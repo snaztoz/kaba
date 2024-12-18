@@ -17,30 +17,42 @@ pub enum Type {
     Identifier(String),
 
     Array {
-        elem_t: Option<Box<Type>>,
+        elem_t: Option<Box<Self>>,
     },
 
     Callable {
-        params_t: Vec<Type>,
-        return_t: Box<Type>,
+        params_t: Vec<Self>,
+        return_t: Box<Self>,
     },
 }
 
 impl Type {
-    pub fn void() -> Type {
-        Type::Identifier(String::from("void"))
+    pub fn void() -> Self {
+        Self::Identifier(String::from("void"))
     }
 
-    pub fn bool() -> Type {
-        Type::Identifier(String::from("bool"))
+    pub fn bool() -> Self {
+        Self::Identifier(String::from("bool"))
     }
 
-    pub fn int() -> Type {
-        Type::Identifier(String::from("int"))
+    pub fn sbyte() -> Self {
+        Self::Identifier(String::from("sbyte"))
     }
 
-    pub fn float() -> Type {
-        Type::Identifier(String::from("float"))
+    pub fn short() -> Self {
+        Self::Identifier(String::from("short"))
+    }
+
+    pub fn int() -> Self {
+        Self::Identifier(String::from("int"))
+    }
+
+    pub fn long() -> Self {
+        Self::Identifier(String::from("long"))
+    }
+
+    pub fn float() -> Self {
+        Self::Identifier(String::from("float"))
     }
 
     /// Get the largest numeric type between `a` and `b`.
@@ -51,7 +63,9 @@ impl Type {
     /// ## Signed integers
     ///
     /// 1. UnboundedInt
-    /// 2. Int
+    /// 2. Short
+    /// 3. Int
+    /// 4. Long
     ///
     /// # Example
     ///
@@ -61,12 +75,12 @@ impl Type {
     ///
     /// assert_eq!(Type::largest_numeric_t_between(&a, &b), &Type::int())
     /// ```
-    pub fn largest_numeric_t_between<'a>(a: &'a Type, b: &'a Type) -> &'a Type {
+    pub fn largest_numeric_t_between<'a>(a: &'a Self, b: &'a Self) -> &'a Self {
         if a == b {
             return a;
         }
 
-        for t in &[Type::UnboundedInt, Type::int()] {
+        for t in &Self::int_ordering() {
             if t == a {
                 return b;
             } else if t == b {
@@ -77,16 +91,42 @@ impl Type {
         unreachable!()
     }
 
+    fn int_ordering() -> Vec<Self> {
+        vec![
+            Self::UnboundedInt,
+            Self::sbyte(),
+            Self::short(),
+            Self::int(),
+            Self::long(),
+        ]
+    }
+
     pub fn is_number(&self) -> bool {
-        [Self::int(), Self::float()].contains(self) || self.is_unbounded_number()
+        [
+            Self::sbyte(),
+            Self::short(),
+            Self::int(),
+            Self::long(),
+            Self::float(),
+        ]
+        .contains(self)
+            || self.is_unbounded_number()
     }
 
     pub const fn is_unbounded_number(&self) -> bool {
-        matches!(self, Type::UnboundedInt)
+        matches!(self, Self::UnboundedInt)
     }
 
     fn is_signable(&self) -> bool {
-        [Self::int(), Self::float()].contains(self) || self.is_unbounded_number()
+        [
+            Self::sbyte(),
+            Self::short(),
+            Self::int(),
+            Self::long(),
+            Self::float(),
+        ]
+        .contains(self)
+            || self.is_unbounded_number()
     }
 
     pub fn is_void(&self) -> bool {
@@ -98,18 +138,18 @@ impl Type {
     }
 
     pub const fn is_array(&self) -> bool {
-        matches!(self, Type::Array { .. })
+        matches!(self, Self::Array { .. })
     }
 
     pub fn is_array_with_unknown_elem_t(&self) -> bool {
-        matches!(self, Type::Array { elem_t } if elem_t.is_none())
+        matches!(self, Self::Array { elem_t } if elem_t.is_none())
     }
 
     const fn is_callable(&self) -> bool {
         matches!(self, Self::Callable { .. })
     }
 
-    pub fn is_assignable_to(&self, target: &Type) -> bool {
+    pub fn is_assignable_to(&self, target: &Self) -> bool {
         if self == target || self.is_promotable_to(target) {
             return true;
         }
@@ -140,8 +180,19 @@ impl Type {
     ///
     /// assert!(t.is_promotable_to(&Type::int()));
     /// ```
-    fn is_promotable_to(&self, target: &Type) -> bool {
-        self == &Self::UnboundedInt && [Self::int()].contains(target)
+    fn is_promotable_to(&self, target: &Self) -> bool {
+        let ord = Self::int_ordering();
+        let self_idx = ord.iter().position(|t| t == self);
+        let target_idx = ord.iter().position(|t| t == target);
+
+        // NOTE: temporary solution
+        if let Some(self_idx) = self_idx {
+            if let Some(target_idx) = target_idx {
+                return self_idx <= target_idx;
+            }
+        }
+
+        false
     }
 
     /// Promote some types into their default type.
@@ -163,9 +214,9 @@ impl Type {
     ///
     /// assert_eq!(t.promote_default(), &Type::int());
     /// ```
-    pub fn promote_default(&self) -> Type {
+    pub fn promote_default(&self) -> Self {
         match self {
-            Type::UnboundedInt => Self::int(),
+            Self::UnboundedInt => Self::int(),
 
             Self::Array { elem_t } => Self::Array {
                 elem_t: elem_t.as_ref().map(|t| Box::new(t.promote_default())),
@@ -175,16 +226,16 @@ impl Type {
         }
     }
 
-    pub fn unwrap_array(&self) -> &Option<Box<Type>> {
-        if let Type::Array { elem_t, .. } = self {
+    pub fn unwrap_array(&self) -> &Option<Box<Self>> {
+        if let Self::Array { elem_t, .. } = self {
             elem_t
         } else {
             panic!("trying to unwrap array on non-Array type")
         }
     }
 
-    pub fn unwrap_callable(self) -> (Vec<Type>, Type) {
-        if let Type::Callable { params_t, return_t } = self {
+    pub fn unwrap_callable(self) -> (Vec<Self>, Self) {
+        if let Self::Callable { params_t, return_t } = self {
             (params_t, *return_t)
         } else {
             panic!("trying to unwrap callable on non-Callable type")
