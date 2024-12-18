@@ -1,5 +1,5 @@
 use super::scope::{Scope, ScopeRef, ScopeVariant};
-use crate::semantic::types::Type;
+use crate::semantic::types::{SignedInt, Type};
 use std::rc::Rc;
 
 /// SymTable implements the [symbol table](https://en.wikipedia.org/wiki/Symbol_table)
@@ -24,10 +24,17 @@ impl SymTable {
     /// `Type::Int`).
     pub fn new() -> Self {
         let builtin = Scope::new(ScopeVariant::Builtin);
-        builtin.borrow_mut().add_t(Type::void());
-        builtin.borrow_mut().add_t(Type::int());
-        builtin.borrow_mut().add_t(Type::float());
-        builtin.borrow_mut().add_t(Type::bool());
+        builtin.borrow_mut().add_t(Type::Void);
+        builtin.borrow_mut().add_t(Type::Bool);
+        builtin
+            .borrow_mut()
+            .add_t(Type::SignedInt(SignedInt::SByte));
+        builtin
+            .borrow_mut()
+            .add_t(Type::SignedInt(SignedInt::Short));
+        builtin.borrow_mut().add_t(Type::SignedInt(SignedInt::Int));
+        builtin.borrow_mut().add_t(Type::SignedInt(SignedInt::Long));
+        builtin.borrow_mut().add_t(Type::Float);
 
         let global = Scope::new(ScopeVariant::Global);
 

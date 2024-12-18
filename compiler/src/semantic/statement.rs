@@ -62,14 +62,14 @@ impl StatementAnalyzer<'_> {
             });
         }
 
-        Ok(Type::void())
+        Ok(Type::Void)
     }
 
     fn analyze_return(&self, expr: &Option<Box<AstNode>>, span: &Span) -> Result<Type> {
         let expr_t = expr
             .as_ref()
             .map(|expr| ExpressionAnalyzer::new(expr, self.state).analyze())
-            .unwrap_or(Ok(Type::void()))?;
+            .unwrap_or(Ok(Type::Void))?;
 
         let return_t = self
             .state
@@ -90,11 +90,11 @@ impl StatementAnalyzer<'_> {
 
     fn analyze_debug(&self, expr: &AstNode, span: &Span) -> Result<Type> {
         let expr_t = ExpressionAnalyzer::new(expr, self.state).analyze()?;
-        if expr_t.is_void() {
+        if expr_t == Type::Void {
             return Err(Error::UnexpectedVoidTypeExpression { span: span.clone() });
         }
 
-        Ok(Type::void())
+        Ok(Type::Void)
     }
 }
 

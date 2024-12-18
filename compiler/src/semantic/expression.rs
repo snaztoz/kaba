@@ -85,7 +85,7 @@ impl ExpressionAnalyzer<'_> {
         assert::is_boolean(&lhs_t, || lhs.span().clone())?;
         assert::is_boolean(&rhs_t, || rhs.span().clone())?;
 
-        Ok(Type::bool())
+        Ok(Type::Bool)
     }
 
     fn analyze_equality_expr(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
@@ -94,7 +94,7 @@ impl ExpressionAnalyzer<'_> {
 
         assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
-        Ok(Type::bool())
+        Ok(Type::Bool)
     }
 
     fn analyze_comparison_expr(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
@@ -105,7 +105,7 @@ impl ExpressionAnalyzer<'_> {
         assert::is_number(&rhs_t, || rhs.span().clone())?;
         assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
-        Ok(Type::bool())
+        Ok(Type::Bool)
     }
 
     fn analyze_binary_math_expr(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
@@ -124,7 +124,7 @@ impl ExpressionAnalyzer<'_> {
 
         assert::is_boolean(&child_t, || child.span().clone())?;
 
-        Ok(Type::bool())
+        Ok(Type::Bool)
     }
 
     fn analyze_neg_expr(&self, child: &AstNode) -> Result<Type> {
@@ -142,7 +142,7 @@ mod tests {
         test_util::{
             assert_expression_is_err, assert_expression_type, assert_expression_type_with_symbols,
         },
-        types::Type,
+        types::{SignedInt, Type},
     };
 
     #[test]
@@ -152,52 +152,56 @@ mod tests {
 
     #[test]
     fn math_expression_with_sbyte() {
-        let symbols = [("x", Type::sbyte())];
-        assert_expression_type_with_symbols("5 + x;", &symbols, Type::sbyte());
+        let symbols = [("x", Type::SignedInt(SignedInt::SByte))];
+        assert_expression_type_with_symbols("5 + x;", &symbols, Type::SignedInt(SignedInt::SByte));
     }
 
     #[test]
     fn math_expression_with_short() {
-        let symbols = [("x", Type::short())];
-        assert_expression_type_with_symbols("x + 5;", &symbols, Type::short());
+        let symbols = [("x", Type::SignedInt(SignedInt::Short))];
+        assert_expression_type_with_symbols("x + 5;", &symbols, Type::SignedInt(SignedInt::Short));
     }
 
     #[test]
     fn math_expression_with_int() {
-        let symbols = [("x", Type::int())];
-        assert_expression_type_with_symbols("5 + x;", &symbols, Type::int());
+        let symbols = [("x", Type::SignedInt(SignedInt::Int))];
+        assert_expression_type_with_symbols("5 + x;", &symbols, Type::SignedInt(SignedInt::Int));
     }
 
     #[test]
     fn math_expression_with_long() {
-        let symbols = [("x", Type::long())];
-        assert_expression_type_with_symbols("10 + x;", &symbols, Type::long());
+        let symbols = [("x", Type::SignedInt(SignedInt::Long))];
+        assert_expression_type_with_symbols("10 + x;", &symbols, Type::SignedInt(SignedInt::Long));
     }
 
     #[test]
     fn math_expression_with_implicit_conversions() {
         let symbols = [
-            ("a", Type::sbyte()),
-            ("b", Type::short()),
-            ("c", Type::int()),
-            ("d", Type::long()),
+            ("a", Type::SignedInt(SignedInt::SByte)),
+            ("b", Type::SignedInt(SignedInt::Short)),
+            ("c", Type::SignedInt(SignedInt::Int)),
+            ("d", Type::SignedInt(SignedInt::Long)),
         ];
-        assert_expression_type_with_symbols("5 + a * b - c / d;", &symbols, Type::long());
+        assert_expression_type_with_symbols(
+            "5 + a * b - c / d;",
+            &symbols,
+            Type::SignedInt(SignedInt::Long),
+        );
     }
 
     #[test]
     fn float_modulo_expression() {
-        assert_expression_type("99.9 % 0.1;", Type::float());
+        assert_expression_type("99.9 % 0.1;", Type::Float);
     }
 
     #[test]
     fn comparison_and_equality_expressions() {
-        assert_expression_type("767 >= 900 == (45 < 67);", Type::bool());
+        assert_expression_type("767 >= 900 == (45 < 67);", Type::Bool);
     }
 
     #[test]
     fn logical_or_and_and_expressions() {
-        assert_expression_type("false || !false && 50 > 0;", Type::bool());
+        assert_expression_type("false || !false && 50 > 0;", Type::Bool);
     }
 
     #[test]

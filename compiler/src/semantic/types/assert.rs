@@ -46,7 +46,7 @@ pub fn is_boolean<F>(t: &Type, err_span: F) -> Result<()>
 where
     F: FnOnce() -> Span,
 {
-    if t.is_boolean() {
+    if t == &Type::Bool {
         Ok(())
     } else {
         Err(Error::NonBooleanType { span: err_span() })

@@ -18,11 +18,11 @@ impl<'a> BodyAnalyzer<'a> {
 
 impl BodyAnalyzer<'_> {
     pub fn analyze(&self) -> Result<Type> {
-        let mut body_t = Type::void();
+        let mut body_t = Type::Void;
 
         for stmt in self.body() {
             let t = StatementAnalyzer::new(stmt, self.state).analyze()?;
-            if body_t.is_void() {
+            if body_t == Type::Void {
                 body_t = t;
             }
         }

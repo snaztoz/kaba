@@ -63,7 +63,7 @@ impl WhileLoopAnalyzer<'_> {
             BodyAnalyzer::new(self.node, self.state).analyze()
         })?;
 
-        Ok(Type::void())
+        Ok(Type::Void)
     }
 
     fn cond(&self) -> &AstNode {

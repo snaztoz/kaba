@@ -75,7 +75,7 @@ impl EachLoopAnalyzer<'_> {
             BodyAnalyzer::new(self.node, self.state).analyze()
         })?;
 
-        Ok(Type::void())
+        Ok(Type::Void)
     }
 
     fn iterable(&self) -> &AstNode {

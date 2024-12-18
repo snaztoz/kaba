@@ -5,6 +5,8 @@ pub mod assert;
 
 #[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub enum Type {
+    Void,
+
     // An integer type that can be promoted into other integer types. For
     // example:
     //
@@ -14,12 +16,18 @@ pub enum Type {
     // directly, which has an `int` type.
     UnboundedInt,
 
+    // Primitive types
+    Bool,
+    SignedInt(SignedInt),
+    Float,
+
+    // Other types (e.g. class)
     Identifier(String),
 
+    // Compound types
     Array {
         elem_t: Option<Box<Self>>,
     },
-
     Callable {
         params_t: Vec<Self>,
         return_t: Box<Self>,
@@ -27,34 +35,6 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn void() -> Self {
-        Self::Identifier(String::from("void"))
-    }
-
-    pub fn bool() -> Self {
-        Self::Identifier(String::from("bool"))
-    }
-
-    pub fn sbyte() -> Self {
-        Self::Identifier(String::from("sbyte"))
-    }
-
-    pub fn short() -> Self {
-        Self::Identifier(String::from("short"))
-    }
-
-    pub fn int() -> Self {
-        Self::Identifier(String::from("int"))
-    }
-
-    pub fn long() -> Self {
-        Self::Identifier(String::from("long"))
-    }
-
-    pub fn float() -> Self {
-        Self::Identifier(String::from("float"))
-    }
-
     /// Get the largest numeric type between `a` and `b`.
     ///
     /// Smaller numeric type can be casted into a larger numeritc type
@@ -77,10 +57,10 @@ impl Type {
     /// ```
     pub fn largest_numeric_t_between<'a>(a: &'a Self, b: &'a Self) -> &'a Self {
         if a == b {
-            return a;
+            return b;
         }
 
-        for t in &Self::int_ordering() {
+        for t in &Self::signed_ints() {
             if t == a {
                 return b;
             } else if t == b {
@@ -91,50 +71,28 @@ impl Type {
         unreachable!()
     }
 
-    fn int_ordering() -> Vec<Self> {
+    fn signed_ints() -> Vec<Self> {
         vec![
             Self::UnboundedInt,
-            Self::sbyte(),
-            Self::short(),
-            Self::int(),
-            Self::long(),
+            Self::SignedInt(SignedInt::SByte),
+            Self::SignedInt(SignedInt::Short),
+            Self::SignedInt(SignedInt::Int),
+            Self::SignedInt(SignedInt::Long),
         ]
+    }
+
+    fn numbers() -> Vec<Self> {
+        [Self::signed_ints(), vec![Self::Float]].concat()
     }
 
     pub fn is_number(&self) -> bool {
-        [
-            Self::sbyte(),
-            Self::short(),
-            Self::int(),
-            Self::long(),
-            Self::float(),
-        ]
-        .contains(self)
-            || self.is_unbounded_number()
-    }
-
-    pub const fn is_unbounded_number(&self) -> bool {
-        matches!(self, Self::UnboundedInt)
+        Self::numbers().contains(self)
     }
 
     fn is_signable(&self) -> bool {
-        [
-            Self::sbyte(),
-            Self::short(),
-            Self::int(),
-            Self::long(),
-            Self::float(),
-        ]
-        .contains(self)
-            || self.is_unbounded_number()
-    }
-
-    pub fn is_void(&self) -> bool {
-        self == &Self::void()
-    }
-
-    pub fn is_boolean(&self) -> bool {
-        self == &Self::bool()
+        // As unsigned types are not yet supported at the moment, just do this
+        // instead
+        self.is_number()
     }
 
     pub const fn is_array(&self) -> bool {
@@ -181,7 +139,7 @@ impl Type {
     /// assert!(t.is_promotable_to(&Type::int()));
     /// ```
     fn is_promotable_to(&self, target: &Self) -> bool {
-        let ord = Self::int_ordering();
+        let ord = Self::signed_ints();
         let self_idx = ord.iter().position(|t| t == self);
         let target_idx = ord.iter().position(|t| t == target);
 
@@ -216,7 +174,7 @@ impl Type {
     /// ```
     pub fn promote_default(&self) -> Self {
         match self {
-            Self::UnboundedInt => Self::int(),
+            Self::UnboundedInt => Self::SignedInt(SignedInt::Int),
 
             Self::Array { elem_t } => Self::Array {
                 elem_t: elem_t.as_ref().map(|t| Box::new(t.promote_default())),
@@ -247,6 +205,13 @@ impl<'a> From<&'a AstNode> for Type {
     fn from(value: &'a AstNode) -> Self {
         if let AstNode::TypeNotation { tn, .. } = value {
             match tn {
+                TypeNotation::Identifier(id) if id == "void" => Self::Void,
+                TypeNotation::Identifier(id) if id == "bool" => Self::Bool,
+                TypeNotation::Identifier(id) if id == "sbyte" => Self::SignedInt(SignedInt::SByte),
+                TypeNotation::Identifier(id) if id == "short" => Self::SignedInt(SignedInt::Short),
+                TypeNotation::Identifier(id) if id == "int" => Self::SignedInt(SignedInt::Int),
+                TypeNotation::Identifier(id) if id == "long" => Self::SignedInt(SignedInt::Long),
+                TypeNotation::Identifier(id) if id == "float" => Self::Float,
                 TypeNotation::Identifier(id) => Self::Identifier(id.to_string()),
 
                 TypeNotation::Array { elem_tn } => Self::Array {
@@ -274,7 +239,12 @@ impl<'a> From<&'a AstNode> for Type {
 impl Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Void => write!(f, "void"),
+            Self::Bool => write!(f, "bool"),
+
             Self::UnboundedInt => write!(f, "int"),
+            Self::SignedInt(i) => i.fmt(f),
+            Self::Float => write!(f, "float"),
 
             Self::Identifier(id) => write!(f, "{id}"),
 
@@ -296,6 +266,25 @@ impl Display for Type {
                     .join(",");
                 write!(f, "({params_t}) -> {return_t}")
             }
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
+pub enum SignedInt {
+    SByte,
+    Short,
+    Int,
+    Long,
+}
+
+impl Display for SignedInt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::SByte => write!(f, "sbyte"),
+            Self::Short => write!(f, "short"),
+            Self::Int => write!(f, "int"),
+            Self::Long => write!(f, "long"),
         }
     }
 }
