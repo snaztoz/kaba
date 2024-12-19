@@ -142,7 +142,7 @@ mod tests {
         test_util::{
             assert_expression_is_err, assert_expression_type, assert_expression_type_with_symbols,
         },
-        types::{SignedInt, Type},
+        types::Type,
     };
 
     #[test]
@@ -152,41 +152,37 @@ mod tests {
 
     #[test]
     fn math_expression_with_sbyte() {
-        let symbols = [("x", Type::SignedInt(SignedInt::SByte))];
-        assert_expression_type_with_symbols("5 + x;", &symbols, Type::SignedInt(SignedInt::SByte));
+        let symbols = [("x", Type::SByte)];
+        assert_expression_type_with_symbols("5 + x;", &symbols, Type::SByte);
     }
 
     #[test]
     fn math_expression_with_short() {
-        let symbols = [("x", Type::SignedInt(SignedInt::Short))];
-        assert_expression_type_with_symbols("x + 5;", &symbols, Type::SignedInt(SignedInt::Short));
+        let symbols = [("x", Type::Short)];
+        assert_expression_type_with_symbols("x + 5;", &symbols, Type::Short);
     }
 
     #[test]
     fn math_expression_with_int() {
-        let symbols = [("x", Type::SignedInt(SignedInt::Int))];
-        assert_expression_type_with_symbols("5 + x;", &symbols, Type::SignedInt(SignedInt::Int));
+        let symbols = [("x", Type::Int)];
+        assert_expression_type_with_symbols("5 + x;", &symbols, Type::Int);
     }
 
     #[test]
     fn math_expression_with_long() {
-        let symbols = [("x", Type::SignedInt(SignedInt::Long))];
-        assert_expression_type_with_symbols("10 + x;", &symbols, Type::SignedInt(SignedInt::Long));
+        let symbols = [("x", Type::Long)];
+        assert_expression_type_with_symbols("10 + x;", &symbols, Type::Long);
     }
 
     #[test]
     fn math_expression_with_implicit_conversions() {
         let symbols = [
-            ("a", Type::SignedInt(SignedInt::SByte)),
-            ("b", Type::SignedInt(SignedInt::Short)),
-            ("c", Type::SignedInt(SignedInt::Int)),
-            ("d", Type::SignedInt(SignedInt::Long)),
+            ("a", Type::SByte),
+            ("b", Type::Short),
+            ("c", Type::Int),
+            ("d", Type::Long),
         ];
-        assert_expression_type_with_symbols(
-            "5 + a * b - c / d;",
-            &symbols,
-            Type::SignedInt(SignedInt::Long),
-        );
+        assert_expression_type_with_symbols("5 + a * b - c / d;", &symbols, Type::Long);
     }
 
     #[test]

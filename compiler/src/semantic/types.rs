@@ -18,7 +18,12 @@ pub enum Type {
 
     // Primitive types
     Bool,
-    SignedInt(SignedInt),
+
+    SByte,
+    Short,
+    Int,
+    Long,
+
     Float,
 
     // Other types (e.g. class)
@@ -74,10 +79,10 @@ impl Type {
     fn signed_ints() -> Vec<Self> {
         vec![
             Self::UnboundedInt,
-            Self::SignedInt(SignedInt::SByte),
-            Self::SignedInt(SignedInt::Short),
-            Self::SignedInt(SignedInt::Int),
-            Self::SignedInt(SignedInt::Long),
+            Self::SByte,
+            Self::Short,
+            Self::Int,
+            Self::Long,
         ]
     }
 
@@ -174,7 +179,7 @@ impl Type {
     /// ```
     pub fn promote_default(&self) -> Self {
         match self {
-            Self::UnboundedInt => Self::SignedInt(SignedInt::Int),
+            Self::UnboundedInt => Self::Int,
 
             Self::Array { elem_t } => Self::Array {
                 elem_t: elem_t.as_ref().map(|t| Box::new(t.promote_default())),
@@ -207,10 +212,10 @@ impl<'a> From<&'a AstNode> for Type {
             match tn {
                 TypeNotation::Identifier(id) if id == "void" => Self::Void,
                 TypeNotation::Identifier(id) if id == "bool" => Self::Bool,
-                TypeNotation::Identifier(id) if id == "sbyte" => Self::SignedInt(SignedInt::SByte),
-                TypeNotation::Identifier(id) if id == "short" => Self::SignedInt(SignedInt::Short),
-                TypeNotation::Identifier(id) if id == "int" => Self::SignedInt(SignedInt::Int),
-                TypeNotation::Identifier(id) if id == "long" => Self::SignedInt(SignedInt::Long),
+                TypeNotation::Identifier(id) if id == "sbyte" => Self::SByte,
+                TypeNotation::Identifier(id) if id == "short" => Self::Short,
+                TypeNotation::Identifier(id) if id == "int" => Self::Int,
+                TypeNotation::Identifier(id) if id == "long" => Self::Long,
                 TypeNotation::Identifier(id) if id == "float" => Self::Float,
                 TypeNotation::Identifier(id) => Self::Identifier(id.to_string()),
 
@@ -243,7 +248,10 @@ impl Display for Type {
             Self::Bool => write!(f, "bool"),
 
             Self::UnboundedInt => write!(f, "int"),
-            Self::SignedInt(i) => i.fmt(f),
+            Self::SByte => write!(f, "sbyte"),
+            Self::Short => write!(f, "short"),
+            Self::Int => write!(f, "int"),
+            Self::Long => write!(f, "long"),
             Self::Float => write!(f, "float"),
 
             Self::Identifier(id) => write!(f, "{id}"),
@@ -266,25 +274,6 @@ impl Display for Type {
                     .join(",");
                 write!(f, "({params_t}) -> {return_t}")
             }
-        }
-    }
-}
-
-#[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
-pub enum SignedInt {
-    SByte,
-    Short,
-    Int,
-    Long,
-}
-
-impl Display for SignedInt {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::SByte => write!(f, "sbyte"),
-            Self::Short => write!(f, "short"),
-            Self::Int => write!(f, "int"),
-            Self::Long => write!(f, "long"),
         }
     }
 }
