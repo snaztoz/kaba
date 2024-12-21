@@ -324,6 +324,32 @@ mod tests {
     }
 
     #[test]
+    fn auto_casting_on_function_return_value() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    var x: short = foo();
+                end
+
+                fn foo(): sbyte do
+                    return 5;
+                end
+            "});
+    }
+
+    #[test]
+    fn prevent_auto_int_type_narrowing_on_function_return_value() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    var x: sbyte = foo();
+                end
+
+                fn foo(): short do
+                    return 5;
+                end
+            "});
+    }
+
+    #[test]
     fn aliasing_function_identifier() {
         assert_is_ok(indoc! {"
                 fn main() do

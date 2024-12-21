@@ -27,17 +27,17 @@ where
     }
 }
 
-pub fn is_compatible<F>(type_a: &Type, type_b: &Type, err_span: F) -> Result<()>
+pub fn is_compatible<F>(a: &Type, b: &Type, err_span: F) -> Result<()>
 where
     F: FnOnce() -> Span,
 {
-    if type_a == type_b || type_a.is_promotable_to(type_b) || type_b.is_promotable_to(type_a) {
+    if a.is_compatible_with(b) {
         return Ok(());
     }
 
     Err(Error::TypeMismatch {
-        type_a: type_a.clone(),
-        type_b: type_b.clone(),
+        type_a: a.clone(),
+        type_b: b.clone(),
         span: err_span(),
     })
 }

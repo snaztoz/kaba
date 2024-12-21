@@ -94,12 +94,6 @@ impl Type {
         Self::numbers().contains(self)
     }
 
-    fn is_signable(&self) -> bool {
-        // As unsigned types are not yet supported at the moment, just do this
-        // instead
-        self.is_number()
-    }
-
     pub const fn is_array(&self) -> bool {
         matches!(self, Self::Array { .. })
     }
@@ -110,6 +104,16 @@ impl Type {
 
     const fn is_callable(&self) -> bool {
         matches!(self, Self::Callable { .. })
+    }
+
+    fn is_signable(&self) -> bool {
+        // As unsigned types are not yet supported at the moment, just do this
+        // instead
+        self.is_number()
+    }
+
+    pub fn is_compatible_with(&self, other: &Type) -> bool {
+        self == other || self.is_promotable_to(other) || other.is_promotable_to(self)
     }
 
     pub fn is_assignable_to(&self, target: &Self) -> bool {

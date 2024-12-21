@@ -160,6 +160,32 @@ mod tests {
     }
 
     #[test]
+    fn declaring_variable_with_auto_type_casting() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    var a: sbyte = 10;
+                    var b: short = a;
+                    var c: int = b;
+                    var d: long = b;
+
+                    var e = d;
+
+                    var f: long = e;
+                end
+            "});
+    }
+
+    #[test]
+    fn prevent_declaring_variable_with_narrowing_auto_type_casting() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    var a = 10;
+                    var b: short = a;
+                end
+            "});
+    }
+
+    #[test]
     fn declaring_variable_with_bool_literal() {
         assert_is_ok(indoc! {"
                 fn main() do
@@ -300,6 +326,27 @@ mod tests {
         assert_is_ok(indoc! {"
                 fn main() do
                     var arr: [][][]int = [[], []];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variables_of_sbyte_array() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    var arr: []sbyte = [];
+
+                    var arr2: []sbyte = [1, 2, 3];
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variables_of_long_array_with_math_expr_in_literal() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    var x = 10;
+                    var arr: []long = [1, 2, 3 + x];
                 end
             "});
     }

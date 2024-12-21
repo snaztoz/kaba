@@ -4,7 +4,7 @@ use super::{
     state::SharedState,
     types::{assert, Type},
 };
-use crate::ast::Literal;
+use crate::ast::{AstNode, Literal};
 
 /// Analyzer for a literal expressions, such as numbers or arrays.
 pub struct LiteralAnalyzer<'a> {
@@ -32,58 +32,53 @@ impl LiteralAnalyzer<'_> {
     }
 
     fn analyze_array(&self) -> Result<Type> {
-        let arr = if let Literal::Array(arr) = self.lit {
-            arr
-        } else {
-            unreachable!()
-        };
-
-        // Perform double analyzing.
-        //
-        // For example, in the case of a nested array (let's call it A) like:
-        //
-        //      [[], [1]]
-        //
-        // The array type can't be inferred based on the first element only,
-        // which is an empty array.
-        //
-        // The solution is to iterate through all elements and stop on the
-        // first non-empty array, whose type can be inferred (let's call it T).
-        //
-        // Then the type of A will be set to `[]T`.
-        //
-        // Lastly, we re-run the analyzing process against the type of T for
-        // every element inside the array.
-
         let mut elem_t = None;
 
-        for elem in arr {
+        for elem in self.array() {
             let t = ExpressionAnalyzer::new(elem, self.state).analyze()?;
-            if !t.is_array_with_unknown_elem_t() {
-                elem_t = Some(t);
-                break;
+
+            // value with type `[]{unknown}` can't contribute to the inferring
+            // process of the array literal, so we skip this.
+            if t.is_array_with_unknown_elem_t() {
+                continue;
             }
-        }
 
-        if elem_t.is_none() {
-            return Ok(Type::Array { elem_t: None });
-        }
+            if elem_t.is_none() {
+                elem_t = Some(t);
+                continue;
+            }
 
-        for elem in arr {
-            let t = ExpressionAnalyzer::new(elem, self.state).analyze()?;
-            assert::is_assignable(&t, elem_t.as_ref().unwrap(), || elem.span().clone())?;
+            if let Some(current_t) = &elem_t {
+                assert::is_compatible(current_t, &t, || elem.span().clone())?;
+                // temporary
+                if current_t.is_number() {
+                    elem_t = Some(Type::largest_numeric_t_between(current_t, &t).clone());
+                } else {
+                    elem_t = Some(t);
+                }
+            }
         }
 
         Ok(Type::Array {
             elem_t: elem_t.map(Box::new),
         })
     }
+
+    fn array(&self) -> &[AstNode] {
+        if let Literal::Array(arr) = self.lit {
+            arr
+        } else {
+            unreachable!()
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::semantic::{
-        test_util::{assert_expression_is_err, assert_expression_type},
+        test_util::{
+            assert_expression_is_err, assert_expression_type, assert_expression_type_with_symbols,
+        },
         types::Type,
     };
 
@@ -108,6 +103,18 @@ mod tests {
             "[8 * 2048];",
             Type::Array {
                 elem_t: Some(Box::new(Type::UnboundedInt)),
+            },
+        );
+    }
+
+    #[test]
+    fn array_literal_with_literal_after_variable_element() {
+        let symbols = [("x", Type::Int)];
+        assert_expression_type_with_symbols(
+            "[1, x, 5];",
+            &symbols,
+            Type::Array {
+                elem_t: Some(Box::new(Type::Int)),
             },
         );
     }
