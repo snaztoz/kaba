@@ -139,39 +139,37 @@ impl ExpressionAnalyzer<'_> {
 #[cfg(test)]
 mod tests {
     use crate::semantic::{
-        test_util::{
-            assert_expression_is_err, assert_expression_type, assert_expression_type_with_symbols,
-        },
+        test_util::{assert_expr_is_err, assert_expr_type},
         types::Type,
     };
 
     #[test]
     fn math_expression_with_int_literals() {
-        assert_expression_type("-5 + 50 * 200 / 7 - 999;", Type::UnboundedInt);
+        assert_expr_type("-5 + 50 * 200 / 7 - 999;", &[], Type::UnboundedInt);
     }
 
     #[test]
     fn math_expression_with_sbyte() {
         let symbols = [("x", Type::SByte)];
-        assert_expression_type_with_symbols("5 + x;", &symbols, Type::SByte);
+        assert_expr_type("5 + x;", &symbols, Type::SByte);
     }
 
     #[test]
     fn math_expression_with_short() {
         let symbols = [("x", Type::Short)];
-        assert_expression_type_with_symbols("x + 5;", &symbols, Type::Short);
+        assert_expr_type("x + 5;", &symbols, Type::Short);
     }
 
     #[test]
     fn math_expression_with_int() {
         let symbols = [("x", Type::Int)];
-        assert_expression_type_with_symbols("5 + x;", &symbols, Type::Int);
+        assert_expr_type("5 + x;", &symbols, Type::Int);
     }
 
     #[test]
     fn math_expression_with_long() {
         let symbols = [("x", Type::Long)];
-        assert_expression_type_with_symbols("10 + x;", &symbols, Type::Long);
+        assert_expr_type("10 + x;", &symbols, Type::Long);
     }
 
     #[test]
@@ -182,56 +180,56 @@ mod tests {
             ("c", Type::Int),
             ("d", Type::Long),
         ];
-        assert_expression_type_with_symbols("5 + a * b - c / d;", &symbols, Type::Long);
+        assert_expr_type("5 + a * b - c / d;", &symbols, Type::Long);
     }
 
     #[test]
     fn float_modulo_expression() {
-        assert_expression_type("99.9 % 0.1;", Type::Float);
+        assert_expr_type("99.9 % 0.1;", &[], Type::Float);
     }
 
     #[test]
     fn comparison_and_equality_expressions() {
-        assert_expression_type("767 >= 900 == (45 < 67);", Type::Bool);
+        assert_expr_type("767 >= 900 == (45 < 67);", &[], Type::Bool);
     }
 
     #[test]
     fn logical_or_and_and_expressions() {
-        assert_expression_type("false || !false && 50 > 0;", Type::Bool);
+        assert_expr_type("false || !false && 50 > 0;", &[], Type::Bool);
     }
 
     #[test]
     fn math_expression_with_int_and_float_operands() {
-        assert_expression_is_err("-5 + -0.25;");
+        assert_expr_is_err("-5 + -0.25;");
     }
 
     #[test]
     fn non_existing_identifier() {
-        assert_expression_is_err("100 - not_exist;");
+        assert_expr_is_err("100 - not_exist;");
     }
 
     #[test]
     fn negating_boolean_value() {
-        assert_expression_is_err("-true;");
+        assert_expr_is_err("-true;");
     }
 
     #[test]
     fn comparing_boolean_values() {
-        assert_expression_is_err("true > false;");
+        assert_expr_is_err("true > false;");
     }
 
     #[test]
     fn analyzing_equality_of_int_and_float() {
-        assert_expression_is_err("93 == 93.0;");
+        assert_expr_is_err("93 == 93.0;");
     }
 
     #[test]
     fn negating_int_value() {
-        assert_expression_is_err("!5;");
+        assert_expr_is_err("!5;");
     }
 
     #[test]
     fn logical_and_with_int_value() {
-        assert_expression_is_err("false || !false && 50;");
+        assert_expr_is_err("false || !false && 50;");
     }
 }

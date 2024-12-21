@@ -76,16 +76,15 @@ impl LiteralAnalyzer<'_> {
 #[cfg(test)]
 mod tests {
     use crate::semantic::{
-        test_util::{
-            assert_expression_is_err, assert_expression_type, assert_expression_type_with_symbols,
-        },
+        test_util::{assert_expr_is_err, assert_expr_type},
         types::Type,
     };
 
     #[test]
     fn array_literal() {
-        assert_expression_type(
+        assert_expr_type(
             "[1, 2, 3];",
+            &[],
             Type::Array {
                 elem_t: Some(Box::new(Type::UnboundedInt)),
             },
@@ -94,13 +93,14 @@ mod tests {
 
     #[test]
     fn empty_array_literal() {
-        assert_expression_type("[];", Type::Array { elem_t: None });
+        assert_expr_type("[];", &[], Type::Array { elem_t: None });
     }
 
     #[test]
     fn array_literal_with_math_expression() {
-        assert_expression_type(
+        assert_expr_type(
             "[8 * 2048];",
+            &[],
             Type::Array {
                 elem_t: Some(Box::new(Type::UnboundedInt)),
             },
@@ -110,7 +110,7 @@ mod tests {
     #[test]
     fn array_literal_with_literal_after_variable_element() {
         let symbols = [("x", Type::Int)];
-        assert_expression_type_with_symbols(
+        assert_expr_type(
             "[1, x, 5];",
             &symbols,
             Type::Array {
@@ -121,8 +121,9 @@ mod tests {
 
     #[test]
     fn nested_array_literals() {
-        assert_expression_type(
+        assert_expr_type(
             "[[1, 3, 5], [2, 6, 3], [9, 1, 1]];",
+            &[],
             Type::Array {
                 elem_t: Some(Box::new(Type::Array {
                     elem_t: Some(Box::new(Type::UnboundedInt)),
@@ -133,13 +134,14 @@ mod tests {
 
     #[test]
     fn array_literal_with_different_element_types() {
-        assert_expression_is_err("[1, 5.0];");
+        assert_expr_is_err("[1, 5.0];");
     }
 
     #[test]
     fn array_literal_with_different_nested_element_sizes() {
-        assert_expression_type(
+        assert_expr_type(
             "[[], [1]];",
+            &[],
             Type::Array {
                 elem_t: Some(Box::new(Type::Array {
                     elem_t: Some(Box::new(Type::UnboundedInt)),

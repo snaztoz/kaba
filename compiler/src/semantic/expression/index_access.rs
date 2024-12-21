@@ -55,12 +55,13 @@ impl IndexAccessAnalyzer<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::semantic::test_util::assert_expression_type;
+    use crate::semantic::test_util::assert_expr_type;
 
     #[test]
     fn index_accessing() {
-        assert_expression_type(
+        assert_expr_type(
             "[[1, 2]][0];",
+            &[],
             Type::Array {
                 elem_t: Some(Box::new(Type::UnboundedInt)),
             },
