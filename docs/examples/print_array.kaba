@@ -1,7 +1,7 @@
 # Display elements inside an array
 
 fn main() do
-    var arr = [1, 2, 3, 4, 5, 6];
+    var arr = []int{ 1, 2, 3, 4, 5, 6 };
 
     each n in arr do
         debug n * 2;

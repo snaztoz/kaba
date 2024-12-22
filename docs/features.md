@@ -183,7 +183,7 @@ fn main() do
 
     var d: () -> void = foo;
 
-    var e: []int = [99, 101];
+    var e: []int = []int{ 99, 101 };
 end
 
 fn foo() do
@@ -192,15 +192,15 @@ end
 
 ### More on array type
 
-Array has a **fixed** size, so that it can't be changed after it was created.
+Even though the size is not specified in the type notation (`[]T`), array has a **fixed** size, so that it can't grow or shrink after it was created.
 
-Array size is not included in the type system, so that `[1, 2, 3]` is considered to have the same type as `[1]`.
+Because the size is not included in the type notation, an integer array like `[1, 2, 3]` is considered to have the same type as `[1]`.
 
 Kaba can infer the type of an array:
 
 ```text
 fn main do
-    var arr = [false, true, true];
+    var arr = []bool{ false, true, true };
 
     # The type of `arr` is `[]bool`
 
@@ -212,7 +212,7 @@ More complex scenarios are also supported:
 
 ```text
 fn main() do
-    var arr = [[], [4, 5]];
+    var arr = [][]int{ []int{}, []int{ 4, 5 } };
     foo(arr);
 
     arr[1][1] = 10;
@@ -221,22 +221,6 @@ end
 
 fn foo(arr: [][]int) do
     debug arr[1][1];
-end
-```
-
-On a side note, statements such as variable declaration and `each` loop are unable to infer type from an empty array literal, so type notation is mandatory in those cases:
-
-```text
-fn main() do
-    # Use this...
-    var x: []int = [];
-
-    # Not this...
-    var x = [];
-
-    # And also not this...
-    each i in [] do
-    end
 end
 ```
 
@@ -366,16 +350,16 @@ It also supports `continue` and `break` statements:
 
 ```text
 fn main() do
-    each i in [1, 2, 3, 4, 5, 6] do
-        if i == 3 do
+    each n in []int{ 1, 2, 3, 4, 5, 6 } do
+        if n == 3 do
             continue;
         end
 
-        if i == 5 do
+        if n == 5 do
             break;
         end
 
-        debug i;
+        debug n;
     end
 end
 ```
