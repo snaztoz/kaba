@@ -113,7 +113,7 @@ impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::VoidTypeVariable { .. } => {
-                write!(f, "unable to create variable with `Void` type")
+                write!(f, "unable to create variable with `void` type")
             }
             Self::InvalidAssignmentType { var_t, val_t, .. } => {
                 write!(
@@ -170,7 +170,7 @@ impl Display for Error {
                 )
             }
             Self::UnexpectedVoidTypeExpression { .. } => {
-                write!(f, "unexpected `Void` type expression")
+                write!(f, "unexpected `void` type expression")
             }
         }
     }
