@@ -46,7 +46,7 @@ impl LiteralAnalyzer<'_> {
         }
 
         Ok(Type::Array {
-            elem_t: Some(Box::new(elem_t)),
+            elem_t: Box::new(elem_t),
         })
     }
 }
@@ -64,7 +64,7 @@ mod tests {
             "[]int{ 1, 2, 3 };",
             &[],
             Type::Array {
-                elem_t: Some(Box::new(Type::Int)),
+                elem_t: Box::new(Type::Int),
             },
         );
     }
@@ -75,7 +75,7 @@ mod tests {
             "[]int{};",
             &[],
             Type::Array {
-                elem_t: Some(Box::new(Type::Int)),
+                elem_t: Box::new(Type::Int),
             },
         );
     }
@@ -86,7 +86,7 @@ mod tests {
             "[]int{ 8 * 2048 };",
             &[],
             Type::Array {
-                elem_t: Some(Box::new(Type::Int)),
+                elem_t: Box::new(Type::Int),
             },
         );
     }
@@ -98,7 +98,7 @@ mod tests {
             "[]int{ 1, x, 5 };",
             &symbols,
             Type::Array {
-                elem_t: Some(Box::new(Type::Int)),
+                elem_t: Box::new(Type::Int),
             },
         );
     }
@@ -109,9 +109,9 @@ mod tests {
             "[][]int{ []int{1, 3, 5}, []int{2, 6, 3}, []int{9, 1, 1} };",
             &[],
             Type::Array {
-                elem_t: Some(Box::new(Type::Array {
-                    elem_t: Some(Box::new(Type::Int)),
-                })),
+                elem_t: Box::new(Type::Array {
+                    elem_t: Box::new(Type::Int),
+                }),
             },
         );
     }
@@ -127,9 +127,9 @@ mod tests {
             "[][]int{ []int{}, []int{1} };",
             &[],
             Type::Array {
-                elem_t: Some(Box::new(Type::Array {
-                    elem_t: Some(Box::new(Type::Int)),
-                })),
+                elem_t: Box::new(Type::Array {
+                    elem_t: Box::new(Type::Int),
+                }),
             },
         );
     }

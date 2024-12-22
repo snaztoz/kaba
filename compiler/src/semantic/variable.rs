@@ -58,25 +58,12 @@ impl VariableDeclarationAnalyzer<'_> {
             assert::is_assignable(&val_t, &t, || self.span().clone())?;
             t
         } else {
-            if val_t.is_array_with_unknown_elem_t() {
-                return Err(Error::UnableToInferType {
-                    span: self.id().span().clone(),
-                });
-            }
             val_t.promote_default()
         };
 
         self.save_symbol(&self.id_string(), var_t, self.span())?;
 
         Ok(Type::Void)
-    }
-
-    fn id(&self) -> &AstNode {
-        if let AstNode::VariableDeclaration { id, .. } = self.node {
-            id
-        } else {
-            unreachable!()
-        }
     }
 
     fn id_string(&self) -> String {

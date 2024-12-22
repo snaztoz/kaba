@@ -18,20 +18,18 @@ pub enum Type {
 
     // Primitive types
     Bool,
-
-    SByte,
-    Short,
+    Float,
     Int,
     Long,
-
-    Float,
+    SByte,
+    Short,
 
     // Other types (e.g. class)
     Identifier(String),
 
     // Compound types
     Array {
-        elem_t: Option<Box<Self>>,
+        elem_t: Box<Self>,
     },
     Callable {
         params_t: Vec<Self>,
@@ -98,10 +96,6 @@ impl Type {
         matches!(self, Self::Array { .. })
     }
 
-    pub fn is_array_with_unknown_elem_t(&self) -> bool {
-        matches!(self, Self::Array { elem_t } if elem_t.is_none())
-    }
-
     const fn is_callable(&self) -> bool {
         matches!(self, Self::Callable { .. })
     }
@@ -116,8 +110,8 @@ impl Type {
         self == other || self.is_promotable_to(other) || other.is_promotable_to(self)
     }
 
-    pub fn is_assignable_to(&self, target: &Self) -> bool {
-        self == target || self.is_promotable_to(target)
+    pub fn is_assignable_to(&self, other: &Self) -> bool {
+        self == other || self.is_promotable_to(other)
     }
 
     /// Check if `self` is promotable to `target`.
@@ -129,10 +123,10 @@ impl Type {
     ///
     /// assert!(t.is_promotable_to(&Type::int()));
     /// ```
-    fn is_promotable_to(&self, target: &Self) -> bool {
+    fn is_promotable_to(&self, other: &Self) -> bool {
         let ord = Self::signed_ints();
         let self_idx = ord.iter().position(|t| t == self);
-        let target_idx = ord.iter().position(|t| t == target);
+        let target_idx = ord.iter().position(|t| t == other);
 
         // NOTE: temporary solution
         if let Some(self_idx) = self_idx {
@@ -167,17 +161,13 @@ impl Type {
         match self {
             Self::UnboundedInt => Self::Int,
 
-            Self::Array { elem_t } => Self::Array {
-                elem_t: elem_t.as_ref().map(|t| Box::new(t.promote_default())),
-            },
-
             t => t.clone(),
         }
     }
 
-    pub fn unwrap_array(&self) -> &Option<Box<Self>> {
+    pub fn unwrap_array(self) -> Self {
         if let Self::Array { elem_t, .. } = self {
-            elem_t
+            *elem_t
         } else {
             panic!("trying to unwrap array on non-Array type")
         }
@@ -206,7 +196,7 @@ impl<'a> From<&'a AstNode> for Type {
                 TypeNotation::Identifier(id) => Self::Identifier(id.to_string()),
 
                 TypeNotation::Array { elem_tn } => Self::Array {
-                    elem_t: Some(Box::new(Self::from(elem_tn.as_ref()))),
+                    elem_t: Box::new(Self::from(elem_tn.as_ref())),
                 },
 
                 TypeNotation::Callable {
@@ -242,15 +232,7 @@ impl Display for Type {
 
             Self::Identifier(id) => write!(f, "{id}"),
 
-            Self::Array { elem_t, .. } => {
-                let elem_t = if let Some(t) = elem_t {
-                    t.to_string()
-                } else {
-                    String::from("{unknown}")
-                };
-
-                write!(f, "[]{elem_t}")
-            }
+            Self::Array { elem_t, .. } => write!(f, "[]{elem_t}"),
 
             Self::Callable { params_t, return_t } => {
                 let params_t = params_t

@@ -49,7 +49,7 @@ impl SharedState {
         }
 
         if let Type::Array { elem_t } = t {
-            return self.has_t(elem_t.as_ref().unwrap());
+            return self.has_t(elem_t);
         }
 
         let current_scope = self.current_scope.borrow().upgrade().unwrap();

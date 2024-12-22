@@ -29,7 +29,7 @@ impl IndexAccessAnalyzer<'_> {
         assert::is_number(&index_t, || self.index().span().clone())?;
 
         match obj_t {
-            Type::Array { elem_t } => Ok(*elem_t.unwrap()),
+            Type::Array { elem_t } => Ok(*elem_t),
 
             _ => unreachable!(),
         }
@@ -63,7 +63,7 @@ mod tests {
             "[][]int{ []int{ 1, 2 } }[0];",
             &[],
             Type::Array {
-                elem_t: Some(Box::new(Type::Int)),
+                elem_t: Box::new(Type::Int),
             },
         );
     }

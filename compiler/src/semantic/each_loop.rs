@@ -1,6 +1,6 @@
 use super::{
     body::BodyAnalyzer,
-    error::{Error, Result},
+    error::Result,
     expression::ExpressionAnalyzer,
     state::{scope::ScopeVariant, SharedState},
     types::{assert, Type},
@@ -55,15 +55,8 @@ impl EachLoopAnalyzer<'_> {
 
         assert::is_iterable(&expr_t, || self.iterable().span().clone())?;
 
-        // Make sure the array element's type is known
-        if expr_t.is_array_with_unknown_elem_t() {
-            return Err(Error::UnableToInferType {
-                span: self.elem_id().span().clone(),
-            });
-        }
-
         let elem_id = self.elem_id().unwrap_identifier().0;
-        let elem_t = expr_t.unwrap_array().as_ref().unwrap().as_ref();
+        let elem_t = expr_t.unwrap_array();
 
         // Check all statements inside the body with a new scope
 
