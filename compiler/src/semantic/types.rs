@@ -46,17 +46,18 @@ impl Type {
     /// ## Signed integers
     ///
     /// 1. UnboundedInt
-    /// 2. Short
-    /// 3. Int
-    /// 4. Long
+    /// 2. SByte (signed-byte)
+    /// 3. Short
+    /// 4. Int
+    /// 5. Long
     ///
     /// # Example
     ///
     /// ```ignore
     /// let a = Type::UnboundedInt;
-    /// let b = Type::int();
+    /// let b = Type::Int;
     ///
-    /// assert_eq!(Type::largest_numeric_t_between(&a, &b), &Type::int())
+    /// assert_eq!(Type::largest_numeric_t_between(&a, &b), &Type::Int)
     /// ```
     pub fn largest_numeric_t_between<'a>(a: &'a Self, b: &'a Self) -> &'a Self {
         if a == b {
@@ -121,7 +122,7 @@ impl Type {
     /// ```ignore
     /// let t = Type::UnboundedInt;
     ///
-    /// assert!(t.is_promotable_to(&Type::int()));
+    /// assert!(t.is_promotable_to(&Type::Int));
     /// ```
     fn is_promotable_to(&self, other: &Self) -> bool {
         let ord = Self::signed_ints();
@@ -148,14 +149,14 @@ impl Type {
     /// ```
     ///
     /// `5` is actually has the type of `Type::UnboundedInt`, but the `x`
-    /// symbol will have the type of `Type::int()`.
+    /// symbol will have the type of `Type::Int`.
     ///
     /// # Example
     ///
     /// ```ignore
     /// let t = Type::UnboundedInt;
     ///
-    /// assert_eq!(t.promote_default(), &Type::int());
+    /// assert_eq!(t.promote_default(), &Type::Int);
     /// ```
     pub fn promote_default(&self) -> Self {
         match self {
