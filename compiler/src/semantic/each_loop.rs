@@ -104,11 +104,11 @@ mod tests {
     fn each_loop_statements() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    each n in [1, 2, 3] do
+                    each n in []int{1, 2, 3} do
                         debug n;
                     end
 
-                    var arr = [4, 5, 6];
+                    var arr = []int{4, 5, 6};
                     each n in arr do
                         debug n;
                     end
@@ -131,20 +131,10 @@ mod tests {
     fn accessing_elem_id_outside_scope() {
         assert_is_err(indoc! {"
                 fn main() do
-                    each n in [1, 2] do
+                    each n in []int{1, 2} do
                     end
 
                     debug n;
-                end
-            "});
-    }
-
-    #[test]
-    fn iterating_over_an_empty_array_of_unknown_type() {
-        assert_is_err(indoc! {"
-                fn main() do
-                    each n in [] do
-                    end
                 end
             "});
     }

@@ -1,4 +1,4 @@
-use super::{error::ParsingError, stream::TokenStream, Result};
+use super::{error::ParsingError, stream::TokenStream, tn::TypeNotationParser, Result};
 use crate::{
     ast::{AstNode, Literal},
     lexer::TokenKind,
@@ -505,14 +505,21 @@ impl ExpressionParser<'_> {
     fn parse_array_literal(&self) -> Result<AstNode> {
         let start = self.tokens.current().span.start;
 
-        // Expecting "["
+        // Expecting "[" and "]"
         self.tokens.skip(&TokenKind::LBrack)?;
+        self.tokens.skip(&TokenKind::RBrack)?;
+
+        // Expecting type notation
+        let elem_tn = TypeNotationParser::new(self.tokens).parse()?;
+
+        // Expecting "{"
+        self.tokens.skip(&TokenKind::LBrace)?;
 
         // Can have >= 0 elements
         let mut elems = vec![];
         loop {
             // Stop when encounter a closing bracket
-            if self.tokens.current_is(&TokenKind::RBrack) {
+            if self.tokens.current_is(&TokenKind::RBrace) {
                 break;
             }
 
@@ -526,12 +533,12 @@ impl ExpressionParser<'_> {
                     continue;
                 }
 
-                TokenKind::RBrack => continue,
+                TokenKind::RBrace => continue,
 
                 kind => {
                     // Error if encountering neither "," or ")"
                     return Err(ParsingError::UnexpectedToken {
-                        expect: TokenKind::RBrack,
+                        expect: TokenKind::RBrace,
                         found: kind.clone(),
                         span: self.tokens.current().span,
                     });
@@ -541,11 +548,14 @@ impl ExpressionParser<'_> {
 
         let end = self.tokens.current().span.end;
 
-        // Expecting "]"
-        self.tokens.skip(&TokenKind::RBrack)?;
+        // Expecting "}"
+        self.tokens.skip(&TokenKind::RBrace)?;
 
         Ok(AstNode::Literal {
-            lit: Literal::Array(elems),
+            lit: Literal::Array {
+                elem_tn: Box::new(elem_tn),
+                elems,
+            },
             span: start..end,
         })
     }
@@ -554,7 +564,7 @@ impl ExpressionParser<'_> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        ast::{AstNode, Literal},
+        ast::{AstNode, Literal, TypeNotation},
         lexer::{self, TokenKind},
         parser::{error::ParsingError, parse, test_util::parse_and_assert_result},
     };
@@ -1071,10 +1081,16 @@ mod tests {
     #[test]
     fn empty_array() {
         parse_and_assert_result(
-            "[];",
+            "[]int{};",
             AstNode::Literal {
-                lit: Literal::Array(vec![]),
-                span: 0..2,
+                lit: Literal::Array {
+                    elem_tn: Box::new(AstNode::TypeNotation {
+                        tn: TypeNotation::Identifier(String::from("int")),
+                        span: 2..5,
+                    }),
+                    elems: vec![],
+                },
+                span: 0..7,
             },
         )
     }
@@ -1082,33 +1098,72 @@ mod tests {
     #[test]
     fn array_with_single_element() {
         parse_and_assert_result(
-            "[5,];",
+            "[]int{5,};",
             AstNode::Literal {
-                lit: Literal::Array(vec![AstNode::Literal {
-                    lit: Literal::Int(5),
-                    span: 1..2,
-                }]),
-                span: 0..4,
+                lit: Literal::Array {
+                    elem_tn: Box::new(AstNode::TypeNotation {
+                        tn: TypeNotation::Identifier(String::from("int")),
+                        span: 2..5,
+                    }),
+                    elems: vec![AstNode::Literal {
+                        lit: Literal::Int(5),
+                        span: 6..7,
+                    }],
+                },
+                span: 0..9,
             },
         );
     }
 
     #[test]
+    fn empty_nested_arrays() {
+        parse_and_assert_result(
+            "[][]int{};",
+            AstNode::Literal {
+                lit: Literal::Array {
+                    elem_tn: Box::new(AstNode::TypeNotation {
+                        tn: TypeNotation::Array {
+                            elem_tn: Box::new(AstNode::TypeNotation {
+                                tn: TypeNotation::Identifier(String::from("int")),
+                                span: 4..7,
+                            }),
+                        },
+                        span: 2..7,
+                    }),
+                    elems: vec![],
+                },
+                span: 0..9,
+            },
+        )
+    }
+
+    #[test]
     fn nested_arrays() {
         parse_and_assert_result(
-            "[[], []];",
+            "[][]int{ []int{} };",
             AstNode::Literal {
-                lit: Literal::Array(vec![
-                    AstNode::Literal {
-                        lit: Literal::Array(vec![]),
-                        span: 1..3,
-                    },
-                    AstNode::Literal {
-                        lit: Literal::Array(vec![]),
-                        span: 5..7,
-                    },
-                ]),
-                span: 0..8,
+                lit: Literal::Array {
+                    elem_tn: Box::new(AstNode::TypeNotation {
+                        tn: TypeNotation::Array {
+                            elem_tn: Box::new(AstNode::TypeNotation {
+                                tn: TypeNotation::Identifier(String::from("int")),
+                                span: 4..7,
+                            }),
+                        },
+                        span: 2..7,
+                    }),
+                    elems: vec![AstNode::Literal {
+                        lit: Literal::Array {
+                            elem_tn: Box::new(AstNode::TypeNotation {
+                                tn: TypeNotation::Identifier(String::from("int")),
+                                span: 11..14,
+                            }),
+                            elems: vec![],
+                        },
+                        span: 9..16,
+                    }],
+                },
+                span: 0..18,
             },
         )
     }

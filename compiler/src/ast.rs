@@ -469,7 +469,10 @@ pub enum Literal {
     Int(i32),
     Float(f64),
 
-    Array(Vec<AstNode>),
+    Array {
+        elem_tn: Box<AstNode>,
+        elems: Vec<AstNode>,
+    },
 }
 
 impl Display for Literal {
@@ -481,8 +484,8 @@ impl Display for Literal {
             Self::Int(n) => write!(f, "{n}"),
             Self::Float(n) => write!(f, "{n}"),
 
-            Self::Array(arr) => {
-                let joined = arr
+            Self::Array { elems, .. } => {
+                let joined = elems
                     .iter()
                     .map(|tn| tn.to_string())
                     .collect::<Vec<_>>()

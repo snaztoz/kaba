@@ -110,6 +110,8 @@ pub enum TokenKind {
     #[token(")")] RParen,
     #[token("[")] LBrack,
     #[token("]")] RBrack,
+    #[token("{")] LBrace,
+    #[token("}")] RBrace,
 
     #[token("=")]  Assign,
     #[token("+=")] AddAssign,
@@ -183,6 +185,8 @@ impl Display for TokenKind {
             Self::RParen => write!(f, "right parentheses (`)`)"),
             Self::LBrack => write!(f, "left bracket (`[`)"),
             Self::RBrack => write!(f, "right bracket (`]`)"),
+            Self::LBrace => write!(f, "left brace (`{{`)"),
+            Self::RBrace => write!(f, "right bracket (`}}`)"),
             Self::Assign => write!(f, "assign operator (`=`)"),
             Self::AddAssign => write!(f, "add assign operator (`+=`)"),
             Self::SubAssign => write!(f, "sub assign operator (`-=`)"),

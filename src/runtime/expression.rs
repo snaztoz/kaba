@@ -64,7 +64,7 @@ impl<'a> ExpressionRunner<'a> {
             Literal::Int(n) => RuntimeValue::Integer(*n),
             Literal::Float(n) => RuntimeValue::Float(*n),
 
-            Literal::Array(arr) => {
+            Literal::Array { elems: arr, .. } => {
                 let mut elems = vec![];
                 for elem in arr {
                     let val = ExpressionRunner::new(elem, self.root, self.state).run()?;

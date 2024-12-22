@@ -117,25 +117,7 @@ impl Type {
     }
 
     pub fn is_assignable_to(&self, target: &Self) -> bool {
-        if self == target || self.is_promotable_to(target) {
-            return true;
-        }
-
-        if self.is_array() && target.is_array() {
-            let self_elem_t = self.unwrap_array();
-            let target_elem_t = target.unwrap_array();
-
-            return self_elem_t
-                .as_ref()
-                .unwrap_or_else(|| {
-                    // Infer self's element type from target's type, because
-                    // target_elem_t will never has `None` value.
-                    target_elem_t.as_ref().unwrap()
-                })
-                .is_assignable_to(target_elem_t.as_ref().unwrap());
-        }
-
-        false
+        self == target || self.is_promotable_to(target)
     }
 
     /// Check if `self` is promotable to `target`.

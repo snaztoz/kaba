@@ -54,7 +54,9 @@ impl VariableDeclarationAnalyzer<'_> {
         let val_t = ExpressionAnalyzer::new(self.val(), self.state).analyze()?;
 
         let var_t = if let Some(tn) = self.tn() {
-            self.analyze_tn(tn, &val_t)?
+            let t = TypeNotationAnalyzer::new(tn, self.state).analyze()?;
+            assert::is_assignable(&val_t, &t, || self.span().clone())?;
+            t
         } else {
             if val_t.is_array_with_unknown_elem_t() {
                 return Err(Error::UnableToInferType {
@@ -67,15 +69,6 @@ impl VariableDeclarationAnalyzer<'_> {
         self.save_symbol(&self.id_string(), var_t, self.span())?;
 
         Ok(Type::Void)
-    }
-
-    fn analyze_tn(&self, tn: &AstNode, val_t: &Type) -> Result<Type> {
-        let t = TypeNotationAnalyzer::new(tn, self.state).analyze()?;
-
-        // Check if the value type is compatible with the variable
-        assert::is_assignable(val_t, &t, || self.span().clone())?;
-
-        Ok(t)
     }
 
     fn id(&self) -> &AstNode {
@@ -280,16 +273,16 @@ mod tests {
     fn declaring_variable_with_array_literal() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr = [1];
+                    var arr = []int{ 1 };
                 end
             "});
     }
 
     #[test]
     fn declaring_variable_with_empty_array_literal() {
-        assert_is_err(indoc! {"
+        assert_is_ok(indoc! {"
                 fn main() do
-                    var arr = [];
+                    var arr = []int{};
                 end
             "});
     }
@@ -298,7 +291,7 @@ mod tests {
     fn declaring_variable_with_array_type_notation() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr: []int = [5, 9, 10];
+                    var arr: []int = []int{ 5, 9, 10 };
                 end
             "});
     }
@@ -307,7 +300,16 @@ mod tests {
     fn declaring_variable_with_empty_array_literal_and_type_notation() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr: []int = [];
+                    var arr: []int = []int{};
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_incompatible_array_literal() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    var arr: []int = []short{ 5 };
                 end
             "});
     }
@@ -316,7 +318,7 @@ mod tests {
     fn declaring_variable_with_nested_arrays_and_type_notation() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr: [][]int = [[5, 9, 10], [1, 2, 3]];
+                    var arr: [][]int = [][]int{ []int{5, 9, 10}, []int{1, 2, 3} };
                 end
             "});
     }
@@ -325,7 +327,7 @@ mod tests {
     fn declaring_variable_with_nested_empty_arrays_and_type_notation() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr: [][][]int = [[], []];
+                    var arr: [][][]int = [][][]int{ [][]int{}, [][]int{} };
                 end
             "});
     }
@@ -334,9 +336,9 @@ mod tests {
     fn declaring_variables_of_sbyte_array() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr: []sbyte = [];
+                    var arr: []sbyte = []sbyte{};
 
-                    var arr2: []sbyte = [1, 2, 3];
+                    var arr2: []sbyte = []sbyte{ 1, 2, 3 };
                 end
             "});
     }
@@ -346,7 +348,7 @@ mod tests {
         assert_is_ok(indoc! {"
                 fn main() do
                     var x = 10;
-                    var arr: []long = [1, 2, 3 + x];
+                    var arr: []long = []long{ 1, 2, 3 + x };
                 end
             "});
     }
@@ -355,7 +357,7 @@ mod tests {
     fn declaring_variable_with_array_literal_of_function_types() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr = [five, six];
+                    var arr = []()->int{ five, six };
                 end
 
                 fn five(): int do
@@ -372,7 +374,7 @@ mod tests {
     fn declaring_variable_with_incompatible_element_types() {
         assert_is_err(indoc! {"
                 fn main() do
-                    var arr = [1, 0.5,];
+                    var arr = []int{ 1, 0.5, };
                 end
             "});
     }
@@ -381,7 +383,7 @@ mod tests {
     fn declaring_variable_with_non_existing_array_type() {
         assert_is_err(indoc! {"
                 fn main() do
-                    var arr: []NotExist = [];
+                    var arr = []NotExist{};
                 end
             "})
     }

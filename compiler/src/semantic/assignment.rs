@@ -226,7 +226,7 @@ mod tests {
     fn assign_to_array_element() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr = [true, false, true];
+                    var arr = []bool{ true, false, true };
 
                     arr[1] = true;
                 end
@@ -237,7 +237,7 @@ mod tests {
     fn shorthand_assign_to_array_element() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr = [0.5, 1.1, 2.3];
+                    var arr = []float{ 0.5, 1.1, 2.3 };
 
                     arr[0] += 5.5;
                 end

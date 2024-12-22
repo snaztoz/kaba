@@ -60,10 +60,10 @@ mod tests {
     #[test]
     fn index_accessing() {
         assert_expr_type(
-            "[[1, 2]][0];",
+            "[][]int{ []int{ 1, 2 } }[0];",
             &[],
             Type::Array {
-                elem_t: Some(Box::new(Type::UnboundedInt)),
+                elem_t: Some(Box::new(Type::Int)),
             },
         );
     }
