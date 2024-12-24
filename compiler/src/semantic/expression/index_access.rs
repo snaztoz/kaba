@@ -55,7 +55,7 @@ impl IndexAccessAnalyzer<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::semantic::test_util::assert_expr_type;
+    use crate::semantic::{test_util::assert_expr_type, types::IntType};
 
     #[test]
     fn index_accessing() {
@@ -63,7 +63,7 @@ mod tests {
             "[][]int{ []int{ 1, 2 } }[0];",
             &[],
             Type::Array {
-                elem_t: Box::new(Type::Int),
+                elem_t: Box::new(Type::Int(IntType::Int)),
             },
         );
     }

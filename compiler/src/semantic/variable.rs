@@ -3,7 +3,7 @@ use super::{
     expression::ExpressionAnalyzer,
     state::SharedState,
     tn::TypeNotationAnalyzer,
-    types::{assert, Type},
+    types::{assert, IntType, Type},
 };
 use crate::ast::AstNode;
 use logos::Span;
@@ -53,12 +53,15 @@ impl VariableDeclarationAnalyzer<'_> {
     pub fn analyze(&self) -> Result<Type> {
         let val_t = ExpressionAnalyzer::new(self.val(), self.state).analyze()?;
 
-        let var_t = if let Some(tn) = self.tn() {
-            let t = TypeNotationAnalyzer::new(tn, self.state).analyze()?;
-            assert::is_assignable(&val_t, &t, || self.span().clone())?;
-            t
-        } else {
-            val_t.promote_default()
+        let var_t = match self.tn() {
+            Some(tn) => {
+                let t = TypeNotationAnalyzer::new(tn, self.state).analyze()?;
+                assert::is_assignable(&val_t, &t, || self.span().clone())?;
+                t
+            }
+
+            None if val_t.is_unbounded_int() => Type::Int(IntType::Int),
+            None => val_t,
         };
 
         self.save_symbol(&self.id_string(), var_t, self.span())?;

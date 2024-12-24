@@ -3,26 +3,14 @@ use std::fmt::Display;
 
 pub mod assert;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Type {
     Void,
 
-    // An integer type that can be promoted into other integer types. For
-    // example:
-    //
-    //  var x: int = 5;
-    //
-    // Here the type of `5` is UnboundedInt, it can be assigned into `x`
-    // directly, which has an `int` type.
-    UnboundedInt,
-
     // Primitive types
     Bool,
+    Int(IntType),
     Float,
-    Int,
-    Long,
-    SByte,
-    Short,
 
     // Other types (e.g. class)
     Identifier(String),
@@ -38,103 +26,25 @@ pub enum Type {
 }
 
 impl Type {
-    /// Get the largest numeric type between `a` and `b`.
-    ///
-    /// Smaller numeric type can be casted into a larger numeritc type
-    /// automatically, with the ordering of the types is like the following:
-    ///
-    /// ## Signed integers
-    ///
-    /// 1. UnboundedInt
-    /// 2. SByte (signed-byte)
-    /// 3. Short
-    /// 4. Int
-    /// 5. Long
-    ///
-    /// # Example
-    ///
-    /// ```ignore
-    /// let a = Type::UnboundedInt;
-    /// let b = Type::Int;
-    ///
-    /// assert_eq!(Type::largest_numeric_t_between(&a, &b), &Type::Int)
-    /// ```
-    pub fn largest_numeric_t_between<'a>(a: &'a Self, b: &'a Self) -> &'a Self {
-        if a == b {
-            return b;
-        }
-
-        for t in &Self::signed_ints() {
-            if t == a {
-                return b;
-            } else if t == b {
-                return a;
-            }
-        }
-
-        unreachable!()
-    }
-
-    fn signed_ints() -> Vec<Self> {
-        vec![
-            Self::UnboundedInt,
-            Self::SByte,
-            Self::Short,
-            Self::Int,
-            Self::Long,
-        ]
-    }
-
-    fn numbers() -> Vec<Self> {
-        [Self::signed_ints(), vec![Self::Float]].concat()
-    }
-
     pub fn is_compatible_with(&self, other: &Type) -> bool {
-        self == other || self.is_promotable_to(other) || other.is_promotable_to(self)
+        if self == other {
+            return true;
+        }
+
+        (self.is_unbounded_int() && other.is_bounded_int())
+            || (other.is_unbounded_int() && self.is_bounded_int())
     }
 
     pub fn is_assignable_to(&self, other: &Self) -> bool {
-        self == other || self.is_promotable_to(other)
+        self == other || (self.is_unbounded_int() && other.is_bounded_int())
     }
 
-    /// Check if `self` is promotable to `other`.
-    ///
-    /// # Example
-    ///
-    /// ```ignore
-    /// let t = Type::UnboundedInt;
-    ///
-    /// assert!(t.is_promotable_to(&Type::Int));
-    /// ```
-    fn is_promotable_to(&self, other: &Self) -> bool {
-        self == &Type::UnboundedInt && Self::signed_ints().contains(other)
+    pub const fn is_unbounded_int(&self) -> bool {
+        matches!(self, &Type::Int(IntType::Unbounded))
     }
 
-    /// Promote some types into their default type.
-    ///
-    /// For example, unbounded integers will have the default type of `int`
-    /// when assigned into a variable:
-    ///
-    /// ```text
-    /// var x = 5;
-    /// ```
-    ///
-    /// `5` is actually has the type of `Type::UnboundedInt`, but the `x`
-    /// symbol will have the type of `Type::Int`.
-    ///
-    /// # Example
-    ///
-    /// ```ignore
-    /// let t = Type::UnboundedInt;
-    ///
-    /// assert_eq!(t.promote_default(), &Type::Int);
-    /// ```
-    pub fn promote_default(&self) -> Self {
-        match self {
-            Self::UnboundedInt => Self::Int,
-
-            t => t.clone(),
-        }
+    fn is_bounded_int(&self) -> bool {
+        matches!(self, Type::Int(t) if t != &IntType::Unbounded)
     }
 
     pub fn unwrap_array(self) -> Self {
@@ -160,10 +70,10 @@ impl<'a> From<&'a AstNode> for Type {
             match tn {
                 TypeNotation::Identifier(id) if id == "void" => Self::Void,
                 TypeNotation::Identifier(id) if id == "bool" => Self::Bool,
-                TypeNotation::Identifier(id) if id == "sbyte" => Self::SByte,
-                TypeNotation::Identifier(id) if id == "short" => Self::Short,
-                TypeNotation::Identifier(id) if id == "int" => Self::Int,
-                TypeNotation::Identifier(id) if id == "long" => Self::Long,
+                TypeNotation::Identifier(id) if id == "sbyte" => Self::Int(IntType::SByte),
+                TypeNotation::Identifier(id) if id == "short" => Self::Int(IntType::Short),
+                TypeNotation::Identifier(id) if id == "int" => Self::Int(IntType::Int),
+                TypeNotation::Identifier(id) if id == "long" => Self::Int(IntType::Long),
                 TypeNotation::Identifier(id) if id == "float" => Self::Float,
                 TypeNotation::Identifier(id) => Self::Identifier(id.to_string()),
 
@@ -193,13 +103,9 @@ impl Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Void => write!(f, "void"),
-            Self::Bool => write!(f, "bool"),
 
-            Self::UnboundedInt => write!(f, "int"),
-            Self::SByte => write!(f, "sbyte"),
-            Self::Short => write!(f, "short"),
-            Self::Int => write!(f, "int"),
-            Self::Long => write!(f, "long"),
+            Self::Bool => write!(f, "bool"),
+            Self::Int(t) => t.fmt(f),
             Self::Float => write!(f, "float"),
 
             Self::Identifier(id) => write!(f, "{id}"),
@@ -214,6 +120,35 @@ impl Display for Type {
                     .join(",");
                 write!(f, "({params_t}) -> {return_t}")
             }
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum IntType {
+    // An integer type that can be promoted into other integer types. For
+    // example:
+    //
+    //  var x: int = 5;
+    //
+    // Here the type of `5` is unbounded int, which can be assigned into `x`
+    // directly as `int` type.
+    Unbounded,
+
+    SByte,
+    Short,
+    Int,
+    Long,
+}
+
+impl Display for IntType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unbounded => write!(f, "unbounded int"),
+            Self::SByte => write!(f, "sbyte"),
+            Self::Short => write!(f, "short"),
+            Self::Int => write!(f, "int"),
+            Self::Long => write!(f, "long"),
         }
     }
 }

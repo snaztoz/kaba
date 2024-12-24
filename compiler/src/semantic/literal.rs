@@ -3,7 +3,7 @@ use super::{
     expression::ExpressionAnalyzer,
     state::SharedState,
     tn::TypeNotationAnalyzer,
-    types::{assert, Type},
+    types::{assert, IntType, Type},
 };
 use crate::ast::Literal;
 
@@ -23,9 +23,9 @@ impl LiteralAnalyzer<'_> {
     pub fn analyze(&self) -> Result<Type> {
         match self.lit {
             Literal::Void => Ok(Type::Void),
-            Literal::Bool(_) => Ok(Type::Bool),
 
-            Literal::Int(_) => Ok(Type::UnboundedInt),
+            Literal::Bool(_) => Ok(Type::Bool),
+            Literal::Int(_) => Ok(Type::Int(IntType::Unbounded)),
             Literal::Float(_) => Ok(Type::Float),
 
             Literal::Array { .. } => self.analyze_array(),
@@ -55,7 +55,7 @@ impl LiteralAnalyzer<'_> {
 mod tests {
     use crate::semantic::{
         test_util::{assert_expr_is_err, assert_expr_type},
-        types::Type,
+        types::{IntType, Type},
     };
 
     #[test]
@@ -64,7 +64,7 @@ mod tests {
             "[]int{ 1, 2, 3 };",
             &[],
             Type::Array {
-                elem_t: Box::new(Type::Int),
+                elem_t: Box::new(Type::Int(IntType::Int)),
             },
         );
     }
@@ -75,7 +75,7 @@ mod tests {
             "[]int{};",
             &[],
             Type::Array {
-                elem_t: Box::new(Type::Int),
+                elem_t: Box::new(Type::Int(IntType::Int)),
             },
         );
     }
@@ -86,14 +86,14 @@ mod tests {
             "[]int{ 8 * 2048 };",
             &[],
             Type::Array {
-                elem_t: Box::new(Type::Int),
+                elem_t: Box::new(Type::Int(IntType::Int)),
             },
         );
     }
 
     #[test]
     fn array_literal_with_incompatible_type() {
-        let symbols = [("x", Type::Short)];
+        let symbols = [("x", Type::Int(IntType::Short))];
         assert_expr_is_err("[]int{ 1, x, 5 };", &symbols);
     }
 
@@ -104,7 +104,7 @@ mod tests {
             &[],
             Type::Array {
                 elem_t: Box::new(Type::Array {
-                    elem_t: Box::new(Type::Int),
+                    elem_t: Box::new(Type::Int(IntType::Int)),
                 }),
             },
         );
@@ -122,7 +122,7 @@ mod tests {
             &[],
             Type::Array {
                 elem_t: Box::new(Type::Array {
-                    elem_t: Box::new(Type::Int),
+                    elem_t: Box::new(Type::Int(IntType::Int)),
                 }),
             },
         );

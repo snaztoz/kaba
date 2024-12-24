@@ -1,3 +1,5 @@
+use std::cmp;
+
 use super::{
     assignment::AssignmentAnalyzer,
     error::{Error, Result},
@@ -116,7 +118,7 @@ impl ExpressionAnalyzer<'_> {
         assert::is_number(&rhs_t, || rhs.span().clone())?;
         assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
-        Ok(Type::largest_numeric_t_between(&lhs_t, &rhs_t).clone())
+        Ok(cmp::max(lhs_t, rhs_t))
     }
 
     fn analyze_logical_not_expr(&self, child: &AstNode) -> Result<Type> {
@@ -140,41 +142,48 @@ impl ExpressionAnalyzer<'_> {
 mod tests {
     use crate::semantic::{
         test_util::{assert_expr_is_err, assert_expr_type},
-        types::Type,
+        types::{IntType, Type},
     };
 
     #[test]
     fn math_expression_with_int_literals() {
-        assert_expr_type("-5 + 50 * 200 / 7 - 999;", &[], Type::UnboundedInt);
+        assert_expr_type(
+            "-5 + 50 * 200 / 7 - 999;",
+            &[],
+            Type::Int(IntType::Unbounded),
+        );
     }
 
     #[test]
     fn math_expression_with_sbyte() {
-        let symbols = [("x", Type::SByte)];
-        assert_expr_type("5 + x;", &symbols, Type::SByte);
+        let symbols = [("x", Type::Int(IntType::SByte))];
+        assert_expr_type("5 + x;", &symbols, Type::Int(IntType::SByte));
     }
 
     #[test]
     fn math_expression_with_short() {
-        let symbols = [("x", Type::Short)];
-        assert_expr_type("x + 5;", &symbols, Type::Short);
+        let symbols = [("x", Type::Int(IntType::Short))];
+        assert_expr_type("x + 5;", &symbols, Type::Int(IntType::Short));
     }
 
     #[test]
     fn math_expression_with_int() {
-        let symbols = [("x", Type::Int)];
-        assert_expr_type("5 + x;", &symbols, Type::Int);
+        let symbols = [("x", Type::Int(IntType::Int))];
+        assert_expr_type("5 + x;", &symbols, Type::Int(IntType::Int));
     }
 
     #[test]
     fn math_expression_with_long() {
-        let symbols = [("x", Type::Long)];
-        assert_expr_type("10 + x;", &symbols, Type::Long);
+        let symbols = [("x", Type::Int(IntType::Long))];
+        assert_expr_type("10 + x;", &symbols, Type::Int(IntType::Long));
     }
 
     #[test]
     fn math_expression_with_different_types() {
-        let symbols = [("a", Type::SByte), ("b", Type::Short)];
+        let symbols = [
+            ("a", Type::Int(IntType::SByte)),
+            ("b", Type::Int(IntType::Short)),
+        ];
         assert_expr_is_err("5 + a * b;", &symbols);
     }
 

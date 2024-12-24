@@ -6,7 +6,7 @@ pub fn is_number<F>(t: &Type, err_span: F) -> Result<()>
 where
     F: FnOnce() -> Span,
 {
-    if Type::numbers().contains(t) {
+    if matches!(t, Type::Int(_)) || matches!(t, Type::Float) {
         Ok(())
     } else {
         Err(Error::NonNumberType { span: err_span() })
@@ -17,7 +17,7 @@ pub fn is_signable<F>(t: &Type, err_span: F) -> Result<()>
 where
     F: FnOnce() -> Span,
 {
-    if Type::numbers().contains(t) {
+    if matches!(t, Type::Int(_)) || matches!(t, Type::Float) {
         Ok(())
     } else {
         Err(Error::NonSignableNumberType {
