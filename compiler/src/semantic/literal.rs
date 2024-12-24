@@ -92,15 +92,9 @@ mod tests {
     }
 
     #[test]
-    fn array_literal_with_literal_after_variable_element() {
+    fn array_literal_with_incompatible_type() {
         let symbols = [("x", Type::Short)];
-        assert_expr_type(
-            "[]int{ 1, x, 5 };",
-            &symbols,
-            Type::Array {
-                elem_t: Box::new(Type::Int),
-            },
-        );
+        assert_expr_is_err("[]int{ 1, x, 5 };", &symbols);
     }
 
     #[test]
@@ -118,7 +112,7 @@ mod tests {
 
     #[test]
     fn array_literal_with_different_element_types() {
-        assert_expr_is_err("[]int{ 1, 5.0 };");
+        assert_expr_is_err("[]int{ 1, 5.0 };", &[]);
     }
 
     #[test]

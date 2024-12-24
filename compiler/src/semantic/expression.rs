@@ -173,14 +173,9 @@ mod tests {
     }
 
     #[test]
-    fn math_expression_with_implicit_conversions() {
-        let symbols = [
-            ("a", Type::SByte),
-            ("b", Type::Short),
-            ("c", Type::Int),
-            ("d", Type::Long),
-        ];
-        assert_expr_type("5 + a * b - c / d;", &symbols, Type::Long);
+    fn math_expression_with_different_types() {
+        let symbols = [("a", Type::SByte), ("b", Type::Short)];
+        assert_expr_is_err("5 + a * b;", &symbols);
     }
 
     #[test]
@@ -200,36 +195,36 @@ mod tests {
 
     #[test]
     fn math_expression_with_int_and_float_operands() {
-        assert_expr_is_err("-5 + -0.25;");
+        assert_expr_is_err("-5 + -0.25;", &[]);
     }
 
     #[test]
     fn non_existing_identifier() {
-        assert_expr_is_err("100 - not_exist;");
+        assert_expr_is_err("100 - not_exist;", &[]);
     }
 
     #[test]
     fn negating_boolean_value() {
-        assert_expr_is_err("-true;");
+        assert_expr_is_err("-true;", &[]);
     }
 
     #[test]
     fn comparing_boolean_values() {
-        assert_expr_is_err("true > false;");
+        assert_expr_is_err("true > false;", &[]);
     }
 
     #[test]
     fn analyzing_equality_of_int_and_float() {
-        assert_expr_is_err("93 == 93.0;");
+        assert_expr_is_err("93 == 93.0;", &[]);
     }
 
     #[test]
     fn negating_int_value() {
-        assert_expr_is_err("!5;");
+        assert_expr_is_err("!5;", &[]);
     }
 
     #[test]
     fn logical_and_with_int_value() {
-        assert_expr_is_err("false || !false && 50;");
+        assert_expr_is_err("false || !false && 50;", &[]);
     }
 }

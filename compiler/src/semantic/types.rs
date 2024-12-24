@@ -125,18 +125,7 @@ impl Type {
     /// assert!(t.is_promotable_to(&Type::Int));
     /// ```
     fn is_promotable_to(&self, other: &Self) -> bool {
-        let ord = Self::signed_ints();
-        let self_idx = ord.iter().position(|t| t == self);
-        let target_idx = ord.iter().position(|t| t == other);
-
-        // NOTE: temporary solution
-        if let Some(self_idx) = self_idx {
-            if let Some(target_idx) = target_idx {
-                return self_idx <= target_idx;
-            }
-        }
-
-        false
+        self == &Type::UnboundedInt && Self::signed_ints().contains(other)
     }
 
     /// Promote some types into their default type.

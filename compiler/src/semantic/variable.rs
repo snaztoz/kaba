@@ -140,27 +140,11 @@ mod tests {
     }
 
     #[test]
-    fn declaring_variable_with_auto_type_casting() {
-        assert_is_ok(indoc! {"
-                fn main() do
-                    var a: sbyte = 10;
-                    var b: short = a;
-                    var c: int = b;
-                    var d: long = b;
-
-                    var e = d;
-
-                    var f: long = e;
-                end
-            "});
-    }
-
-    #[test]
-    fn prevent_declaring_variable_with_narrowing_auto_type_casting() {
+    fn declaring_variable_with_different_int_types() {
         assert_is_err(indoc! {"
                 fn main() do
-                    var a = 10;
-                    var b: short = a;
+                    var a: sbyte = 10;
+                    var b: int = a;
                 end
             "});
     }
@@ -334,7 +318,7 @@ mod tests {
     fn declaring_variables_of_long_array_with_math_expr_in_literal() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var x = 10;
+                    var x: long = 10;
                     var arr: []long = []long{ 1, 2, 3 + x };
                 end
             "});

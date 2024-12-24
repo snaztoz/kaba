@@ -43,12 +43,17 @@ pub fn assert_expr_type(input: &str, symbols: &[(&str, Type)], expected_t: Type)
     assert_eq!(result.unwrap(), expected_t);
 }
 
-pub fn assert_expr_is_err(input: &str) {
+pub fn assert_expr_is_err(input: &str, symbols: &[(&str, Type)]) {
     let tokens = lexer::lex(input).unwrap();
     let ast = parser::parse(tokens).unwrap();
 
     let result = if let AstNode::Program { body, .. } = &ast {
         let state = SharedState::new();
+        for (sym, t) in symbols.iter() {
+            state
+                .save_sym_or_else(sym, t.clone(), || unreachable!())
+                .unwrap();
+        }
         ExpressionAnalyzer::new(&body[0], &state).analyze()
     } else {
         unreachable!();
