@@ -3,7 +3,7 @@ use std::fmt::Display;
 
 pub mod assert;
 
-#[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Type {
     Void,
 
@@ -89,24 +89,6 @@ impl Type {
         [Self::signed_ints(), vec![Self::Float]].concat()
     }
 
-    pub fn is_number(&self) -> bool {
-        Self::numbers().contains(self)
-    }
-
-    pub const fn is_array(&self) -> bool {
-        matches!(self, Self::Array { .. })
-    }
-
-    const fn is_callable(&self) -> bool {
-        matches!(self, Self::Callable { .. })
-    }
-
-    fn is_signable(&self) -> bool {
-        // As unsigned types are not yet supported at the moment, just do this
-        // instead
-        self.is_number()
-    }
-
     pub fn is_compatible_with(&self, other: &Type) -> bool {
         self == other || self.is_promotable_to(other) || other.is_promotable_to(self)
     }
@@ -115,7 +97,7 @@ impl Type {
         self == other || self.is_promotable_to(other)
     }
 
-    /// Check if `self` is promotable to `target`.
+    /// Check if `self` is promotable to `other`.
     ///
     /// # Example
     ///

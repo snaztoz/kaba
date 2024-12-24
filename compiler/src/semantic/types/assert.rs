@@ -6,7 +6,7 @@ pub fn is_number<F>(t: &Type, err_span: F) -> Result<()>
 where
     F: FnOnce() -> Span,
 {
-    if t.is_number() {
+    if Type::numbers().contains(t) {
         Ok(())
     } else {
         Err(Error::NonNumberType { span: err_span() })
@@ -17,7 +17,7 @@ pub fn is_signable<F>(t: &Type, err_span: F) -> Result<()>
 where
     F: FnOnce() -> Span,
 {
-    if t.is_signable() {
+    if Type::numbers().contains(t) {
         Ok(())
     } else {
         Err(Error::NonSignableNumberType {
@@ -57,7 +57,7 @@ pub fn is_callable<F>(t: &Type, err_span: F) -> Result<()>
 where
     F: FnOnce() -> Span,
 {
-    if t.is_callable() {
+    if matches!(t, Type::Callable { .. }) {
         Ok(())
     } else {
         Err(Error::NonCallableType {
@@ -71,7 +71,7 @@ pub fn is_iterable<F>(t: &Type, err_span: F) -> Result<()>
 where
     F: FnOnce() -> Span,
 {
-    if t.is_array() {
+    if matches!(t, Type::Array { .. }) {
         Ok(())
     } else {
         Err(Error::NonIterableType {
@@ -85,7 +85,7 @@ pub fn is_indexable<F>(t: &Type, err_span: F) -> Result<()>
 where
     F: FnOnce() -> Span,
 {
-    if t.is_array() {
+    if matches!(t, Type::Array { .. }) {
         Ok(())
     } else {
         Err(Error::NonIndexableType {
