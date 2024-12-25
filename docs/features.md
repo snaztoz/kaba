@@ -165,7 +165,15 @@ end
 
 Currently, Kaba only support these (non-`void`) data types:
 
-1. Integer (`int`)
+1. Signed integers
+
+    | No | Type    | Name        | Minimum         | Maximum            |
+    |----|---------|-------------|-----------------|--------------------|
+    | 1  | `sbyte` | Signed byte | -2<sup>7</sup>  | 2<sup>7</sup> - 1  |
+    | 2  | `short` | Short       | -2<sup>15</sup> | 2<sup>15</sup> - 1 |
+    | 3  | `int`   | Integer     | -2<sup>31</sup> | 2<sup>31</sup> - 1 |
+    | 4  | `long`  | Long        | -2<sup>63</sup> | 2<sup>63</sup> - 1 |
+
 2. Float (`float`)
 3. Boolean (`bool`)
 4. Callable
