@@ -183,6 +183,16 @@ mod tests {
     }
 
     #[test]
+    fn assigning_overflowed_value() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    var x: sbyte = 0;
+                    x = 128;
+                end
+            "})
+    }
+
+    #[test]
     fn using_math_expression_as_lhs_in_assignment() {
         assert_is_err(indoc! {"
                 fn main() do

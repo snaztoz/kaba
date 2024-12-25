@@ -5,7 +5,7 @@ use super::{
     error::{Error, Result},
     literal::LiteralAnalyzer,
     state::SharedState,
-    types::{assert, Type},
+    types::{assert, IntType, Type},
 };
 use crate::ast::AstNode;
 use function_call::FunctionCallAnalyzer;
@@ -105,7 +105,10 @@ impl ExpressionAnalyzer<'_> {
 
         assert::is_number(&lhs_t, || lhs.span().clone())?;
         assert::is_number(&rhs_t, || rhs.span().clone())?;
-        assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
+
+        if lhs_t.is_bounded_int() || rhs_t.is_bounded_int() {
+            assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
+        }
 
         Ok(Type::Bool)
     }
@@ -116,6 +119,11 @@ impl ExpressionAnalyzer<'_> {
 
         assert::is_number(&lhs_t, || lhs.span().clone())?;
         assert::is_number(&rhs_t, || rhs.span().clone())?;
+
+        if lhs_t.is_unbounded_int() && rhs_t.is_unbounded_int() {
+            return Ok(self.compute_unbounded_int_t(&lhs_t, &rhs_t));
+        }
+
         assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
         Ok(cmp::max(lhs_t, rhs_t))
@@ -134,7 +142,28 @@ impl ExpressionAnalyzer<'_> {
 
         assert::is_signable(&child_t, || child.span().clone())?;
 
-        Ok(child_t)
+        let t = match child_t {
+            Type::Int(IntType::Unbounded(n)) => Type::Int(IntType::Unbounded(-n)),
+            _ => child_t,
+        };
+
+        Ok(t)
+    }
+
+    fn compute_unbounded_int_t(&self, lhs_t: &Type, rhs_t: &Type) -> Type {
+        let lhs_val = lhs_t.unwrap_unbounded_int();
+        let rhs_val = rhs_t.unwrap_unbounded_int();
+
+        let n = match self.node {
+            AstNode::Add { .. } => lhs_val + rhs_val,
+            AstNode::Sub { .. } => lhs_val - rhs_val,
+            AstNode::Mul { .. } => lhs_val * rhs_val,
+            AstNode::Div { .. } => lhs_val / rhs_val,
+            AstNode::Mod { .. } => lhs_val % rhs_val,
+            _ => unreachable!(),
+        };
+
+        Type::Int(IntType::Unbounded(n))
     }
 }
 
@@ -148,9 +177,9 @@ mod tests {
     #[test]
     fn math_expression_with_int_literals() {
         assert_expr_type(
-            "-5 + 50 * 200 / 7 - 999;",
+            "-2 + 50 * 200 / 10 - 999;",
             &[],
-            Type::Int(IntType::Unbounded),
+            Type::Int(IntType::Unbounded(-1)),
         );
     }
 
@@ -176,6 +205,12 @@ mod tests {
     fn math_expression_with_long() {
         let symbols = [("x", Type::Int(IntType::Long))];
         assert_expr_type("10 + x;", &symbols, Type::Int(IntType::Long));
+    }
+
+    #[test]
+    fn math_expression_with_overflowed_operand() {
+        let symbols = [("x", Type::Int(IntType::SByte))];
+        assert_expr_is_err("128 + x;", &symbols);
     }
 
     #[test]

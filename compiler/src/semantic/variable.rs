@@ -153,6 +153,24 @@ mod tests {
     }
 
     #[test]
+    fn declaring_sbyte_variable_with_overflow_constant() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    var a: sbyte = 127 + 1;
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_short_variable_with_overflow_constant() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    var a: short = -32768 - 1;
+                end
+            "});
+    }
+
+    #[test]
     fn declaring_variable_with_bool_literal() {
         assert_is_ok(indoc! {"
                 fn main() do

@@ -31,20 +31,58 @@ impl Type {
             return true;
         }
 
-        (self.is_unbounded_int() && other.is_bounded_int())
-            || (other.is_unbounded_int() && self.is_bounded_int())
+        if self.is_unbounded_int() && other.is_bounded_int() {
+            return self.is_convertible_to_bounded_int(other);
+        } else if other.is_unbounded_int() && self.is_bounded_int() {
+            return other.is_convertible_to_bounded_int(self);
+        }
+
+        false
     }
 
     pub fn is_assignable_to(&self, other: &Self) -> bool {
-        self == other || (self.is_unbounded_int() && other.is_bounded_int())
+        if self == other {
+            return true;
+        }
+
+        if self.is_unbounded_int() {
+            return self.is_convertible_to_bounded_int(other);
+        }
+
+        false
     }
 
     pub const fn is_unbounded_int(&self) -> bool {
-        matches!(self, &Type::Int(IntType::Unbounded))
+        matches!(self, &Type::Int(IntType::Unbounded(_)))
     }
 
-    fn is_bounded_int(&self) -> bool {
-        matches!(self, Type::Int(t) if t != &IntType::Unbounded)
+    pub fn is_bounded_int(&self) -> bool {
+        matches!(self, Type::Int(t) if !matches!(t, IntType::Unbounded(_)))
+    }
+
+    fn is_convertible_to_bounded_int(&self, other: &Self) -> bool {
+        if let Self::Int(IntType::Unbounded(n)) = self {
+            return match other {
+                // Try narrowing the value
+                Self::Int(IntType::SByte) => i8::try_from(*n).is_ok(),
+                Self::Int(IntType::Short) => i16::try_from(*n).is_ok(),
+
+                // Always fit, does not need any checking
+                Self::Int(IntType::Int) | Self::Int(IntType::Long) => true,
+
+                _ => false,
+            };
+        }
+
+        unreachable!()
+    }
+
+    pub fn unwrap_unbounded_int(&self) -> i32 {
+        if let Self::Int(IntType::Unbounded(n)) = self {
+            *n
+        } else {
+            unreachable!()
+        }
     }
 
     pub fn unwrap_array(self) -> Self {
@@ -133,7 +171,7 @@ pub enum IntType {
     //
     // Here the type of `5` is unbounded int, which can be assigned into `x`
     // directly as `int` type.
-    Unbounded,
+    Unbounded(i32),
 
     SByte,
     Short,
@@ -144,7 +182,7 @@ pub enum IntType {
 impl Display for IntType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Unbounded => write!(f, "unbounded int"),
+            Self::Unbounded(n) => write!(f, "unbounded int constant ({n})"),
             Self::SByte => write!(f, "sbyte"),
             Self::Short => write!(f, "short"),
             Self::Int => write!(f, "int"),
