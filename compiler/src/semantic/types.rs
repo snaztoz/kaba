@@ -1,9 +1,9 @@
 use crate::ast::{AstNode, TypeNotation};
-use std::fmt::Display;
+use std::{fmt::Display, hash::Hash};
 
 pub mod assert;
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd)]
 pub enum Type {
     Void,
 
@@ -162,7 +162,7 @@ impl Display for Type {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Ord, PartialOrd)]
 pub enum IntType {
     // An integer type that can be promoted into other integer types. For
     // example:
@@ -178,6 +178,33 @@ pub enum IntType {
     Int,
     Long,
 }
+
+impl Hash for IntType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            Self::Unbounded(_) => state.write_u8(0),
+            Self::SByte => state.write_u8(1),
+            Self::Short => state.write_u8(2),
+            Self::Int => state.write_u8(3),
+            Self::Long => state.write_u8(4),
+        }
+    }
+}
+
+impl PartialEq for IntType {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::Unbounded(_), Self::Unbounded(_))
+                | (Self::SByte, Self::SByte)
+                | (Self::Short, Self::Short)
+                | (Self::Int, Self::Int)
+                | (Self::Long, Self::Long),
+        )
+    }
+}
+
+impl Eq for IntType {}
 
 impl Display for IntType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

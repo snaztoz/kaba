@@ -126,7 +126,15 @@ impl ExpressionAnalyzer<'_> {
 
         assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
-        Ok(cmp::max(lhs_t, rhs_t))
+        // Handle the possibility of converting unbounded into bounded type.
+        match (lhs_t, rhs_t) {
+            (Type::Int(i), Type::Int(j)) => {
+                let max = cmp::max(i.clone(), j.clone());
+                Ok(Type::Int(max))
+            }
+
+            (lhs_t, _) => Ok(lhs_t),
+        }
     }
 
     fn analyze_logical_not_expr(&self, child: &AstNode) -> Result<Type> {
@@ -170,17 +178,16 @@ impl ExpressionAnalyzer<'_> {
 #[cfg(test)]
 mod tests {
     use crate::semantic::{
-        test_util::{assert_expr_is_err, assert_expr_type},
+        test_util::{assert_expr_is_err, assert_expr_type, eval_expr},
         types::{IntType, Type},
     };
 
     #[test]
     fn math_expression_with_int_literals() {
-        assert_expr_type(
-            "-2 + 50 * 200 / 10 - 999;",
-            &[],
-            Type::Int(IntType::Unbounded(-1)),
-        );
+        let res = eval_expr("-2 + 50 * 200 / 10 - 999;", &[]);
+
+        assert!(res.is_ok());
+        assert!(matches!(res.unwrap(), Type::Int(IntType::Unbounded(-1))));
     }
 
     #[test]
