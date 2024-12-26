@@ -457,6 +457,13 @@ impl ExpressionParser<'_> {
                     span: token.span,
                 })
             }
+            TokenKind::Char(c) => {
+                self.tokens.advance();
+                Ok(AstNode::Literal {
+                    lit: Literal::Char(c),
+                    span: token.span,
+                })
+            }
 
             TokenKind::LBrack => self.parse_array_literal(),
 
@@ -1021,6 +1028,17 @@ mod tests {
             AstNode::Literal {
                 lit: Literal::Bool(true),
                 span: 0..4,
+            },
+        );
+    }
+
+    #[test]
+    fn char_literal() {
+        parse_and_assert_result(
+            "'a';",
+            AstNode::Literal {
+                lit: Literal::Char('a'),
+                span: 0..3,
             },
         );
     }

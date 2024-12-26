@@ -464,10 +464,11 @@ pub enum Literal {
     // A temporary value while the runtime is still using a tree-walk
     // interpreter mode
     Void,
-    Bool(bool),
 
+    Bool(bool),
     Int(i32),
     Float(f32),
+    Char(char),
 
     Array {
         elem_tn: Box<AstNode>,
@@ -479,10 +480,11 @@ impl Display for Literal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Void => write!(f, "void"),
-            Self::Bool(b) => write!(f, "{b}"),
 
+            Self::Bool(b) => write!(f, "{b}"),
             Self::Int(n) => write!(f, "{n}"),
             Self::Float(n) => write!(f, "{n}"),
+            Self::Char(c) => write!(f, "{c}"),
 
             Self::Array { elems, .. } => {
                 let joined = elems

@@ -11,6 +11,7 @@ pub enum Type {
     Bool,
     Int(IntType),
     Float(FloatType),
+    Char,
 
     // Other types (e.g. class)
     Identifier(String),
@@ -151,6 +152,7 @@ impl<'a> From<&'a AstNode> for Type {
                 TypeNotation::Identifier(id) if id == "long" => Self::Int(IntType::Long),
                 TypeNotation::Identifier(id) if id == "float" => Self::Float(FloatType::Float),
                 TypeNotation::Identifier(id) if id == "double" => Self::Float(FloatType::Double),
+                TypeNotation::Identifier(id) if id == "char" => Self::Char,
                 TypeNotation::Identifier(id) => Self::Identifier(id.to_string()),
 
                 TypeNotation::Array { elem_tn } => Self::Array {
@@ -183,6 +185,7 @@ impl Display for Type {
             Self::Bool => write!(f, "bool"),
             Self::Int(t) => t.fmt(f),
             Self::Float(t) => t.fmt(f),
+            Self::Char => write!(f, "char"),
 
             Self::Identifier(id) => write!(f, "{id}"),
 

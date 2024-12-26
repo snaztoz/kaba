@@ -63,6 +63,7 @@ impl<'a> ExpressionRunner<'a> {
             Literal::Bool(b) => RuntimeValue::Boolean(*b),
             Literal::Int(n) => RuntimeValue::Integer(*n),
             Literal::Float(n) => RuntimeValue::Float(f64::from(*n)),
+            Literal::Char(c) => RuntimeValue::Char(*c),
 
             Literal::Array { elems: arr, .. } => {
                 let mut elems = vec![];

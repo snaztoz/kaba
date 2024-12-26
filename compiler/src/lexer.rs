@@ -4,11 +4,11 @@
 use logos::{Lexer, Logos, Span};
 use std::fmt::Display;
 
-/// Provide a quick way to lex a Kaba program's source code, without the
-/// needs to setting up and running the lexer manually.
+/// Provide a quick way to lex a Kaba program's source code, without the needs
+/// to setting up and running the lexer manually.
 ///
-/// Produces a vector of [`Token`] that contains additional
-/// information of a token.
+/// Produces a vector of [`Token`] that contains additional information of a
+/// token.
 pub fn lex(src: &str) -> Result<Vec<Token>, LexingError> {
     let mut l = TokenKind::lexer(src);
     let mut tokens = vec![];
@@ -40,17 +40,15 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexingError> {
     Ok(tokens)
 }
 
-/// A wrapper around raw [`TokenKind`] that also store the metadata
-/// information of a token, such as its actual position inside
-/// the source code.
+/// A wrapper around raw [`TokenKind`] that also store the metadata information
+/// of a token, such as its actual position inside the source code.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Token {
     pub kind: TokenKind,
     pub span: Span,
 }
 
-/// The list of all token kinds that may exists in a valid Kaba
-/// source code.
+/// The list of all token kinds that may exists in a valid Kaba source code.
 #[derive(Logos, Clone, Debug, PartialEq)]
 #[logos(skip r"[ \t\r\n\f]+", error = LexingError)]
 #[rustfmt::skip]
@@ -73,6 +71,9 @@ pub enum TokenKind {
 
     #[token("false")]
     BoolFalse,
+
+    #[regex(r#"'((?:\\['"\\nrt0]|\\x[0-9a-fA-F]{2}|[^'\\]))'"#, callback = lex_char)]
+    Char(char),
 
     //
     // Keywords
@@ -157,6 +158,7 @@ impl Display for TokenKind {
             Self::Float(_) => write!(f, "float"),
             Self::BoolTrue => write!(f, "true"),
             Self::BoolFalse => write!(f, "false"),
+            Self::Char(_) => write!(f, "char"),
 
             Self::Var => write!(f, "`var` keyword"),
             Self::If => write!(f, "`if` keyword"),
@@ -229,6 +231,37 @@ fn lex_integer(lex: &mut Lexer<TokenKind>) -> i32 {
 
 fn lex_float(lex: &mut Lexer<TokenKind>) -> f32 {
     lex.slice().parse().unwrap()
+}
+
+fn lex_char(lex: &mut Lexer<TokenKind>) -> char {
+    let slice = lex.slice();
+    let char_slice = &slice[1..slice.len() - 1];
+
+    if char_slice.len() == 1 {
+        return char_slice.parse().unwrap();
+    }
+
+    if char_slice.len() == 2 {
+        return match char_slice {
+            "\\'" => '\'',
+            "\\\"" => '\"',
+            "\\n" => '\n',
+            "\\r" => '\r',
+            "\\t" => '\t',
+            "\\0" => '\0',
+            _ => unimplemented!("other character escape"),
+        };
+    }
+
+    if let Some(hex) = char_slice.strip_prefix("\\x") {
+        if let Ok(value) = u8::from_str_radix(hex, 16) {
+            return value as char;
+        } else {
+            panic!("Invalid hexadecimal value.");
+        }
+    }
+
+    unreachable!()
 }
 
 fn lex_comment(lex: &mut Lexer<TokenKind>) -> String {
@@ -372,6 +405,34 @@ mod tests {
     fn test_lexing_a_small_float_literal() {
         let input = "0.0723";
         lex_and_assert_result(input, TokenKind::Float(input.parse().unwrap()));
+    }
+
+    //
+    // Test char literal
+    //
+
+    #[test]
+    fn lex_single_character() {
+        let input = "'a'";
+        lex_and_assert_result(input, TokenKind::Char('a'));
+    }
+
+    #[test]
+    fn lex_single_digit_character() {
+        let input = "'1'";
+        lex_and_assert_result(input, TokenKind::Char('1'));
+    }
+
+    #[test]
+    fn lex_newline_character() {
+        let input = "'\\n'";
+        lex_and_assert_result(input, TokenKind::Char('\n'));
+    }
+
+    #[test]
+    fn lex_hex_ascii_character_escape() {
+        let input = "'\\x41'";
+        lex_and_assert_result(input, TokenKind::Char('A'));
     }
 
     //
