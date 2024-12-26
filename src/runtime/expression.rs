@@ -59,10 +59,10 @@ impl<'a> ExpressionRunner<'a> {
     fn literal_to_value(&self, lit: &'a Literal) -> Result<RuntimeValue> {
         let val = match lit {
             Literal::Void => RuntimeValue::Void,
-            Literal::Bool(b) => RuntimeValue::Boolean(*b),
 
+            Literal::Bool(b) => RuntimeValue::Boolean(*b),
             Literal::Int(n) => RuntimeValue::Integer(*n),
-            Literal::Float(n) => RuntimeValue::Float(*n),
+            Literal::Float(n) => RuntimeValue::Float(f64::from(*n)),
 
             Literal::Array { elems: arr, .. } => {
                 let mut elems = vec![];

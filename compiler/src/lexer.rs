@@ -66,7 +66,7 @@ pub enum TokenKind {
     Int(i32),
 
     #[regex(r"[0-9]+\.[0-9]+", callback = lex_float)]
-    Float(f64),
+    Float(f32),
 
     #[token("true")]
     BoolTrue,
@@ -227,7 +227,7 @@ fn lex_integer(lex: &mut Lexer<TokenKind>) -> i32 {
     lex.slice().parse().unwrap()
 }
 
-fn lex_float(lex: &mut Lexer<TokenKind>) -> f64 {
+fn lex_float(lex: &mut Lexer<TokenKind>) -> f32 {
     lex.slice().parse().unwrap()
 }
 

@@ -3,7 +3,7 @@ use super::{
     expression::ExpressionAnalyzer,
     state::SharedState,
     tn::TypeNotationAnalyzer,
-    types::{assert, IntType, Type},
+    types::{assert, FloatType, IntType, Type},
 };
 use crate::ast::AstNode;
 use logos::Span;
@@ -61,6 +61,7 @@ impl VariableDeclarationAnalyzer<'_> {
             }
 
             None if val_t.is_unbounded_int() => Type::Int(IntType::Int),
+            None if val_t.is_unbounded_float() => Type::Float(FloatType::Double),
             None => val_t,
         };
 
@@ -137,7 +138,8 @@ mod tests {
     fn declaring_variable_with_float_literal() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var x = -0.5;
+                    var x: float = -0.5;
+                    var y: double = 9.99;
                 end
             "});
     }

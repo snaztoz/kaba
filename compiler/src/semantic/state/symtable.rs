@@ -1,5 +1,5 @@
 use super::scope::{Scope, ScopeRef, ScopeVariant};
-use crate::semantic::types::{IntType, Type};
+use crate::semantic::types::{FloatType, IntType, Type};
 use std::rc::Rc;
 
 /// SymTable implements the [symbol table](https://en.wikipedia.org/wiki/Symbol_table)
@@ -30,7 +30,8 @@ impl SymTable {
         builtin.borrow_mut().add_t(Type::Int(IntType::Short));
         builtin.borrow_mut().add_t(Type::Int(IntType::Int));
         builtin.borrow_mut().add_t(Type::Int(IntType::Long));
-        builtin.borrow_mut().add_t(Type::Float);
+        builtin.borrow_mut().add_t(Type::Float(FloatType::Float));
+        builtin.borrow_mut().add_t(Type::Float(FloatType::Double));
 
         let global = Scope::new(ScopeVariant::Global);
 

@@ -467,7 +467,7 @@ pub enum Literal {
     Bool(bool),
 
     Int(i32),
-    Float(f64),
+    Float(f32),
 
     Array {
         elem_tn: Box<AstNode>,

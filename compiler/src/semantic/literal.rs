@@ -3,7 +3,7 @@ use super::{
     expression::ExpressionAnalyzer,
     state::SharedState,
     tn::TypeNotationAnalyzer,
-    types::{assert, IntType, Type},
+    types::{assert, FloatType, IntType, Type},
 };
 use crate::ast::Literal;
 
@@ -26,7 +26,7 @@ impl LiteralAnalyzer<'_> {
 
             Literal::Bool(_) => Ok(Type::Bool),
             Literal::Int(n) => Ok(Type::Int(IntType::Unbounded(*n))),
-            Literal::Float(_) => Ok(Type::Float),
+            Literal::Float(n) => Ok(Type::Float(FloatType::Unbounded(*n))),
 
             Literal::Array { .. } => self.analyze_array(),
         }

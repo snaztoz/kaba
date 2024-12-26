@@ -5,7 +5,7 @@ use super::{
     error::{Error, Result},
     literal::LiteralAnalyzer,
     state::SharedState,
-    types::{assert, IntType, Type},
+    types::{assert, FloatType, IntType, Type},
 };
 use crate::ast::AstNode;
 use function_call::FunctionCallAnalyzer;
@@ -106,7 +106,11 @@ impl ExpressionAnalyzer<'_> {
         assert::is_number(&lhs_t, || lhs.span().clone())?;
         assert::is_number(&rhs_t, || rhs.span().clone())?;
 
-        if lhs_t.is_bounded_int() || rhs_t.is_bounded_int() {
+        if lhs_t.is_bounded_int()
+            || rhs_t.is_bounded_int()
+            || lhs_t.is_unbounded_float()
+            || rhs_t.is_unbounded_float()
+        {
             assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
         }
 
@@ -122,6 +126,8 @@ impl ExpressionAnalyzer<'_> {
 
         if lhs_t.is_unbounded_int() && rhs_t.is_unbounded_int() {
             return Ok(self.compute_unbounded_int_t(&lhs_t, &rhs_t));
+        } else if lhs_t.is_unbounded_float() && rhs_t.is_unbounded_float() {
+            return Ok(self.compute_unbounded_float_t(&lhs_t, &rhs_t));
         }
 
         assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
@@ -133,7 +139,12 @@ impl ExpressionAnalyzer<'_> {
                 Ok(Type::Int(max))
             }
 
-            (lhs_t, _) => Ok(lhs_t),
+            (Type::Float(i), Type::Float(j)) => {
+                let max = cmp::max(i.clone(), j.clone());
+                Ok(Type::Float(max))
+            }
+
+            _ => unreachable!(),
         }
     }
 
@@ -173,13 +184,29 @@ impl ExpressionAnalyzer<'_> {
 
         Type::Int(IntType::Unbounded(n))
     }
+
+    fn compute_unbounded_float_t(&self, lhs_t: &Type, rhs_t: &Type) -> Type {
+        let lhs_val = lhs_t.unwrap_unbounded_float();
+        let rhs_val = rhs_t.unwrap_unbounded_float();
+
+        let n = match self.node {
+            AstNode::Add { .. } => lhs_val + rhs_val,
+            AstNode::Sub { .. } => lhs_val - rhs_val,
+            AstNode::Mul { .. } => lhs_val * rhs_val,
+            AstNode::Div { .. } => lhs_val / rhs_val,
+            AstNode::Mod { .. } => lhs_val % rhs_val,
+            _ => unreachable!(),
+        };
+
+        Type::Float(FloatType::Unbounded(n))
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::semantic::{
         test_util::{assert_expr_is_err, assert_expr_type, eval_expr},
-        types::{IntType, Type},
+        types::{FloatType, IntType, Type},
     };
 
     #[test]
@@ -188,6 +215,17 @@ mod tests {
 
         assert!(res.is_ok());
         assert!(matches!(res.unwrap(), Type::Int(IntType::Unbounded(-1))));
+    }
+
+    #[test]
+    fn math_expression_with_float_literals() {
+        let res = eval_expr("0.1 + 0.3 * 0.2 / 0.4;", &[]);
+
+        assert!(res.is_ok());
+        assert!(matches!(
+            res.unwrap(),
+            Type::Float(FloatType::Unbounded(0.25))
+        ));
     }
 
     #[test]
@@ -221,7 +259,7 @@ mod tests {
     }
 
     #[test]
-    fn math_expression_with_different_types() {
+    fn math_expression_with_different_int_types() {
         let symbols = [
             ("a", Type::Int(IntType::SByte)),
             ("b", Type::Int(IntType::Short)),
@@ -230,8 +268,23 @@ mod tests {
     }
 
     #[test]
+    fn math_expression_with_different_float_types() {
+        let symbols = [
+            ("a", Type::Float(FloatType::Float)),
+            ("b", Type::Float(FloatType::Double)),
+        ];
+        assert_expr_is_err("5 + a * b;", &symbols);
+    }
+
+    #[test]
     fn float_modulo_expression() {
-        assert_expr_type("99.9 % 0.1;", &[], Type::Float);
+        let result = eval_expr("3.5 % 0.1;", &[]);
+
+        assert!(result.is_ok());
+        assert!(matches!(
+            result.unwrap(),
+            Type::Float(FloatType::Unbounded(_))
+        ))
     }
 
     #[test]

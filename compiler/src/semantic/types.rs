@@ -1,5 +1,5 @@
 use crate::ast::{AstNode, TypeNotation};
-use std::{fmt::Display, hash::Hash};
+use std::{cmp::Ordering, fmt::Display, hash::Hash};
 
 pub mod assert;
 
@@ -10,7 +10,7 @@ pub enum Type {
     // Primitive types
     Bool,
     Int(IntType),
-    Float,
+    Float(FloatType),
 
     // Other types (e.g. class)
     Identifier(String),
@@ -37,6 +37,12 @@ impl Type {
             return other.is_convertible_to_bounded_int(self);
         }
 
+        if self.is_unbounded_float() && other.is_bounded_float() {
+            return self.is_convertible_to_bounded_float(other);
+        } else if other.is_unbounded_float() && self.is_bounded_float() {
+            return other.is_convertible_to_bounded_float(self);
+        }
+
         false
     }
 
@@ -47,6 +53,8 @@ impl Type {
 
         if self.is_unbounded_int() {
             return self.is_convertible_to_bounded_int(other);
+        } else if self.is_unbounded_float() {
+            return self.is_convertible_to_bounded_float(other);
         }
 
         false
@@ -58,6 +66,14 @@ impl Type {
 
     pub fn is_bounded_int(&self) -> bool {
         matches!(self, Type::Int(t) if !matches!(t, IntType::Unbounded(_)))
+    }
+
+    pub const fn is_unbounded_float(&self) -> bool {
+        matches!(self, &Type::Float(FloatType::Unbounded(_)))
+    }
+
+    pub fn is_bounded_float(&self) -> bool {
+        matches!(self, Type::Float(t) if !matches!(t, FloatType::Unbounded(_)))
     }
 
     fn is_convertible_to_bounded_int(&self, other: &Self) -> bool {
@@ -77,8 +93,29 @@ impl Type {
         unreachable!()
     }
 
+    fn is_convertible_to_bounded_float(&self, other: &Self) -> bool {
+        if let Self::Float(FloatType::Unbounded(_)) = self {
+            return match other {
+                // Always fit, does not need any checking
+                Self::Float(FloatType::Float) | Self::Float(FloatType::Double) => true,
+
+                _ => false,
+            };
+        }
+
+        unreachable!()
+    }
+
     pub fn unwrap_unbounded_int(&self) -> i32 {
         if let Self::Int(IntType::Unbounded(n)) = self {
+            *n
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn unwrap_unbounded_float(&self) -> f32 {
+        if let Self::Float(FloatType::Unbounded(n)) = self {
             *n
         } else {
             unreachable!()
@@ -112,7 +149,8 @@ impl<'a> From<&'a AstNode> for Type {
                 TypeNotation::Identifier(id) if id == "short" => Self::Int(IntType::Short),
                 TypeNotation::Identifier(id) if id == "int" => Self::Int(IntType::Int),
                 TypeNotation::Identifier(id) if id == "long" => Self::Int(IntType::Long),
-                TypeNotation::Identifier(id) if id == "float" => Self::Float,
+                TypeNotation::Identifier(id) if id == "float" => Self::Float(FloatType::Float),
+                TypeNotation::Identifier(id) if id == "double" => Self::Float(FloatType::Double),
                 TypeNotation::Identifier(id) => Self::Identifier(id.to_string()),
 
                 TypeNotation::Array { elem_tn } => Self::Array {
@@ -144,7 +182,7 @@ impl Display for Type {
 
             Self::Bool => write!(f, "bool"),
             Self::Int(t) => t.fmt(f),
-            Self::Float => write!(f, "float"),
+            Self::Float(t) => t.fmt(f),
 
             Self::Identifier(id) => write!(f, "{id}"),
 
@@ -214,6 +252,82 @@ impl Display for IntType {
             Self::Short => write!(f, "short"),
             Self::Int => write!(f, "int"),
             Self::Long => write!(f, "long"),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum FloatType {
+    // An integer type that can be promoted into other integer types. For
+    // example:
+    //
+    //  var x: int = 5;
+    //
+    // Here the type of `5` is unbounded int, which can be assigned into `x`
+    // directly as `int` type.
+    Unbounded(f32),
+
+    Float,
+    Double,
+}
+
+impl Hash for FloatType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            Self::Unbounded(_) => state.write_u8(0),
+            Self::Float => state.write_u8(1),
+            Self::Double => state.write_u8(2),
+        }
+    }
+}
+
+impl PartialEq for FloatType {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::Unbounded(_), Self::Unbounded(_))
+                | (Self::Float, Self::Float)
+                | (Self::Double, Self::Double)
+        )
+    }
+}
+
+impl Eq for FloatType {}
+
+impl Ord for FloatType {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self {
+            Self::Unbounded(_) => match other {
+                Self::Unbounded(_) => Ordering::Equal,
+                _ => Ordering::Less,
+            },
+
+            Self::Float => match other {
+                Self::Unbounded(_) => Ordering::Greater,
+                Self::Float => Ordering::Equal,
+                Self::Double => Ordering::Less,
+            },
+
+            Self::Double => match other {
+                Self::Double => Ordering::Equal,
+                _ => Ordering::Greater,
+            },
+        }
+    }
+}
+
+impl PartialOrd for FloatType {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Display for FloatType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unbounded(n) => write!(f, "unbounded float constant ({n})"),
+            Self::Float => write!(f, "float"),
+            Self::Double => write!(f, "double"),
         }
     }
 }
