@@ -1,9 +1,9 @@
 use super::{
     body::BodyAnalyzer,
-    error::{Error, Result},
+    error::Result,
     expression::ExpressionAnalyzer,
     state::{scope::ScopeVariant, SharedState},
-    types::Type,
+    types::{assert, Type},
 };
 use crate::ast::AstNode;
 
@@ -53,17 +53,10 @@ impl EachLoopAnalyzer<'_> {
     pub fn analyze(&self) -> Result<Type> {
         let expr_t = ExpressionAnalyzer::new(self.iterable(), self.state).analyze()?;
 
-        Type::assert_iterable(&expr_t, || self.iterable().span().clone())?;
-
-        // Make sure the array element's type is known
-        if expr_t.is_array_with_unknown_elem_t() {
-            return Err(Error::UnableToInferType {
-                span: self.elem_id().span().clone(),
-            });
-        }
+        assert::is_iterable(&expr_t, || self.iterable().span().clone())?;
 
         let elem_id = self.elem_id().unwrap_identifier().0;
-        let elem_t = expr_t.unwrap_array().as_ref().unwrap().as_ref();
+        let elem_t = expr_t.unwrap_array();
 
         // Check all statements inside the body with a new scope
 
@@ -75,7 +68,7 @@ impl EachLoopAnalyzer<'_> {
             BodyAnalyzer::new(self.node, self.state).analyze()
         })?;
 
-        Ok(Type::void())
+        Ok(Type::Void)
     }
 
     fn iterable(&self) -> &AstNode {
@@ -104,11 +97,11 @@ mod tests {
     fn each_loop_statements() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    each n in [1, 2, 3] do
+                    each n in []int{1, 2, 3} do
                         debug n;
                     end
 
-                    var arr = [4, 5, 6];
+                    var arr = []int{4, 5, 6};
                     each n in arr do
                         debug n;
                     end
@@ -131,20 +124,10 @@ mod tests {
     fn accessing_elem_id_outside_scope() {
         assert_is_err(indoc! {"
                 fn main() do
-                    each n in [1, 2] do
+                    each n in []int{1, 2} do
                     end
 
                     debug n;
-                end
-            "});
-    }
-
-    #[test]
-    fn iterating_over_an_empty_array_of_unknown_type() {
-        assert_is_err(indoc! {"
-                fn main() do
-                    each n in [] do
-                    end
                 end
             "});
     }

@@ -65,7 +65,7 @@ impl FunctionDeclarationAnalyzer<'_> {
     }
 
     fn return_t(&self) -> Type {
-        self.return_tn().map_or(Type::void(), Type::from)
+        self.return_tn().map_or(Type::Void, Type::from)
     }
 
     // Save function information to the ScopeStack.
@@ -135,10 +135,10 @@ impl FunctionDefinitionAnalyzer<'_> {
 
                 let body_t = BodyAnalyzer::new(self.node, self.state).analyze()?;
 
-                if !return_t.is_void() && body_t.is_void() {
+                if return_t != Type::Void && body_t == Type::Void {
                     return Err(Error::ReturnTypeMismatch {
                         expected: return_t,
-                        get: Type::void(),
+                        get: Type::Void,
                         span: self.id().span().clone(),
                     });
                 }
@@ -147,7 +147,7 @@ impl FunctionDefinitionAnalyzer<'_> {
             },
         )?;
 
-        Ok(Type::void())
+        Ok(Type::Void)
     }
 
     fn save_params_to_stack(&self, params: &[((String, Span), Type)]) -> Result<()> {
@@ -324,6 +324,19 @@ mod tests {
     }
 
     #[test]
+    fn prevent_incompatible_int_type_on_function_return_value() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    var x: int = foo();
+                end
+
+                fn foo(): sbyte do
+                    return 5;
+                end
+            "});
+    }
+
+    #[test]
     fn aliasing_function_identifier() {
         assert_is_ok(indoc! {"
                 fn main() do
@@ -376,7 +389,7 @@ mod tests {
     fn calling_function_with_array_parameter() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    foo([1, 2, 3]);
+                    foo([]int{1, 2, 3});
                 end
 
                 fn foo(arr: []int) do
@@ -388,11 +401,11 @@ mod tests {
     fn calling_function_with_array_parameter_using_different_array_sizes() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    foo([1, 2, 3]);
+                    foo([]int{1, 2, 3});
 
-                    foo([]);
+                    foo([]int{});
 
-                    foo([1,]);
+                    foo([]int{1,});
                 end
 
                 fn foo(arr: []int) do
@@ -411,7 +424,7 @@ mod tests {
                 end
 
                 fn foo(): []int do
-                    return [1, 2, 3];
+                    return []int{1, 2, 3};
                 end
             "});
     }

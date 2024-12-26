@@ -38,7 +38,7 @@ impl TypeNotationAnalyzer<'_> {
             });
         }
 
-        if !self.void_allowed && self.t().is_void() {
+        if !self.void_allowed && self.t() == Type::Void {
             return Err(Error::VoidTypeVariable {
                 span: self.span().clone(),
             });

@@ -1,9 +1,11 @@
+use std::cmp;
+
 use super::{
     assignment::AssignmentAnalyzer,
     error::{Error, Result},
     literal::LiteralAnalyzer,
     state::SharedState,
-    types::{LiteralType, Type},
+    types::{assert, FloatType, IntType, Type},
 };
 use crate::ast::AstNode;
 use function_call::FunctionCallAnalyzer;
@@ -35,26 +37,26 @@ impl ExpressionAnalyzer<'_> {
             | AstNode::ModAssign { .. } => AssignmentAnalyzer::new(self.node, self.state).analyze(),
 
             AstNode::Eq { lhs, rhs, .. } | AstNode::Neq { lhs, rhs, .. } => {
-                self.analyze_equality_operation(lhs, rhs)
+                self.analyze_equality_expr(lhs, rhs)
             }
 
             AstNode::Or { lhs, rhs, .. } | AstNode::And { lhs, rhs, .. } => {
-                self.analyze_logical_and_or_operation(lhs, rhs)
+                self.analyze_logical_and_or_expr(lhs, rhs)
             }
 
             AstNode::Gt { lhs, rhs, .. }
             | AstNode::Gte { lhs, rhs, .. }
             | AstNode::Lt { lhs, rhs, .. }
-            | AstNode::Lte { lhs, rhs, .. } => self.analyze_comparison_operation(lhs, rhs),
+            | AstNode::Lte { lhs, rhs, .. } => self.analyze_comparison_expr(lhs, rhs),
 
             AstNode::Add { lhs, rhs, .. }
             | AstNode::Sub { lhs, rhs, .. }
             | AstNode::Mul { lhs, rhs, .. }
             | AstNode::Div { lhs, rhs, .. }
-            | AstNode::Mod { lhs, rhs, .. } => self.analyze_math_binary_operation(lhs, rhs),
+            | AstNode::Mod { lhs, rhs, .. } => self.analyze_binary_math_expr(lhs, rhs),
 
-            AstNode::Not { child, .. } => self.analyze_logical_not_operation(child),
-            AstNode::Neg { child, .. } => self.analyze_neg_operation(child),
+            AstNode::Not { child, .. } => self.analyze_logical_not_expr(child),
+            AstNode::Neg { child, .. } => self.analyze_neg_expr(child),
 
             AstNode::Identifier { name, span } => {
                 self.state
@@ -78,134 +80,255 @@ impl ExpressionAnalyzer<'_> {
         }
     }
 
-    fn analyze_logical_and_or_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
+    fn analyze_logical_and_or_expr(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
         let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
         let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
-        Type::assert_boolean(&lhs_t, || lhs.span().clone())?;
-        Type::assert_boolean(&rhs_t, || rhs.span().clone())?;
+        assert::is_boolean(&lhs_t, || lhs.span().clone())?;
+        assert::is_boolean(&rhs_t, || rhs.span().clone())?;
 
-        Ok(Type::bool())
+        Ok(Type::Bool)
     }
 
-    fn analyze_equality_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
+    fn analyze_equality_expr(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
         let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
         let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
-        Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
+        assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
 
-        Ok(Type::bool())
+        Ok(Type::Bool)
     }
 
-    fn analyze_comparison_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
+    fn analyze_comparison_expr(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
         let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
         let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
-        Type::assert_number(&lhs_t, || lhs.span().clone())?;
-        Type::assert_number(&rhs_t, || rhs.span().clone())?;
-        Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
+        assert::is_number(&lhs_t, || lhs.span().clone())?;
+        assert::is_number(&rhs_t, || rhs.span().clone())?;
 
-        Ok(Type::bool())
-    }
-
-    fn analyze_math_binary_operation(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
-        let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
-        let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
-
-        Type::assert_number(&lhs_t, || lhs.span().clone())?;
-        Type::assert_number(&rhs_t, || rhs.span().clone())?;
-        Type::assert_same(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
-
-        if lhs_t == Type::Literal(LiteralType::UnsignedInt)
-            && rhs_t == Type::Literal(LiteralType::UnsignedInt)
+        if lhs_t.is_bounded_int()
+            || rhs_t.is_bounded_int()
+            || lhs_t.is_unbounded_float()
+            || rhs_t.is_unbounded_float()
         {
-            return Ok(Type::Literal(LiteralType::UnsignedInt));
+            assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
         }
 
-        Ok(lhs_t)
+        Ok(Type::Bool)
     }
 
-    fn analyze_logical_not_operation(&self, child: &AstNode) -> Result<Type> {
-        let child_t = ExpressionAnalyzer::new(child, self.state).analyze()?;
+    fn analyze_binary_math_expr(&self, lhs: &AstNode, rhs: &AstNode) -> Result<Type> {
+        let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
+        let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
-        Type::assert_boolean(&child_t, || child.span().clone())?;
+        assert::is_number(&lhs_t, || lhs.span().clone())?;
+        assert::is_number(&rhs_t, || rhs.span().clone())?;
 
-        Ok(Type::bool())
-    }
-
-    fn analyze_neg_operation(&self, child: &AstNode) -> Result<Type> {
-        let child_t = ExpressionAnalyzer::new(child, self.state).analyze()?;
-
-        Type::assert_signable_number(&child_t, || child.span().clone())?;
-
-        if child_t.is_number_literal() {
-            // Must change into signed integer
-            Ok(Type::Literal(LiteralType::Int))
-        } else {
-            Ok(child_t)
+        if lhs_t.is_unbounded_int() && rhs_t.is_unbounded_int() {
+            return Ok(self.compute_unbounded_int_t(&lhs_t, &rhs_t));
+        } else if lhs_t.is_unbounded_float() && rhs_t.is_unbounded_float() {
+            return Ok(self.compute_unbounded_float_t(&lhs_t, &rhs_t));
         }
+
+        assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
+
+        // Handle the possibility of converting unbounded into bounded type.
+        match (lhs_t, rhs_t) {
+            (Type::Int(i), Type::Int(j)) => {
+                let max = cmp::max(i.clone(), j.clone());
+                Ok(Type::Int(max))
+            }
+
+            (Type::Float(i), Type::Float(j)) => {
+                let max = cmp::max(i.clone(), j.clone());
+                Ok(Type::Float(max))
+            }
+
+            _ => unreachable!(),
+        }
+    }
+
+    fn analyze_logical_not_expr(&self, child: &AstNode) -> Result<Type> {
+        let child_t = ExpressionAnalyzer::new(child, self.state).analyze()?;
+
+        assert::is_boolean(&child_t, || child.span().clone())?;
+
+        Ok(Type::Bool)
+    }
+
+    fn analyze_neg_expr(&self, child: &AstNode) -> Result<Type> {
+        let child_t = ExpressionAnalyzer::new(child, self.state).analyze()?;
+
+        assert::is_signable(&child_t, || child.span().clone())?;
+
+        let t = match child_t {
+            Type::Int(IntType::Unbounded(n)) => Type::Int(IntType::Unbounded(-n)),
+            _ => child_t,
+        };
+
+        Ok(t)
+    }
+
+    fn compute_unbounded_int_t(&self, lhs_t: &Type, rhs_t: &Type) -> Type {
+        let lhs_val = lhs_t.unwrap_unbounded_int();
+        let rhs_val = rhs_t.unwrap_unbounded_int();
+
+        let n = match self.node {
+            AstNode::Add { .. } => lhs_val + rhs_val,
+            AstNode::Sub { .. } => lhs_val - rhs_val,
+            AstNode::Mul { .. } => lhs_val * rhs_val,
+            AstNode::Div { .. } => lhs_val / rhs_val,
+            AstNode::Mod { .. } => lhs_val % rhs_val,
+            _ => unreachable!(),
+        };
+
+        Type::Int(IntType::Unbounded(n))
+    }
+
+    fn compute_unbounded_float_t(&self, lhs_t: &Type, rhs_t: &Type) -> Type {
+        let lhs_val = lhs_t.unwrap_unbounded_float();
+        let rhs_val = rhs_t.unwrap_unbounded_float();
+
+        let n = match self.node {
+            AstNode::Add { .. } => lhs_val + rhs_val,
+            AstNode::Sub { .. } => lhs_val - rhs_val,
+            AstNode::Mul { .. } => lhs_val * rhs_val,
+            AstNode::Div { .. } => lhs_val / rhs_val,
+            AstNode::Mod { .. } => lhs_val % rhs_val,
+            _ => unreachable!(),
+        };
+
+        Type::Float(FloatType::Unbounded(n))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::semantic::{
-        test_util::{assert_expression_is_err, assert_expression_type},
-        types::{LiteralType, Type},
+        test_util::{assert_expr_is_err, assert_expr_type, eval_expr},
+        types::{FloatType, IntType, Type},
     };
 
     #[test]
-    fn math_expression_returning_int_type() {
-        assert_expression_type("-5 + 50 * 200 / 7 - 999;", Type::Literal(LiteralType::Int));
+    fn math_expression_with_int_literals() {
+        let res = eval_expr("-2 + 50 * 200 / 10 - 999;", &[]);
+
+        assert!(res.is_ok());
+        assert!(matches!(res.unwrap(), Type::Int(IntType::Unbounded(-1))));
     }
 
     #[test]
-    fn float_modulo_operation() {
-        assert_expression_type("99.9 % 0.1;", Type::float());
+    fn math_expression_with_float_literals() {
+        let res = eval_expr("0.1 + 0.3 * 0.2 / 0.4;", &[]);
+
+        assert!(res.is_ok());
+        assert!(matches!(
+            res.unwrap(),
+            Type::Float(FloatType::Unbounded(0.25))
+        ));
     }
 
     #[test]
-    fn comparison_and_equality_operations() {
-        assert_expression_type("767 >= 900 == (45 < 67);", Type::bool());
+    fn math_expression_with_sbyte() {
+        let symbols = [("x", Type::Int(IntType::SByte))];
+        assert_expr_type("5 + x;", &symbols, Type::Int(IntType::SByte));
     }
 
     #[test]
-    fn logical_or_and_and_operations() {
-        assert_expression_type("false || !false && 50 > 0;", Type::bool());
+    fn math_expression_with_short() {
+        let symbols = [("x", Type::Int(IntType::Short))];
+        assert_expr_type("x + 5;", &symbols, Type::Int(IntType::Short));
+    }
+
+    #[test]
+    fn math_expression_with_int() {
+        let symbols = [("x", Type::Int(IntType::Int))];
+        assert_expr_type("5 + x;", &symbols, Type::Int(IntType::Int));
+    }
+
+    #[test]
+    fn math_expression_with_long() {
+        let symbols = [("x", Type::Int(IntType::Long))];
+        assert_expr_type("10 + x;", &symbols, Type::Int(IntType::Long));
+    }
+
+    #[test]
+    fn math_expression_with_overflowed_operand() {
+        let symbols = [("x", Type::Int(IntType::SByte))];
+        assert_expr_is_err("128 + x;", &symbols);
+    }
+
+    #[test]
+    fn math_expression_with_different_int_types() {
+        let symbols = [
+            ("a", Type::Int(IntType::SByte)),
+            ("b", Type::Int(IntType::Short)),
+        ];
+        assert_expr_is_err("5 + a * b;", &symbols);
+    }
+
+    #[test]
+    fn math_expression_with_different_float_types() {
+        let symbols = [
+            ("a", Type::Float(FloatType::Float)),
+            ("b", Type::Float(FloatType::Double)),
+        ];
+        assert_expr_is_err("5 + a * b;", &symbols);
+    }
+
+    #[test]
+    fn float_modulo_expression() {
+        let result = eval_expr("3.5 % 0.1;", &[]);
+
+        assert!(result.is_ok());
+        assert!(matches!(
+            result.unwrap(),
+            Type::Float(FloatType::Unbounded(_))
+        ))
+    }
+
+    #[test]
+    fn comparison_and_equality_expressions() {
+        assert_expr_type("767 >= 900 == (45 < 67);", &[], Type::Bool);
+    }
+
+    #[test]
+    fn logical_or_and_and_expressions() {
+        assert_expr_type("false || !false && 50 > 0;", &[], Type::Bool);
     }
 
     #[test]
     fn math_expression_with_int_and_float_operands() {
-        assert_expression_is_err("-5 + -0.25;");
+        assert_expr_is_err("-5 + -0.25;", &[]);
     }
 
     #[test]
     fn non_existing_identifier() {
-        assert_expression_is_err("100 - not_exist;");
+        assert_expr_is_err("100 - not_exist;", &[]);
     }
 
     #[test]
     fn negating_boolean_value() {
-        assert_expression_is_err("-true;");
+        assert_expr_is_err("-true;", &[]);
     }
 
     #[test]
     fn comparing_boolean_values() {
-        assert_expression_is_err("true > false;");
+        assert_expr_is_err("true > false;", &[]);
     }
 
     #[test]
-    fn analyzeing_equality_of_int_and_float() {
-        assert_expression_is_err("93 == 93.0;");
+    fn analyzing_equality_of_int_and_float() {
+        assert_expr_is_err("93 == 93.0;", &[]);
     }
 
     #[test]
     fn negating_int_value() {
-        assert_expression_is_err("!5;");
+        assert_expr_is_err("!5;", &[]);
     }
 
     #[test]
     fn logical_and_with_int_value() {
-        assert_expression_is_err("false || !false && 50;");
+        assert_expr_is_err("false || !false && 50;", &[]);
     }
 }

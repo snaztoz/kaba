@@ -3,7 +3,7 @@ use super::{
     error::Result,
     expression::ExpressionAnalyzer,
     state::{scope::ScopeVariant, SharedState},
-    types::Type,
+    types::{assert, Type},
 };
 use crate::ast::AstNode;
 
@@ -82,7 +82,7 @@ impl<'a> ConditionalBranchAnalyzer<'a> {
 impl ConditionalBranchAnalyzer<'_> {
     pub fn analyze(&self) -> Result<Type> {
         let cond_t = ExpressionAnalyzer::new(self.cond(), self.state).analyze()?;
-        Type::assert_boolean(&cond_t, || self.cond().span().clone())?;
+        assert::is_boolean(&cond_t, || self.cond().span().clone())?;
 
         // Check all statements inside the body with a new scope
 
@@ -92,7 +92,7 @@ impl ConditionalBranchAnalyzer<'_> {
 
         if self.or_else().is_none() {
             // Non-exhaustive branches, set to "Void"
-            return Ok(Type::void());
+            return Ok(Type::Void);
         }
 
         match self.or_else().unwrap() {
@@ -104,10 +104,10 @@ impl ConditionalBranchAnalyzer<'_> {
                     ConditionalBranchAnalyzer::new(self.or_else().unwrap(), self.state)
                         .analyze()?;
 
-                if !return_t.is_void() && !branch_return_t.is_void() {
+                if return_t != Type::Void && branch_return_t != Type::Void {
                     Ok(return_t)
                 } else {
-                    Ok(Type::void())
+                    Ok(Type::Void)
                 }
             }
 
@@ -118,10 +118,10 @@ impl ConditionalBranchAnalyzer<'_> {
                     BodyAnalyzer::new(self.or_else().unwrap(), self.state).analyze()
                 })?;
 
-                if !return_t.is_void() && !branch_return_t.is_void() {
+                if return_t != Type::Void && branch_return_t != Type::Void {
                     Ok(return_t)
                 } else {
-                    Ok(Type::void())
+                    Ok(Type::Void)
                 }
             }
 

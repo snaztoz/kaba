@@ -4,7 +4,7 @@ use super::{
     error::{Error, Result},
     expression::ExpressionAnalyzer,
     state::SharedState,
-    types::Type,
+    types::{assert, Type},
     variable::VariableDeclarationAnalyzer,
     while_loop::WhileLoopAnalyzer,
 };
@@ -48,7 +48,7 @@ impl StatementAnalyzer<'_> {
 
             AstNode::Return { expr, span } => self.analyze_return(expr, span),
 
-            AstNode::Debug { expr, span } => self.analyze_debug(expr, span),
+            AstNode::Debug { expr, .. } => self.analyze_debug(expr),
 
             expr => ExpressionAnalyzer::new(expr, self.state).analyze(),
         }
@@ -62,14 +62,14 @@ impl StatementAnalyzer<'_> {
             });
         }
 
-        Ok(Type::void())
+        Ok(Type::Void)
     }
 
     fn analyze_return(&self, expr: &Option<Box<AstNode>>, span: &Span) -> Result<Type> {
         let expr_t = expr
             .as_ref()
             .map(|expr| ExpressionAnalyzer::new(expr, self.state).analyze())
-            .unwrap_or(Ok(Type::void()))?;
+            .unwrap_or(Ok(Type::Void))?;
 
         let return_t = self
             .state
@@ -79,22 +79,28 @@ impl StatementAnalyzer<'_> {
                 span: span.clone(),
             })?;
 
-        Type::assert_assignable(&expr_t, &return_t, || span.clone())
-            .map_err(|err| Error::ReturnTypeMismatch {
-                expected: return_t.clone(),
-                get: expr_t,
-                span: err.span().clone(),
-            })
-            .map(|_| return_t)
+        assert::is_assignable(&expr_t, &return_t, || match expr {
+            Some(expr) => expr.span().clone(),
+            None => span.clone(),
+        })
+        .map_err(|err| Error::ReturnTypeMismatch {
+            expected: return_t.clone(),
+            get: expr_t,
+            span: err.span().clone(),
+        })?;
+
+        Ok(return_t)
     }
 
-    fn analyze_debug(&self, expr: &AstNode, span: &Span) -> Result<Type> {
+    fn analyze_debug(&self, expr: &AstNode) -> Result<Type> {
         let expr_t = ExpressionAnalyzer::new(expr, self.state).analyze()?;
-        if expr_t.is_void() {
-            return Err(Error::UnexpectedVoidTypeExpression { span: span.clone() });
+        if expr_t == Type::Void {
+            return Err(Error::UnexpectedVoidTypeExpression {
+                span: expr.span().clone(),
+            });
         }
 
-        Ok(Type::void())
+        Ok(Type::Void)
     }
 }
 

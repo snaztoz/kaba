@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add new signed integer types (`sbyte`, `short`, and `long`).
+- Add new floating-point types (`double`).
+- Add char data type (`char`).
+- Check unbounded integer expression value before assigning to bounded integer types.
+
+### Changed
+
+- Rename built-in types to lowercase version (by [@snaztoz](https://github.com/snaztoz) in [#43](https://github.com/snaztoz/kaba/pull/43))
+- (Internal) replace semantic analyzer's scope stack with symbol tree (by [@snaztoz](https://github.com/snaztoz) in [#43](https://github.com/snaztoz/kaba/pull/43))
+- Change array literal syntax.
+
 ## [0.4.0] - 2024-12-06
 
 ### Added

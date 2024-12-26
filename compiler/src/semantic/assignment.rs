@@ -2,7 +2,7 @@ use super::{
     error::{Error, Result},
     expression::ExpressionAnalyzer,
     state::SharedState,
-    types::Type,
+    types::{assert, Type},
 };
 use crate::ast::AstNode;
 use logos::Span;
@@ -92,9 +92,9 @@ impl AssignmentAnalyzer<'_> {
         let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
         let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
-        Type::assert_assignable(&rhs_t, &lhs_t, || span.clone())?;
+        assert::is_assignable(&rhs_t, &lhs_t, || span.clone())?;
 
-        Ok(Type::void())
+        Ok(Type::Void)
     }
 
     fn analyze_shorthand_assignment(
@@ -106,11 +106,11 @@ impl AssignmentAnalyzer<'_> {
         let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
         let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
 
-        Type::assert_number(&lhs_t, || lhs.span().clone())?;
-        Type::assert_number(&rhs_t, || rhs.span().clone())?;
-        Type::assert_assignable(&rhs_t, &lhs_t, || span.clone())?;
+        assert::is_number(&lhs_t, || lhs.span().clone())?;
+        assert::is_number(&rhs_t, || rhs.span().clone())?;
+        assert::is_assignable(&rhs_t, &lhs_t, || span.clone())?;
 
-        Ok(Type::void())
+        Ok(Type::Void)
     }
 
     fn lhs(&self) -> &AstNode {
@@ -183,6 +183,16 @@ mod tests {
     }
 
     #[test]
+    fn assigning_overflowed_value() {
+        assert_is_err(indoc! {"
+                fn main() do
+                    var x: sbyte = 0;
+                    x = 128;
+                end
+            "})
+    }
+
+    #[test]
     fn using_math_expression_as_lhs_in_assignment() {
         assert_is_err(indoc! {"
                 fn main() do
@@ -226,7 +236,7 @@ mod tests {
     fn assign_to_array_element() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr = [true, false, true];
+                    var arr = []bool{ true, false, true };
 
                     arr[1] = true;
                 end
@@ -237,7 +247,7 @@ mod tests {
     fn shorthand_assign_to_array_element() {
         assert_is_ok(indoc! {"
                 fn main() do
-                    var arr = [0.5, 1.1, 2.3];
+                    var arr = []float{ 0.5, 1.1, 2.3 };
 
                     arr[0] += 5.5;
                 end

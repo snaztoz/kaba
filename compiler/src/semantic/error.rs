@@ -32,10 +32,6 @@ pub enum Error {
         span: Span,
     },
 
-    UnableToInferType {
-        span: Span,
-    },
-
     SymbolAlreadyExist {
         id: String,
         span: Span,
@@ -96,7 +92,6 @@ impl Error {
             Self::VoidTypeVariable { span, .. }
             | Self::InvalidAssignmentType { span, .. }
             | Self::InvalidAssignmentLhs { span, .. }
-            | Self::UnableToInferType { span }
             | Self::SymbolAlreadyExist { span, .. }
             | Self::SymbolDoesNotExist { span, .. }
             | Self::NonNumberType { span, .. }
@@ -118,7 +113,7 @@ impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::VoidTypeVariable { .. } => {
-                write!(f, "unable to create variable with `Void` type")
+                write!(f, "unable to create variable with `void` type")
             }
             Self::InvalidAssignmentType { var_t, val_t, .. } => {
                 write!(
@@ -128,9 +123,6 @@ impl Display for Error {
             }
             Self::InvalidAssignmentLhs { lhs, .. } => {
                 write!(f, "{lhs} can not be an assignment's lhs")
-            }
-            Self::UnableToInferType { .. } => {
-                write!(f, "unable to infer type")
             }
             Self::SymbolAlreadyExist { id, .. } => {
                 write!(f, "`{id}` already exists in current scope")
@@ -178,7 +170,7 @@ impl Display for Error {
                 )
             }
             Self::UnexpectedVoidTypeExpression { .. } => {
-                write!(f, "unexpected `Void` type expression")
+                write!(f, "unexpected `void` type expression")
             }
         }
     }

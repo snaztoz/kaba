@@ -4,7 +4,7 @@ use crate::{
     semantic::{
         error::{Error, Result},
         state::SharedState,
-        types::Type,
+        types::{assert, Type},
     },
 };
 use logos::Span;
@@ -24,7 +24,7 @@ impl<'a> FunctionCallAnalyzer<'a> {
 impl FunctionCallAnalyzer<'_> {
     pub fn analyze(&self) -> Result<Type> {
         let fn_t = ExpressionAnalyzer::new(self.callee(), self.state).analyze()?;
-        Type::assert_callable(&fn_t, || self.callee().span().clone())?;
+        assert::is_callable(&fn_t, || self.callee().span().clone())?;
 
         let args_t = self.args_t()?;
         let (params_t, return_t) = fn_t.unwrap_callable();

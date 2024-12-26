@@ -59,12 +59,13 @@ impl<'a> ExpressionRunner<'a> {
     fn literal_to_value(&self, lit: &'a Literal) -> Result<RuntimeValue> {
         let val = match lit {
             Literal::Void => RuntimeValue::Void,
+
             Literal::Bool(b) => RuntimeValue::Boolean(*b),
+            Literal::Int(n) => RuntimeValue::Integer(*n),
+            Literal::Float(n) => RuntimeValue::Float(f64::from(*n)),
+            Literal::Char(c) => RuntimeValue::Char(*c),
 
-            Literal::Int(n) => RuntimeValue::Integer((*n).try_into().unwrap()),
-            Literal::Float(n) => RuntimeValue::Float(*n),
-
-            Literal::Array(arr) => {
+            Literal::Array { elems: arr, .. } => {
                 let mut elems = vec![];
                 for elem in arr {
                     let val = ExpressionRunner::new(elem, self.root, self.state).run()?;

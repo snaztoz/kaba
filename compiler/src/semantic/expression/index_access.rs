@@ -1,7 +1,11 @@
 use super::ExpressionAnalyzer;
 use crate::{
     ast::AstNode,
-    semantic::{error::Result, state::SharedState, types::Type},
+    semantic::{
+        error::Result,
+        state::SharedState,
+        types::{assert, Type},
+    },
 };
 
 /// Analyzer for index access expression rule.
@@ -19,13 +23,13 @@ impl<'a> IndexAccessAnalyzer<'a> {
 impl IndexAccessAnalyzer<'_> {
     pub fn analyze(&self) -> Result<Type> {
         let obj_t = ExpressionAnalyzer::new(self.obj(), self.state).analyze()?;
-        Type::assert_indexable(&obj_t, || self.obj().span().clone())?;
+        assert::is_indexable(&obj_t, || self.obj().span().clone())?;
 
         let index_t = ExpressionAnalyzer::new(self.index(), self.state).analyze()?;
-        Type::assert_number(&index_t, || self.index().span().clone())?;
+        assert::is_number(&index_t, || self.index().span().clone())?;
 
         match obj_t {
-            Type::Array { elem_t } => Ok(*elem_t.unwrap()),
+            Type::Array { elem_t } => Ok(*elem_t),
 
             _ => unreachable!(),
         }
@@ -51,14 +55,15 @@ impl IndexAccessAnalyzer<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::semantic::{test_util::assert_expression_type, types::LiteralType};
+    use crate::semantic::{test_util::assert_expr_type, types::IntType};
 
     #[test]
     fn index_accessing() {
-        assert_expression_type(
-            "[[1, 2]][0];",
+        assert_expr_type(
+            "[][]int{ []int{ 1, 2 } }[0];",
+            &[],
             Type::Array {
-                elem_t: Some(Box::new(Type::Literal(LiteralType::UnsignedInt))),
+                elem_t: Box::new(Type::Int(IntType::Int)),
             },
         );
     }

@@ -6,6 +6,7 @@ pub enum RuntimeValue {
     Integer(i32),
     Float(f64),
     Boolean(bool),
+    Char(char),
     Function(usize),
     Array(usize),
 }
@@ -35,6 +36,7 @@ impl Display for RuntimeValue {
             Self::Integer(n) => write!(f, "{n}"),
             Self::Float(n) => write!(f, "{n}"),
             Self::Boolean(b) => write!(f, "{b}"),
+            Self::Char(c) => write!(f, "{c}"),
 
             Self::Function(p) => write!(f, "<function #{p}>"),
             Self::Array(p) => write!(f, "<array #{p}>"),
