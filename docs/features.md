@@ -174,7 +174,13 @@ Currently, Kaba only support these (non-`void`) data types:
     | 3  | `int`   | Integer     | -2<sup>31</sup> | 2<sup>31</sup> - 1 |
     | 4  | `long`  | Long        | -2<sup>63</sup> | 2<sup>63</sup> - 1 |
 
-2. Float (`float`)
+2. Floating-point numbers
+
+    | No | Type     | Name   | Minimum                  | Maximum                 |
+    |----|----------|--------|--------------------------|-------------------------|
+    | 1  | `float`  | Float  | -3.40282347E+38          | 3.40282347E+38f32       |
+    | 2  | `double` | Double | -1.7976931348623157E+308 | 1.7976931348623157E+308 |
+
 3. Boolean (`bool`)
 4. Callable
 5. Array
