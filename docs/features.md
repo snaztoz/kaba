@@ -182,8 +182,9 @@ Currently, Kaba only support these (non-`void`) data types:
     | 2  | `double` | Double | -1.7976931348623157E+308 | 1.7976931348623157E+308 |
 
 3. Boolean (`bool`)
-4. Callable
-5. Array
+4. Char (`char`)
+5. Callable
+6. Array
 
 (... more to come!)
 
@@ -195,14 +196,26 @@ fn main() do
 
     var c: bool = false;
 
-    var d: () -> void = foo;
+    var d: char = 'A';
 
-    var e: []int = []int{ 99, 101 };
+    var e: () -> void = foo;
+
+    var f: []int = []int{ 99, 101 };
 end
 
 fn foo() do
 end
 ```
+
+### More on `char` type
+
+Currently, it supports:
+
+1. Basic character, such as `'A'`, `'0'`, etc.
+2. Escape character, such as `'\n'`.
+3. Hex-based character, such as `'\x41'` (which basically the same as `'A'`).
+
+Non-ASCII characters are not yet supported at the moment.
 
 ### More on array type
 

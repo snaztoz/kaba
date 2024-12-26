@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add new signed integer types (`sbyte`, `short`, and `long`).
 - Add new floating-point types (`double`).
+- Add char data type (`char`).
 - Check unbounded integer expression value before assigning to bounded integer types.
 
 ### Changed
