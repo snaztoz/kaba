@@ -367,7 +367,7 @@ To loop over each element of an iterable, use the `each` loop statement:
 
 ```text
 fn main() do
-    each n in [1, 2, 3, 4] do
+    each n in []int{ 1, 2, 3, 4 } do
         debug n * 2;
     end
 end
