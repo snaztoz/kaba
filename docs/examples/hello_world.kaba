@@ -1,0 +1,5 @@
+# Display "Hello, World!" in the screen
+
+fn main() do
+    debug "Hello, world!";
+end

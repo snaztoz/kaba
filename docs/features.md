@@ -183,6 +183,7 @@ Currently, Kaba only support these (non-`void`) data types:
 
 3. Boolean (`bool`)
 4. Char (`char`)
+5. String (`string`)
 5. Callable
 6. Array
 
@@ -198,16 +199,18 @@ fn main() do
 
     var d: char = 'A';
 
-    var e: () -> void = foo;
+    var e: string = "Hello!";
 
-    var f: []int = []int{ 99, 101 };
+    var f: () -> void = foo;
+
+    var g: []int = []int{ 99, 101 };
 end
 
 fn foo() do
 end
 ```
 
-### More on `char` type
+### About `char` type
 
 Currently, it supports:
 
@@ -217,7 +220,16 @@ Currently, it supports:
 
 Non-ASCII characters are not yet supported at the moment.
 
-### More on array type
+### About `string` type
+
+Currently, it supports:
+
+1. Basic character, such as `'A'`, `'0'`, etc.
+2. Some escape character, such as `'\n'`.
+
+Strings in Kaba currently are immutable, and no operation that can be used for them yet (aside from printing, assigning, and equality checkings, of course).
+
+### About array type
 
 Even though the size is not specified in the type notation (`[]T`), array has a **fixed** size, so that it can't grow or shrink after it was created.
 
