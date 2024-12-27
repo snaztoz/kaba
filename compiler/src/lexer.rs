@@ -72,7 +72,7 @@ pub enum TokenKind {
     #[token("false")]
     BoolFalse,
 
-    #[regex(r#"'((?:\\['"\\nrt0]|\\x[0-9a-fA-F]{2}|[^'\\]))'"#, callback = lex_char)]
+    #[regex(r#"'(?:\\['"\\nrt0]|\\x[0-9a-fA-F]{2}|[^'\\])'"#, callback = lex_char)]
     Char(char),
 
     //
