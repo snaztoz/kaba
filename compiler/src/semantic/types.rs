@@ -12,6 +12,7 @@ pub enum Type {
     Int(IntType),
     Float(FloatType),
     Char,
+    String,
 
     // Other types (e.g. class)
     Identifier(String),
@@ -153,6 +154,7 @@ impl<'a> From<&'a AstNode> for Type {
                 TypeNotation::Identifier(id) if id == "float" => Self::Float(FloatType::Float),
                 TypeNotation::Identifier(id) if id == "double" => Self::Float(FloatType::Double),
                 TypeNotation::Identifier(id) if id == "char" => Self::Char,
+                TypeNotation::Identifier(id) if id == "string" => Self::String,
                 TypeNotation::Identifier(id) => Self::Identifier(id.to_string()),
 
                 TypeNotation::Array { elem_tn } => Self::Array {
@@ -186,6 +188,7 @@ impl Display for Type {
             Self::Int(t) => t.fmt(f),
             Self::Float(t) => t.fmt(f),
             Self::Char => write!(f, "char"),
+            Self::String => write!(f, "string"),
 
             Self::Identifier(id) => write!(f, "{id}"),
 

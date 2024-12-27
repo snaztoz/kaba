@@ -28,6 +28,7 @@ impl LiteralAnalyzer<'_> {
             Literal::Int(n) => Ok(Type::Int(IntType::Unbounded(*n))),
             Literal::Float(n) => Ok(Type::Float(FloatType::Unbounded(*n))),
             Literal::Char(_) => Ok(Type::Char),
+            Literal::String(_) => Ok(Type::String),
 
             Literal::Array { .. } => self.analyze_array(),
         }

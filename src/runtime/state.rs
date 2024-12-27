@@ -79,7 +79,7 @@ impl RuntimeState<'_> {
             .find(|scope| scope.contains_key(id))
             .unwrap();
 
-        Ok(*scope.get(id).unwrap())
+        Ok(scope.get(id).unwrap().clone())
     }
 
     pub fn store_value(&self, id: &str, val: RuntimeValue) {

@@ -10,22 +10,24 @@ You can download the specific version you want to use directly from our [release
 
 If you want to build Kaba from source, consult the ["Building Kaba" guide](docs/build.md).
 
-## 🚀 Usage
+## 🚀 Usage: a `Hello, World!`
 
 First, make sure Kaba binary is already [installed](#-install).
 
-Then create a [Kaba program file](docs/features.md) (the extension **must be** `.kaba`). For example, let's create a file called `math.kaba` with the following code:
+Next, create a [Kaba program file](docs/features.md) (the extension **must be** `.kaba`).
+
+For this example, let's create a file called `hello.kaba` with the following code:
 
 ```text
 fn main() do
-    debug 5 + 7;
+    debug "Hello, World!";
 end
 ```
 
-Now we run the following shell command:
+Then run the following shell command:
 
 ```bash
-kaba run math.kaba
+kaba run hello.kaba
 
 # Or use:
 #   ./target/release/kaba run ...
@@ -33,10 +35,10 @@ kaba run math.kaba
 # Or:
 #   ./kaba run ...
 #
-# (Adjust on where the binary file is located)
+# (Adjust as needed, depending on where the binary file is located)
 ```
 
-It will print `12` in the screen🤯
+Now the string is displayed on the screen😊
 
 ## ❓ Features
 
@@ -48,7 +50,7 @@ See [docs/examples](docs/examples) directory for the examples of already-working
 
 ## 🎯 Next Goals
 
-Current priority is to add support for other data types, such as string.
+The current priority is to add support for `struct` data type.
 
 ## ⚒️ Contributing
 

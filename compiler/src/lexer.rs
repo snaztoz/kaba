@@ -1,5 +1,5 @@
-//! This module contains the required logic operations during the
-//! lexing/tokenizing stage of a Kaba source code.
+//! This module contains the required logic operations during the tokenizing
+//! stage of a Kaba source code.
 
 use logos::{Lexer, Logos, Span};
 use std::fmt::Display;
@@ -72,8 +72,11 @@ pub enum TokenKind {
     #[token("false")]
     BoolFalse,
 
-    #[regex(r#"'((?:\\['"\\nrt0]|\\x[0-9a-fA-F]{2}|[^'\\]))'"#, callback = lex_char)]
+    #[regex(r#"'(?:\\['"\\nrt0]|\\x[0-9a-fA-F]{2}|[^'\\])'"#, callback = lex_char)]
     Char(char),
+
+    #[token("\"", callback = lex_string)]
+    String(String),
 
     //
     // Keywords
@@ -159,6 +162,7 @@ impl Display for TokenKind {
             Self::BoolTrue => write!(f, "true"),
             Self::BoolFalse => write!(f, "false"),
             Self::Char(_) => write!(f, "char"),
+            Self::String(_) => write!(f, "string"),
 
             Self::Var => write!(f, "`var` keyword"),
             Self::If => write!(f, "`if` keyword"),
@@ -264,6 +268,47 @@ fn lex_char(lex: &mut Lexer<TokenKind>) -> char {
     unreachable!()
 }
 
+fn lex_string(lex: &mut Lexer<TokenKind>) -> Result<String, LexingError> {
+    let mut buff = String::new();
+    let mut n_bytes = 0;
+    let mut escape = false;
+    let mut closed = false;
+
+    for c in lex.remainder().chars() {
+        n_bytes += c.len_utf8();
+        match c {
+            '\\' if escape => buff.push('\\'),
+            '\\' => {
+                escape = true;
+                continue;
+            }
+            'n' if escape => buff.push('\n'),
+            'r' if escape => buff.push('\r'),
+            't' if escape => buff.push('\t'),
+            '0' if escape => buff.push('\0'),
+            '\'' if escape => buff.push('\''),
+            '\"' if escape => buff.push('\"'),
+            '\"' => {
+                closed = true;
+                break;
+            }
+            _ => buff.push(c),
+        }
+        escape = false;
+    }
+
+    if !closed {
+        let eof_pos = lex.source().len();
+        return Err(LexingError::UnexpectedEof {
+            expect: String::from("\""),
+            span: eof_pos..eof_pos,
+        });
+    }
+
+    lex.bump(n_bytes);
+    Ok(buff)
+}
+
 fn lex_comment(lex: &mut Lexer<TokenKind>) -> String {
     let remainder = lex.remainder();
     if let Some(newline_index) = remainder.find('\n') {
@@ -281,6 +326,10 @@ pub enum LexingError {
         token: String,
         span: Span,
     },
+    UnexpectedEof {
+        expect: String,
+        span: Span,
+    },
     UnknownToken {
         token: String,
         span: Span,
@@ -293,9 +342,9 @@ pub enum LexingError {
 impl LexingError {
     pub fn span(&self) -> Span {
         match self {
-            Self::IdentifierStartsWithNumber { span, .. } | Self::UnknownToken { span, .. } => {
-                span.clone()
-            }
+            Self::IdentifierStartsWithNumber { span, .. }
+            | Self::UnexpectedEof { span, .. }
+            | Self::UnknownToken { span, .. } => span.clone(),
 
             _ => unreachable!(),
         }
@@ -307,6 +356,9 @@ impl Display for LexingError {
         match self {
             Self::IdentifierStartsWithNumber { token, .. } => {
                 write!(f, "identifier can't start with number: `{token}`")
+            }
+            Self::UnexpectedEof { expect, .. } => {
+                write!(f, "expecting `{expect}`, but found EOF instead")
             }
             Self::UnknownToken { token, .. } => {
                 write!(f, "unknown token `{token}`")
@@ -433,6 +485,37 @@ mod tests {
     fn lex_hex_ascii_character_escape() {
         let input = "'\\x41'";
         lex_and_assert_result(input, TokenKind::Char('A'));
+    }
+
+    //
+    // String literals
+    //
+
+    #[test]
+    fn lex_empty_string() {
+        let input = r#""""#;
+        lex_and_assert_result(input, TokenKind::String(String::from("")));
+    }
+
+    #[test]
+    fn lex_single_character_string() {
+        let input = r#""a""#;
+        lex_and_assert_result(input, TokenKind::String(String::from("a")));
+    }
+
+    #[test]
+    fn lex_multiple_characters_string() {
+        let input = r#""abc def ghi 012 @93875252435    ""#;
+        lex_and_assert_result(
+            input,
+            TokenKind::String(String::from("abc def ghi 012 @93875252435    ")),
+        );
+    }
+
+    #[test]
+    fn lex_escape_characters_string() {
+        let input = r#""\\\n\t\r\0\'\"""#;
+        lex_and_assert_result(input, TokenKind::String(String::from("\\\n\t\r\0\'\"")));
     }
 
     //

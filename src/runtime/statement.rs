@@ -158,7 +158,7 @@ impl StatementRunner<'_> {
             let id = elem_id.unwrap_identifier().0;
 
             for item in iterable {
-                let scope = HashMap::from([(id.clone(), *item)]);
+                let scope = HashMap::from([(id.clone(), item.clone())]);
 
                 self.state.ss.borrow_mut().push(scope);
                 BodyRunner::new(self.ast, self.root, self.state).run()?;

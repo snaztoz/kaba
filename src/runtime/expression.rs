@@ -49,7 +49,7 @@ impl<'a> ExpressionRunner<'a> {
                     todo!("index out of bound")
                 }
 
-                return Ok(arr[i]);
+                return Ok(arr[i].clone());
             }
         }
 
@@ -64,6 +64,7 @@ impl<'a> ExpressionRunner<'a> {
             Literal::Int(n) => RuntimeValue::Integer(*n),
             Literal::Float(n) => RuntimeValue::Float(f64::from(*n)),
             Literal::Char(c) => RuntimeValue::Char(*c),
+            Literal::String(s) => RuntimeValue::String(s.clone()),
 
             Literal::Array { elems: arr, .. } => {
                 let mut elems = vec![];
@@ -354,8 +355,8 @@ impl ExpressionRunner<'_> {
 
                 for (i, FunctionParam { id, .. }) in params.iter().enumerate() {
                     let (id, _) = id.unwrap_identifier();
-                    let val = args[i];
-                    self.state.store_value(&id, val);
+                    let val = &args[i];
+                    self.state.store_value(&id, val.clone());
                 }
 
                 BodyRunner::new(f, self.root, self.state).run()?;
@@ -364,7 +365,7 @@ impl ExpressionRunner<'_> {
                 let val = self.state.return_value();
                 self.state.ss.borrow_mut().pop();
 
-                return Ok(*val);
+                return Ok(val.clone());
             }
         }
 
