@@ -49,8 +49,8 @@ impl<'a> AssignmentRunner<'a> {
                     todo!("index out of bound")
                 }
 
-                let old_val = arr[*index];
-                let new_val = self.math_add(&old_val, &val);
+                let old_val = &arr[*index];
+                let new_val = self.math_add(old_val, &val);
 
                 arr[*index] = new_val;
             }
@@ -74,8 +74,8 @@ impl<'a> AssignmentRunner<'a> {
                     todo!("index out of bound")
                 }
 
-                let old_val = arr[*index];
-                let new_val = self.math_sub(&old_val, &val);
+                let old_val = &arr[*index];
+                let new_val = self.math_sub(old_val, &val);
 
                 arr[*index] = new_val;
             }
@@ -99,8 +99,8 @@ impl<'a> AssignmentRunner<'a> {
                     todo!("index out of bound")
                 }
 
-                let old_val = arr[*index];
-                let new_val = self.math_mul(&old_val, &val);
+                let old_val = &arr[*index];
+                let new_val = self.math_mul(old_val, &val);
 
                 arr[*index] = new_val;
             }
@@ -124,8 +124,8 @@ impl<'a> AssignmentRunner<'a> {
                     todo!("index out of bound")
                 }
 
-                let old_val = arr[*index];
-                let new_val = self.math_div(&old_val, &val);
+                let old_val = &arr[*index];
+                let new_val = self.math_div(old_val, &val);
 
                 arr[*index] = new_val;
             }
@@ -149,8 +149,8 @@ impl<'a> AssignmentRunner<'a> {
                     todo!("index out of bound")
                 }
 
-                let old_val = arr[*index];
-                let new_val = self.math_mod(&old_val, &val);
+                let old_val = &arr[*index];
+                let new_val = self.math_mod(old_val, &val);
 
                 arr[*index] = new_val;
             }

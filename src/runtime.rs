@@ -301,6 +301,24 @@ mod tests {
     }
 
     #[test]
+    fn function_accept_string_parameter_and_return_value() {
+        assert_output_equal(
+            indoc! {r#"
+                fn main() do
+                    debug greet("snaztoz");
+                end
+
+                fn greet(name: string): string do
+                    debug "Hello";
+                    debug name;
+                    return name;
+                end
+            "#},
+            "Hello\nsnaztoz\nsnaztoz\n".as_bytes(),
+        );
+    }
+
+    #[test]
     fn recursion() {
         assert_output_equal(
             indoc! {"

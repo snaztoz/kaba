@@ -469,6 +469,7 @@ pub enum Literal {
     Int(i32),
     Float(f32),
     Char(char),
+    String(String),
 
     Array {
         elem_tn: Box<AstNode>,
@@ -485,6 +486,7 @@ impl Display for Literal {
             Self::Int(n) => write!(f, "{n}"),
             Self::Float(n) => write!(f, "{n}"),
             Self::Char(c) => write!(f, "{c}"),
+            Self::String(s) => write!(f, "{s}"),
 
             Self::Array { elems, .. } => {
                 let joined = elems

@@ -33,6 +33,7 @@ impl SymTable {
         builtin.borrow_mut().add_t(Type::Float(FloatType::Float));
         builtin.borrow_mut().add_t(Type::Float(FloatType::Double));
         builtin.borrow_mut().add_t(Type::Char);
+        builtin.borrow_mut().add_t(Type::String);
 
         let global = Scope::new(ScopeVariant::Global);
 

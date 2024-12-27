@@ -1,12 +1,13 @@
 use std::fmt::Display;
 
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub enum RuntimeValue {
     Void,
     Integer(i32),
     Float(f64),
     Boolean(bool),
     Char(char),
+    String(String),
     Function(usize),
     Array(usize),
 }
@@ -37,6 +38,7 @@ impl Display for RuntimeValue {
             Self::Float(n) => write!(f, "{n}"),
             Self::Boolean(b) => write!(f, "{b}"),
             Self::Char(c) => write!(f, "{c}"),
+            Self::String(s) => write!(f, "{s}"),
 
             Self::Function(p) => write!(f, "<function #{p}>"),
             Self::Array(p) => write!(f, "<array #{p}>"),

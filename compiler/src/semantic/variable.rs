@@ -182,6 +182,26 @@ mod tests {
     }
 
     #[test]
+    fn declaring_variable_with_char_literal() {
+        assert_is_ok(indoc! {"
+                fn main() do
+                    var x = 'a';
+                    var y: char = 'b';
+                end
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_string_literal() {
+        assert_is_ok(indoc! {r#"
+                fn main() do
+                    var x = "abc def \n 123\t";
+                    var y: string = "hello, world!";
+                end
+            "#});
+    }
+
+    #[test]
     fn declaring_variable_with_void_type() {
         assert_is_err(indoc! {"
                 fn main() do
