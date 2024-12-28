@@ -71,7 +71,7 @@ pub enum TokenKind {
     #[regex(r"true|false", callback = lex_bool)]
     Bool(bool),
 
-    #[regex(r#"'(?:\\['"\\nrt0]|\\x[0-9a-fA-F]{2}|[^'\\])'"#, callback = lex_char)]
+    #[token("\'", callback = lex_char)]
     Char(char),
 
     #[token("\"", callback = lex_string)]
@@ -245,35 +245,45 @@ fn lex_bool(lex: &mut Lexer<TokenKind>) -> bool {
     }
 }
 
-fn lex_char(lex: &mut Lexer<TokenKind>) -> char {
-    let slice = lex.slice();
-    let char_slice = &slice[1..slice.len() - 1];
-
-    if char_slice.len() == 1 {
-        return char_slice.parse().unwrap();
-    }
-
-    if char_slice.len() == 2 {
-        return match char_slice {
-            "\\'" => '\'',
-            "\\\"" => '\"',
-            "\\n" => '\n',
-            "\\r" => '\r',
-            "\\t" => '\t',
-            "\\0" => '\0',
-            _ => unimplemented!("other character escape"),
-        };
-    }
-
-    if let Some(hex) = char_slice.strip_prefix("\\x") {
-        if let Ok(value) = u8::from_str_radix(hex, 16) {
-            return value as char;
-        } else {
-            panic!("Invalid hexadecimal value.");
+fn lex_char(lex: &mut Lexer<TokenKind>) -> Result<char> {
+    let c = match lex.remainder().chars().next() {
+        Some(c) => c,
+        None => {
+            return Err(LexingError::UnexpectedEof {
+                span: lex.span().end..lex.span().end,
+            })
         }
-    }
+    };
 
-    unreachable!()
+    lex.bump(c.len_utf8());
+
+    let c = match c {
+        '\\' => lex_escape_character(lex)?,
+        '\'' => {
+            return Err(LexingError::UnexpectedToken {
+                span: lex.span().end - 1..lex.span().end,
+            })
+        }
+        _ => c,
+    };
+
+    match lex.remainder().chars().next() {
+        Some('\'') => (),
+        Some(_) => {
+            return Err(LexingError::UnexpectedToken {
+                span: lex.span().end..lex.span().end,
+            })
+        }
+        None => {
+            return Err(LexingError::UnexpectedEof {
+                span: lex.span().end..lex.span().end,
+            })
+        }
+    };
+
+    lex.bump(c.len_utf8());
+
+    Ok(c)
 }
 
 fn lex_string(lex: &mut Lexer<TokenKind>) -> Result<String> {
@@ -376,6 +386,10 @@ pub enum LexingError {
         span: Span,
     },
 
+    UnexpectedToken {
+        span: Span,
+    },
+
     UnknownToken {
         token: String,
         span: Span,
@@ -400,6 +414,7 @@ impl LexingError {
         match self {
             Self::InvalidIdentifier { span, .. }
             | Self::UnexpectedEof { span, .. }
+            | Self::UnexpectedToken { span, .. }
             | Self::UnknownToken { span, .. }
             | Self::UnsupportedEscapeCharacter { span, .. }
             | Self::InvalidHexNumber { span, .. } => span.clone(),
@@ -417,6 +432,9 @@ impl Display for LexingError {
             }
             Self::UnexpectedEof { .. } => {
                 write!(f, "not expecting an end-of-file (EOF)")
+            }
+            Self::UnexpectedToken { .. } => {
+                write!(f, "unexpected token")
             }
             Self::UnknownToken { token, .. } => {
                 write!(f, "unknown token: `{token}`")
