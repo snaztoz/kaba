@@ -443,17 +443,10 @@ impl ExpressionParser<'_> {
                     span: token.span,
                 })
             }
-            TokenKind::BoolTrue => {
+            TokenKind::Bool(b) => {
                 self.tokens.advance();
                 Ok(AstNode::Literal {
-                    lit: Literal::Bool(true),
-                    span: token.span,
-                })
-            }
-            TokenKind::BoolFalse => {
-                self.tokens.advance();
-                Ok(AstNode::Literal {
-                    lit: Literal::Bool(false),
+                    lit: Literal::Bool(b),
                     span: token.span,
                 })
             }

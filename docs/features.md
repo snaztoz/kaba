@@ -214,9 +214,9 @@ end
 
 Currently, it supports:
 
-1. Basic character, such as `'A'`, `'0'`, etc.
-2. Escape character, such as `'\n'`.
-3. Hex-based character, such as `'\x41'` (which basically the same as `'A'`).
+1. Basic characters, such as `'A'`, `'0'`, etc.
+2. Escape characters, such as `'\n'`.
+3. Hex-based characters, such as `'\x41'` (which basically the same as `'A'`).
 
 Non-ASCII characters are not yet supported at the moment.
 
@@ -224,8 +224,9 @@ Non-ASCII characters are not yet supported at the moment.
 
 Currently, it supports:
 
-1. Basic character, such as `'A'`, `'0'`, etc.
-2. Some escape character, such as `'\n'`.
+1. Basic characters, such as `'A'`, `'0'`, etc.
+2. Escape characters, such as `'\n'`.
+3. Hex-based characters, such as `'\x41'` (which basically the same as `'A'`).
 
 Strings in Kaba currently are immutable, and no operation that can be used for them yet (aside from printing, assigning, and equality checkings, of course).
 

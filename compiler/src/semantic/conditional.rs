@@ -54,10 +54,9 @@ use crate::ast::AstNode;
 /// end
 /// ```
 ///
-/// * If a conditional statement branch returns a value (when it is residing
-///   inside a function), then any other branch in the same statement must also
-///   returning values as well to make it be able to be the last statement in
-///   the function:
+/// * For a series of conditional statement branches to be able to be placed as
+///   the last statement of a function, all of the branches must return values
+///   (exhaustive). Else, the compiler will throw an error.
 ///
 /// ```text
 /// fn foo(): int do

@@ -4,12 +4,14 @@
 use logos::{Lexer, Logos, Span};
 use std::fmt::Display;
 
+type Result<T> = std::result::Result<T, LexingError>;
+
 /// Provide a quick way to lex a Kaba program's source code, without the needs
 /// to setting up and running the lexer manually.
 ///
 /// Produces a vector of [`Token`] that contains additional information of a
 /// token.
-pub fn lex(src: &str) -> Result<Vec<Token>, LexingError> {
+pub fn lex(src: &str) -> Result<Vec<Token>> {
     let mut l = TokenKind::lexer(src);
     let mut tokens = vec![];
 
@@ -66,13 +68,10 @@ pub enum TokenKind {
     #[regex(r"[0-9]+\.[0-9]+", callback = lex_float)]
     Float(f32),
 
-    #[token("true")]
-    BoolTrue,
+    #[regex(r"true|false", callback = lex_bool)]
+    Bool(bool),
 
-    #[token("false")]
-    BoolFalse,
-
-    #[regex(r#"'(?:\\['"\\nrt0]|\\x[0-9a-fA-F]{2}|[^'\\])'"#, callback = lex_char)]
+    #[token("\'", callback = lex_char)]
     Char(char),
 
     #[token("\"", callback = lex_string)]
@@ -157,12 +156,11 @@ impl Display for TokenKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Identifier(_) => write!(f, "identifier"),
-            Self::Int(_) => write!(f, "integer"),
-            Self::Float(_) => write!(f, "float"),
-            Self::BoolTrue => write!(f, "true"),
-            Self::BoolFalse => write!(f, "false"),
-            Self::Char(_) => write!(f, "char"),
-            Self::String(_) => write!(f, "string"),
+            Self::Int(_) => write!(f, "integer literal"),
+            Self::Float(_) => write!(f, "float literal"),
+            Self::Bool(b) => write!(f, "boolean `{b}` literal"),
+            Self::Char(_) => write!(f, "char literal"),
+            Self::String(_) => write!(f, "string literal"),
 
             Self::Var => write!(f, "`var` keyword"),
             Self::If => write!(f, "`if` keyword"),
@@ -218,14 +216,16 @@ impl Display for TokenKind {
     }
 }
 
-fn lex_identifier(lex: &mut Lexer<TokenKind>) -> Result<String, LexingError> {
+fn lex_identifier(lex: &mut Lexer<TokenKind>) -> Result<String> {
     let value = lex.slice();
+
     if value.chars().next().unwrap().is_numeric() {
-        return Err(LexingError::IdentifierStartsWithNumber {
+        return Err(LexingError::InvalidIdentifier {
             token: String::from(value),
             span: lex.span(),
         });
     }
+
     Ok(String::from(value))
 }
 
@@ -237,76 +237,131 @@ fn lex_float(lex: &mut Lexer<TokenKind>) -> f32 {
     lex.slice().parse().unwrap()
 }
 
-fn lex_char(lex: &mut Lexer<TokenKind>) -> char {
-    let slice = lex.slice();
-    let char_slice = &slice[1..slice.len() - 1];
-
-    if char_slice.len() == 1 {
-        return char_slice.parse().unwrap();
+fn lex_bool(lex: &mut Lexer<TokenKind>) -> bool {
+    match lex.slice() {
+        "true" => true,
+        "false" => false,
+        _ => unreachable!(),
     }
-
-    if char_slice.len() == 2 {
-        return match char_slice {
-            "\\'" => '\'',
-            "\\\"" => '\"',
-            "\\n" => '\n',
-            "\\r" => '\r',
-            "\\t" => '\t',
-            "\\0" => '\0',
-            _ => unimplemented!("other character escape"),
-        };
-    }
-
-    if let Some(hex) = char_slice.strip_prefix("\\x") {
-        if let Ok(value) = u8::from_str_radix(hex, 16) {
-            return value as char;
-        } else {
-            panic!("Invalid hexadecimal value.");
-        }
-    }
-
-    unreachable!()
 }
 
-fn lex_string(lex: &mut Lexer<TokenKind>) -> Result<String, LexingError> {
-    let mut buff = String::new();
-    let mut n_bytes = 0;
-    let mut escape = false;
-    let mut closed = false;
+fn lex_char(lex: &mut Lexer<TokenKind>) -> Result<char> {
+    let c = match lex.remainder().chars().next() {
+        Some(c) => c,
+        None => {
+            return Err(LexingError::UnexpectedEof {
+                span: lex.span().end..lex.span().end,
+            })
+        }
+    };
 
-    for c in lex.remainder().chars() {
-        n_bytes += c.len_utf8();
+    lex.bump(c.len_utf8());
+
+    let c = match c {
+        '\\' => lex_escape_character(lex)?,
+        '\'' => {
+            return Err(LexingError::UnexpectedToken {
+                span: lex.span().end - 1..lex.span().end,
+            })
+        }
+        _ => c,
+    };
+
+    match lex.remainder().chars().next() {
+        Some('\'') => (),
+        Some(_) => {
+            return Err(LexingError::UnexpectedToken {
+                span: lex.span().end..lex.span().end,
+            })
+        }
+        None => {
+            return Err(LexingError::UnexpectedEof {
+                span: lex.span().end..lex.span().end,
+            })
+        }
+    };
+
+    lex.bump(c.len_utf8());
+
+    Ok(c)
+}
+
+fn lex_string(lex: &mut Lexer<TokenKind>) -> Result<String> {
+    let mut buff = String::new();
+
+    while let Some(c) = lex.remainder().chars().next() {
+        lex.bump(c.len_utf8());
         match c {
-            '\\' if escape => buff.push('\\'),
             '\\' => {
-                escape = true;
-                continue;
+                let c = lex_escape_character(lex)?;
+                buff.push(c);
             }
-            'n' if escape => buff.push('\n'),
-            'r' if escape => buff.push('\r'),
-            't' if escape => buff.push('\t'),
-            '0' if escape => buff.push('\0'),
-            '\'' if escape => buff.push('\''),
-            '\"' if escape => buff.push('\"'),
             '\"' => {
-                closed = true;
-                break;
+                return Ok(buff);
             }
             _ => buff.push(c),
         }
-        escape = false;
     }
 
-    if !closed {
-        let eof_pos = lex.source().len();
-        return Err(LexingError::UnexpectedEof {
-            expect: String::from("\""),
-            span: eof_pos..eof_pos,
-        });
+    Err(LexingError::UnexpectedEof {
+        span: lex.source().len()..lex.source().len(),
+    })
+}
+
+fn lex_escape_character(lex: &mut Lexer<TokenKind>) -> Result<char> {
+    let c = match lex.remainder().chars().next() {
+        Some(c) => c,
+        None => {
+            return Err(LexingError::UnexpectedEof {
+                span: lex.span().end..lex.span().end,
+            })
+        }
+    };
+
+    lex.bump(c.len_utf8());
+
+    let c = match c {
+        '\\' | '\'' | '\"' => c,
+        'n' => '\n',
+        'r' => '\r',
+        't' => '\t',
+        '0' => '\0',
+        'x' => lex_hex(lex)?,
+
+        _ => {
+            return Err(LexingError::UnsupportedEscapeCharacter {
+                c,
+                span: lex.span().end - 2..lex.span().end,
+            })
+        }
+    };
+
+    Ok(c)
+}
+
+fn lex_hex(lex: &mut Lexer<TokenKind>) -> Result<char> {
+    let mut buff = String::new();
+
+    for _ in 0..2 {
+        let c = match lex.remainder().chars().next() {
+            Some(c) => c,
+            None => {
+                return Err(LexingError::UnexpectedEof {
+                    span: lex.span().end..lex.span().end,
+                })
+            }
+        };
+
+        lex.bump(c.len_utf8());
+        buff.push(c)
     }
 
-    lex.bump(n_bytes);
-    Ok(buff)
+    u8::from_str_radix(&buff, 16)
+        .map(|b| b as char)
+        .map_err(|_| LexingError::InvalidHexNumber {
+            n: buff,
+            span: lex.span().end - 2..lex.span().end,
+        })
 }
 
 fn lex_comment(lex: &mut Lexer<TokenKind>) -> String {
@@ -322,16 +377,31 @@ fn lex_comment(lex: &mut Lexer<TokenKind>) -> String {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum LexingError {
-    IdentifierStartsWithNumber {
+    InvalidIdentifier {
         token: String,
         span: Span,
     },
+
     UnexpectedEof {
-        expect: String,
         span: Span,
     },
+
+    UnexpectedToken {
+        span: Span,
+    },
+
     UnknownToken {
         token: String,
+        span: Span,
+    },
+
+    UnsupportedEscapeCharacter {
+        c: char,
+        span: Span,
+    },
+
+    InvalidHexNumber {
+        n: String,
         span: Span,
     },
 
@@ -342,9 +412,12 @@ pub enum LexingError {
 impl LexingError {
     pub fn span(&self) -> Span {
         match self {
-            Self::IdentifierStartsWithNumber { span, .. }
+            Self::InvalidIdentifier { span, .. }
             | Self::UnexpectedEof { span, .. }
-            | Self::UnknownToken { span, .. } => span.clone(),
+            | Self::UnexpectedToken { span, .. }
+            | Self::UnknownToken { span, .. }
+            | Self::UnsupportedEscapeCharacter { span, .. }
+            | Self::InvalidHexNumber { span, .. } => span.clone(),
 
             _ => unreachable!(),
         }
@@ -354,14 +427,23 @@ impl LexingError {
 impl Display for LexingError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::IdentifierStartsWithNumber { token, .. } => {
-                write!(f, "identifier can't start with number: `{token}`")
+            Self::InvalidIdentifier { token, .. } => {
+                write!(f, "not a valid identifier: `{token}`")
             }
-            Self::UnexpectedEof { expect, .. } => {
-                write!(f, "expecting `{expect}`, but found EOF instead")
+            Self::UnexpectedEof { .. } => {
+                write!(f, "not expecting an end-of-file (EOF)")
+            }
+            Self::UnexpectedToken { .. } => {
+                write!(f, "unexpected token")
             }
             Self::UnknownToken { token, .. } => {
-                write!(f, "unknown token `{token}`")
+                write!(f, "unknown token: `{token}`")
+            }
+            Self::UnsupportedEscapeCharacter { c, .. } => {
+                write!(f, "unsupported escape character: `\\{c}`")
+            }
+            Self::InvalidHexNumber { n, .. } => {
+                write!(f, "not a valid hex number: `{n}`")
             }
             _ => unreachable!(),
         }
@@ -516,6 +598,12 @@ mod tests {
     fn lex_escape_characters_string() {
         let input = r#""\\\n\t\r\0\'\"""#;
         lex_and_assert_result(input, TokenKind::String(String::from("\\\n\t\r\0\'\"")));
+    }
+
+    #[test]
+    fn string_hex_character_escape() {
+        let input = r#""\x41""#;
+        lex_and_assert_result(input, TokenKind::String(String::from("A")));
     }
 
     //
