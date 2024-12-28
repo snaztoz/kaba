@@ -10,7 +10,7 @@ You can download the specific version you want to use directly from our [release
 
 If you want to build Kaba from source, consult the ["Building Kaba" guide](docs/build.md).
 
-## 🚀 Usage: a `Hello, World!`
+## 🚀 Quickstart: `Hello, World!`
 
 First, make sure Kaba binary is already [installed](#-install).
 
@@ -37,8 +37,6 @@ kaba run hello.kaba
 #
 # (Adjust as needed, depending on where the binary file is located)
 ```
-
-Now the string is displayed on the screen😊
 
 ## ❓ Features
 
