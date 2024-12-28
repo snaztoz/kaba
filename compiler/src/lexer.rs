@@ -66,11 +66,14 @@ pub enum TokenKind {
     #[regex(r"[0-9]+\.[0-9]+", callback = lex_float)]
     Float(f32),
 
-    #[token("true")]
-    BoolTrue,
+    #[regex(r"true|false", callback = lex_bool)]
+    Bool(bool),
 
-    #[token("false")]
-    BoolFalse,
+    // #[token("true")]
+    // BoolTrue,
+
+    // #[token("false")]
+    // BoolFalse,
 
     #[regex(r#"'(?:\\['"\\nrt0]|\\x[0-9a-fA-F]{2}|[^'\\])'"#, callback = lex_char)]
     Char(char),
@@ -157,12 +160,11 @@ impl Display for TokenKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Identifier(_) => write!(f, "identifier"),
-            Self::Int(_) => write!(f, "integer"),
-            Self::Float(_) => write!(f, "float"),
-            Self::BoolTrue => write!(f, "true"),
-            Self::BoolFalse => write!(f, "false"),
-            Self::Char(_) => write!(f, "char"),
-            Self::String(_) => write!(f, "string"),
+            Self::Int(_) => write!(f, "integer literal"),
+            Self::Float(_) => write!(f, "float literal"),
+            Self::Bool(b) => write!(f, "boolean `{b}` literal"),
+            Self::Char(_) => write!(f, "char literal"),
+            Self::String(_) => write!(f, "string literal"),
 
             Self::Var => write!(f, "`var` keyword"),
             Self::If => write!(f, "`if` keyword"),
@@ -235,6 +237,14 @@ fn lex_integer(lex: &mut Lexer<TokenKind>) -> i32 {
 
 fn lex_float(lex: &mut Lexer<TokenKind>) -> f32 {
     lex.slice().parse().unwrap()
+}
+
+fn lex_bool(lex: &mut Lexer<TokenKind>) -> bool {
+    match lex.slice() {
+        "true" => true,
+        "false" => false,
+        _ => unreachable!(),
+    }
 }
 
 fn lex_char(lex: &mut Lexer<TokenKind>) -> char {
