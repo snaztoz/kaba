@@ -276,43 +276,70 @@ fn lex_char(lex: &mut Lexer<TokenKind>) -> char {
 
 fn lex_string(lex: &mut Lexer<TokenKind>) -> Result<String> {
     let mut buff = String::new();
-    let mut n_bytes = 0;
-    let mut escape = false;
-    let mut closed = false;
 
-    for c in lex.remainder().chars() {
-        n_bytes += c.len_utf8();
+    while let Some(c) = lex.remainder().chars().next() {
+        lex.bump(c.len_utf8());
         match c {
-            '\\' if escape => buff.push('\\'),
             '\\' => {
-                escape = true;
-                continue;
+                let c = lex_escape_character(lex)?;
+                buff.push(c);
             }
-            'n' if escape => buff.push('\n'),
-            'r' if escape => buff.push('\r'),
-            't' if escape => buff.push('\t'),
-            '0' if escape => buff.push('\0'),
-            '\'' if escape => buff.push('\''),
-            '\"' if escape => buff.push('\"'),
             '\"' => {
-                closed = true;
-                break;
+                return Ok(buff);
             }
             _ => buff.push(c),
         }
-        escape = false;
     }
 
-    if !closed {
-        let eof_pos = lex.source().len();
-        return Err(LexingError::UnexpectedEof {
-            expect: String::from("\""),
-            span: eof_pos..eof_pos,
-        });
+    Err(LexingError::UnexpectedEof {
+        span: lex.source().len()..lex.source().len(),
+    })
+}
+
+fn lex_escape_character(lex: &mut Lexer<TokenKind>) -> Result<char> {
+    let c = match lex.remainder().chars().next() {
+        Some(c) => c,
+        None => todo!(),
+    };
+
+    lex.bump(c.len_utf8());
+
+    let c = match c {
+        '\\' | '\'' | '\"' => c,
+        'n' => '\n',
+        'r' => '\r',
+        't' => '\t',
+        '0' => '\0',
+        'x' => lex_hex(lex)?,
+        _ => todo!(),
+    };
+
+    Ok(c)
+}
+
+fn lex_hex(lex: &mut Lexer<TokenKind>) -> Result<char> {
+    let mut buff = String::new();
+
+    for _ in 0..2 {
+        let c = match lex.remainder().chars().next() {
+            Some(c) => c,
+            None => {
+                return Err(LexingError::UnexpectedEof {
+                    span: lex.span().end..lex.span().end,
+                })
+            }
+        };
+
+        lex.bump(c.len_utf8());
+        buff.push(c)
     }
 
-    lex.bump(n_bytes);
-    Ok(buff)
+    let c = match u8::from_str_radix(&buff, 16) {
+        Ok(b) => b as char,
+        _ => panic!("Invalid hexadecimal value."),
+    };
+
+    Ok(c)
 }
 
 fn lex_comment(lex: &mut Lexer<TokenKind>) -> String {
@@ -332,10 +359,11 @@ pub enum LexingError {
         token: String,
         span: Span,
     },
+
     UnexpectedEof {
-        expect: String,
         span: Span,
     },
+
     UnknownToken {
         token: String,
         span: Span,
@@ -363,8 +391,8 @@ impl Display for LexingError {
             Self::IdentifierStartsWithNumber { token, .. } => {
                 write!(f, "identifier can't start with number: `{token}`")
             }
-            Self::UnexpectedEof { expect, .. } => {
-                write!(f, "expecting `{expect}`, but found EOF instead")
+            Self::UnexpectedEof { .. } => {
+                write!(f, "not expecting EOF")
             }
             Self::UnknownToken { token, .. } => {
                 write!(f, "unknown token `{token}`")
@@ -522,6 +550,12 @@ mod tests {
     fn lex_escape_characters_string() {
         let input = r#""\\\n\t\r\0\'\"""#;
         lex_and_assert_result(input, TokenKind::String(String::from("\\\n\t\r\0\'\"")));
+    }
+
+    #[test]
+    fn string_hex_character_escape() {
+        let input = r#""\x41""#;
+        lex_and_assert_result(input, TokenKind::String(String::from("A")));
     }
 
     //
