@@ -218,12 +218,14 @@ impl Display for TokenKind {
 
 fn lex_identifier(lex: &mut Lexer<TokenKind>) -> Result<String> {
     let value = lex.slice();
+
     if value.chars().next().unwrap().is_numeric() {
-        return Err(LexingError::IdentifierStartsWithNumber {
+        return Err(LexingError::InvalidIdentifier {
             token: String::from(value),
             span: lex.span(),
         });
     }
+
     Ok(String::from(value))
 }
 
@@ -299,7 +301,11 @@ fn lex_string(lex: &mut Lexer<TokenKind>) -> Result<String> {
 fn lex_escape_character(lex: &mut Lexer<TokenKind>) -> Result<char> {
     let c = match lex.remainder().chars().next() {
         Some(c) => c,
-        None => todo!(),
+        None => {
+            return Err(LexingError::UnexpectedEof {
+                span: lex.span().end..lex.span().end,
+            })
+        }
     };
 
     lex.bump(c.len_utf8());
@@ -311,7 +317,13 @@ fn lex_escape_character(lex: &mut Lexer<TokenKind>) -> Result<char> {
         't' => '\t',
         '0' => '\0',
         'x' => lex_hex(lex)?,
-        _ => todo!(),
+
+        _ => {
+            return Err(LexingError::UnsupportedEscapeCharacter {
+                c,
+                span: lex.span().end - 2..lex.span().end,
+            })
+        }
     };
 
     Ok(c)
@@ -334,12 +346,12 @@ fn lex_hex(lex: &mut Lexer<TokenKind>) -> Result<char> {
         buff.push(c)
     }
 
-    let c = match u8::from_str_radix(&buff, 16) {
-        Ok(b) => b as char,
-        _ => panic!("Invalid hexadecimal value."),
-    };
-
-    Ok(c)
+    u8::from_str_radix(&buff, 16)
+        .map(|b| b as char)
+        .map_err(|_| LexingError::InvalidHexNumber {
+            n: buff,
+            span: lex.span().end - 2..lex.span().end,
+        })
 }
 
 fn lex_comment(lex: &mut Lexer<TokenKind>) -> String {
@@ -355,7 +367,7 @@ fn lex_comment(lex: &mut Lexer<TokenKind>) -> String {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum LexingError {
-    IdentifierStartsWithNumber {
+    InvalidIdentifier {
         token: String,
         span: Span,
     },
@@ -369,6 +381,16 @@ pub enum LexingError {
         span: Span,
     },
 
+    UnsupportedEscapeCharacter {
+        c: char,
+        span: Span,
+    },
+
+    InvalidHexNumber {
+        n: String,
+        span: Span,
+    },
+
     #[default]
     Default,
 }
@@ -376,9 +398,11 @@ pub enum LexingError {
 impl LexingError {
     pub fn span(&self) -> Span {
         match self {
-            Self::IdentifierStartsWithNumber { span, .. }
+            Self::InvalidIdentifier { span, .. }
             | Self::UnexpectedEof { span, .. }
-            | Self::UnknownToken { span, .. } => span.clone(),
+            | Self::UnknownToken { span, .. }
+            | Self::UnsupportedEscapeCharacter { span, .. }
+            | Self::InvalidHexNumber { span, .. } => span.clone(),
 
             _ => unreachable!(),
         }
@@ -388,14 +412,20 @@ impl LexingError {
 impl Display for LexingError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::IdentifierStartsWithNumber { token, .. } => {
-                write!(f, "identifier can't start with number: `{token}`")
+            Self::InvalidIdentifier { token, .. } => {
+                write!(f, "not a valid identifier: `{token}`")
             }
             Self::UnexpectedEof { .. } => {
-                write!(f, "not expecting EOF")
+                write!(f, "not expecting an end-of-file (EOF)")
             }
             Self::UnknownToken { token, .. } => {
-                write!(f, "unknown token `{token}`")
+                write!(f, "unknown token: `{token}`")
+            }
+            Self::UnsupportedEscapeCharacter { c, .. } => {
+                write!(f, "unsupported escape character: `\\{c}`")
+            }
+            Self::InvalidHexNumber { n, .. } => {
+                write!(f, "not a valid hex number: `{n}`")
             }
             _ => unreachable!(),
         }
