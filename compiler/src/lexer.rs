@@ -4,12 +4,14 @@
 use logos::{Lexer, Logos, Span};
 use std::fmt::Display;
 
+type Result<T> = std::result::Result<T, LexingError>;
+
 /// Provide a quick way to lex a Kaba program's source code, without the needs
 /// to setting up and running the lexer manually.
 ///
 /// Produces a vector of [`Token`] that contains additional information of a
 /// token.
-pub fn lex(src: &str) -> Result<Vec<Token>, LexingError> {
+pub fn lex(src: &str) -> Result<Vec<Token>> {
     let mut l = TokenKind::lexer(src);
     let mut tokens = vec![];
 
@@ -68,12 +70,6 @@ pub enum TokenKind {
 
     #[regex(r"true|false", callback = lex_bool)]
     Bool(bool),
-
-    // #[token("true")]
-    // BoolTrue,
-
-    // #[token("false")]
-    // BoolFalse,
 
     #[regex(r#"'(?:\\['"\\nrt0]|\\x[0-9a-fA-F]{2}|[^'\\])'"#, callback = lex_char)]
     Char(char),
@@ -220,7 +216,7 @@ impl Display for TokenKind {
     }
 }
 
-fn lex_identifier(lex: &mut Lexer<TokenKind>) -> Result<String, LexingError> {
+fn lex_identifier(lex: &mut Lexer<TokenKind>) -> Result<String> {
     let value = lex.slice();
     if value.chars().next().unwrap().is_numeric() {
         return Err(LexingError::IdentifierStartsWithNumber {
@@ -278,7 +274,7 @@ fn lex_char(lex: &mut Lexer<TokenKind>) -> char {
     unreachable!()
 }
 
-fn lex_string(lex: &mut Lexer<TokenKind>) -> Result<String, LexingError> {
+fn lex_string(lex: &mut Lexer<TokenKind>) -> Result<String> {
     let mut buff = String::new();
     let mut n_bytes = 0;
     let mut escape = false;
