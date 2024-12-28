@@ -14,7 +14,7 @@ use crate::ast::AstNode;
 /// * The provided expression must evaluates to an array:
 ///
 /// ```text
-/// each [0, 1, 2] as n do
+/// each n in []int{ 0, 1, 2 } do
 ///     # ...
 /// end
 /// ```
@@ -22,7 +22,7 @@ use crate::ast::AstNode;
 /// * With `break` or `continue` statement:
 ///
 /// ```text
-/// each [0, 1, 2] as n do
+/// each n in []int{ 0, 1, 2 } do
 ///     if !false do
 ///         break;
 ///     end
@@ -34,7 +34,7 @@ use crate::ast::AstNode;
 /// * The provided expression can't evaluates to types other than array:
 ///
 /// ```text
-/// each true as n do
+/// each n in true do
 ///     # Invalid
 /// end
 /// ```
