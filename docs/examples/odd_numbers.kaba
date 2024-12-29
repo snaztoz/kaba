@@ -1,4 +1,4 @@
-# Display all positive odd numbers below 0.
+// Display all positive odd numbers below 0.
 
 fn main() do
     var i = 0;

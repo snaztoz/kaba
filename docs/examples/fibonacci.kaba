@@ -1,4 +1,4 @@
-# A simple fibonacci implementation
+// A simple fibonacci implementation
 
 fn main() do
     debug fibonacci(6);

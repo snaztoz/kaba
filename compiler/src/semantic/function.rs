@@ -105,8 +105,8 @@ impl FunctionDeclarationAnalyzer<'_> {
 
 /// Analyzer for function definition.
 ///
-/// This analyzer assumes that the data from function declarations (i.e. function
-/// signature informations) are already stored in the ScopeStack.
+/// This analyzer assumes that the data from function declarations (i.e.
+/// function signature informations) are already stored in the ScopeStack.
 pub struct FunctionDefinitionAnalyzer<'a> {
     node: &'a AstNode,
     state: &'a SharedState,
@@ -491,7 +491,7 @@ mod tests {
         assert_is_err(indoc! {"
                 fn get_five(): int do
                     return 5;
-                    1 + true; # should be error
+                    1 + true; // should be error
                 end
             "});
     }

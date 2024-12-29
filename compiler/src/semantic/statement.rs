@@ -13,9 +13,9 @@ use logos::Span;
 
 /// Analyzer for a single statement.
 ///
-/// It analyzes simple statements, such as loop control analyzeing, and also acts as
-/// an aggregate for another (more specific) statement analyzers, such as the
-/// AssignmentAnalyzer.
+/// It analyzes simple statements, such as loop control analyzeing, and also
+/// acts as an aggregate for another (more specific) statement analyzers, such
+/// as the AssignmentAnalyzer.
 pub struct StatementAnalyzer<'a> {
     node: &'a AstNode,
     state: &'a SharedState,
