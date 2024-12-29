@@ -11,13 +11,13 @@ Kaba is a:
     ```text
     var x: int = 5;
 
-    x = false;  # ERROR
+    x = false;  // ERROR
     ```
 
 2. Strongly typed language, where operations between different types can't be done without going through certain procedure.
 
     ```text
-    5 + 5.0;    # ERROR
+    5 + 5.0;    // ERROR
     ```
 
 Kaba is mainly consisted of 2 parts:
@@ -41,10 +41,10 @@ The file also must contains a [main function](#main-function), which acts as the
 
 ## Comments
 
-Kaba only supports single-line comment, which is prefixed by the `#` symbol:
+Kaba only supports single-line comment, which is prefixed by the `//` symbol:
 
 ```text
-# This is a comment
+// This is a comment
 ```
 
 ## Defining functions
@@ -53,7 +53,7 @@ To define functions, use the `fn` keyword:
 
 ```text
 fn foo() do
-    # do nothing
+    // do nothing
 end
 ```
 
@@ -104,7 +104,7 @@ If value type is incompatible with the variable, the compiler will throw an erro
 
 ```text
 fn main() do
-    var x: int = 10.0;  # ERROR
+    var x: int = 10.0;  // ERROR
 end
 ```
 
@@ -118,7 +118,7 @@ For example, the following program will results in compilation error:
 fn main() do
     var x = 5;
 
-    x = 10.0;   # ERROR!
+    x = 10.0;   // ERROR!
 end
 ```
 
@@ -154,7 +154,7 @@ Note that the compiler will reject if the expression evaluates to `void` type:
 
 ```text
 fn main() do
-    debug my_void_fn();  # ERROR
+    debug my_void_fn();  // ERROR
 end
 
 fn my_void_fn() do
@@ -242,7 +242,7 @@ Kaba can infer the type of an array:
 fn main do
     var arr = []bool{ false, true, true };
 
-    # The type of `arr` is `[]bool`
+    // The type of `arr` is `[]bool`
 
     debug arr[1];   // `true`
 end
@@ -350,7 +350,7 @@ fn main() do
 
     while i < 10 do
         if i == 5 do
-            break;  # exit from loop
+            break;  // exit from loop
         end
         debug i;
         i += 1;
@@ -367,7 +367,7 @@ fn main() do
     while i < 10 do
         i += 1;
         if i == 5 do
-            continue;  # "5" won't be printed
+            continue;  // "5" won't be printed
         end
         debug i;
     end

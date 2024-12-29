@@ -15,7 +15,7 @@ use crate::ast::AstNode;
 ///
 /// ```text
 /// each n in []int{ 0, 1, 2 } do
-///     # ...
+///     // ...
 /// end
 /// ```
 ///
@@ -35,7 +35,7 @@ use crate::ast::AstNode;
 ///
 /// ```text
 /// each n in true do
-///     # Invalid
+///     // Invalid
 /// end
 /// ```
 pub struct EachLoopAnalyzer<'a> {

@@ -1,4 +1,4 @@
-# Display elements inside an array
+// Display elements inside an array
 
 fn main() do
     var arr = []int{ 1, 2, 3, 4, 5, 6 };

@@ -15,7 +15,7 @@ use crate::ast::AstNode;
 ///
 /// ```text
 /// if true do
-///     # ...
+///     // ...
 /// end
 /// ```
 ///
@@ -23,11 +23,11 @@ use crate::ast::AstNode;
 ///
 /// ```text
 /// if false do
-///     # Won't be executed
+///     // Won't be executed
 /// else if !true do
-///     # Won't be executed
+///     // Won't be executed
 /// else do
-///     # Will be executed
+///     // Will be executed
 /// end
 /// ```
 ///
@@ -50,7 +50,7 @@ use crate::ast::AstNode;
 ///
 /// ```text
 /// if 1 + 1 do
-///     # Invalid
+///     // Invalid
 /// end
 /// ```
 ///
@@ -63,7 +63,7 @@ use crate::ast::AstNode;
 ///     if !true do
 ///         return 1;
 ///     else do
-///         # Error: This branch should returns something!
+///         // Error: This branch should returns something!
 ///     end
 /// end
 /// ```

@@ -125,7 +125,7 @@ mod tests {
                 fn main() do
                     while true do
                         break;
-                        1 + true; # this should be error
+                        1 + true; // this should be error
                     end
                 end
             "})

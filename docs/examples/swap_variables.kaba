@@ -1,4 +1,4 @@
-# Swap the value between 2 variables
+// Swap the value between 2 variables
 
 fn main() do
     var x = 10;

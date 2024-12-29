@@ -138,7 +138,7 @@ pub enum TokenKind {
 
     // Comments
 
-    #[token("#", callback = lex_comment)]
+    #[token("//", callback = lex_comment)]
     Comment(String),
 
     // This will always be appended as the last token
@@ -623,7 +623,7 @@ mod tests {
     #[test]
     fn test_lexing_comment_above_code() {
         let input = indoc! {"
-            # This is a single line comment
+            // This is a single line comment
             var x = 5;
         "};
         lex_and_assert_comments_are_skipped(input);
@@ -633,7 +633,7 @@ mod tests {
     fn test_lexing_comment_after_code() {
         let input = indoc! {"
             var x = 10;
-            print(x); # this should works too!
+            print(x); // this should works too!
         "};
         lex_and_assert_comments_are_skipped(input);
     }
@@ -641,7 +641,7 @@ mod tests {
     #[test]
     fn test_lexing_a_comment_that_commenting_out_a_code() {
         let input = indoc! {"
-            # print(y);
+            // print(y);
         "};
         lex_and_assert_comments_are_skipped(input);
     }
@@ -649,7 +649,7 @@ mod tests {
     #[test]
     fn test_lexing_comment_that_spans_until_eof() {
         let input = indoc! {"
-        # A single line comment that spans to EOF"};
+        // A single line comment that spans to EOF"};
         lex_and_assert_comments_are_skipped(input);
     }
 }
