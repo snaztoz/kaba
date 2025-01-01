@@ -14,33 +14,33 @@ use crate::ast::AstNode;
 /// * The provided condition must be an expression that returns a boolean:
 ///
 /// ```text
-/// if true do
+/// if true {
 ///     // ...
-/// end
+/// }
 /// ```
 ///
 /// * This statement can have multiple branches:
 ///
 /// ```text
-/// if false do
+/// if false {
 ///     // Won't be executed
-/// else if !true do
+/// } else if !true {
 ///     // Won't be executed
-/// else do
+/// } else {
 ///     // Will be executed
-/// end
+/// }
 /// ```
 ///
 /// * It can be the last statement of a function:
 ///
 /// ```text
-/// fn foo(): int do
-///     if false do
+/// fn foo(): int {
+///     if false {
 ///         return 5;
-///     else do
+///     } else {
 ///         return 99;
-///     end
-/// end
+///     }
+/// }
 /// ```
 ///
 /// ### ❌ Invalid Examples
@@ -49,9 +49,9 @@ use crate::ast::AstNode;
 ///   boolean:
 ///
 /// ```text
-/// if 1 + 1 do
+/// if 1 + 1 {
 ///     // Invalid
-/// end
+/// }
 /// ```
 ///
 /// * For a series of conditional statement branches to be able to be placed as
@@ -59,13 +59,13 @@ use crate::ast::AstNode;
 ///   (exhaustive). Else, the compiler will throw an error.
 ///
 /// ```text
-/// fn foo(): int do
-///     if !true do
+/// fn foo(): int {
+///     if !true {
 ///         return 1;
-///     else do
+///     } else {
 ///         // Error: This branch should returns something!
-///     end
-/// end
+///     }
+/// }
 /// ```
 pub struct ConditionalBranchAnalyzer<'a> {
     node: &'a AstNode,

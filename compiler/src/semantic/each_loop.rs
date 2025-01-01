@@ -14,19 +14,19 @@ use crate::ast::AstNode;
 /// * The provided expression must evaluates to an array:
 ///
 /// ```text
-/// each n in []int{ 0, 1, 2 } do
+/// each n in []int{ 0, 1, 2 } {
 ///     // ...
-/// end
+/// }
 /// ```
 ///
 /// * With `break` or `continue` statement:
 ///
 /// ```text
-/// each n in []int{ 0, 1, 2 } do
-///     if !false do
+/// each n in []int{ 0, 1, 2 } {
+///     if !false {
 ///         break;
-///     end
-/// end
+///     }
+/// }
 /// ```
 ///
 /// ### ❌ Invalid Examples
@@ -34,9 +34,9 @@ use crate::ast::AstNode;
 /// * The provided expression can't evaluates to types other than array:
 ///
 /// ```text
-/// each n in true do
+/// each n in true {
 ///     // Invalid
-/// end
+/// }
 /// ```
 pub struct EachLoopAnalyzer<'a> {
     node: &'a AstNode,

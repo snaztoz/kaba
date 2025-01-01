@@ -14,19 +14,19 @@ use crate::ast::AstNode;
 /// * The provided condition must be an expression that returns a boolean:
 ///
 /// ```text
-/// while true do
+/// while true {
 ///     # ...
-/// end
+/// }
 /// ```
 ///
 /// * With `break` or `continue` statement:
 ///
 /// ```text
-/// while true do
-///     if !false do
+/// while true {
+///     if !false {
 ///         break;
-///     end
-/// end
+///     }
+/// }
 /// ```
 ///
 /// ### ❌ Invalid Examples
@@ -35,9 +35,9 @@ use crate::ast::AstNode;
 ///   boolean:
 ///
 /// ```text
-/// while 1 + 1 do
+/// while 1 + 1 {
 ///     # Invalid
-/// end
+/// }
 /// ```
 pub struct WhileLoopAnalyzer<'a> {
     node: &'a AstNode,
