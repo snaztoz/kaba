@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-01-01
+
 ### Added
 
 - Add new signed integer types: `sbyte`, `short`, and `long` (by [@snaztoz](https://github.com/snaztoz) in [7bbfd17](https://github.com/snaztoz/kaba/pull/44/commits/7bbfd17d02acd57267742376598efdb1f267d78d))
