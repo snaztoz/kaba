@@ -1,6 +1,6 @@
 // Swap the value between 2 variables
 
-fn main() do
+fn main() {
     var x = 10;
     var y = 20;
 
@@ -13,4 +13,4 @@ fn main() do
 
     debug x;
     debug y;
-end
+}

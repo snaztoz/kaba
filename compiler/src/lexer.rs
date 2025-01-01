@@ -91,8 +91,6 @@ pub enum TokenKind {
     #[token("in")]       In,
     #[token("fn")]       Fn,
     #[token("return")]   Return,
-    #[token("do")]       Do,
-    #[token("end")]      End,
     #[token("as")]       As,
     #[token("debug")]    Debug,
 
@@ -172,8 +170,6 @@ impl Display for TokenKind {
             Self::In => write!(f, "`in` keyword"),
             Self::Fn => write!(f, "`fn` keyword"),
             Self::Return => write!(f, "`return` keyword"),
-            Self::Do => write!(f, "`do` keyword"),
-            Self::End => write!(f, "`end` keyword"),
             Self::As => write!(f, "`as` keyword"),
             Self::Debug => write!(f, "`debug` keyword"),
 

@@ -127,7 +127,7 @@ mod tests {
     #[test]
     fn empty_function_definition() {
         parse_and_assert_result(
-            "fn foo() do end",
+            "fn foo() {}",
             AstNode::FunctionDefinition {
                 id: Box::new(AstNode::Identifier {
                     name: String::from("foo"),
@@ -136,7 +136,7 @@ mod tests {
                 params: vec![],
                 return_tn: None,
                 body: vec![],
-                span: 0..15,
+                span: 0..11,
             },
         );
     }
@@ -144,7 +144,7 @@ mod tests {
     #[test]
     fn function_definition_with_parameters_and_trailing_comma() {
         parse_and_assert_result(
-            "fn foo(x: int, y: bool,) do end",
+            "fn foo(x: int, y: bool,) {}",
             AstNode::FunctionDefinition {
                 id: Box::new(AstNode::Identifier {
                     name: String::from("foo"),
@@ -174,7 +174,7 @@ mod tests {
                 ],
                 return_tn: None,
                 body: vec![],
-                span: 0..31,
+                span: 0..27,
             },
         );
     }
@@ -182,7 +182,7 @@ mod tests {
     #[test]
     fn function_definition_with_parameter_and_body() {
         parse_and_assert_result(
-            "fn write(x: int) do print(x); end",
+            "fn write(x: int) { print(x); }",
             AstNode::FunctionDefinition {
                 id: Box::new(AstNode::Identifier {
                     name: String::from("write"),
@@ -202,15 +202,15 @@ mod tests {
                 body: vec![AstNode::FunctionCall {
                     callee: Box::new(AstNode::Identifier {
                         name: String::from("print"),
-                        span: 20..25,
+                        span: 19..24,
                     }),
                     args: vec![AstNode::Identifier {
                         name: String::from("x"),
-                        span: 26..27,
+                        span: 25..26,
                     }],
-                    span: 20..28,
+                    span: 19..27,
                 }],
-                span: 0..33,
+                span: 0..30,
             },
         );
     }
@@ -218,7 +218,7 @@ mod tests {
     #[test]
     fn function_definition_with_return_statement() {
         parse_and_assert_result(
-            "fn foo(): int do return 5; end",
+            "fn foo(): int { return 5; }",
             AstNode::FunctionDefinition {
                 id: Box::new(AstNode::Identifier {
                     name: String::from("foo"),
@@ -232,11 +232,11 @@ mod tests {
                 body: vec![AstNode::Return {
                     expr: Some(Box::new(AstNode::Literal {
                         lit: Literal::Int(5),
-                        span: 24..25,
+                        span: 23..24,
                     })),
-                    span: 17..25,
+                    span: 16..24,
                 }],
-                span: 0..30,
+                span: 0..27,
             },
         );
     }

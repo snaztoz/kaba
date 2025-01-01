@@ -44,14 +44,14 @@ mod tests {
     #[test]
     fn while_statement() {
         parse_and_assert_result(
-            "while true do end",
+            "while true {}",
             AstNode::While {
                 cond: Box::new(AstNode::Literal {
                     lit: Literal::Bool(true),
                     span: 6..10,
                 }),
                 body: vec![],
-                span: 0..17,
+                span: 0..13,
             },
         );
     }
@@ -59,17 +59,17 @@ mod tests {
     #[test]
     fn while_statement_with_loop_control_statements() {
         parse_and_assert_result(
-            "while true do continue; break; end",
+            "while true { continue; break; }",
             AstNode::While {
                 cond: Box::new(AstNode::Literal {
                     lit: Literal::Bool(true),
                     span: 6..10,
                 }),
                 body: vec![
-                    AstNode::Continue { span: 14..22 },
-                    AstNode::Break { span: 24..29 },
+                    AstNode::Continue { span: 13..21 },
+                    AstNode::Break { span: 23..28 },
                 ],
-                span: 0..34,
+                span: 0..31,
             },
         );
     }

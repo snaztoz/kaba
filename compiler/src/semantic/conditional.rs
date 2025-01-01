@@ -14,33 +14,33 @@ use crate::ast::AstNode;
 /// * The provided condition must be an expression that returns a boolean:
 ///
 /// ```text
-/// if true do
+/// if true {
 ///     // ...
-/// end
+/// }
 /// ```
 ///
 /// * This statement can have multiple branches:
 ///
 /// ```text
-/// if false do
+/// if false {
 ///     // Won't be executed
-/// else if !true do
+/// } else if !true {
 ///     // Won't be executed
-/// else do
+/// } else {
 ///     // Will be executed
-/// end
+/// }
 /// ```
 ///
 /// * It can be the last statement of a function:
 ///
 /// ```text
-/// fn foo(): int do
-///     if false do
+/// fn foo(): int {
+///     if false {
 ///         return 5;
-///     else do
+///     } else {
 ///         return 99;
-///     end
-/// end
+///     }
+/// }
 /// ```
 ///
 /// ### ❌ Invalid Examples
@@ -49,9 +49,9 @@ use crate::ast::AstNode;
 ///   boolean:
 ///
 /// ```text
-/// if 1 + 1 do
+/// if 1 + 1 {
 ///     // Invalid
-/// end
+/// }
 /// ```
 ///
 /// * For a series of conditional statement branches to be able to be placed as
@@ -59,13 +59,13 @@ use crate::ast::AstNode;
 ///   (exhaustive). Else, the compiler will throw an error.
 ///
 /// ```text
-/// fn foo(): int do
-///     if !true do
+/// fn foo(): int {
+///     if !true {
 ///         return 1;
-///     else do
+///     } else {
 ///         // Error: This branch should returns something!
-///     end
-/// end
+///     }
+/// }
 /// ```
 pub struct ConditionalBranchAnalyzer<'a> {
     node: &'a AstNode,
@@ -153,73 +153,73 @@ mod tests {
     #[test]
     fn if_else_statements() {
         assert_is_ok(indoc! {"
-                fn main() do
+                fn main() {
                     var condition1 = 5 < 10;
                     var condition2 = 0.5 < 0.75;
 
-                    if condition1 do
+                    if condition1 {
                         debug condition1;
                         debug 1;
-                    else if condition2 do
+                    } else if condition2 {
                         debug condition2;
                         debug 2;
-                    else do
+                    } else {
                         debug 0;
-                    end
-                end
+                    }
+                }
             "})
     }
 
     #[test]
     fn nested_if_statements() {
         assert_is_ok(indoc! {"
-                fn main() do
-                    if 1 + 1 == 2 do
-                        if 2 + 2 == 4 do
-                            if 3 + 3 == 6 do
+                fn main() {
+                    if 1 + 1 == 2 {
+                        if 2 + 2 == 4 {
+                            if 3 + 3 == 6 {
                                 debug true;
-                            end
-                        end
-                    end
-                end
+                            }
+                        }
+                    }
+                }
             "})
     }
 
     #[test]
     fn using_variable_declared_inside_conditional_scope_from_outside() {
         assert_is_err(indoc! {"
-                fn main() do
-                    if true do
+                fn main() {
+                    if true {
                         var x = 50;
                         debug x;
-                    end
+                    }
 
                     debug x;
-                end
+                }
             "})
     }
 
     #[test]
     fn using_math_expression_as_condition_in_if_statement() {
         assert_is_err(indoc! {"
-                fn main() do
-                    if 1 + 1 do
+                fn main() {
+                    if 1 + 1 {
                         debug 1;
-                    end
-                end
+                    }
+                }
             "})
     }
 
     #[test]
     fn using_variable_declared_in_sibling_branch_scope() {
         assert_is_err(indoc! {"
-                fn main() do
-                    if true do
+                fn main() {
+                    if true {
                         var x = 50;
-                    else do
+                    } else {
                         debug x;
-                    end
-                end
+                    }
+                }
             "})
     }
 }

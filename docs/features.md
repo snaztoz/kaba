@@ -52,9 +52,9 @@ Kaba only supports single-line comment, which is prefixed by the `//` symbol:
 To define functions, use the `fn` keyword:
 
 ```text
-fn foo() do
+fn foo() {
     // do nothing
-end
+}
 ```
 
 From the example above, `foo()` return type is `void` (not returning anything).
@@ -62,9 +62,9 @@ From the example above, `foo()` return type is `void` (not returning anything).
 To return a value from functions, use the `return` keyword (and don't forget to specify the type notation as well):
 
 ```text
-fn yield_five(): int do
+fn yield_five(): int {
     return 5;
-end
+}
 ```
 
 ## `main()` function
@@ -72,12 +72,11 @@ end
 The entry point to a Kaba program is a function called `main()`:
 
 ```text
-fn main() do
+fn main() {
     do_nothing();
-end
+}
 
-fn do_nothing() do
-end
+fn do_nothing() {}
 ```
 
 ## Creating variables
@@ -85,9 +84,9 @@ end
 To create variables, use the `var` keyword:
 
 ```text
-fn main() do
+fn main() {
     var x = 5;
-end
+}
 ```
 
 The value must always be specified, while the variable's type can be inferred from it.
@@ -95,17 +94,17 @@ The value must always be specified, while the variable's type can be inferred fr
 If you want to specify the type manually, use the following syntax:
 
 ```text
-fn main() do
+fn main() {
     var x: int = 5;
-end
+}
 ```
 
 If value type is incompatible with the variable, the compiler will throw an error:
 
 ```text
-fn main() do
+fn main() {
     var x: int = 10.0;  // ERROR
-end
+}
 ```
 
 ## Value assignments
@@ -115,11 +114,11 @@ Kaba is a strongly-typed language, so the type of operands in various operations
 For example, the following program will results in compilation error:
 
 ```text
-fn main() do
+fn main() {
     var x = 5;
 
     x = 10.0;   // ERROR!
-end
+}
 ```
 
 ## Shorthand assignments
@@ -127,7 +126,7 @@ end
 Shorthand assignments are also supported:
 
 ```text
-fn main() do
+fn main() {
     var x = 10;
 
     x += 1;
@@ -135,7 +134,7 @@ fn main() do
     x *= 2;
     x /= 4;
     x %= 2;
-end
+}
 ```
 
 ## Displaying value with `debug` statement
@@ -143,22 +142,22 @@ end
 To display value to `stdout`, use the `debug` statement:
 
 ```text
-fn main() do
+fn main() {
     var x = 101;
 
     debug x;
-end
+}
 ```
 
 Note that the compiler will reject if the expression evaluates to `void` type:
 
 ```text
-fn main() do
+fn main() {
     debug my_void_fn();  // ERROR
-end
+}
 
-fn my_void_fn() do
-end
+fn my_void_fn() {
+}
 ```
 
 ## Data types
@@ -190,7 +189,7 @@ Currently, Kaba only support these (non-`void`) data types:
 (... more to come!)
 
 ```text
-fn main() do
+fn main() {
     var a: int = 10;
 
     var b: float = 5.0;
@@ -204,10 +203,9 @@ fn main() do
     var f: () -> void = foo;
 
     var g: []int = []int{ 99, 101 };
-end
+}
 
-fn foo() do
-end
+fn foo() {}
 ```
 
 ### About `char` type
@@ -239,29 +237,29 @@ Because the size is not included in the type notation, an integer array like `[1
 Kaba can infer the type of an array:
 
 ```text
-fn main do
+fn main {
     var arr = []bool{ false, true, true };
 
     // The type of `arr` is `[]bool`
 
     debug arr[1];   // `true`
-end
+}
 ```
 
 More complex scenarios are also supported:
 
 ```text
-fn main() do
+fn main() {
     var arr = [][]int{ []int{}, []int{ 4, 5 } };
     foo(arr);
 
     arr[1][1] = 10;
     foo(arr);
-end
+}
 
-fn foo(arr: [][]int) do
+fn foo(arr: [][]int) {
     debug arr[1][1];
-end
+}
 ```
 
 ## Expressions
@@ -271,11 +269,11 @@ end
 Basic math operations such as addition, subtraction, etc. are supported:
 
 ```text
-fn main() do
+fn main() {
     debug 23 + 5 * 30 / (2 - 9);
 
     debug 5 % 2;
-end
+}
 ```
 
 ### Equality and comparison expressions
@@ -283,14 +281,14 @@ end
 Operations like "less than", "equal", etc. are supported:
 
 ```text
-fn main() do
+fn main() {
     debug 50 == 50;
     debug 50 != 10;
     debug 43 > 2;
     debug 2.5 >= 2.5;
     debug 100 < 101;
     debug 7 <= 10;
-end
+}
 ```
 
 ### Logical boolean expressions
@@ -298,11 +296,11 @@ end
 Logical "or", "and", and "not" are supported:
 
 ```text
-fn main() do
+fn main() {
     debug false || true;
     debug false && false;
     debug !false;
-end
+}
 ```
 
 ## Conditional branches
@@ -310,19 +308,19 @@ end
 Kaba also support "if... else..." statement:
 
 ```text
-fn main() do
+fn main() {
     var condition = 50 > 10;
     var condition2 = 50 > 20;
 
-    if condition do
+    if condition {
         debug 1;
-        if condition2 do
+        if condition2 {
             debug 2;
-        end
-    else do
+        }
+    } else {
         debug 0;
-    end
-end
+    }
+}
 ```
 
 ## Loop with `while` statement
@@ -330,48 +328,48 @@ end
 To looping over while a condition is met, use the `while` statement:
 
 ```text
-fn main() do
+fn main() {
     var i = 0;
 
-    while i < 10 do
-        if i % 2 == 0 do
+    while i < 10 {
+        if i % 2 == 0 {
             debug i;
-        end
+        }
         i += 1;
-    end
-end
+    }
+}
 ```
 
 To exit from a loop early, use the `break` statement:
 
 ```text
-fn main() do
+fn main() {
     var i = 0;
 
-    while i < 10 do
-        if i == 5 do
+    while i < 10 {
+        if i == 5 {
             break;  // exit from loop
-        end
+        }
         debug i;
         i += 1;
-    end
-end
+    }
+}
 ```
 
 To skip an iteration, use the `continue` statement:
 
 ```text
-fn main() do
+fn main() {
     var i = 0;
 
-    while i < 10 do
+    while i < 10 {
         i += 1;
-        if i == 5 do
+        if i == 5 {
             continue;  // "5" won't be printed
-        end
+        }
         debug i;
-    end
-end
+    }
+}
 ```
 
 ## Loop with `each` statement
@@ -379,27 +377,27 @@ end
 To loop over each element of an iterable, use the `each` loop statement:
 
 ```text
-fn main() do
-    each n in []int{ 1, 2, 3, 4 } do
+fn main() {
+    each n in []int{ 1, 2, 3, 4 } {
         debug n * 2;
-    end
-end
+    }
+}
 ```
 
 It also supports `continue` and `break` statements:
 
 ```text
-fn main() do
-    each n in []int{ 1, 2, 3, 4, 5, 6 } do
-        if n == 3 do
+fn main() {
+    each n in []int{ 1, 2, 3, 4, 5, 6 } {
+        if n == 3 {
             continue;
-        end
+        }
 
-        if n == 5 do
+        if n == 5 {
             break;
-        end
+        }
 
         debug n;
-    end
-end
+    }
+}
 ```

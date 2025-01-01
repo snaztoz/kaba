@@ -1,15 +1,15 @@
 // A simple fibonacci implementation
 
-fn main() do
+fn main() {
     debug fibonacci(6);
-end
+}
 
-fn fibonacci(n: int): int do
-    if n <= 0 do
+fn fibonacci(n: int): int {
+    if n <= 0 {
         return 0;
-    else if n == 1 || n == 2 do
+    } else if n == 1 || n == 2 {
         return 1;
-    end
+    }
 
     return fibonacci(n-1) + fibonacci(n-2);
-end
+}
