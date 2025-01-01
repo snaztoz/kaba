@@ -47,7 +47,7 @@ impl BlockParser<'_> {
 
             if self.tokens.current_is(&TokenKind::Eof) {
                 return Err(ParsingError::UnexpectedToken {
-                    expect: TokenKind::End,
+                    expect: TokenKind::RBrace,
                     found: TokenKind::Eof,
                     span: self.tokens.current().span,
                 });
