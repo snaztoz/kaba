@@ -9,41 +9,28 @@ pub struct Block {
 
 pub struct BlockParser<'a> {
     tokens: &'a TokenStream,
-    extra_delimiter: Option<TokenKind>,
 }
 
 impl<'a> BlockParser<'a> {
     pub const fn new(tokens: &'a TokenStream) -> Self {
-        Self {
-            tokens,
-            extra_delimiter: None,
-        }
+        Self { tokens }
     }
 }
 
 impl BlockParser<'_> {
-    pub fn allow_delimiter(mut self, delimiter: TokenKind) -> Self {
-        self.extra_delimiter = Some(delimiter);
-        self
-    }
-
     pub fn parse(&self) -> Result<Block> {
         let start = self.tokens.current().span.start;
 
-        // Expecting "do"
-        self.tokens.skip(&TokenKind::Do)?;
+        // Expecting "{"
+        self.tokens.skip(&TokenKind::LBrace)?;
 
         // Expecting statements
         let stmts = self.parse_stmts()?;
 
         let end = self.tokens.current().span.end;
 
-        // Expecting "end" keyword or `extra_delimiter`
-        //
-        // Skip only if delimiter *is not* "end"
-        if self.tokens.current_is(&TokenKind::End) {
-            self.tokens.skip(&TokenKind::End)?;
-        }
+        // Expecting "}"
+        self.tokens.skip(&TokenKind::RBrace)?;
 
         Ok(Block {
             body: stmts,
@@ -54,15 +41,11 @@ impl BlockParser<'_> {
     fn parse_stmts(&self) -> Result<Vec<AstNode>> {
         let mut stmts = vec![];
         loop {
-            if let Some(tok) = &self.extra_delimiter {
-                if self.tokens.current_is(tok) {
-                    break;
-                }
+            if self.tokens.current_is(&TokenKind::RBrace) {
+                break;
             }
 
-            if self.tokens.current_is(&TokenKind::End) {
-                break;
-            } else if self.tokens.current_is(&TokenKind::Eof) {
+            if self.tokens.current_is(&TokenKind::Eof) {
                 return Err(ParsingError::UnexpectedToken {
                     expect: TokenKind::End,
                     found: TokenKind::Eof,

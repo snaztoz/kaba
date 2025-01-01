@@ -84,10 +84,10 @@ mod tests {
     fn simple_outputting() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     var x = 10;
                     debug x;
-                end
+                }
             "},
             "10\n".as_bytes(),
         );
@@ -97,12 +97,12 @@ mod tests {
     fn multiplication_result() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     var x = 5;
                     var y = 10;
 
                     debug x * y;
-                end
+                }
             "},
             "50\n".as_bytes(),
         );
@@ -112,13 +112,13 @@ mod tests {
     fn changing_value() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     var x = 2048;
                     debug x;
 
                     x = 1024;
                     debug x;
-                end
+                }
             "},
             "2048\n1024\n".as_bytes(),
         );
@@ -128,14 +128,14 @@ mod tests {
     fn conditional_branch() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     var x = 2048;
-                    if true do
+                    if true {
                         var x = 1024;
                         debug x;
-                    end
+                    }
                     debug x;
-                end
+                }
             "},
             "1024\n2048\n".as_bytes(),
         );
@@ -145,17 +145,17 @@ mod tests {
     fn multiple_conditional_branches() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     var x = 2048;
-                    if false do
+                    if false {
                         x = 1024;
-                    else if false do
+                    } else if false {
                         x = 512;
-                    else do
+                    } else {
                         x = 256;
-                    end
+                    }
                     debug x;
-                end
+                }
             "},
             "256\n".as_bytes(),
         );
@@ -165,16 +165,16 @@ mod tests {
     fn simple_loop() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     var x = 0;
-                    while true do
+                    while true {
                         debug x;
-                        if x == 5 do
+                        if x == 5 {
                             break;
-                        end
+                        }
                         x = x + 1;
-                    end
-                end
+                    }
+                }
             "},
             "0\n1\n2\n3\n4\n5\n".as_bytes(),
         );
@@ -184,17 +184,17 @@ mod tests {
     fn boolean_logic_operators() {
         assert_output_equal(
             indoc! {"
-                fn main() do
-                    if false && true do
+                fn main() {
+                    if false && true {
                         debug 1;
-                    end
-                    if false || true do
+                    }
+                    if false || true {
                         debug 2;
-                    end
-                    if !false do
+                    }
+                    if !false {
                         debug 3;
-                    end
-                end
+                    }
+                }
             "},
             "2\n3\n".as_bytes(),
         );
@@ -204,18 +204,18 @@ mod tests {
     fn loop_with_conditional_branches() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     var x = 0;
-                    while true do
+                    while true {
                         x = x + 1;
-                        if x == 2 do
+                        if x == 2 {
                             continue;
-                        else if x == 5 do
+                        } else if x == 5 {
                             break;
-                        end
+                        }
                         debug x;
-                    end
-                end
+                    }
+                }
             "},
             "1\n3\n4\n".as_bytes(),
         );
@@ -225,7 +225,7 @@ mod tests {
     fn shorthand_operators() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     var x = 5;
                     x += 5;
                     debug x;
@@ -237,7 +237,7 @@ mod tests {
                     debug x;
                     x %= 3;
                     debug x;
-                end
+                }
             "},
             "10\n8\n16\n4\n1\n".as_bytes(),
         );
@@ -247,17 +247,17 @@ mod tests {
     fn function_call() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     debug add_two(5);
-                end
+                }
 
-                fn add_two(n: int): int do
+                fn add_two(n: int): int {
                     return n + get_two();
-                end
+                }
 
-                fn get_two(): int do
+                fn get_two(): int {
                     return 2;
-                end
+                }
             "},
             "7\n".as_bytes(),
         );
@@ -267,14 +267,14 @@ mod tests {
     fn calling_function_with_variable_argument() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     var x = 10;
                     dbg(x);
-                end
+                }
 
-                fn dbg(n: int) do
+                fn dbg(n: int) {
                     debug n;
-                end
+                }
             "},
             "10\n".as_bytes(),
         );
@@ -284,17 +284,17 @@ mod tests {
     fn doing_math_on_function_call_results() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     debug one() + two();
-                end
+                }
 
-                fn one(): int do
+                fn one(): int {
                     return 1;
-                end
+                }
 
-                fn two(): int do
+                fn two(): int {
                     return 2;
-                end
+                }
             "},
             "3\n".as_bytes(),
         );
@@ -304,15 +304,15 @@ mod tests {
     fn function_accept_string_parameter_and_return_value() {
         assert_output_equal(
             indoc! {r#"
-                fn main() do
+                fn main() {
                     debug greet("snaztoz");
-                end
+                }
 
-                fn greet(name: string): string do
+                fn greet(name: string): string {
                     debug "Hello";
                     debug name;
                     return name;
-                end
+                }
             "#},
             "Hello\nsnaztoz\nsnaztoz\n".as_bytes(),
         );
@@ -322,16 +322,16 @@ mod tests {
     fn recursion() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     debug fibonacci(3);
-                end
+                }
 
-                fn fibonacci(n: int): int do
-                    if n == 1 || n == 2 do
+                fn fibonacci(n: int): int {
+                    if n == 1 || n == 2 {
                         return 1;
-                    end
+                    }
                     return fibonacci(n-1) + fibonacci(n-2);
-                end
+                }
             "},
             "2\n".as_bytes(),
         );
@@ -341,17 +341,17 @@ mod tests {
     fn recursive_counter() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     count_to_zero(5);
-                end
+                }
 
-                fn count_to_zero(n: int) do
-                    if n < 0 do
+                fn count_to_zero(n: int) {
+                    if n < 0 {
                         return;
-                    end
+                    }
                     debug n;
                     count_to_zero(n-1);
-                end
+                }
             "},
             "5\n4\n3\n2\n1\n0\n".as_bytes(),
         );
@@ -361,21 +361,21 @@ mod tests {
     fn function_as_argument_to_function_call() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     print(produce);
-                end
+                }
 
-                fn print(producer: () -> int) do
+                fn print(producer: () -> int) {
                     var x: () -> int = producer;
                     debug x();
 
                     var y = producer;
                     debug y();
-                end
+                }
 
-                fn produce(): int do
+                fn produce(): int {
                     return 5;
-                end
+                }
             "},
             "5\n5\n".as_bytes(),
         );
@@ -385,17 +385,17 @@ mod tests {
     fn calling_function_returned_from_another_function_call() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     debug foo()();
-                end
+                }
 
-                fn foo(): () -> int do
+                fn foo(): () -> int {
                     return bar;
-                end
+                }
 
-                fn bar(): int do
+                fn bar(): int {
                     return 25;
-                end
+                }
             "},
             "25\n".as_bytes(),
         );
@@ -405,13 +405,13 @@ mod tests {
     fn debug_array() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     debug [][]int{ []int{1, 2}, []int{3, 4} }[1][0];
 
                     var arr = []int{ 1, 3 };
                     var x = 98;
                     debug arr[99 - x] + 5;
-                end
+                }
             "},
             "3\n8\n".as_bytes(),
         );
@@ -421,7 +421,7 @@ mod tests {
     fn assign_to_array() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     var arr = []int{ 0, 1, 2 };
 
                     arr[0] = 99;
@@ -435,7 +435,7 @@ mod tests {
                     debug arr[0];
                     debug arr[1];
                     debug arr[2];
-                end
+                }
             "},
             "0\n4\n2\n".as_bytes(),
         );
@@ -445,7 +445,7 @@ mod tests {
     fn calling_array_elements() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     var arr = [](int) -> int {
                         add_one,
                         add_two,
@@ -453,23 +453,23 @@ mod tests {
                     };
 
                     var i = 0;
-                    while i < 3 do
+                    while i < 3 {
                         debug arr[i](5);
                         i += 1;
-                    end
-                end
+                    }
+                }
 
-                fn add_one(n: int): int do
+                fn add_one(n: int): int {
                     return n + 1;
-                end
+                }
 
-                fn add_two(n: int): int do
+                fn add_two(n: int): int {
                     return n + 2;
-                end
+                }
 
-                fn add_three(n: int): int do
+                fn add_three(n: int): int {
                     return n + 3;
-                end
+                }
             "},
             "6\n7\n8\n".as_bytes(),
         );
@@ -479,7 +479,7 @@ mod tests {
     fn returning_array_from_a_function() {
         assert_output_equal(
             indoc! {"
-                fn main() do
+                fn main() {
                     var arr_1 = foo();
                     var arr_2 = foo();
 
@@ -490,11 +490,11 @@ mod tests {
 
                     debug arr_1[0];
                     debug arr_2[0];
-                end
+                }
 
-                fn foo(): []int do
+                fn foo(): []int {
                     return []int{ 0 };
-                end
+                }
             "},
             "0\n0\n10\n0\n".as_bytes(),
         );
@@ -504,19 +504,19 @@ mod tests {
     fn iterate_array_using_each_loop_statement() {
         assert_output_equal(
             indoc! {"
-                fn main() do
-                    each n in []int{ 1, 2, 3, 4, 5, 6 } do
-                        if n == 3 do
+                fn main() {
+                    each n in []int{ 1, 2, 3, 4, 5, 6 } {
+                        if n == 3 {
                             continue;
-                        end
+                        }
 
-                        if n == 5 do
+                        if n == 5 {
                             break;
-                        end
+                        }
 
                         debug n * 2;
-                    end
-                end
+                    }
+                }
             "},
             "2\n4\n8\n".as_bytes(),
         );

@@ -210,333 +210,333 @@ mod tests {
     #[test]
     fn defining_function_without_parameter_or_return_type() {
         assert_is_ok(indoc! {"
-                fn add() do end
+                fn add() {}
             "});
     }
 
     #[test]
     fn defining_duplicated_functions() {
         assert_is_err(indoc! {"
-                fn print_sum_of(a: int, b: int,) do
+                fn print_sum_of(a: int, b: int) {
                     debug a + b;
-                end
+                }
 
-                fn print_sum_of(a: float, b: float) do
+                fn print_sum_of(a: float, b: float) {
                     debug a + b;
-                end
+                }
             "});
     }
 
     #[test]
     fn defining_functions_both_with_parameters_and_return_type() {
         assert_is_ok(indoc! {"
-                fn sum(x: int, y: int): int do
+                fn sum(x: int, y: int): int {
                     return x + y;
-                end
+                }
             "});
     }
 
     #[test]
     fn recursive_fibonacci_function() {
         assert_is_ok(indoc! {"
-                fn fibonacci(n: int): int do
-                    if n == 0 do
+                fn fibonacci(n: int): int {
+                    if n == 0 {
                         return 0;
-                    else if n == 1 || n == 2 do
+                    } else if n == 1 || n == 2 {
                         return 1;
-                    end
+                    }
                     return fibonacci(n-1) + fibonacci(n-2);
-                end
+                }
             "});
     }
 
     #[test]
     fn recursive_functions_with_void_return_type() {
         assert_is_ok(indoc! {"
-                fn count_to_zero(n: int) do
+                fn count_to_zero(n: int) {
                     debug n;
-                    if n == 0 do
+                    if n == 0 {
                         return;
-                    end
+                    }
                     count_to_zero(n-1);
-                end
+                }
 
-                fn main() do
+                fn main() {
                     count_to_zero(10);
-                end
+                }
             "});
     }
 
     #[test]
     fn returning_from_functions_with_conditional_and_loop_statements() {
         assert_is_ok(indoc! {"
-                fn first(): int do
+                fn first(): int {
                     return 5;
-                end
+                }
 
-                fn second(): int do
-                    if false do
+                fn second(): int {
+                    if false {
                         return 0;
-                    else do
+                    } else {
                         return 1;
-                    end
-                end
+                    }
+                }
 
-                fn third(): int do
-                    if false do
+                fn third(): int {
+                    if false {
                         return 0;
-                    end
+                    }
                     return 1;
-                end
+                }
 
-                fn fourth(): int do
-                    while false do
+                fn fourth(): int {
+                    while false {
                         return 0;
-                    end
+                    }
                     return 1;
-                end
+                }
 
-                fn fifth(): int do
+                fn fifth(): int {
                     return 1;
 
-                    if false do
+                    if false {
                         return 0;
-                    end
-                end
+                    }
+                }
             "});
     }
 
     #[test]
     fn defining_functions_not_in_order() {
         assert_is_ok(indoc! {"
-                fn main() do
+                fn main() {
                     call_foo();
-                end
+                }
 
-                fn call_foo() do
+                fn call_foo() {
                     call_bar();
-                end
+                }
 
-                fn call_bar() do
+                fn call_bar() {
                     debug true;
-                end
+                }
             "})
     }
 
     #[test]
-    fn prevent_incompatible_int_type_on_function_return_value() {
+    fn prevent_indocompatible_int_type_on_function_return_value() {
         assert_is_err(indoc! {"
-                fn main() do
+                fn main() {
                     var x: int = foo();
-                end
+                }
 
-                fn foo(): sbyte do
+                fn foo(): sbyte {
                     return 5;
-                end
+                }
             "});
     }
 
     #[test]
     fn aliasing_function_identifier() {
         assert_is_ok(indoc! {"
-                fn main() do
+                fn main() {
                     var aliased = return_two;
 
                     debug aliased();
-                end
+                }
 
-                fn return_two(): int do
+                fn return_two(): int {
                     return 2;
-                end
+                }
             "});
     }
 
     #[test]
     fn using_function_type_as_function_parameter() {
         assert_is_ok(indoc! {"
-                fn main() do
+                fn main() {
                     debug get_num(produce);
-                end
+                }
 
-                fn get_num(producer: () -> int): int do
+                fn get_num(producer: () -> int): int {
                     return producer() + 5;
-                end
+                }
 
-                fn produce(): int do
+                fn produce(): int {
                     return 10;
-                end
+                }
             "});
     }
 
     #[test]
     fn calling_function_returned_by_another_function_call() {
         assert_is_ok(indoc! {"
-                fn main() do
+                fn main() {
                     debug foo()();
-                end
+                }
 
-                fn foo(): () -> int do
+                fn foo(): () -> int {
                     return bar;
-                end
+                }
 
-                fn bar(): int do
+                fn bar(): int {
                     return 25;
-                end
+                }
             "});
     }
 
     #[test]
     fn calling_function_with_array_parameter() {
         assert_is_ok(indoc! {"
-                fn main() do
+                fn main() {
                     foo([]int{1, 2, 3});
-                end
+                }
 
-                fn foo(arr: []int) do
-                end
+                fn foo(arr: []int) {
+                }
             "});
     }
 
     #[test]
     fn calling_function_with_array_parameter_using_different_array_sizes() {
         assert_is_ok(indoc! {"
-                fn main() do
+                fn main() {
                     foo([]int{1, 2, 3});
 
                     foo([]int{});
 
                     foo([]int{1,});
-                end
+                }
 
-                fn foo(arr: []int) do
-                end
+                fn foo(arr: []int) {
+                }
             "});
     }
 
     #[test]
     fn returning_array_from_a_function() {
         assert_is_ok(indoc! {"
-                fn main() do
+                fn main() {
                     var arr_1: []int = foo();
                     var arr_2: []int = foo();
 
                     arr_1[0] = 10;
-                end
+                }
 
-                fn foo(): []int do
+                fn foo(): []int {
                     return []int{1, 2, 3};
-                end
+                }
             "});
     }
 
     #[test]
     fn defining_function_not_in_global_scope() {
         assert_is_err(indoc! {"
-                fn main() do
-                    if true do
-                        fn foo() do end
-                    end
-                end
+                fn main() {
+                    if true {
+                        fn foo() {}
+                    }
+                }
             "});
     }
 
     #[test]
     fn defining_function_with_a_non_existing_return_type() {
         assert_is_err(indoc! {"
-                fn foo(): NonExistingType do end
+                fn foo(): NonExistingType { }
             "});
     }
 
     #[test]
     fn defining_function_with_duplicated_parameter_name() {
         assert_is_err(indoc! {"
-                fn add_sum_of(x: int, x: int) do end
+                fn add_sum_of(x: int, x: int) { }
             "});
     }
 
     #[test]
     fn defining_function_with_a_non_existing_parameter_type() {
         assert_is_err(indoc! {"
-                fn foo(x: NonExistingType) do end
+                fn foo(x: NonExistingType) { }
             "});
     }
 
     #[test]
     fn defining_function_with_void_parameter_type() {
         assert_is_err(indoc! {"
-                fn foo(x: Void) do end
+                fn foo(x: Void) { }
             "});
     }
 
     #[test]
     fn returning_value_from_function_with_void_return_type() {
         assert_is_err(indoc! {"
-                fn foo() do
+                fn foo() {
                     return 5;
-                end
+                }
             "});
     }
 
     #[test]
     fn returning_value_from_function_with_mismatched_return_type() {
         assert_is_err(indoc! {"
-                fn sum(x: int, y: int): int do
+                fn sum(x: int, y: int): int {
                     return 5.0;
-                end
+                }
             "});
     }
 
     #[test]
     fn invalid_statement_after_return() {
         assert_is_err(indoc! {"
-                fn get_five(): int do
+                fn get_five(): int {
                     return 5;
                     1 + true; // should be error
-                end
+                }
             "});
     }
 
     #[test]
     fn returning_non_existing_variable() {
         assert_is_err(indoc! {"
-                fn foo(): int do
+                fn foo(): int {
                     return not_exist;
-                end
+                }
             "});
     }
 
     #[test]
     fn defining_function_with_missing_return_in_other_branches() {
         assert_is_err(indoc! {"
-                fn foo(): int do
-                    if false do
+                fn foo(): int {
+                    if false {
                         return 5;
-                    end
-                end
+                    }
+                }
             "});
     }
 
     #[test]
     fn defining_function_with_missing_return_in_else_branch_or_outer_scope() {
         assert_is_err(indoc! {"
-                fn foo(): int do
-                    if false do
+                fn foo(): int {
+                    if false {
                         return 0;
-                    else if !true do
+                    } else if !true {
                         return 0;
-                    end
-                end
+                    }
+                }
             "});
     }
 
     #[test]
     fn defining_function_with_missing_return_in_outer_scope_of_while_statement() {
         assert_is_err(indoc! {"
-                fn foo(): int do
-                    while false do
+                fn foo(): int {
+                    while false {
                         return 0;
-                    end
-                end
+                    }
+                }
             "});
     }
 }

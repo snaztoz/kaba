@@ -96,39 +96,38 @@ mod tests {
     #[test]
     fn each_loop_statements() {
         assert_is_ok(indoc! {"
-                fn main() do
-                    each n in []int{1, 2, 3} do
+                fn main() {
+                    each n in []int{1, 2, 3} {
                         debug n;
-                    end
+                    }
 
                     var arr = []int{4, 5, 6};
-                    each n in arr do
+                    each n in arr {
                         debug n;
-                    end
-                end
+                    }
+                }
             "});
     }
 
     #[test]
     fn each_loop_statement_with_non_array_expression() {
         assert_is_err(indoc! {"
-                fn main() do
-                    each n in true do
+                fn main() {
+                    each n in true {
                         debug n;
-                    end
-                end
+                    }
+                }
             "});
     }
 
     #[test]
     fn accessing_elem_id_outside_scope() {
         assert_is_err(indoc! {"
-                fn main() do
-                    each n in []int{1, 2} do
-                    end
+                fn main() {
+                    each n in []int{1, 2} {}
 
                     debug n;
-                end
+                }
             "});
     }
 }

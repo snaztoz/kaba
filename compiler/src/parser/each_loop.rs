@@ -70,7 +70,7 @@ mod tests {
     #[test]
     fn each_statement() {
         parse_and_assert_result(
-            "each elem in arr do end",
+            "each elem in arr {}",
             AstNode::Each {
                 elem_id: Box::new(AstNode::Identifier {
                     name: String::from("elem"),
@@ -81,7 +81,7 @@ mod tests {
                     span: 13..16,
                 }),
                 body: vec![],
-                span: 0..23,
+                span: 0..19,
             },
         );
     }

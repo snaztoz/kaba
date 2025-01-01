@@ -26,7 +26,7 @@ impl ConditionalParser<'_> {
         let cond = ExpressionParser::new(self.tokens).parse()?;
 
         // Expecting block
-        let block = self.block_parser().parse()?;
+        let block = BlockParser::new(self.tokens).parse()?;
 
         end = block.span.end;
 
@@ -61,9 +61,9 @@ impl ConditionalParser<'_> {
                 Ok(Some(alt))
             }
 
-            TokenKind::Do => {
+            TokenKind::LBrace => {
                 // Expecting block
-                let block = self.block_parser().parse()?;
+                let block = BlockParser::new(self.tokens).parse()?;
 
                 *end_pos = block.span.end;
 
@@ -80,10 +80,6 @@ impl ConditionalParser<'_> {
             }),
         }
     }
-
-    fn block_parser(&self) -> BlockParser<'_> {
-        BlockParser::new(self.tokens).allow_delimiter(TokenKind::Else)
-    }
 }
 
 #[cfg(test)]
@@ -96,7 +92,7 @@ mod tests {
     #[test]
     fn if_statement() {
         parse_and_assert_result(
-            "if 15 > 10 do print(1); end",
+            "if 15 > 10 { print(1); }",
             AstNode::If {
                 cond: Box::new(AstNode::Gt {
                     lhs: Box::new(AstNode::Literal {
@@ -112,16 +108,16 @@ mod tests {
                 body: vec![AstNode::FunctionCall {
                     callee: Box::new(AstNode::Identifier {
                         name: String::from("print"),
-                        span: 14..19,
+                        span: 13..18,
                     }),
                     args: vec![AstNode::Literal {
                         lit: Literal::Int(1),
-                        span: 20..21,
+                        span: 19..20,
                     }],
-                    span: 14..22,
+                    span: 13..21,
                 }],
                 or_else: None,
-                span: 0..27,
+                span: 0..24,
             },
         );
     }
@@ -129,7 +125,7 @@ mod tests {
     #[test]
     fn if_else_branches() {
         parse_and_assert_result(
-            "if false do else if false do else do end",
+            "if false {} else if false {} else {}",
             AstNode::If {
                 cond: Box::new(AstNode::Literal {
                     lit: Literal::Bool(false),
@@ -144,11 +140,11 @@ mod tests {
                     body: vec![],
                     or_else: Some(Box::new(AstNode::Else {
                         body: vec![],
-                        span: 29..40,
+                        span: 29..36,
                     })),
-                    span: 17..40,
+                    span: 17..36,
                 })),
-                span: 0..40,
+                span: 0..36,
             },
         );
     }

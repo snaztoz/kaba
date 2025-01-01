@@ -83,51 +83,51 @@ mod tests {
     #[test]
     fn while_loop_statements() {
         assert_is_ok(indoc! {"
-                fn main() do
-                    while 2 > 5 do
+                fn main() {
+                    while 2 > 5 {
                         debug 1;
-                    end
+                    }
 
                     var a = 5;
-                    while true do
-                        if a == 5 do
+                    while true {
+                        if a == 5 {
                             break;
-                        end
+                        }
                         debug 0;
-                    end
-                end
+                    }
+                }
             "})
     }
 
     #[test]
     fn using_math_expression_as_condition_in_while_statement() {
         assert_is_err(indoc! {"
-                fn main() do
-                    while 5 + 5 do end
-                end
+                fn main() {
+                    while 5 + 5 {}
+                }
             "})
     }
 
     #[test]
     fn using_break_statement_not_in_loop_scope() {
         assert_is_err(indoc! {"
-                fn main() do
-                    if true do
+                fn main() {
+                    if true {
                         break;
-                    end
-                end
+                    }
+                }
             "})
     }
 
     #[test]
     fn using_invalid_statement_after_loop_control() {
         assert_is_err(indoc! {"
-                fn main() do
-                    while true do
+                fn main() {
+                    while true {
                         break;
                         1 + true; // this should be error
-                    end
-                end
+                    }
+                }
             "})
     }
 }

@@ -112,21 +112,21 @@ mod tests {
     #[test]
     fn debug_expression() {
         assert_is_ok(indoc! {"
-                fn main() do
+                fn main() {
                     debug 17 * 5;
-                end
+                }
             "});
     }
 
     #[test]
     fn debug_expression_with_void_type() {
         assert_is_err(indoc! {"
-                fn main() do
+                fn main() {
                     debug this_is_void();
-                end
+                }
 
-                fn this_is_void() do
-                end
+                fn this_is_void() {
+                }
             "});
     }
 }

@@ -153,73 +153,73 @@ mod tests {
     #[test]
     fn if_else_statements() {
         assert_is_ok(indoc! {"
-                fn main() do
+                fn main() {
                     var condition1 = 5 < 10;
                     var condition2 = 0.5 < 0.75;
 
-                    if condition1 do
+                    if condition1 {
                         debug condition1;
                         debug 1;
-                    else if condition2 do
+                    } else if condition2 {
                         debug condition2;
                         debug 2;
-                    else do
+                    } else {
                         debug 0;
-                    end
-                end
+                    }
+                }
             "})
     }
 
     #[test]
     fn nested_if_statements() {
         assert_is_ok(indoc! {"
-                fn main() do
-                    if 1 + 1 == 2 do
-                        if 2 + 2 == 4 do
-                            if 3 + 3 == 6 do
+                fn main() {
+                    if 1 + 1 == 2 {
+                        if 2 + 2 == 4 {
+                            if 3 + 3 == 6 {
                                 debug true;
-                            end
-                        end
-                    end
-                end
+                            }
+                        }
+                    }
+                }
             "})
     }
 
     #[test]
     fn using_variable_declared_inside_conditional_scope_from_outside() {
         assert_is_err(indoc! {"
-                fn main() do
-                    if true do
+                fn main() {
+                    if true {
                         var x = 50;
                         debug x;
-                    end
+                    }
 
                     debug x;
-                end
+                }
             "})
     }
 
     #[test]
     fn using_math_expression_as_condition_in_if_statement() {
         assert_is_err(indoc! {"
-                fn main() do
-                    if 1 + 1 do
+                fn main() {
+                    if 1 + 1 {
                         debug 1;
-                    end
-                end
+                    }
+                }
             "})
     }
 
     #[test]
     fn using_variable_declared_in_sibling_branch_scope() {
         assert_is_err(indoc! {"
-                fn main() do
-                    if true do
+                fn main() {
+                    if true {
                         var x = 50;
-                    else do
+                    } else {
                         debug x;
-                    end
-                end
+                    }
+                }
             "})
     }
 }
