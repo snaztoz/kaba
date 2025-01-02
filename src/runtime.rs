@@ -406,9 +406,9 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 fn main() {
-                    debug [][]int{ []int{1, 2}, []int{3, 4} }[1][0];
+                    debug [[]int [int 1, 2], [int 3, 4]][1][0];
 
-                    var arr = []int{ 1, 3 };
+                    var arr = [int 1, 3];
                     var x = 98;
                     debug arr[99 - x] + 5;
                 }
@@ -422,7 +422,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 fn main() {
-                    var arr = []int{ 0, 1, 2 };
+                    var arr = [int 0, 1, 2];
 
                     arr[0] = 99;
 
@@ -446,11 +446,11 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 fn main() {
-                    var arr = [](int) -> int {
+                    var arr = [(int) -> int
                         add_one,
                         add_two,
                         add_three,
-                    };
+                    ];
 
                     var i = 0;
                     while i < 3 {
@@ -493,7 +493,7 @@ mod tests {
                 }
 
                 fn foo(): []int {
-                    return []int{ 0 };
+                    return [int 0];
                 }
             "},
             "0\n0\n10\n0\n".as_bytes(),
@@ -505,7 +505,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 fn main() {
-                    each n in []int{ 1, 2, 3, 4, 5, 6 } {
+                    each n in [int 1, 2, 3, 4, 5, 6] {
                         if n == 3 {
                             continue;
                         }

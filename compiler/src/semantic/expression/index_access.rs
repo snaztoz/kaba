@@ -60,7 +60,7 @@ mod tests {
     #[test]
     fn index_accessing() {
         assert_expr_type(
-            "[][]int{ []int{ 1, 2 } }[0];",
+            "[[]int [int 1, 2]][0];",
             &[],
             Type::Array {
                 elem_t: Box::new(Type::Int(IntType::Int)),

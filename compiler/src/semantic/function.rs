@@ -389,7 +389,7 @@ mod tests {
     fn calling_function_with_array_parameter() {
         assert_is_ok(indoc! {"
                 fn main() {
-                    foo([]int{1, 2, 3});
+                    foo([int 1, 2, 3]);
                 }
 
                 fn foo(arr: []int) {
@@ -401,11 +401,11 @@ mod tests {
     fn calling_function_with_array_parameter_using_different_array_sizes() {
         assert_is_ok(indoc! {"
                 fn main() {
-                    foo([]int{1, 2, 3});
+                    foo([int 1, 2, 3]);
 
-                    foo([]int{});
+                    foo([int]);
 
-                    foo([]int{1,});
+                    foo([int 1]);
                 }
 
                 fn foo(arr: []int) {
@@ -424,7 +424,7 @@ mod tests {
                 }
 
                 fn foo(): []int {
-                    return []int{1, 2, 3};
+                    return [int 1, 2, 3];
                 }
             "});
     }

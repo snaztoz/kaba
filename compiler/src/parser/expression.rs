@@ -512,21 +512,17 @@ impl ExpressionParser<'_> {
     fn parse_array_literal(&self) -> Result<AstNode> {
         let start = self.tokens.current().span.start;
 
-        // Expecting "[" and "]"
+        // Expecting "["
         self.tokens.skip(&TokenKind::LBrack)?;
-        self.tokens.skip(&TokenKind::RBrack)?;
 
         // Expecting type notation
         let elem_tn = TypeNotationParser::new(self.tokens).parse()?;
-
-        // Expecting "{"
-        self.tokens.skip(&TokenKind::LBrace)?;
 
         // Can have >= 0 elements
         let mut elems = vec![];
         loop {
             // Stop when encounter a closing bracket
-            if self.tokens.current_is(&TokenKind::RBrace) {
+            if self.tokens.current_is(&TokenKind::RBrack) {
                 break;
             }
 
@@ -540,12 +536,12 @@ impl ExpressionParser<'_> {
                     continue;
                 }
 
-                TokenKind::RBrace => continue,
+                TokenKind::RBrack => continue,
 
                 kind => {
-                    // Error if encountering neither "," or ")"
+                    // Error if encountering neither "," or "]"
                     return Err(ParsingError::UnexpectedToken {
-                        expect: TokenKind::RBrace,
+                        expect: TokenKind::RBrack,
                         found: kind.clone(),
                         span: self.tokens.current().span,
                     });
@@ -555,8 +551,8 @@ impl ExpressionParser<'_> {
 
         let end = self.tokens.current().span.end;
 
-        // Expecting "}"
-        self.tokens.skip(&TokenKind::RBrace)?;
+        // Expecting "]"
+        self.tokens.skip(&TokenKind::RBrack)?;
 
         Ok(AstNode::Literal {
             lit: Literal::Array {
@@ -1110,12 +1106,54 @@ mod tests {
     #[test]
     fn empty_array() {
         parse_and_assert_result(
-            "[]int{};",
+            "[int];",
             AstNode::Literal {
                 lit: Literal::Array {
                     elem_tn: Box::new(AstNode::TypeNotation {
                         tn: TypeNotation::Identifier(String::from("int")),
-                        span: 2..5,
+                        span: 1..4,
+                    }),
+                    elems: vec![],
+                },
+                span: 0..5,
+            },
+        )
+    }
+
+    #[test]
+    fn array_with_single_element() {
+        parse_and_assert_result(
+            "[int 5];",
+            AstNode::Literal {
+                lit: Literal::Array {
+                    elem_tn: Box::new(AstNode::TypeNotation {
+                        tn: TypeNotation::Identifier(String::from("int")),
+                        span: 1..4,
+                    }),
+                    elems: vec![AstNode::Literal {
+                        lit: Literal::Int(5),
+                        span: 5..6,
+                    }],
+                },
+                span: 0..7,
+            },
+        );
+    }
+
+    #[test]
+    fn empty_nested_arrays() {
+        parse_and_assert_result(
+            "[[]int];",
+            AstNode::Literal {
+                lit: Literal::Array {
+                    elem_tn: Box::new(AstNode::TypeNotation {
+                        tn: TypeNotation::Array {
+                            elem_tn: Box::new(AstNode::TypeNotation {
+                                tn: TypeNotation::Identifier(String::from("int")),
+                                span: 3..6,
+                            }),
+                        },
+                        span: 1..6,
                     }),
                     elems: vec![],
                 },
@@ -1125,74 +1163,32 @@ mod tests {
     }
 
     #[test]
-    fn array_with_single_element() {
-        parse_and_assert_result(
-            "[]int{5,};",
-            AstNode::Literal {
-                lit: Literal::Array {
-                    elem_tn: Box::new(AstNode::TypeNotation {
-                        tn: TypeNotation::Identifier(String::from("int")),
-                        span: 2..5,
-                    }),
-                    elems: vec![AstNode::Literal {
-                        lit: Literal::Int(5),
-                        span: 6..7,
-                    }],
-                },
-                span: 0..9,
-            },
-        );
-    }
-
-    #[test]
-    fn empty_nested_arrays() {
-        parse_and_assert_result(
-            "[][]int{};",
-            AstNode::Literal {
-                lit: Literal::Array {
-                    elem_tn: Box::new(AstNode::TypeNotation {
-                        tn: TypeNotation::Array {
-                            elem_tn: Box::new(AstNode::TypeNotation {
-                                tn: TypeNotation::Identifier(String::from("int")),
-                                span: 4..7,
-                            }),
-                        },
-                        span: 2..7,
-                    }),
-                    elems: vec![],
-                },
-                span: 0..9,
-            },
-        )
-    }
-
-    #[test]
     fn nested_arrays() {
         parse_and_assert_result(
-            "[][]int{ []int{} };",
+            "[[]int [int]];",
             AstNode::Literal {
                 lit: Literal::Array {
                     elem_tn: Box::new(AstNode::TypeNotation {
                         tn: TypeNotation::Array {
                             elem_tn: Box::new(AstNode::TypeNotation {
                                 tn: TypeNotation::Identifier(String::from("int")),
-                                span: 4..7,
+                                span: 3..6,
                             }),
                         },
-                        span: 2..7,
+                        span: 1..6,
                     }),
                     elems: vec![AstNode::Literal {
                         lit: Literal::Array {
                             elem_tn: Box::new(AstNode::TypeNotation {
                                 tn: TypeNotation::Identifier(String::from("int")),
-                                span: 11..14,
+                                span: 8..11,
                             }),
                             elems: vec![],
                         },
-                        span: 9..16,
+                        span: 7..12,
                     }],
                 },
-                span: 0..18,
+                span: 0..13,
             },
         )
     }

@@ -63,7 +63,7 @@ mod tests {
     #[test]
     fn array_literal() {
         assert_expr_type(
-            "[]int{ 1, 2, 3 };",
+            "[int 1, 2, 3];",
             &[],
             Type::Array {
                 elem_t: Box::new(Type::Int(IntType::Int)),
@@ -74,7 +74,7 @@ mod tests {
     #[test]
     fn empty_array_literal() {
         assert_expr_type(
-            "[]int{};",
+            "[int];",
             &[],
             Type::Array {
                 elem_t: Box::new(Type::Int(IntType::Int)),
@@ -85,7 +85,7 @@ mod tests {
     #[test]
     fn array_literal_with_math_expression() {
         assert_expr_type(
-            "[]int{ 8 * 2048 };",
+            "[int 8 * 2048];",
             &[],
             Type::Array {
                 elem_t: Box::new(Type::Int(IntType::Int)),
@@ -96,13 +96,13 @@ mod tests {
     #[test]
     fn array_literal_with_incompatible_type() {
         let symbols = [("x", Type::Int(IntType::Short))];
-        assert_expr_is_err("[]int{ 1, x, 5 };", &symbols);
+        assert_expr_is_err("[int 1, x, 5];", &symbols);
     }
 
     #[test]
     fn nested_array_literals() {
         assert_expr_type(
-            "[][]int{ []int{1, 3, 5}, []int{2, 6, 3}, []int{9, 1, 1} };",
+            "[[]int [int 1, 3, 5], [int 2, 6, 3], [int 9, 1, 1]];",
             &[],
             Type::Array {
                 elem_t: Box::new(Type::Array {
@@ -114,13 +114,13 @@ mod tests {
 
     #[test]
     fn array_literal_with_different_element_types() {
-        assert_expr_is_err("[]int{ 1, 5.0 };", &[]);
+        assert_expr_is_err("[int 1, 5.0];", &[]);
     }
 
     #[test]
     fn array_literal_with_different_nested_element_sizes() {
         assert_expr_type(
-            "[][]int{ []int{}, []int{1} };",
+            "[[]int [int], [int 1]];",
             &[],
             Type::Array {
                 elem_t: Box::new(Type::Array {

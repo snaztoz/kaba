@@ -283,7 +283,7 @@ mod tests {
     fn declaring_variable_with_array_literal() {
         assert_is_ok(indoc! {"
                 fn main() {
-                    var arr = []int{ 1 };
+                    var arr = [int 1];
                 }
             "});
     }
@@ -292,7 +292,7 @@ mod tests {
     fn declaring_variable_with_empty_array_literal() {
         assert_is_ok(indoc! {"
                 fn main() {
-                    var arr = []int{};
+                    var arr = [int];
                 }
             "});
     }
@@ -301,7 +301,7 @@ mod tests {
     fn declaring_variable_with_array_type_notation() {
         assert_is_ok(indoc! {"
                 fn main() {
-                    var arr: []int = []int{ 5, 9, 10 };
+                    var arr: []int = [int 5, 9, 10];
                 }
             "});
     }
@@ -310,7 +310,7 @@ mod tests {
     fn declaring_variable_with_empty_array_literal_and_type_notation() {
         assert_is_ok(indoc! {"
                 fn main() {
-                    var arr: []int = []int{};
+                    var arr: []int = [int];
                 }
             "});
     }
@@ -319,7 +319,7 @@ mod tests {
     fn declaring_variable_with_incompatible_array_literal() {
         assert_is_err(indoc! {"
                 fn main() {
-                    var arr: []int = []short{ 5 };
+                    var arr: []int = [short 5];
                 }
             "});
     }
@@ -328,7 +328,7 @@ mod tests {
     fn declaring_variable_with_nested_arrays_and_type_notation() {
         assert_is_ok(indoc! {"
                 fn main() {
-                    var arr: [][]int = [][]int{ []int{5, 9, 10}, []int{1, 2, 3} };
+                    var arr: [][]int = [[]int [int 5, 9, 10], [int 1, 2, 3]];
                 }
             "});
     }
@@ -337,7 +337,7 @@ mod tests {
     fn declaring_variable_with_nested_empty_arrays_and_type_notation() {
         assert_is_ok(indoc! {"
                 fn main() {
-                    var arr: [][][]int = [][][]int{ [][]int{}, [][]int{} };
+                    var arr: [][][]int = [[][]int [[]int], [[]int]];
                 }
             "});
     }
@@ -346,9 +346,9 @@ mod tests {
     fn declaring_variables_of_sbyte_array() {
         assert_is_ok(indoc! {"
                 fn main() {
-                    var arr: []sbyte = []sbyte{};
+                    var arr: []sbyte = [sbyte];
 
-                    var arr2: []sbyte = []sbyte{ 1, 2, 3 };
+                    var arr2: []sbyte = [sbyte 1, 2, 3];
                 }
             "});
     }
@@ -358,7 +358,7 @@ mod tests {
         assert_is_ok(indoc! {"
                 fn main() {
                     var x: long = 10;
-                    var arr: []long = []long{ 1, 2, 3 + x };
+                    var arr: []long = [long 1, 2, 3 + x];
                 }
             "});
     }
@@ -367,7 +367,7 @@ mod tests {
     fn declaring_variable_with_array_literal_of_function_types() {
         assert_is_ok(indoc! {"
                 fn main() {
-                    var arr = []()->int{ five, six };
+                    var arr = [()->int five, six];
                 }
 
                 fn five(): int {
@@ -384,7 +384,7 @@ mod tests {
     fn declaring_variable_with_incompatible_element_types() {
         assert_is_err(indoc! {"
                 fn main() {
-                    var arr = []int{ 1, 0.5, };
+                    var arr = [int 1, 0.5];
                 }
             "});
     }
@@ -393,7 +393,7 @@ mod tests {
     fn declaring_variable_with_non_existing_array_type() {
         assert_is_err(indoc! {"
                 fn main() {
-                    var arr = []NotExist{};
+                    var arr = [NotExist];
                 }
             "})
     }
