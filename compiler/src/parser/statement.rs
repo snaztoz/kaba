@@ -110,12 +110,12 @@ impl StatementParser<'_> {
 mod tests {
     use crate::{
         ast::{AstNode, Literal},
-        parser::test_util::parse_and_assert_result,
+        parser::test_util::assert_ast,
     };
 
     #[test]
     fn debug_statement() {
-        parse_and_assert_result(
+        assert_ast(
             "debug 5 + 5 * 7;",
             AstNode::Debug {
                 expr: Box::new(AstNode::Add {

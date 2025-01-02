@@ -65,11 +65,11 @@ impl EachLoopParser<'_> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ast::AstNode, parser::test_util::parse_and_assert_result};
+    use crate::{ast::AstNode, parser::test_util::assert_ast};
 
     #[test]
     fn each_statement() {
-        parse_and_assert_result(
+        assert_ast(
             "each elem in arr {}",
             AstNode::Each {
                 elem_id: Box::new(AstNode::Identifier {

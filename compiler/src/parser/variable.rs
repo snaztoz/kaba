@@ -84,12 +84,12 @@ impl VariableDeclarationParser<'_> {
 mod tests {
     use crate::{
         ast::{AstNode, Literal, TypeNotation},
-        parser::test_util::{parse_and_assert_error, parse_and_assert_result},
+        parser::test_util::{assert_ast, assert_is_err},
     };
 
     #[test]
     fn variable_declaration_without_type_notation() {
-        parse_and_assert_result(
+        assert_ast(
             "var abc = 123 * x;",
             AstNode::VariableDeclaration {
                 id: Box::from(AstNode::Identifier {
@@ -115,7 +115,7 @@ mod tests {
 
     #[test]
     fn variable_declaration_with_grouped_expression_as_initial_value() {
-        parse_and_assert_result(
+        assert_ast(
             "var x = (123 + 50);",
             AstNode::VariableDeclaration {
                 id: Box::from(AstNode::Identifier {
@@ -141,7 +141,7 @@ mod tests {
 
     #[test]
     fn variable_declaration_with_nested_grouped_expression_as_initial_value() {
-        parse_and_assert_result(
+        assert_ast(
             "var x = ((((foo))));",
             AstNode::VariableDeclaration {
                 id: Box::from(AstNode::Identifier {
@@ -160,12 +160,12 @@ mod tests {
 
     #[test]
     fn variable_declaration_without_initial_value() {
-        parse_and_assert_error("var x: Int;");
+        assert_is_err("var x: Int;");
     }
 
     #[test]
     fn variable_declaration_with_both_type_notation_and_initial_value() {
-        parse_and_assert_result(
+        assert_ast(
             "var x: int = 5;",
             AstNode::VariableDeclaration {
                 id: Box::from(AstNode::Identifier {
@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn variable_declaration_with_function_type_notation() {
-        parse_and_assert_result(
+        assert_ast(
             "var x: (int) -> void = foo;",
             AstNode::VariableDeclaration {
                 id: Box::from(AstNode::Identifier {
@@ -218,7 +218,7 @@ mod tests {
 
     #[test]
     fn variable_declaration_with_nested_function_type_notation() {
-        parse_and_assert_result(
+        assert_ast(
             "var x: (int, bool) -> (int,) -> void = foo;",
             AstNode::VariableDeclaration {
                 id: Box::from(AstNode::Identifier {
@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn variable_declaration_with_array_type() {
-        parse_and_assert_result(
+        assert_ast(
             "var x: [][]int = foo;",
             AstNode::VariableDeclaration {
                 id: Box::from(AstNode::Identifier {

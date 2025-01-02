@@ -50,7 +50,7 @@ mod tests {
     use super::*;
     use indoc::indoc;
 
-    fn lex_and_assert_result(input: &str, expected: TokenKind) {
+    fn assert_token_kind(input: &str, expected: TokenKind) {
         let result = lex(input);
         assert!(result.is_ok());
 
@@ -59,7 +59,7 @@ mod tests {
         assert_eq!(tokens[0].kind, expected);
     }
 
-    fn lex_and_assert_err(input: &str) {
+    fn assert_is_err(input: &str) {
         let result = lex(input);
         assert!(result.is_err());
     }
@@ -71,31 +71,31 @@ mod tests {
     #[test]
     fn test_lexing_normal_identifier() {
         let input = "abc";
-        lex_and_assert_result(input, TokenKind::Identifier(String::from(input)));
+        assert_token_kind(input, TokenKind::Identifier(String::from(input)));
     }
 
     #[test]
     fn test_lexing_identifier_with_mixed_characters() {
         let input = "_d768a7ABC_adsf";
-        lex_and_assert_result(input, TokenKind::Identifier(String::from(input)));
+        assert_token_kind(input, TokenKind::Identifier(String::from(input)));
     }
 
     #[test]
     fn test_lexing_identifier_that_only_a_single_underline() {
         let input = "_";
-        lex_and_assert_result(input, TokenKind::Identifier(String::from(input)));
+        assert_token_kind(input, TokenKind::Identifier(String::from(input)));
     }
 
     #[test]
     fn test_lexing_identifier_without_alphabets() {
         let input = "_123";
-        lex_and_assert_result(input, TokenKind::Identifier(String::from(input)));
+        assert_token_kind(input, TokenKind::Identifier(String::from(input)));
     }
 
     #[test]
     fn test_lexing_identifier_that_starts_with_number() {
         let input = "123abc";
-        lex_and_assert_err(input);
+        assert_is_err(input);
     }
 
     //
@@ -105,19 +105,19 @@ mod tests {
     #[test]
     fn test_lexing_an_integer_literal() {
         let input = "123";
-        lex_and_assert_result(input, TokenKind::Int(input.parse().unwrap()));
+        assert_token_kind(input, TokenKind::Int(input.parse().unwrap()));
     }
 
     #[test]
     fn test_lexing_a_zero_literal() {
         let input = "0";
-        lex_and_assert_result(input, TokenKind::Int(input.parse().unwrap()));
+        assert_token_kind(input, TokenKind::Int(input.parse().unwrap()));
     }
 
     #[test]
     fn test_lexing_a_big_integer_literal() {
         let input = "2147483647";
-        lex_and_assert_result(input, TokenKind::Int(input.parse().unwrap()));
+        assert_token_kind(input, TokenKind::Int(input.parse().unwrap()));
     }
 
     //
@@ -127,13 +127,13 @@ mod tests {
     #[test]
     fn test_lexing_a_float_literal() {
         let input = "123.5";
-        lex_and_assert_result(input, TokenKind::Float(input.parse().unwrap()));
+        assert_token_kind(input, TokenKind::Float(input.parse().unwrap()));
     }
 
     #[test]
     fn test_lexing_a_small_float_literal() {
         let input = "0.0723";
-        lex_and_assert_result(input, TokenKind::Float(input.parse().unwrap()));
+        assert_token_kind(input, TokenKind::Float(input.parse().unwrap()));
     }
 
     //
@@ -143,25 +143,25 @@ mod tests {
     #[test]
     fn lex_single_character() {
         let input = "'a'";
-        lex_and_assert_result(input, TokenKind::Char('a'));
+        assert_token_kind(input, TokenKind::Char('a'));
     }
 
     #[test]
     fn lex_single_digit_character() {
         let input = "'1'";
-        lex_and_assert_result(input, TokenKind::Char('1'));
+        assert_token_kind(input, TokenKind::Char('1'));
     }
 
     #[test]
     fn lex_newline_character() {
         let input = "'\\n'";
-        lex_and_assert_result(input, TokenKind::Char('\n'));
+        assert_token_kind(input, TokenKind::Char('\n'));
     }
 
     #[test]
     fn lex_hex_ascii_character_escape() {
         let input = "'\\x41'";
-        lex_and_assert_result(input, TokenKind::Char('A'));
+        assert_token_kind(input, TokenKind::Char('A'));
     }
 
     //
@@ -171,19 +171,19 @@ mod tests {
     #[test]
     fn lex_empty_string() {
         let input = r#""""#;
-        lex_and_assert_result(input, TokenKind::String(String::from("")));
+        assert_token_kind(input, TokenKind::String(String::from("")));
     }
 
     #[test]
     fn lex_single_character_string() {
         let input = r#""a""#;
-        lex_and_assert_result(input, TokenKind::String(String::from("a")));
+        assert_token_kind(input, TokenKind::String(String::from("a")));
     }
 
     #[test]
     fn lex_multiple_characters_string() {
         let input = r#""abc def ghi 012 @93875252435    ""#;
-        lex_and_assert_result(
+        assert_token_kind(
             input,
             TokenKind::String(String::from("abc def ghi 012 @93875252435    ")),
         );
@@ -192,13 +192,13 @@ mod tests {
     #[test]
     fn lex_escape_characters_string() {
         let input = r#""\\\n\t\r\0\'\"""#;
-        lex_and_assert_result(input, TokenKind::String(String::from("\\\n\t\r\0\'\"")));
+        assert_token_kind(input, TokenKind::String(String::from("\\\n\t\r\0\'\"")));
     }
 
     #[test]
     fn string_hex_character_escape() {
         let input = r#""\x41""#;
-        lex_and_assert_result(input, TokenKind::String(String::from("A")));
+        assert_token_kind(input, TokenKind::String(String::from("A")));
     }
 
     //
