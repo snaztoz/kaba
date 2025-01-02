@@ -5,7 +5,7 @@ use super::{
 };
 use crate::{
     ast::AstNode,
-    lexer::{Token, TokenKind},
+    lexer::token::{Token, TokenKind},
 };
 
 pub struct StatementParser<'a> {

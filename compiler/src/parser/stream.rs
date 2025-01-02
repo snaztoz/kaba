@@ -1,5 +1,5 @@
 use super::{error::ParsingError, Result};
-use crate::lexer::{Token, TokenKind};
+use crate::lexer::token::{Token, TokenKind};
 use std::cell::RefCell;
 
 pub struct TokenStream {

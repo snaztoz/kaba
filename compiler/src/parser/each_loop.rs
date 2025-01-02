@@ -2,7 +2,7 @@ use super::{
     block::BlockParser, error::ParsingError, expression::ExpressionParser, stream::TokenStream,
     Result,
 };
-use crate::{ast::AstNode, lexer::TokenKind};
+use crate::{ast::AstNode, lexer::token::TokenKind};
 
 pub struct EachLoopParser<'a> {
     tokens: &'a TokenStream,

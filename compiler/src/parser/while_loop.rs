@@ -1,5 +1,5 @@
 use super::{block::BlockParser, expression::ExpressionParser, stream::TokenStream, Result};
-use crate::{ast::AstNode, lexer::TokenKind};
+use crate::{ast::AstNode, lexer::token::TokenKind};
 
 pub struct WhileLoopParser<'a> {
     tokens: &'a TokenStream,

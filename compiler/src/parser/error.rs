@@ -1,4 +1,4 @@
-use crate::lexer::TokenKind;
+use crate::lexer::token::TokenKind;
 use logos::Span;
 use std::fmt::Display;
 

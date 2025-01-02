@@ -4,7 +4,7 @@ use super::{
     stream::TokenStream,
     tn::TypeNotationParser,
 };
-use crate::{ast::AstNode, lexer::TokenKind};
+use crate::{ast::AstNode, lexer::token::TokenKind};
 
 pub struct VariableDeclarationParser<'a> {
     tokens: &'a TokenStream,

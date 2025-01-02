@@ -3,7 +3,7 @@ use super::{
 };
 use crate::{
     ast::{AstNode, FunctionParam},
-    lexer::TokenKind,
+    lexer::token::TokenKind,
 };
 
 pub struct FunctionDefinitionParser<'a> {

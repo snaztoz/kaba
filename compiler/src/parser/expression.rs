@@ -1,7 +1,7 @@
 use super::{error::ParsingError, stream::TokenStream, tn::TypeNotationParser, Result};
 use crate::{
     ast::{AstNode, Literal},
-    lexer::TokenKind,
+    lexer::token::TokenKind,
 };
 
 pub struct ExpressionParser<'a> {
@@ -568,7 +568,7 @@ impl ExpressionParser<'_> {
 mod tests {
     use crate::{
         ast::{AstNode, Literal, TypeNotation},
-        lexer::{self, TokenKind},
+        lexer::{self, token::TokenKind},
         parser::{error::ParsingError, parse, test_util::parse_and_assert_result},
     };
 
