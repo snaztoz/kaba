@@ -156,8 +156,7 @@ fn main() {
     debug my_void_fn();  // ERROR
 }
 
-fn my_void_fn() {
-}
+fn my_void_fn() {}
 ```
 
 ## Data types
@@ -202,7 +201,7 @@ fn main() {
 
     var f: () -> void = foo;
 
-    var g: []int = []int{ 99, 101 };
+    var g: []int = [int 99, 101];
 }
 
 fn foo() {}
@@ -238,7 +237,7 @@ Kaba can infer the type of an array:
 
 ```text
 fn main {
-    var arr = []bool{ false, true, true };
+    var arr = [bool false, true, true];
 
     // The type of `arr` is `[]bool`
 
@@ -250,7 +249,7 @@ More complex scenarios are also supported:
 
 ```text
 fn main() {
-    var arr = [][]int{ []int{}, []int{ 4, 5 } };
+    var arr = [[]int [int], [int 4, 5]];
     foo(arr);
 
     arr[1][1] = 10;
@@ -323,7 +322,7 @@ fn main() {
 }
 ```
 
-## Loop with `while` statement
+## Looping with `while` statement
 
 To looping over while a condition is met, use the `while` statement:
 
@@ -372,23 +371,23 @@ fn main() {
 }
 ```
 
-## Loop with `each` statement
+## Looping with `each` statement
 
-To loop over each element of an iterable, use the `each` loop statement:
+To simplify looping over elements of an iterable, use the `each` loop statement:
 
 ```text
 fn main() {
-    each n in []int{ 1, 2, 3, 4 } {
+    each n in [int 1, 2, 3, 4] {
         debug n * 2;
     }
 }
 ```
 
-It also supports `continue` and `break` statements:
+Similar to the `while` statement, we can also use `continue` and `break` statements in inside of it:
 
 ```text
 fn main() {
-    each n in []int{ 1, 2, 3, 4, 5, 6 } {
+    each n in [int 1, 2, 3, 4, 5, 6] {
         if n == 3 {
             continue;
         }
