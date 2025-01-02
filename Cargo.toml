@@ -21,6 +21,4 @@ rust-version.workspace = true
 [dependencies]
 clap = { version = "4.4.10", features = ["derive"] }
 compiler = { path = "./compiler" }
-
-[dev-dependencies]
 indoc = "2.0.4"
