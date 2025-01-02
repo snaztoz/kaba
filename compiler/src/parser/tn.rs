@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     ast::{AstNode, TypeNotation},
-    lexer::TokenKind,
+    lexer::token::TokenKind,
 };
 
 pub struct TypeNotationParser<'a> {

@@ -1,7 +1,7 @@
 use super::{error::ParsingError, stream::TokenStream, tn::TypeNotationParser, Result};
 use crate::{
     ast::{AstNode, Literal},
-    lexer::TokenKind,
+    lexer::token::TokenKind,
 };
 
 pub struct ExpressionParser<'a> {
@@ -568,13 +568,13 @@ impl ExpressionParser<'_> {
 mod tests {
     use crate::{
         ast::{AstNode, Literal, TypeNotation},
-        lexer::{self, TokenKind},
-        parser::{error::ParsingError, parse, test_util::parse_and_assert_result},
+        lexer::{self, token::TokenKind},
+        parser::{error::ParsingError, parse, test_util::assert_ast},
     };
 
     #[test]
     fn math_expression() {
-        parse_and_assert_result(
+        assert_ast(
             "abc + 512 * 200 - abc / 3;",
             AstNode::Sub {
                 lhs: Box::new(AstNode::Add {
@@ -613,7 +613,7 @@ mod tests {
 
     #[test]
     fn variable_assignment() {
-        parse_and_assert_result(
+        assert_ast(
             "abc = 123 * x;",
             AstNode::Assign {
                 lhs: Box::new(AstNode::Identifier {
@@ -638,7 +638,7 @@ mod tests {
 
     #[test]
     fn variable_assignment_with_negative_value() {
-        parse_and_assert_result(
+        assert_ast(
             "x = (-5);",
             AstNode::Assign {
                 lhs: Box::new(AstNode::Identifier {
@@ -659,7 +659,7 @@ mod tests {
 
     #[test]
     fn variable_add_assign() {
-        parse_and_assert_result(
+        assert_ast(
             "x += (-5);",
             AstNode::AddAssign {
                 lhs: Box::new(AstNode::Identifier {
@@ -680,7 +680,7 @@ mod tests {
 
     #[test]
     fn variable_sub_assign() {
-        parse_and_assert_result(
+        assert_ast(
             "x -= (-5);",
             AstNode::SubAssign {
                 lhs: Box::new(AstNode::Identifier {
@@ -701,7 +701,7 @@ mod tests {
 
     #[test]
     fn variable_mul_assign() {
-        parse_and_assert_result(
+        assert_ast(
             "x *= (-5);",
             AstNode::MulAssign {
                 lhs: Box::new(AstNode::Identifier {
@@ -722,7 +722,7 @@ mod tests {
 
     #[test]
     fn variable_div_assign() {
-        parse_and_assert_result(
+        assert_ast(
             "x /= (-5);",
             AstNode::DivAssign {
                 lhs: Box::new(AstNode::Identifier {
@@ -743,7 +743,7 @@ mod tests {
 
     #[test]
     fn variable_mod_assign() {
-        parse_and_assert_result(
+        assert_ast(
             "x %= (-5);",
             AstNode::ModAssign {
                 lhs: Box::new(AstNode::Identifier {
@@ -764,7 +764,7 @@ mod tests {
 
     #[test]
     fn float_values_mod_expression() {
-        parse_and_assert_result(
+        assert_ast(
             "50.0 % 2.0;",
             AstNode::Mod {
                 lhs: Box::new(AstNode::Literal {
@@ -782,7 +782,7 @@ mod tests {
 
     #[test]
     fn left_grouped_expression() {
-        parse_and_assert_result(
+        assert_ast(
             "(123 - 53) * 7;",
             AstNode::Mul {
                 lhs: Box::new(AstNode::Sub {
@@ -807,7 +807,7 @@ mod tests {
 
     #[test]
     fn right_grouped_expression() {
-        parse_and_assert_result(
+        assert_ast(
             "123 + (foo - 50);",
             AstNode::Add {
                 lhs: Box::new(AstNode::Literal {
@@ -832,7 +832,7 @@ mod tests {
 
     #[test]
     fn nested_grouped_expression() {
-        parse_and_assert_result(
+        assert_ast(
             "(((75)));",
             AstNode::Literal {
                 lit: Literal::Int(75),
@@ -843,7 +843,7 @@ mod tests {
 
     #[test]
     fn math_expression_function_call() {
-        parse_and_assert_result(
+        assert_ast(
             "abc(123, 50 + 2) * 7;",
             AstNode::Mul {
                 lhs: Box::new(AstNode::FunctionCall {
@@ -881,7 +881,7 @@ mod tests {
 
     #[test]
     fn nested_function_call() {
-        parse_and_assert_result(
+        assert_ast(
             "abc(xyz(123, 456),);",
             AstNode::FunctionCall {
                 callee: Box::new(AstNode::Identifier {
@@ -912,7 +912,7 @@ mod tests {
 
     #[test]
     fn math_expression_negative_numbers() {
-        parse_and_assert_result(
+        assert_ast(
             "-abc + (-(5)) * -(-7);",
             AstNode::Add {
                 lhs: Box::new(AstNode::Neg {
@@ -949,7 +949,7 @@ mod tests {
 
     #[test]
     fn negating_function_call() {
-        parse_and_assert_result(
+        assert_ast(
             "-(-(abc)(-foo));",
             AstNode::Neg {
                 child: Box::new(AstNode::Neg {
@@ -976,7 +976,7 @@ mod tests {
 
     #[test]
     fn index_access() {
-        parse_and_assert_result(
+        assert_ast(
             "foo[3];",
             AstNode::IndexAccess {
                 object: Box::new(AstNode::Identifier {
@@ -994,7 +994,7 @@ mod tests {
 
     #[test]
     fn nested_index_access() {
-        parse_and_assert_result(
+        assert_ast(
             "foo[3][10];",
             AstNode::IndexAccess {
                 object: Box::new(AstNode::IndexAccess {
@@ -1019,7 +1019,7 @@ mod tests {
 
     #[test]
     fn boolean_literal() {
-        parse_and_assert_result(
+        assert_ast(
             "true;",
             AstNode::Literal {
                 lit: Literal::Bool(true),
@@ -1030,7 +1030,7 @@ mod tests {
 
     #[test]
     fn char_literal() {
-        parse_and_assert_result(
+        assert_ast(
             "'a';",
             AstNode::Literal {
                 lit: Literal::Char('a'),
@@ -1041,7 +1041,7 @@ mod tests {
 
     #[test]
     fn string_literal() {
-        parse_and_assert_result(
+        assert_ast(
             r#""abc def 012";"#,
             AstNode::Literal {
                 lit: Literal::String(String::from("abc def 012")),
@@ -1052,7 +1052,7 @@ mod tests {
 
     #[test]
     fn comparison_and_equality_expressions() {
-        parse_and_assert_result(
+        assert_ast(
             "1 >= 5 == true;",
             AstNode::Eq {
                 lhs: Box::new(AstNode::Gte {
@@ -1077,7 +1077,7 @@ mod tests {
 
     #[test]
     fn logical_and_or_expression() {
-        parse_and_assert_result(
+        assert_ast(
             "false || !false && true;",
             AstNode::And {
                 lhs: Box::new(AstNode::Or {
@@ -1105,7 +1105,7 @@ mod tests {
 
     #[test]
     fn empty_array() {
-        parse_and_assert_result(
+        assert_ast(
             "[int];",
             AstNode::Literal {
                 lit: Literal::Array {
@@ -1122,7 +1122,7 @@ mod tests {
 
     #[test]
     fn array_with_single_element() {
-        parse_and_assert_result(
+        assert_ast(
             "[int 5];",
             AstNode::Literal {
                 lit: Literal::Array {
@@ -1142,7 +1142,7 @@ mod tests {
 
     #[test]
     fn empty_nested_arrays() {
-        parse_and_assert_result(
+        assert_ast(
             "[[]int];",
             AstNode::Literal {
                 lit: Literal::Array {
@@ -1164,7 +1164,7 @@ mod tests {
 
     #[test]
     fn nested_arrays() {
-        parse_and_assert_result(
+        assert_ast(
             "[[]int [int]];",
             AstNode::Literal {
                 lit: Literal::Array {

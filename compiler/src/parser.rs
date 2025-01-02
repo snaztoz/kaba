@@ -3,7 +3,7 @@
 
 use crate::{
     ast::AstNode,
-    lexer::{Token, TokenKind},
+    lexer::token::{Token, TokenKind},
 };
 use error::Result;
 use statement::StatementParser;

@@ -1,5 +1,5 @@
 use super::{block::BlockParser, expression::ExpressionParser, stream::TokenStream, Result};
-use crate::{ast::AstNode, lexer::TokenKind};
+use crate::{ast::AstNode, lexer::token::TokenKind};
 
 pub struct WhileLoopParser<'a> {
     tokens: &'a TokenStream,
@@ -38,12 +38,12 @@ impl WhileLoopParser<'_> {
 mod tests {
     use crate::{
         ast::{AstNode, Literal},
-        parser::test_util::parse_and_assert_result,
+        parser::test_util::assert_ast,
     };
 
     #[test]
     fn while_statement() {
-        parse_and_assert_result(
+        assert_ast(
             "while true {}",
             AstNode::While {
                 cond: Box::new(AstNode::Literal {
@@ -58,7 +58,7 @@ mod tests {
 
     #[test]
     fn while_statement_with_loop_control_statements() {
-        parse_and_assert_result(
+        assert_ast(
             "while true { continue; break; }",
             AstNode::While {
                 cond: Box::new(AstNode::Literal {

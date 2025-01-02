@@ -1,5 +1,5 @@
 use super::{error::ParsingError, statement::StatementParser, stream::TokenStream, Result};
-use crate::{ast::AstNode, lexer::TokenKind};
+use crate::{ast::AstNode, lexer::token::TokenKind};
 use logos::Span;
 
 pub struct Block {

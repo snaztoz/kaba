@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2025-01-02
+
 ### Changed
 
-- Change array literal syntax.
+- Change array literal syntax (by [@snaztoz](https://github.com/snaztoz) in [#50](https://github.com/snaztoz/kaba/pull/50))
 
 ## [0.5.0] - 2025-01-01
 

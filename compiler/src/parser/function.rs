@@ -3,7 +3,7 @@ use super::{
 };
 use crate::{
     ast::{AstNode, FunctionParam},
-    lexer::TokenKind,
+    lexer::token::TokenKind,
 };
 
 pub struct FunctionDefinitionParser<'a> {
@@ -121,12 +121,12 @@ impl FunctionDefinitionParser<'_> {
 mod tests {
     use crate::{
         ast::{AstNode, FunctionParam, Literal, TypeNotation},
-        parser::test_util::parse_and_assert_result,
+        parser::test_util::assert_ast,
     };
 
     #[test]
     fn empty_function_definition() {
-        parse_and_assert_result(
+        assert_ast(
             "fn foo() {}",
             AstNode::FunctionDefinition {
                 id: Box::new(AstNode::Identifier {
@@ -143,7 +143,7 @@ mod tests {
 
     #[test]
     fn function_definition_with_parameters_and_trailing_comma() {
-        parse_and_assert_result(
+        assert_ast(
             "fn foo(x: int, y: bool,) {}",
             AstNode::FunctionDefinition {
                 id: Box::new(AstNode::Identifier {
@@ -181,7 +181,7 @@ mod tests {
 
     #[test]
     fn function_definition_with_parameter_and_body() {
-        parse_and_assert_result(
+        assert_ast(
             "fn write(x: int) { print(x); }",
             AstNode::FunctionDefinition {
                 id: Box::new(AstNode::Identifier {
@@ -217,7 +217,7 @@ mod tests {
 
     #[test]
     fn function_definition_with_return_statement() {
-        parse_and_assert_result(
+        assert_ast(
             "fn foo(): int { return 5; }",
             AstNode::FunctionDefinition {
                 id: Box::new(AstNode::Identifier {

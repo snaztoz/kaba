@@ -2,7 +2,7 @@ use super::{
     block::BlockParser, error::ParsingError, expression::ExpressionParser, stream::TokenStream,
     Result,
 };
-use crate::{ast::AstNode, lexer::TokenKind};
+use crate::{ast::AstNode, lexer::token::TokenKind};
 
 pub struct ConditionalParser<'a> {
     tokens: &'a TokenStream,
@@ -86,12 +86,12 @@ impl ConditionalParser<'_> {
 mod tests {
     use crate::{
         ast::{AstNode, Literal},
-        parser::test_util::parse_and_assert_result,
+        parser::test_util::assert_ast,
     };
 
     #[test]
     fn if_statement() {
-        parse_and_assert_result(
+        assert_ast(
             "if 15 > 10 { print(1); }",
             AstNode::If {
                 cond: Box::new(AstNode::Gt {
@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn if_else_branches() {
-        parse_and_assert_result(
+        assert_ast(
             "if false {} else if false {} else {}",
             AstNode::If {
                 cond: Box::new(AstNode::Literal {
