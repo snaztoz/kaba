@@ -57,7 +57,7 @@ Thank you for considering contributing to the Kaba programming language! The con
 ## 📃 License
 
 ```text
-Copyright 2023-2024 Hafidh Muqsithanova Sukarno
+Copyright 2023 Hafidh Muqsithanova Sukarno
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
