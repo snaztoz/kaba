@@ -1,5 +1,5 @@
 [workspace]
-members = ["kabac"]
+members = ["kaba", "kabac", "kabart_p"]
 resolver = "2"
 
 [workspace.package]
@@ -8,17 +8,3 @@ edition = "2021"
 license = "Apache-2.0"
 authors = ["Hafidh Muqsithanova Sukarno <hafidhmn@gmail.com>"]
 rust-version = "1.81"
-
-[package]
-name = "kaba"
-description = "Kaba programming language"
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-authors.workspace = true
-rust-version.workspace = true
-
-[dependencies]
-clap = { version = "4.4.10", features = ["derive"] }
-kabac = { path = "./kabac" }
-indoc = "2.0.4"

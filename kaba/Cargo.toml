@@ -1,0 +1,14 @@
+[package]
+name = "kaba"
+description = "Kaba programming language"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+clap = { version = "4.4.10", features = ["derive"] }
+indoc = "2.0.4"
+kabac = { path = "../kabac" }
+kabart = { package = "kabart_p", path = "../kabart_p" }
