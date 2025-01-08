@@ -1,7 +1,7 @@
 //! This module contains the high-level utility for the source code compilation
 //! procedure.
 
-use crate::{ast::AstNode, lexer, parser, semantic, Error, Result};
+use crate::{ast::AstNode, lexer, parser, semantic, Error, Result, SymTable};
 use std::{
     fmt::Display,
     fs,
@@ -17,7 +17,7 @@ pub struct Compiler {
 
 impl Compiler {
     /// Run the compilation process.
-    pub fn compile(&mut self) -> Result<AstNode> {
+    pub fn compile(&mut self) -> Result<(AstNode, SymTable)> {
         self.normalize_newlines();
 
         let tokens = lexer::lex(&self.src).map_err(|e| Error {
@@ -34,14 +34,14 @@ impl Compiler {
             span: Some(e.span()),
         })?;
 
-        let _sym_table = semantic::analyze(&ast).map_err(|e| Error {
+        let sym_table = semantic::analyze(&ast).map_err(|e| Error {
             path: self.path.as_deref(),
             src: &self.src,
             message: e.to_string(),
             span: Some(e.span().clone()),
         })?;
 
-        Ok(ast)
+        Ok((ast, sym_table))
     }
 
     // Normalize all newline characters to LF

@@ -145,3 +145,9 @@ impl SymTable {
         false
     }
 }
+
+impl Default for SymTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}

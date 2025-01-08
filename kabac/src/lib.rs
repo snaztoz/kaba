@@ -2,6 +2,7 @@
 
 pub use compiler::Compiler;
 pub use error::Error;
+pub use semantic::state::symtable::SymTable;
 
 pub mod ast;
 mod compiler;

@@ -14,7 +14,7 @@ mod error;
 mod expression;
 mod function;
 mod literal;
-mod state;
+pub mod state;
 mod statement;
 #[cfg(test)]
 mod test_util;

@@ -70,7 +70,7 @@ mod tests {
         let mut out_stream = vec![];
         let mut err_stream = vec![];
 
-        let ast = Compiler::from(input).compile().unwrap();
+        let (ast, _) = Compiler::from(input).compile().unwrap();
 
         let streams = RuntimeStream::new(&mut out_stream, &mut err_stream);
         let runtime = Runtime::new(ast, streams);
