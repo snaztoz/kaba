@@ -1,7 +1,7 @@
 use super::{
     error::Result, expression::ExpressionRunner, state::RuntimeState, value::RuntimeValue,
 };
-use compiler::ast::AstNode;
+use kabac::ast::AstNode;
 
 pub struct AssignmentRunner<'a> {
     ast: &'a AstNode,

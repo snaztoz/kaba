@@ -113,15 +113,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "compiler"
-version = "0.5.1"
-dependencies = [
- "colored",
- "indoc",
- "logos",
-]
-
-[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -144,8 +135,17 @@ name = "kaba"
 version = "0.5.1"
 dependencies = [
  "clap",
- "compiler",
  "indoc",
+ "kabac",
+]
+
+[[package]]
+name = "kabac"
+version = "0.5.1"
+dependencies = [
+ "colored",
+ "indoc",
+ "logos",
 ]
 
 [[package]]

@@ -22,7 +22,7 @@ Kaba is a:
 
 Kaba is mainly consisted of 2 parts:
 
-1. [Compiler](../compiler/), where the architecture is briefly explained at the [README](../compiler/README.md) file.
+1. [Compiler](../kabac/), where the architecture is briefly explained at the [README](../kabac/README.md) file.
 2. [Runtime](../src/runtime.rs), which currently is still a prototype.
 
 To run a Kaba program, the `run` command may be used:

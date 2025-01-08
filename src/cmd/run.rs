@@ -1,5 +1,5 @@
-use compiler::Compiler;
 use kaba::runtime::{stream::RuntimeStream, Runtime};
+use kabac::Compiler;
 use std::{io, path::Path, process};
 
 macro_rules! exit_on_error {

@@ -1,5 +1,5 @@
 [workspace]
-members = ["compiler"]
+members = ["kabac"]
 resolver = "2"
 
 [workspace.package]
@@ -20,5 +20,5 @@ rust-version.workspace = true
 
 [dependencies]
 clap = { version = "4.4.10", features = ["derive"] }
-compiler = { path = "./compiler" }
+kabac = { path = "./kabac" }
 indoc = "2.0.4"
