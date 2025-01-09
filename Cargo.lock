@@ -142,6 +142,7 @@ name = "kaba"
 version = "0.5.1"
 dependencies = [
  "clap",
+ "colored",
  "indoc",
  "kabac",
  "kabart_p",
@@ -151,7 +152,6 @@ dependencies = [
 name = "kabac"
 version = "0.5.1"
 dependencies = [
- "colored",
  "indoc",
  "logos",
 ]

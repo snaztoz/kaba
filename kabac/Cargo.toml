@@ -8,6 +8,5 @@ authors.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-colored = "2.1.0"
 indoc = "2.0.4"
 logos = "0.13.0"

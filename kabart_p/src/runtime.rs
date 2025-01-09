@@ -64,13 +64,13 @@ impl<'a> Runtime<'a> {
 mod tests {
     use super::*;
     use indoc::indoc;
-    use kabac::Compiler;
+    use kabac;
 
     fn assert_output_equal(input: &str, expect: &[u8]) {
         let mut out_stream = vec![];
         let mut err_stream = vec![];
 
-        let (ast, _) = Compiler::from(input).compile().unwrap();
+        let (ast, _) = kabac::compile(input).unwrap();
 
         let streams = RuntimeStream::new(&mut out_stream, &mut err_stream);
         let runtime = Runtime::new(ast, streams);
