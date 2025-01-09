@@ -1,0 +1,12 @@
+[package]
+name = "kabac"
+description = "The compiler of Kaba programming language"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+indoc = "2.0.4"
+logos = "0.13.0"

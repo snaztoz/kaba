@@ -1,6 +1,5 @@
 [package]
-name = "compiler"
-description = "The compiler of Kaba programming language"
+name = "kabart_p"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,6 +7,7 @@ authors.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-colored = "2.1.0"
+kabac = { path = "../kabac" }
+
+[dev-dependencies]
 indoc = "2.0.4"
-logos = "0.13.0"

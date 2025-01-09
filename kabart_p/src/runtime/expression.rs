@@ -2,7 +2,7 @@ use super::{
     assignment::AssignmentRunner, error::Result, state::RuntimeState, value::RuntimeValue,
 };
 use crate::runtime::body::BodyRunner;
-use compiler::ast::{AstNode, FunctionParam, Literal};
+use kabac::ast::{AstNode, FunctionParam, Literal};
 use std::collections::HashMap;
 
 pub struct ExpressionRunner<'a> {
