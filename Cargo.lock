@@ -149,6 +149,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "kaba2js"
+version = "0.5.1"
+
+[[package]]
 name = "kabac"
 version = "0.5.1"
 dependencies = [
