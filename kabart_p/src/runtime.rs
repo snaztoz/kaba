@@ -5,7 +5,7 @@
 
 use self::{error::Result, state::RuntimeState, stream::RuntimeStream, value::RuntimeValue};
 use expression::ExpressionRunner;
-use kabac::ast::AstNode;
+use kabac::AstNode;
 
 mod assignment;
 mod body;

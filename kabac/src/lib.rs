@@ -1,17 +1,15 @@
 #![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/README.md"))]
 
-use ast::AstNode;
-pub use error::Error;
+pub use ast::{AstNode, FunctionParam, Literal};
+pub use error::{Error, Result};
 pub use logos::Span;
 pub use semantic::state::symtable::SymTable;
 
-pub mod ast;
+mod ast;
 mod error;
 mod lexer;
 mod parser;
 mod semantic;
-
-type Result<'a, T> = std::result::Result<T, Error>;
 
 pub fn compile(src: &str) -> Result<(AstNode, SymTable)> {
     let src = normalize_newlines(src);
