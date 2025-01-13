@@ -78,7 +78,7 @@ impl AssignmentAnalyzer<'_> {
     }
 
     fn analyze_lhs(&self) -> Result<()> {
-        if !self.lhs().is_valid_assignment_lhs() {
+        if !self.lhs().is_lval() {
             return Err(Error::InvalidAssignmentLhs {
                 lhs: self.lhs().to_string(),
                 span: self.lhs().span().clone(),
