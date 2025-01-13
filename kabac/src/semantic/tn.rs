@@ -33,7 +33,7 @@ impl TypeNotationAnalyzer<'_> {
         // The provided type must exist in the current scope
         if !self.state.has_t(&self.t()) {
             return Err(Error::SymbolDoesNotExist {
-                id: self.t().to_string(),
+                sym: self.t().to_string(),
                 span: self.span().clone(),
             });
         }

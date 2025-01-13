@@ -22,8 +22,8 @@ pub enum Error {
     },
 
     InvalidAssignmentType {
-        var_t: String,
-        val_t: String,
+        var_t: Type,
+        val_t: Type,
         span: Span,
     },
 
@@ -33,12 +33,12 @@ pub enum Error {
     },
 
     SymbolAlreadyExist {
-        id: String,
+        sym: String,
         span: Span,
     },
 
     SymbolDoesNotExist {
-        id: String,
+        sym: String,
         span: Span,
     },
 
@@ -124,11 +124,11 @@ impl Display for Error {
             Self::InvalidAssignmentLhs { lhs, .. } => {
                 write!(f, "{lhs} can not be an assignment's lhs")
             }
-            Self::SymbolAlreadyExist { id, .. } => {
-                write!(f, "`{id}` already exists in current scope")
+            Self::SymbolAlreadyExist { sym, .. } => {
+                write!(f, "`{sym}` already exists in current scope")
             }
-            Self::SymbolDoesNotExist { id, .. } => {
-                write!(f, "`{id}` does not exist in current scope")
+            Self::SymbolDoesNotExist { sym, .. } => {
+                write!(f, "`{sym}` does not exist in current scope")
             }
             Self::NonNumberType { .. } => {
                 write!(f, "not a number")

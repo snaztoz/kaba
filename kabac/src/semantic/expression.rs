@@ -62,7 +62,7 @@ impl ExpressionAnalyzer<'_> {
                 self.state
                     .get_sym_t(name)
                     .ok_or_else(|| Error::SymbolDoesNotExist {
-                        id: String::from(name),
+                        sym: String::from(name),
                         span: span.clone(),
                     })
             }

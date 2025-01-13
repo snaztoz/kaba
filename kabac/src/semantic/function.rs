@@ -73,7 +73,7 @@ impl FunctionDeclarationAnalyzer<'_> {
         let (sym, sym_span) = self.sym().unwrap_symbol();
         self.state
             .save_sym_or_else(&sym, fn_t.clone(), || Error::SymbolAlreadyExist {
-                id: sym.clone(),
+                sym: sym.clone(),
                 span: sym_span,
             })
     }
@@ -154,7 +154,7 @@ impl FunctionDefinitionAnalyzer<'_> {
         for ((sym, sym_span), t) in params {
             self.state
                 .save_sym_or_else(sym, t.clone(), || Error::SymbolAlreadyExist {
-                    id: sym.clone(),
+                    sym: sym.clone(),
                     span: sym_span.clone(),
                 })?;
         }
@@ -324,7 +324,7 @@ mod tests {
     }
 
     #[test]
-    fn prevent_indocompatible_int_type_on_function_return_value() {
+    fn prevent_incompatible_int_type_on_function_return_value() {
         assert_is_err(indoc! {"
                 fn main() {
                     var x: int = foo();

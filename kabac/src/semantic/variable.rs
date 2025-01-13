@@ -102,10 +102,10 @@ impl VariableDeclarationAnalyzer<'_> {
         }
     }
 
-    fn save_symbol(&self, id: &str, t: Type, span: &Span) -> Result<()> {
+    fn save_symbol(&self, sym: &str, t: Type, span: &Span) -> Result<()> {
         self.state
-            .save_sym_or_else(id, t, || Error::SymbolAlreadyExist {
-                id: String::from(id),
+            .save_sym_or_else(sym, t, || Error::SymbolAlreadyExist {
+                sym: String::from(sym),
                 span: span.clone(),
             })
     }
