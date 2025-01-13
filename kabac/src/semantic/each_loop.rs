@@ -55,14 +55,14 @@ impl EachLoopAnalyzer<'_> {
 
         assert::is_iterable(&expr_t, || self.iterable().span().clone())?;
 
-        let elem_id = self.elem_id().unwrap_identifier().0;
+        let elem_sym = self.elem_sym().unwrap_symbol().0;
         let elem_t = expr_t.unwrap_array();
 
         // Check all statements inside the body with a new scope
 
         self.state.with_scope(ScopeVariant::Loop, || {
             self.state
-                .save_sym_or_else(&elem_id, elem_t.clone(), || unreachable!())
+                .save_sym_or_else(&elem_sym, elem_t.clone(), || unreachable!())
                 .unwrap();
 
             BodyAnalyzer::new(self.node, self.state).analyze()
@@ -79,9 +79,9 @@ impl EachLoopAnalyzer<'_> {
         }
     }
 
-    fn elem_id(&self) -> &AstNode {
-        if let AstNode::Each { elem_id, .. } = self.node {
-            elem_id
+    fn elem_sym(&self) -> &AstNode {
+        if let AstNode::Each { elem_sym, .. } = self.node {
+            elem_sym
         } else {
             unreachable!()
         }

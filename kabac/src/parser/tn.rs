@@ -22,7 +22,7 @@ impl TypeNotationParser<'_> {
         match self.tokens.current_kind() {
             TokenKind::Identifier(name) => {
                 let tn = AstNode::TypeNotation {
-                    tn: TypeNotation::Identifier(name),
+                    tn: TypeNotation::Symbol(name),
                     span: self.tokens.current().span.clone(),
                 };
 

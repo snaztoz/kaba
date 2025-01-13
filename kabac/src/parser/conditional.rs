@@ -106,7 +106,7 @@ mod tests {
                     span: 3..10,
                 }),
                 body: vec![AstNode::FunctionCall {
-                    callee: Box::new(AstNode::Identifier {
+                    callee: Box::new(AstNode::Symbol {
                         name: String::from("print"),
                         span: 13..18,
                     }),

@@ -55,10 +55,10 @@ impl ExpressionAnalyzer<'_> {
             | AstNode::Div { lhs, rhs, .. }
             | AstNode::Mod { lhs, rhs, .. } => self.analyze_binary_math_expr(lhs, rhs),
 
-            AstNode::Not { child, .. } => self.analyze_logical_not_expr(child),
-            AstNode::Neg { child, .. } => self.analyze_neg_expr(child),
+            AstNode::Not { expr, .. } => self.analyze_logical_not_expr(expr),
+            AstNode::Neg { expr, .. } => self.analyze_neg_expr(expr),
 
-            AstNode::Identifier { name, span } => {
+            AstNode::Symbol { name, span } => {
                 self.state
                     .get_sym_t(name)
                     .ok_or_else(|| Error::SymbolDoesNotExist {

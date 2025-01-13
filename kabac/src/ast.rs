@@ -16,7 +16,7 @@ pub enum AstNode {
     },
 
     VariableDeclaration {
-        id: Box<AstNode>,
+        sym: Box<AstNode>,
         tn: Option<Box<AstNode>>,
         val: Box<AstNode>,
         span: Span,
@@ -41,7 +41,7 @@ pub enum AstNode {
     },
 
     Each {
-        elem_id: Box<AstNode>,
+        elem_sym: Box<AstNode>,
         iterable: Box<AstNode>,
         body: Vec<AstNode>,
         span: Span,
@@ -56,7 +56,7 @@ pub enum AstNode {
     },
 
     FunctionDefinition {
-        id: Box<AstNode>,
+        sym: Box<AstNode>,
         params: Vec<FunctionParam>,
         return_tn: Option<Box<AstNode>>,
         body: Vec<AstNode>,
@@ -188,12 +188,12 @@ pub enum AstNode {
     },
 
     Not {
-        child: Box<AstNode>,
+        expr: Box<AstNode>,
         span: Span,
     },
 
     Neg {
-        child: Box<AstNode>,
+        expr: Box<AstNode>,
         span: Span,
     },
 
@@ -212,11 +212,11 @@ pub enum AstNode {
     // This variant is only used as the span information holder and then will be
     // removed. It won't be present in the final resulting ASTs.
     Group {
-        child: Box<AstNode>,
+        expr: Box<AstNode>,
         span: Span,
     },
 
-    Identifier {
+    Symbol {
         name: String,
         span: Span,
     },
@@ -270,28 +270,28 @@ impl AstNode {
             | Self::FunctionCall { span, .. }
             | Self::IndexAccess { span, .. }
             | Self::Group { span, .. }
-            | Self::Identifier { span, .. }
+            | Self::Symbol { span, .. }
             | Self::TypeNotation { span, .. }
             | Self::Literal { span, .. } => span,
         }
     }
 
     pub const fn is_valid_assignment_lhs(&self) -> bool {
-        matches!(self, Self::Identifier { .. }) || matches!(self, Self::IndexAccess { .. })
+        matches!(self, Self::Symbol { .. }) || matches!(self, Self::IndexAccess { .. })
     }
 
-    pub fn unwrap_identifier(&self) -> (String, Span) {
-        if let AstNode::Identifier { name, span } = self {
+    pub fn unwrap_symbol(&self) -> (String, Span) {
+        if let AstNode::Symbol { name, span } = self {
             (name.clone(), span.clone())
         } else {
-            panic!("calling `unwrap_identifier` on non-identifier AstNode: {self:?}")
+            unreachable!()
         }
     }
 
     pub fn unwrap_group(self) -> AstNode {
-        if let AstNode::Group { child, .. } = self {
+        if let AstNode::Group { expr, .. } = self {
             // unwrap recursively
-            child.unwrap_group()
+            expr.unwrap_group()
         } else {
             self
         }
@@ -400,8 +400,8 @@ impl Display for AstNode {
             Self::IndexAccess { .. } => {
                 write!(f, "index access expression")
             }
-            Self::Identifier { .. } => {
-                write!(f, "identifier")
+            Self::Symbol { .. } => {
+                write!(f, "symbol")
             }
             Self::TypeNotation { .. } => {
                 write!(f, "type notation")
@@ -417,16 +417,18 @@ impl Display for AstNode {
 
 #[derive(Debug, PartialEq)]
 pub struct FunctionParam {
-    pub id: AstNode,
+    pub sym: AstNode,
     pub tn: AstNode,
 }
 
 #[derive(Debug, PartialEq)]
 pub enum TypeNotation {
-    Identifier(String),
+    Symbol(String),
+
     Array {
         elem_tn: Box<AstNode>,
     },
+
     Callable {
         params_tn: Vec<AstNode>,
         return_tn: Box<AstNode>,
@@ -436,7 +438,7 @@ pub enum TypeNotation {
 impl Display for TypeNotation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Identifier(id) => write!(f, "{id}"),
+            Self::Symbol(sym) => write!(f, "{sym}"),
 
             Self::Array { elem_tn } => {
                 write!(f, "[]{elem_tn}")

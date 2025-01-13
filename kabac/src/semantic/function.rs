@@ -70,17 +70,17 @@ impl FunctionDeclarationAnalyzer<'_> {
 
     // Save function information to the ScopeStack.
     fn save_fn_t_to_stack(&self, fn_t: Type) -> Result<()> {
-        let (id, id_span) = self.id().unwrap_identifier();
+        let (sym, sym_span) = self.sym().unwrap_symbol();
         self.state
-            .save_sym_or_else(&id, fn_t.clone(), || Error::SymbolAlreadyExist {
-                id: id.clone(),
-                span: id_span,
+            .save_sym_or_else(&sym, fn_t.clone(), || Error::SymbolAlreadyExist {
+                id: sym.clone(),
+                span: sym_span,
             })
     }
 
-    fn id(&self) -> &AstNode {
-        if let AstNode::FunctionDefinition { id, .. } = self.node {
-            id
+    fn sym(&self) -> &AstNode {
+        if let AstNode::FunctionDefinition { sym, .. } = self.node {
+            sym
         } else {
             unreachable!()
         }
@@ -139,7 +139,7 @@ impl FunctionDefinitionAnalyzer<'_> {
                     return Err(Error::ReturnTypeMismatch {
                         expected: return_t,
                         get: Type::Void,
-                        span: self.id().span().clone(),
+                        span: self.sym().span().clone(),
                     });
                 }
 
@@ -151,11 +151,11 @@ impl FunctionDefinitionAnalyzer<'_> {
     }
 
     fn save_params_to_stack(&self, params: &[((String, Span), Type)]) -> Result<()> {
-        for ((id, id_span), t) in params {
+        for ((sym, sym_span), t) in params {
             self.state
-                .save_sym_or_else(id, t.clone(), || Error::SymbolAlreadyExist {
-                    id: id.clone(),
-                    span: id_span.clone(),
+                .save_sym_or_else(sym, t.clone(), || Error::SymbolAlreadyExist {
+                    id: sym.clone(),
+                    span: sym_span.clone(),
                 })?;
         }
 
@@ -164,37 +164,37 @@ impl FunctionDefinitionAnalyzer<'_> {
 
     fn params(&self) -> Vec<((String, Span), Type)> {
         let params_t = self.fn_t().unwrap_callable().0;
-        let params_id = self.params_id();
+        let params_sym = self.params_sym();
 
-        params_id
+        params_sym
             .iter()
             .cloned()
             .zip(params_t.iter().cloned())
             .collect::<Vec<_>>()
     }
 
-    fn id(&self) -> &AstNode {
-        if let AstNode::FunctionDefinition { id, .. } = self.node {
-            id
+    fn sym(&self) -> &AstNode {
+        if let AstNode::FunctionDefinition { sym, .. } = self.node {
+            sym
         } else {
             unreachable!()
         }
     }
 
     fn fn_t(&self) -> Type {
-        if let AstNode::FunctionDefinition { id, .. } = self.node {
-            let id_str = &id.unwrap_identifier().0;
-            self.state.get_sym_t(id_str).unwrap()
+        if let AstNode::FunctionDefinition { sym, .. } = self.node {
+            let sym_string = &sym.unwrap_symbol().0;
+            self.state.get_sym_t(sym_string).unwrap()
         } else {
             unreachable!()
         }
     }
 
-    fn params_id(&self) -> Vec<(String, Span)> {
+    fn params_sym(&self) -> Vec<(String, Span)> {
         if let AstNode::FunctionDefinition { params, .. } = self.node {
             params
                 .iter()
-                .map(|p| p.id.unwrap_identifier())
+                .map(|p| p.sym.unwrap_symbol())
                 .collect::<Vec<_>>()
         } else {
             unreachable!()

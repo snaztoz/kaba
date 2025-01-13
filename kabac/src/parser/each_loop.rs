@@ -21,8 +21,8 @@ impl EachLoopParser<'_> {
         // Expecting "each" keyword
         self.tokens.skip(&TokenKind::Each)?;
 
-        // Expecting element identifier
-        let elem_id = self.parse_id()?;
+        // Expecting element symbol
+        let elem_sym = self.parse_sym()?;
 
         // Expecting "in" keyword
         self.tokens.skip(&TokenKind::In)?;
@@ -37,15 +37,15 @@ impl EachLoopParser<'_> {
 
         Ok(AstNode::Each {
             iterable: Box::new(arr),
-            elem_id: Box::new(elem_id),
+            elem_sym: Box::new(elem_sym),
             body: block.body,
             span: start..end,
         })
     }
 
-    fn parse_id(&self) -> Result<AstNode> {
-        let id = match self.tokens.current_kind() {
-            TokenKind::Identifier(name) => Ok(AstNode::Identifier {
+    fn parse_sym(&self) -> Result<AstNode> {
+        let sym = match self.tokens.current_kind() {
+            TokenKind::Identifier(name) => Ok(AstNode::Symbol {
                 name,
                 span: self.tokens.current().span,
             }),
@@ -59,7 +59,7 @@ impl EachLoopParser<'_> {
 
         self.tokens.advance();
 
-        id
+        sym
     }
 }
 
@@ -72,11 +72,11 @@ mod tests {
         assert_ast(
             "each elem in arr {}",
             AstNode::Each {
-                elem_id: Box::new(AstNode::Identifier {
+                elem_sym: Box::new(AstNode::Symbol {
                     name: String::from("elem"),
                     span: 5..9,
                 }),
-                iterable: Box::new(AstNode::Identifier {
+                iterable: Box::new(AstNode::Symbol {
                     name: String::from("arr"),
                     span: 13..16,
                 }),

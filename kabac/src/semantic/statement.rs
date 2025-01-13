@@ -41,9 +41,9 @@ impl StatementAnalyzer<'_> {
 
             AstNode::Break { span } | AstNode::Continue { span } => self.analyze_loop_control(span),
 
-            AstNode::FunctionDefinition { id, .. } => Err(Error::UnexpectedStatement {
+            AstNode::FunctionDefinition { sym, .. } => Err(Error::UnexpectedStatement {
                 stmt_str: self.node.to_string(),
-                span: id.span().clone(),
+                span: sym.span().clone(),
             }),
 
             AstNode::Return { expr, span } => self.analyze_return(expr, span),

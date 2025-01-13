@@ -23,8 +23,8 @@ impl FunctionDefinitionParser<'_> {
         // Expecting "fn" keyword
         self.tokens.skip(&TokenKind::Fn)?;
 
-        // Expecting identifier
-        let id = self.parse_id()?;
+        // Expecting symbol
+        let sym = self.parse_sym()?;
 
         // Expecting "("
         self.tokens.skip(&TokenKind::LParen)?;
@@ -43,16 +43,16 @@ impl FunctionDefinitionParser<'_> {
 
         Ok(AstNode::FunctionDefinition {
             params,
-            id: Box::new(id),
+            sym: Box::new(sym),
             return_tn: return_tn.map(Box::new),
             body: block.body,
             span: start..block.span.end,
         })
     }
 
-    fn parse_id(&self) -> Result<AstNode> {
-        let id = match self.tokens.current_kind() {
-            TokenKind::Identifier(name) => Ok(AstNode::Identifier {
+    fn parse_sym(&self) -> Result<AstNode> {
+        let sym = match self.tokens.current_kind() {
+            TokenKind::Identifier(name) => Ok(AstNode::Symbol {
                 name,
                 span: self.tokens.current().span,
             }),
@@ -66,14 +66,14 @@ impl FunctionDefinitionParser<'_> {
 
         self.tokens.advance();
 
-        id
+        sym
     }
 
     fn parse_params(&self) -> Result<Vec<FunctionParam>> {
         let mut params = vec![];
         while !self.tokens.current_is(&TokenKind::RParen) {
-            // Expecting identifier
-            let id = self.parse_id()?;
+            // Expecting symbol
+            let sym = self.parse_sym()?;
 
             // Expecting ":"
             self.tokens.skip(&TokenKind::Colon)?;
@@ -81,7 +81,7 @@ impl FunctionDefinitionParser<'_> {
             // Expecting type notation
             let tn = TypeNotationParser::new(self.tokens).parse()?;
 
-            params.push(FunctionParam { id, tn });
+            params.push(FunctionParam { sym, tn });
 
             // Expecting either "," or ")"
 
@@ -129,7 +129,7 @@ mod tests {
         assert_ast(
             "fn foo() {}",
             AstNode::FunctionDefinition {
-                id: Box::new(AstNode::Identifier {
+                sym: Box::new(AstNode::Symbol {
                     name: String::from("foo"),
                     span: 3..6,
                 }),
@@ -146,28 +146,28 @@ mod tests {
         assert_ast(
             "fn foo(x: int, y: bool,) {}",
             AstNode::FunctionDefinition {
-                id: Box::new(AstNode::Identifier {
+                sym: Box::new(AstNode::Symbol {
                     name: String::from("foo"),
                     span: 3..6,
                 }),
                 params: vec![
                     FunctionParam {
-                        id: AstNode::Identifier {
+                        sym: AstNode::Symbol {
                             name: String::from("x"),
                             span: 7..8,
                         },
                         tn: AstNode::TypeNotation {
-                            tn: TypeNotation::Identifier(String::from("int")),
+                            tn: TypeNotation::Symbol(String::from("int")),
                             span: 10..13,
                         },
                     },
                     FunctionParam {
-                        id: AstNode::Identifier {
+                        sym: AstNode::Symbol {
                             name: String::from("y"),
                             span: 15..16,
                         },
                         tn: AstNode::TypeNotation {
-                            tn: TypeNotation::Identifier(String::from("bool")),
+                            tn: TypeNotation::Symbol(String::from("bool")),
                             span: 18..22,
                         },
                     },
@@ -184,27 +184,27 @@ mod tests {
         assert_ast(
             "fn write(x: int) { print(x); }",
             AstNode::FunctionDefinition {
-                id: Box::new(AstNode::Identifier {
+                sym: Box::new(AstNode::Symbol {
                     name: String::from("write"),
                     span: 3..8,
                 }),
                 params: vec![FunctionParam {
-                    id: AstNode::Identifier {
+                    sym: AstNode::Symbol {
                         name: String::from("x"),
                         span: 9..10,
                     },
                     tn: AstNode::TypeNotation {
-                        tn: TypeNotation::Identifier(String::from("int")),
+                        tn: TypeNotation::Symbol(String::from("int")),
                         span: 12..15,
                     },
                 }],
                 return_tn: None,
                 body: vec![AstNode::FunctionCall {
-                    callee: Box::new(AstNode::Identifier {
+                    callee: Box::new(AstNode::Symbol {
                         name: String::from("print"),
                         span: 19..24,
                     }),
-                    args: vec![AstNode::Identifier {
+                    args: vec![AstNode::Symbol {
                         name: String::from("x"),
                         span: 25..26,
                     }],
@@ -220,13 +220,13 @@ mod tests {
         assert_ast(
             "fn foo(): int { return 5; }",
             AstNode::FunctionDefinition {
-                id: Box::new(AstNode::Identifier {
+                sym: Box::new(AstNode::Symbol {
                     name: String::from("foo"),
                     span: 3..6,
                 }),
                 params: vec![],
                 return_tn: Some(Box::new(AstNode::TypeNotation {
-                    tn: TypeNotation::Identifier(String::from("int")),
+                    tn: TypeNotation::Symbol(String::from("int")),
                     span: 10..13,
                 })),
                 body: vec![AstNode::Return {

@@ -65,14 +65,14 @@ impl VariableDeclarationAnalyzer<'_> {
             None => val_t,
         };
 
-        self.save_symbol(&self.id_string(), var_t, self.span())?;
+        self.save_symbol(&self.sym_string(), var_t, self.span())?;
 
         Ok(Type::Void)
     }
 
-    fn id_string(&self) -> String {
-        if let AstNode::VariableDeclaration { id, .. } = self.node {
-            id.unwrap_identifier().0
+    fn sym_string(&self) -> String {
+        if let AstNode::VariableDeclaration { sym, .. } = self.node {
+            sym.unwrap_symbol().0
         } else {
             unreachable!()
         }
