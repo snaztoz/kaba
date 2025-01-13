@@ -421,8 +421,8 @@ impl ExpressionParser<'_> {
                 })
             }
 
-            // Expecting either identifier or literals
-            TokenKind::Identifier(name) => {
+            // Expecting either symbols or literals
+            TokenKind::Symbol(name) => {
                 self.tokens.advance();
                 Ok(AstNode::Symbol {
                     name,
@@ -468,7 +468,7 @@ impl ExpressionParser<'_> {
             TokenKind::LBrack => self.parse_array_literal(),
 
             kind => Err(ParsingError::UnexpectedToken {
-                expect: TokenKind::Identifier(String::from("foo")),
+                expect: TokenKind::Symbol(String::from("foo")),
                 found: kind.clone(),
                 span: token.span,
             }),

@@ -4,11 +4,11 @@ use super::{
 };
 use logos::Lexer;
 
-pub fn lex_identifier(lex: &mut Lexer<TokenKind>) -> Result<String> {
+pub fn lex_symbol(lex: &mut Lexer<TokenKind>) -> Result<String> {
     let value = lex.slice();
 
     if value.chars().next().unwrap().is_numeric() {
-        return Err(LexingError::InvalidIdentifier {
+        return Err(LexingError::InvalidSymbol {
             token: String::from(value),
             span: lex.span(),
         });

@@ -65,101 +65,101 @@ mod tests {
     }
 
     //
-    // Test identifiers
+    // Symbols
     //
 
     #[test]
-    fn test_lexing_normal_identifier() {
+    fn normal_symbol() {
         let input = "abc";
-        assert_token_kind(input, TokenKind::Identifier(String::from(input)));
+        assert_token_kind(input, TokenKind::Symbol(String::from(input)));
     }
 
     #[test]
-    fn test_lexing_identifier_with_mixed_characters() {
+    fn symbol_with_mixed_characters() {
         let input = "_d768a7ABC_adsf";
-        assert_token_kind(input, TokenKind::Identifier(String::from(input)));
+        assert_token_kind(input, TokenKind::Symbol(String::from(input)));
     }
 
     #[test]
-    fn test_lexing_identifier_that_only_a_single_underline() {
+    fn symbol_that_consists_of_single_underline() {
         let input = "_";
-        assert_token_kind(input, TokenKind::Identifier(String::from(input)));
+        assert_token_kind(input, TokenKind::Symbol(String::from(input)));
     }
 
     #[test]
-    fn test_lexing_identifier_without_alphabets() {
+    fn symbol_without_alphabets() {
         let input = "_123";
-        assert_token_kind(input, TokenKind::Identifier(String::from(input)));
+        assert_token_kind(input, TokenKind::Symbol(String::from(input)));
     }
 
     #[test]
-    fn test_lexing_identifier_that_starts_with_number() {
+    fn symbol_that_starts_with_number() {
         let input = "123abc";
         assert_is_err(input);
     }
 
     //
-    // Test integer literals
+    // Integer literals
     //
 
     #[test]
-    fn test_lexing_an_integer_literal() {
+    fn integer_literal() {
         let input = "123";
         assert_token_kind(input, TokenKind::Int(input.parse().unwrap()));
     }
 
     #[test]
-    fn test_lexing_a_zero_literal() {
+    fn zero_literal() {
         let input = "0";
         assert_token_kind(input, TokenKind::Int(input.parse().unwrap()));
     }
 
     #[test]
-    fn test_lexing_a_big_integer_literal() {
+    fn big_integer_literal() {
         let input = "2147483647";
         assert_token_kind(input, TokenKind::Int(input.parse().unwrap()));
     }
 
     //
-    // Test float literals
+    // Float literals
     //
 
     #[test]
-    fn test_lexing_a_float_literal() {
+    fn float_literal() {
         let input = "123.5";
         assert_token_kind(input, TokenKind::Float(input.parse().unwrap()));
     }
 
     #[test]
-    fn test_lexing_a_small_float_literal() {
+    fn small_float_literal() {
         let input = "0.0723";
         assert_token_kind(input, TokenKind::Float(input.parse().unwrap()));
     }
 
     //
-    // Test char literal
+    // Char literal
     //
 
     #[test]
-    fn lex_single_character() {
+    fn single_character() {
         let input = "'a'";
         assert_token_kind(input, TokenKind::Char('a'));
     }
 
     #[test]
-    fn lex_single_digit_character() {
+    fn single_digit_character() {
         let input = "'1'";
         assert_token_kind(input, TokenKind::Char('1'));
     }
 
     #[test]
-    fn lex_newline_character() {
+    fn newline_character() {
         let input = "'\\n'";
         assert_token_kind(input, TokenKind::Char('\n'));
     }
 
     #[test]
-    fn lex_hex_ascii_character_escape() {
+    fn hex_ascii_character_escape() {
         let input = "'\\x41'";
         assert_token_kind(input, TokenKind::Char('A'));
     }
@@ -169,19 +169,19 @@ mod tests {
     //
 
     #[test]
-    fn lex_empty_string() {
+    fn empty_string() {
         let input = r#""""#;
         assert_token_kind(input, TokenKind::String(String::from("")));
     }
 
     #[test]
-    fn lex_single_character_string() {
+    fn single_character_string() {
         let input = r#""a""#;
         assert_token_kind(input, TokenKind::String(String::from("a")));
     }
 
     #[test]
-    fn lex_multiple_characters_string() {
+    fn multiple_characters_string() {
         let input = r#""abc def ghi 012 @93875252435    ""#;
         assert_token_kind(
             input,
@@ -190,22 +190,22 @@ mod tests {
     }
 
     #[test]
-    fn lex_escape_characters_string() {
+    fn escape_characters_string() {
         let input = r#""\\\n\t\r\0\'\"""#;
         assert_token_kind(input, TokenKind::String(String::from("\\\n\t\r\0\'\"")));
     }
 
     #[test]
-    fn string_hex_character_escape() {
+    fn string_with_hex_character_escape() {
         let input = r#""\x41""#;
         assert_token_kind(input, TokenKind::String(String::from("A")));
     }
 
     //
-    // Test comment literals
+    // Comment literals
     //
 
-    fn lex_and_assert_comments_are_skipped(input: &str) {
+    fn assert_comments_are_skipped(input: &str) {
         let result = lex(input);
         assert!(result.is_ok());
 
@@ -216,35 +216,35 @@ mod tests {
     }
 
     #[test]
-    fn test_lexing_comment_above_code() {
+    fn comment_above_code() {
         let input = indoc! {"
             // This is a single line comment
             var x = 5;
         "};
-        lex_and_assert_comments_are_skipped(input);
+        assert_comments_are_skipped(input);
     }
 
     #[test]
-    fn test_lexing_comment_after_code() {
+    fn comment_after_code() {
         let input = indoc! {"
             var x = 10;
             print(x); // this should works too!
         "};
-        lex_and_assert_comments_are_skipped(input);
+        assert_comments_are_skipped(input);
     }
 
     #[test]
-    fn test_lexing_a_comment_that_commenting_out_a_code() {
+    fn commenting_out_a_code() {
         let input = indoc! {"
             // print(y);
         "};
-        lex_and_assert_comments_are_skipped(input);
+        assert_comments_are_skipped(input);
     }
 
     #[test]
-    fn test_lexing_comment_that_spans_until_eof() {
+    fn comment_that_spans_until_eof() {
         let input = indoc! {"
         // A single line comment that spans to EOF"};
-        lex_and_assert_comments_are_skipped(input);
+        assert_comments_are_skipped(input);
     }
 }

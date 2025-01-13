@@ -20,7 +20,7 @@ impl<'a> TypeNotationParser<'a> {
 impl TypeNotationParser<'_> {
     pub fn parse(&self) -> Result<AstNode> {
         match self.tokens.current_kind() {
-            TokenKind::Identifier(name) => {
+            TokenKind::Symbol(name) => {
                 let tn = AstNode::TypeNotation {
                     tn: TypeNotation::Symbol(name),
                     span: self.tokens.current().span.clone(),
@@ -35,7 +35,7 @@ impl TypeNotationParser<'_> {
             TokenKind::LParen => self.parse_function_tn(),
 
             _ => Err(ParsingError::UnexpectedToken {
-                expect: TokenKind::Identifier(String::from("foo")),
+                expect: TokenKind::Symbol(String::from("foo")),
                 found: self.tokens.current().kind.clone(),
                 span: self.tokens.current().span,
             }),

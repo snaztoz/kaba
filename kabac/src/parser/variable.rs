@@ -50,7 +50,7 @@ impl VariableDeclarationParser<'_> {
 
     fn parse_sym(&self) -> Result<AstNode> {
         match self.tokens.current_kind() {
-            TokenKind::Identifier(name) => {
+            TokenKind::Symbol(name) => {
                 let sym = AstNode::Symbol {
                     name,
                     span: self.tokens.current().span.clone(),
@@ -61,7 +61,7 @@ impl VariableDeclarationParser<'_> {
                 Ok(sym)
             }
             _ => Err(ParsingError::UnexpectedToken {
-                expect: TokenKind::Identifier(String::from("foo")),
+                expect: TokenKind::Symbol(String::from("foo")),
                 found: self.tokens.current_kind().clone(),
                 span: self.tokens.current().span,
             }),

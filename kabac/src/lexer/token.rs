@@ -15,8 +15,8 @@ pub struct Token {
 #[logos(skip r"[ \t\r\n\f]+", error = LexingError)]
 #[rustfmt::skip]
 pub enum TokenKind {
-    #[regex("[a-zA-Z0-9_]+", rule::lex_identifier)]
-    Identifier(String),
+    #[regex("[a-zA-Z0-9_]+", rule::lex_symbol)]
+    Symbol(String),
 
     //
     // Literals
@@ -54,7 +54,7 @@ pub enum TokenKind {
     #[token("debug")]    Debug,
 
     //
-    // Symbols
+    // Signs and operators
     //
 
     #[token("+")] Add,
@@ -98,8 +98,7 @@ pub enum TokenKind {
     #[token("//", callback = rule::lex_comment)]
     Comment(String),
 
-    // This will always be appended as the last token
-    // inside token list
+    // This will always be appended as the last token inside token list
     Eof,
 }
 
@@ -112,7 +111,7 @@ impl TokenKind {
 impl Display for TokenKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Identifier(_) => write!(f, "identifier"),
+            Self::Symbol(_) => write!(f, "symbol"),
             Self::Int(_) => write!(f, "integer literal"),
             Self::Float(_) => write!(f, "float literal"),
             Self::Bool(b) => write!(f, "boolean `{b}` literal"),

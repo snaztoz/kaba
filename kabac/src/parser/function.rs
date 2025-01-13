@@ -52,13 +52,13 @@ impl FunctionDefinitionParser<'_> {
 
     fn parse_sym(&self) -> Result<AstNode> {
         let sym = match self.tokens.current_kind() {
-            TokenKind::Identifier(name) => Ok(AstNode::Symbol {
+            TokenKind::Symbol(name) => Ok(AstNode::Symbol {
                 name,
                 span: self.tokens.current().span,
             }),
 
             kind => Err(ParsingError::UnexpectedToken {
-                expect: TokenKind::Identifier(String::from("function_name")),
+                expect: TokenKind::Symbol(String::from("function_name")),
                 found: kind.clone(),
                 span: self.tokens.current().span,
             }),
