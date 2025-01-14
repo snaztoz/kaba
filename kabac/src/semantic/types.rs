@@ -5,9 +5,8 @@ pub mod assert;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd)]
 pub enum Type {
+    // Basic types
     Void,
-
-    // Primitive types
     Bool,
     Int(IntType),
     Float(FloatType),
