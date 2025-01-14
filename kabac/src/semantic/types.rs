@@ -15,7 +15,7 @@ pub enum Type {
     String,
 
     // Other types (e.g. class)
-    Identifier(String),
+    Symbol(String),
 
     // Compound types
     Array {
@@ -155,7 +155,7 @@ impl<'a> From<&'a AstNode> for Type {
                 TypeNotation::Symbol(sym) if sym == "double" => Self::Float(FloatType::Double),
                 TypeNotation::Symbol(sym) if sym == "char" => Self::Char,
                 TypeNotation::Symbol(sym) if sym == "string" => Self::String,
-                TypeNotation::Symbol(sym) => Self::Identifier(sym.to_string()),
+                TypeNotation::Symbol(sym) => Self::Symbol(sym.clone()),
 
                 TypeNotation::Array { elem_tn } => Self::Array {
                     elem_t: Box::new(Self::from(elem_tn.as_ref())),
@@ -190,7 +190,7 @@ impl Display for Type {
             Self::Char => write!(f, "char"),
             Self::String => write!(f, "string"),
 
-            Self::Identifier(id) => write!(f, "{id}"),
+            Self::Symbol(id) => write!(f, "{id}"),
 
             Self::Array { elem_t, .. } => write!(f, "[]{elem_t}"),
 
