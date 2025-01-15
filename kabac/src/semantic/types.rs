@@ -13,9 +13,6 @@ pub enum Type {
     Char,
     String,
 
-    // Other types (e.g. class)
-    Symbol(String),
-
     // Compound types
     Array {
         elem_t: Box<Self>,
@@ -24,6 +21,9 @@ pub enum Type {
         params_t: Vec<Self>,
         return_t: Box<Self>,
     },
+
+    // Other types (e.g. class)
+    Symbol(String),
 }
 
 impl Type {
