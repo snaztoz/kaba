@@ -22,6 +22,7 @@ impl WhileLoopParser<'_> {
         let cond = ExpressionParser::new(self.state).parse()?;
 
         // Expecting block
+        let scope_id = self.state.next_scope_id();
         let block = BlockParser::new(self.state).parse()?;
 
         let end = block.span.end;
@@ -29,6 +30,7 @@ impl WhileLoopParser<'_> {
         Ok(AstNode::While {
             cond: Box::new(cond),
             body: block.body,
+            scope_id,
             span: start..end,
         })
     }
@@ -51,6 +53,7 @@ mod tests {
                     span: 6..10,
                 }),
                 body: vec![],
+                scope_id: 2,
                 span: 0..13,
             },
         );
@@ -69,6 +72,7 @@ mod tests {
                     AstNode::Continue { span: 13..21 },
                     AstNode::Break { span: 23..28 },
                 ],
+                scope_id: 2,
                 span: 0..31,
             },
         );

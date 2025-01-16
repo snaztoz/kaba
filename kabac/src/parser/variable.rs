@@ -24,6 +24,7 @@ impl VariableDeclarationParser<'_> {
         self.state.tokens.skip(&TokenKind::Var)?;
 
         // Parse symbol
+        let sym_id = self.state.next_symbol_id();
         let sym = self.parse_sym()?;
 
         // Parse type notation (optional)
@@ -42,7 +43,7 @@ impl VariableDeclarationParser<'_> {
 
         Ok(AstNode::VariableDeclaration {
             sym: Box::new(sym),
-            sym_id: self.state.next_id(),
+            sym_id,
             tn: tn.map(Box::new),
             val: Box::new(expr.unwrap_group()),
             span: start..end,

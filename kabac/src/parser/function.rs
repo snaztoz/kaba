@@ -24,8 +24,8 @@ impl FunctionDefinitionParser<'_> {
         self.state.tokens.skip(&TokenKind::Fn)?;
 
         // Expecting symbol
+        let sym_id = self.state.next_symbol_id();
         let sym = self.parse_sym()?;
-        let sym_id = self.state.next_id();
 
         // Expecting "("
         self.state.tokens.skip(&TokenKind::LParen)?;
@@ -40,6 +40,7 @@ impl FunctionDefinitionParser<'_> {
         let return_tn = self.parse_return_tn()?;
 
         // Expecting function body
+        let scope_id = self.state.next_scope_id();
         let block = BlockParser::new(self.state).parse()?;
 
         Ok(AstNode::FunctionDefinition {
@@ -48,6 +49,7 @@ impl FunctionDefinitionParser<'_> {
             sym_id,
             return_tn: return_tn.map(Box::new),
             body: block.body,
+            scope_id,
             span: start..block.span.end,
         })
     }
@@ -75,6 +77,7 @@ impl FunctionDefinitionParser<'_> {
         let mut params = vec![];
         while !self.state.tokens.current_is(&TokenKind::RParen) {
             // Expecting symbol
+            let sym_id = self.state.next_symbol_id();
             let sym = self.parse_sym()?;
 
             // Expecting ":"
@@ -83,11 +86,7 @@ impl FunctionDefinitionParser<'_> {
             // Expecting type notation
             let tn = TypeNotationParser::new(self.state).parse()?;
 
-            params.push(FunctionParam {
-                sym,
-                sym_id: self.state.next_id(),
-                tn,
-            });
+            params.push(FunctionParam { sym, sym_id, tn });
 
             // Expecting either "," or ")"
 
@@ -143,6 +142,7 @@ mod tests {
                 params: vec![],
                 return_tn: None,
                 body: vec![],
+                scope_id: 2,
                 span: 0..11,
             },
         );
@@ -184,6 +184,7 @@ mod tests {
                 ],
                 return_tn: None,
                 body: vec![],
+                scope_id: 2,
                 span: 0..27,
             },
         );
@@ -222,6 +223,7 @@ mod tests {
                     }],
                     span: 19..27,
                 }],
+                scope_id: 2,
                 span: 0..30,
             },
         );
@@ -249,6 +251,7 @@ mod tests {
                     })),
                     span: 16..24,
                 }],
+                scope_id: 2,
                 span: 0..27,
             },
         );

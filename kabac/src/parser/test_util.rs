@@ -9,6 +9,7 @@ pub fn assert_ast(input: &str, expect: AstNode) {
         result.unwrap(),
         AstNode::Program {
             body: vec![expect],
+            scope_id: 1,
             span: 0..input.len(),
         }
     );

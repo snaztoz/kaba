@@ -22,6 +22,7 @@ impl EachLoopParser<'_> {
         self.state.tokens.skip(&TokenKind::Each)?;
 
         // Expecting element symbol
+        let elem_sym_id = self.state.next_symbol_id();
         let elem_sym = self.parse_sym()?;
 
         // Expecting "in" keyword
@@ -31,6 +32,7 @@ impl EachLoopParser<'_> {
         let arr = ExpressionParser::new(self.state).parse()?;
 
         // Expecting block
+        let scope_id = self.state.next_scope_id();
         let block = BlockParser::new(self.state).parse()?;
 
         let end = block.span.end;
@@ -38,8 +40,9 @@ impl EachLoopParser<'_> {
         Ok(AstNode::Each {
             iterable: Box::new(arr),
             elem_sym: Box::new(elem_sym),
-            elem_sym_id: self.state.next_id(),
+            elem_sym_id,
             body: block.body,
+            scope_id,
             span: start..end,
         })
     }
@@ -83,6 +86,7 @@ mod tests {
                     span: 13..16,
                 }),
                 body: vec![],
+                scope_id: 2,
                 span: 0..19,
             },
         );

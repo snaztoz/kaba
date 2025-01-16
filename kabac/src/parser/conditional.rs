@@ -26,6 +26,7 @@ impl ConditionalParser<'_> {
         let cond = ExpressionParser::new(self.state).parse()?;
 
         // Expecting block
+        let scope_id = self.state.next_scope_id();
         let block = BlockParser::new(self.state).parse()?;
 
         end = block.span.end;
@@ -36,6 +37,7 @@ impl ConditionalParser<'_> {
         Ok(AstNode::If {
             cond: Box::new(cond),
             body: block.body,
+            scope_id,
             or_else: or_else.map(Box::new),
             span: start..end,
         })
@@ -63,12 +65,14 @@ impl ConditionalParser<'_> {
 
             TokenKind::LBrace => {
                 // Expecting block
+                let scope_id = self.state.next_scope_id();
                 let block = BlockParser::new(self.state).parse()?;
 
                 *end_pos = block.span.end;
 
                 Ok(Some(AstNode::Else {
                     body: block.body,
+                    scope_id,
                     span: start..block.span.end,
                 }))
             }
@@ -116,6 +120,7 @@ mod tests {
                     }],
                     span: 13..21,
                 }],
+                scope_id: 2,
                 or_else: None,
                 span: 0..24,
             },
@@ -132,14 +137,17 @@ mod tests {
                     span: 3..8,
                 }),
                 body: vec![],
+                scope_id: 2,
                 or_else: Some(Box::new(AstNode::If {
                     cond: Box::new(AstNode::Literal {
                         lit: Literal::Bool(false),
                         span: 20..25,
                     }),
                     body: vec![],
+                    scope_id: 3,
                     or_else: Some(Box::new(AstNode::Else {
                         body: vec![],
+                        scope_id: 4,
                         span: 29..36,
                     })),
                     span: 17..36,
