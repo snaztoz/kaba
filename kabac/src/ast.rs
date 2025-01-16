@@ -6,6 +6,8 @@
 use logos::Span;
 use std::fmt::Display;
 
+pub type SymbolId = u32;
+
 /// The representation of each node that make up a whole Kaba AST.
 #[derive(Debug, PartialEq)]
 pub enum AstNode {
@@ -17,6 +19,7 @@ pub enum AstNode {
 
     VariableDeclaration {
         sym: Box<AstNode>,
+        sym_id: SymbolId,
         tn: Option<Box<AstNode>>,
         val: Box<AstNode>,
         span: Span,
@@ -42,6 +45,7 @@ pub enum AstNode {
 
     Each {
         elem_sym: Box<AstNode>,
+        elem_sym_id: SymbolId,
         iterable: Box<AstNode>,
         body: Vec<AstNode>,
         span: Span,
@@ -57,6 +61,7 @@ pub enum AstNode {
 
     FunctionDefinition {
         sym: Box<AstNode>,
+        sym_id: SymbolId,
         params: Vec<FunctionParam>,
         return_tn: Option<Box<AstNode>>,
         body: Vec<AstNode>,
@@ -418,6 +423,7 @@ impl Display for AstNode {
 #[derive(Debug, PartialEq)]
 pub struct FunctionParam {
     pub sym: AstNode,
+    pub sym_id: SymbolId,
     pub tn: AstNode,
 }
 

@@ -1,16 +1,16 @@
-use super::{error::ParsingError, stream::TokenStream, tn::TypeNotationParser, Result};
+use super::{error::ParsingError, state::ParserState, tn::TypeNotationParser, Result};
 use crate::{
     ast::{AstNode, Literal},
     lexer::token::TokenKind,
 };
 
 pub struct ExpressionParser<'a> {
-    tokens: &'a TokenStream,
+    state: &'a ParserState<'a>,
 }
 
 impl<'a> ExpressionParser<'a> {
-    pub const fn new(tokens: &'a TokenStream) -> Self {
-        Self { tokens }
+    pub const fn new(state: &'a ParserState) -> Self {
+        Self { state }
     }
 }
 
@@ -24,9 +24,9 @@ impl ExpressionParser<'_> {
         let lhs = self.parse_logical_and_or_expression()?;
 
         // Expecting "=", "+=", "-=", "*=", "/=", or "%=" (optional)
-        match self.tokens.current_kind() {
+        match self.state.tokens.current_kind() {
             TokenKind::Assign => {
-                self.tokens.skip(&TokenKind::Assign)?;
+                self.state.tokens.skip(&TokenKind::Assign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -38,7 +38,7 @@ impl ExpressionParser<'_> {
                 })
             }
             TokenKind::AddAssign => {
-                self.tokens.skip(&TokenKind::AddAssign)?;
+                self.state.tokens.skip(&TokenKind::AddAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -50,7 +50,7 @@ impl ExpressionParser<'_> {
                 })
             }
             TokenKind::SubAssign => {
-                self.tokens.skip(&TokenKind::SubAssign)?;
+                self.state.tokens.skip(&TokenKind::SubAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -62,7 +62,7 @@ impl ExpressionParser<'_> {
                 })
             }
             TokenKind::MulAssign => {
-                self.tokens.skip(&TokenKind::MulAssign)?;
+                self.state.tokens.skip(&TokenKind::MulAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -74,7 +74,7 @@ impl ExpressionParser<'_> {
                 })
             }
             TokenKind::DivAssign => {
-                self.tokens.skip(&TokenKind::DivAssign)?;
+                self.state.tokens.skip(&TokenKind::DivAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -86,7 +86,7 @@ impl ExpressionParser<'_> {
                 })
             }
             TokenKind::ModAssign => {
-                self.tokens.skip(&TokenKind::ModAssign)?;
+                self.state.tokens.skip(&TokenKind::ModAssign)?;
 
                 let rhs = self.parse_logical_and_or_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -107,9 +107,9 @@ impl ExpressionParser<'_> {
 
         loop {
             // Expecting "||" or "&&" (both are optional)
-            match self.tokens.current_kind() {
+            match self.state.tokens.current_kind() {
                 TokenKind::Or => {
-                    self.tokens.skip(&TokenKind::Or)?;
+                    self.state.tokens.skip(&TokenKind::Or)?;
 
                     let rhs = self.parse_equality_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -121,7 +121,7 @@ impl ExpressionParser<'_> {
                     };
                 }
                 TokenKind::And => {
-                    self.tokens.skip(&TokenKind::And)?;
+                    self.state.tokens.skip(&TokenKind::And)?;
 
                     let rhs = self.parse_equality_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -143,9 +143,9 @@ impl ExpressionParser<'_> {
 
         loop {
             // Expecting "==" or "!=" (both are optional)
-            match self.tokens.current_kind() {
+            match self.state.tokens.current_kind() {
                 TokenKind::Eq => {
-                    self.tokens.skip(&TokenKind::Eq)?;
+                    self.state.tokens.skip(&TokenKind::Eq)?;
 
                     let rhs = self.parse_comparison_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -157,7 +157,7 @@ impl ExpressionParser<'_> {
                     };
                 }
                 TokenKind::Neq => {
-                    self.tokens.skip(&TokenKind::Neq)?;
+                    self.state.tokens.skip(&TokenKind::Neq)?;
 
                     let rhs = self.parse_comparison_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -178,9 +178,9 @@ impl ExpressionParser<'_> {
         let lhs = self.parse_additive_expression()?;
 
         // Expecting ">", ">=", "<" or "<=" (all are optional)
-        match self.tokens.current_kind() {
+        match self.state.tokens.current_kind() {
             TokenKind::Gt => {
-                self.tokens.skip(&TokenKind::Gt)?;
+                self.state.tokens.skip(&TokenKind::Gt)?;
 
                 let rhs = self.parse_additive_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -192,7 +192,7 @@ impl ExpressionParser<'_> {
                 })
             }
             TokenKind::Gte => {
-                self.tokens.skip(&TokenKind::Gte)?;
+                self.state.tokens.skip(&TokenKind::Gte)?;
 
                 let rhs = self.parse_additive_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -204,7 +204,7 @@ impl ExpressionParser<'_> {
                 })
             }
             TokenKind::Lt => {
-                self.tokens.skip(&TokenKind::Lt)?;
+                self.state.tokens.skip(&TokenKind::Lt)?;
 
                 let rhs = self.parse_additive_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -216,7 +216,7 @@ impl ExpressionParser<'_> {
                 })
             }
             TokenKind::Lte => {
-                self.tokens.skip(&TokenKind::Lte)?;
+                self.state.tokens.skip(&TokenKind::Lte)?;
 
                 let rhs = self.parse_additive_expression()?;
                 let span = lhs.span().start..rhs.span().end;
@@ -237,9 +237,9 @@ impl ExpressionParser<'_> {
 
         loop {
             // Expecting "+" or "-" (both are optional)
-            match self.tokens.current_kind() {
+            match self.state.tokens.current_kind() {
                 TokenKind::Add => {
-                    self.tokens.skip(&TokenKind::Add)?;
+                    self.state.tokens.skip(&TokenKind::Add)?;
 
                     let rhs = self.parse_multiplicative_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -251,7 +251,7 @@ impl ExpressionParser<'_> {
                     };
                 }
                 TokenKind::Sub => {
-                    self.tokens.skip(&TokenKind::Sub)?;
+                    self.state.tokens.skip(&TokenKind::Sub)?;
 
                     let rhs = self.parse_multiplicative_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -273,9 +273,9 @@ impl ExpressionParser<'_> {
 
         loop {
             // Expecting "*", "/" or "%" (all are optional)
-            match self.tokens.current_kind() {
+            match self.state.tokens.current_kind() {
                 TokenKind::Mul => {
-                    self.tokens.skip(&TokenKind::Mul)?;
+                    self.state.tokens.skip(&TokenKind::Mul)?;
 
                     let rhs = self.parse_unary_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -287,7 +287,7 @@ impl ExpressionParser<'_> {
                     };
                 }
                 TokenKind::Div => {
-                    self.tokens.skip(&TokenKind::Div)?;
+                    self.state.tokens.skip(&TokenKind::Div)?;
 
                     let rhs = self.parse_unary_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -299,7 +299,7 @@ impl ExpressionParser<'_> {
                     };
                 }
                 TokenKind::Mod => {
-                    self.tokens.skip(&TokenKind::Mod)?;
+                    self.state.tokens.skip(&TokenKind::Mod)?;
 
                     let rhs = self.parse_unary_expression()?;
                     let span = lhs.span().start..rhs.span().end;
@@ -317,9 +317,9 @@ impl ExpressionParser<'_> {
 
     fn parse_unary_expression(&self) -> Result<AstNode> {
         //  Prefixed by >= 0 "negation" or "not" expression
-        if self.tokens.current_is(&TokenKind::Sub) {
+        if self.state.tokens.current_is(&TokenKind::Sub) {
             return self.parse_prefix_expression(&TokenKind::Sub);
-        } else if self.tokens.current_is(&TokenKind::Not) {
+        } else if self.state.tokens.current_is(&TokenKind::Not) {
             return self.parse_prefix_expression(&TokenKind::Not);
         }
 
@@ -330,19 +330,19 @@ impl ExpressionParser<'_> {
         //
         // TODO: field access
         loop {
-            match self.tokens.current_kind() {
+            match self.state.tokens.current_kind() {
                 TokenKind::LParen => {
                     let callee_start = expr.span().start;
 
                     // Expecting "("
-                    self.tokens.skip(&TokenKind::LParen)?;
+                    self.state.tokens.skip(&TokenKind::LParen)?;
 
                     let args = self.parse_function_call()?;
 
-                    let span = callee_start..self.tokens.current().span.end;
+                    let span = callee_start..self.state.tokens.current().span.end;
 
                     // Expecting ")"
-                    self.tokens.skip(&TokenKind::RParen)?;
+                    self.state.tokens.skip(&TokenKind::RParen)?;
 
                     expr = AstNode::FunctionCall {
                         callee: Box::new(expr.unwrap_group()),
@@ -355,15 +355,15 @@ impl ExpressionParser<'_> {
                     let callee_start = expr.span().start;
 
                     // Expecting "("
-                    self.tokens.skip(&TokenKind::LBrack)?;
+                    self.state.tokens.skip(&TokenKind::LBrack)?;
 
                     // Expecting expression
                     let index = self.parse()?;
 
-                    let span = callee_start..self.tokens.current().span.end;
+                    let span = callee_start..self.state.tokens.current().span.end;
 
                     // Expecting ")"
-                    self.tokens.skip(&TokenKind::RBrack)?;
+                    self.state.tokens.skip(&TokenKind::RBrack)?;
 
                     expr = AstNode::IndexAccess {
                         object: Box::new(expr.unwrap_group()),
@@ -380,8 +380,8 @@ impl ExpressionParser<'_> {
     }
 
     fn parse_prefix_expression(&self, token: &TokenKind) -> Result<AstNode> {
-        let start = self.tokens.current().span.start;
-        self.tokens.skip(token)?;
+        let start = self.state.tokens.current().span.start;
+        self.state.tokens.skip(token)?;
 
         let expr = self.parse_unary_expression()?;
         let span = start..expr.span().end;
@@ -401,19 +401,19 @@ impl ExpressionParser<'_> {
     }
 
     fn parse_primary_expression(&self) -> Result<AstNode> {
-        let token = self.tokens.current();
+        let token = self.state.tokens.current();
 
         match token.kind {
             TokenKind::LParen => {
                 // Parse group expression
 
                 let lparen_start = token.span.start;
-                self.tokens.skip(&TokenKind::LParen)?;
+                self.state.tokens.skip(&TokenKind::LParen)?;
 
                 let expr = self.parse()?;
 
-                let span = lparen_start..self.tokens.current().span.end;
-                self.tokens.skip(&TokenKind::RParen)?;
+                let span = lparen_start..self.state.tokens.current().span.end;
+                self.state.tokens.skip(&TokenKind::RParen)?;
 
                 Ok(AstNode::Group {
                     expr: Box::new(expr),
@@ -423,42 +423,42 @@ impl ExpressionParser<'_> {
 
             // Expecting either symbols or literals
             TokenKind::Symbol(name) => {
-                self.tokens.advance();
+                self.state.tokens.advance();
                 Ok(AstNode::Symbol {
                     name,
                     span: token.span,
                 })
             }
             TokenKind::Int(n) => {
-                self.tokens.advance();
+                self.state.tokens.advance();
                 Ok(AstNode::Literal {
                     lit: Literal::Int(n),
                     span: token.span,
                 })
             }
             TokenKind::Float(n) => {
-                self.tokens.advance();
+                self.state.tokens.advance();
                 Ok(AstNode::Literal {
                     lit: Literal::Float(n),
                     span: token.span,
                 })
             }
             TokenKind::Bool(b) => {
-                self.tokens.advance();
+                self.state.tokens.advance();
                 Ok(AstNode::Literal {
                     lit: Literal::Bool(b),
                     span: token.span,
                 })
             }
             TokenKind::Char(c) => {
-                self.tokens.advance();
+                self.state.tokens.advance();
                 Ok(AstNode::Literal {
                     lit: Literal::Char(c),
                     span: token.span,
                 })
             }
             TokenKind::String(s) => {
-                self.tokens.advance();
+                self.state.tokens.advance();
                 Ok(AstNode::Literal {
                     lit: Literal::String(s),
                     span: token.span,
@@ -481,7 +481,7 @@ impl ExpressionParser<'_> {
 
         loop {
             // Stop when encounter a closing parentheses
-            if self.tokens.current_is(&TokenKind::RParen) {
+            if self.state.tokens.current_is(&TokenKind::RParen) {
                 return Ok(args);
             }
 
@@ -489,9 +489,9 @@ impl ExpressionParser<'_> {
             args.push(self.parse()?);
 
             // Continue if encounter "," or break out of loop if encounter ")"
-            match self.tokens.current_kind() {
+            match self.state.tokens.current_kind() {
                 TokenKind::Comma => {
-                    self.tokens.skip(&TokenKind::Comma)?;
+                    self.state.tokens.skip(&TokenKind::Comma)?;
                     continue;
                 }
 
@@ -502,7 +502,7 @@ impl ExpressionParser<'_> {
                     return Err(ParsingError::UnexpectedToken {
                         expect: TokenKind::RParen,
                         found: kind.clone(),
-                        span: self.tokens.current().span,
+                        span: self.state.tokens.current().span,
                     });
                 }
             }
@@ -510,19 +510,19 @@ impl ExpressionParser<'_> {
     }
 
     fn parse_array_literal(&self) -> Result<AstNode> {
-        let start = self.tokens.current().span.start;
+        let start = self.state.tokens.current().span.start;
 
         // Expecting "["
-        self.tokens.skip(&TokenKind::LBrack)?;
+        self.state.tokens.skip(&TokenKind::LBrack)?;
 
         // Expecting type notation
-        let elem_tn = TypeNotationParser::new(self.tokens).parse()?;
+        let elem_tn = TypeNotationParser::new(self.state).parse()?;
 
         // Can have >= 0 elements
         let mut elems = vec![];
         loop {
             // Stop when encounter a closing bracket
-            if self.tokens.current_is(&TokenKind::RBrack) {
+            if self.state.tokens.current_is(&TokenKind::RBrack) {
                 break;
             }
 
@@ -530,9 +530,9 @@ impl ExpressionParser<'_> {
             elems.push(self.parse()?);
 
             // Continue if encounter "," or break out of loop if encounter ")"
-            match self.tokens.current_kind() {
+            match self.state.tokens.current_kind() {
                 TokenKind::Comma => {
-                    self.tokens.skip(&TokenKind::Comma)?;
+                    self.state.tokens.skip(&TokenKind::Comma)?;
                     continue;
                 }
 
@@ -543,16 +543,16 @@ impl ExpressionParser<'_> {
                     return Err(ParsingError::UnexpectedToken {
                         expect: TokenKind::RBrack,
                         found: kind.clone(),
-                        span: self.tokens.current().span,
+                        span: self.state.tokens.current().span,
                     });
                 }
             }
         }
 
-        let end = self.tokens.current().span.end;
+        let end = self.state.tokens.current().span.end;
 
         // Expecting "]"
-        self.tokens.skip(&TokenKind::RBrack)?;
+        self.state.tokens.skip(&TokenKind::RBrack)?;
 
         Ok(AstNode::Literal {
             lit: Literal::Array {

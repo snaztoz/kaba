@@ -6,6 +6,7 @@ use crate::{
     lexer::token::{Token, TokenKind},
 };
 use error::Result;
+use state::ParserState;
 use statement::StatementParser;
 use stream::TokenStream;
 
@@ -15,6 +16,7 @@ mod each_loop;
 mod error;
 mod expression;
 mod function;
+mod state;
 mod statement;
 mod stream;
 #[cfg(test)]
@@ -23,35 +25,21 @@ mod tn;
 mod variable;
 mod while_loop;
 
-/// Provide a quick way to parse Kaba tokens, without the needs to setting up
-/// and running the parser manually.
+/// Parse a Kaba program from the provided tokens.
 ///
 /// Produces an AST that represents the entire source code of the given tokens.
 pub fn parse(tokens: Vec<Token>) -> Result<AstNode> {
-    Parser::new(tokens).parse()
-}
+    let tokens = TokenStream::new(tokens);
+    let parser_state = ParserState::new(&tokens);
 
-struct Parser {
-    tokens: TokenStream,
-}
-
-impl Parser {
-    const fn new(tokens: Vec<Token>) -> Self {
-        Self {
-            tokens: TokenStream::new(tokens),
-        }
+    let mut body = vec![];
+    while !tokens.current_is(&TokenKind::Eof) {
+        let stmt = StatementParser::new(&parser_state).parse()?;
+        body.push(stmt)
     }
 
-    fn parse(&self) -> Result<AstNode> {
-        let mut body = vec![];
-        while !self.tokens.current_is(&TokenKind::Eof) {
-            let stmt = StatementParser::new(&self.tokens).parse()?;
-            body.push(stmt)
-        }
-
-        Ok(AstNode::Program {
-            body,
-            span: 0..self.tokens.current().span.end,
-        })
-    }
+    Ok(AstNode::Program {
+        body,
+        span: 0..tokens.current().span.end,
+    })
 }

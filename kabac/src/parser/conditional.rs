@@ -1,32 +1,32 @@
 use super::{
-    block::BlockParser, error::ParsingError, expression::ExpressionParser, stream::TokenStream,
+    block::BlockParser, error::ParsingError, expression::ExpressionParser, state::ParserState,
     Result,
 };
 use crate::{ast::AstNode, lexer::token::TokenKind};
 
 pub struct ConditionalParser<'a> {
-    tokens: &'a TokenStream,
+    state: &'a ParserState<'a>,
 }
 
 impl<'a> ConditionalParser<'a> {
-    pub const fn new(tokens: &'a TokenStream) -> Self {
-        Self { tokens }
+    pub const fn new(state: &'a ParserState) -> Self {
+        Self { state }
     }
 }
 
 impl ConditionalParser<'_> {
     pub fn parse(&self) -> Result<AstNode> {
-        let start = self.tokens.current().span.start;
+        let start = self.state.tokens.current().span.start;
         let mut end;
 
         // Expecting "if" keyword
-        self.tokens.skip(&TokenKind::If)?;
+        self.state.tokens.skip(&TokenKind::If)?;
 
         // Expecting expression
-        let cond = ExpressionParser::new(self.tokens).parse()?;
+        let cond = ExpressionParser::new(self.state).parse()?;
 
         // Expecting block
-        let block = BlockParser::new(self.tokens).parse()?;
+        let block = BlockParser::new(self.state).parse()?;
 
         end = block.span.end;
 
@@ -42,16 +42,16 @@ impl ConditionalParser<'_> {
     }
 
     fn parse_alt_branches(&self, end_pos: &mut usize) -> Result<Option<AstNode>> {
-        if !self.tokens.current_is(&TokenKind::Else) {
+        if !self.state.tokens.current_is(&TokenKind::Else) {
             return Ok(None);
         }
 
-        let start = self.tokens.current().span.start;
+        let start = self.state.tokens.current().span.start;
 
         // Expecting "else" keyword
-        self.tokens.skip(&TokenKind::Else)?;
+        self.state.tokens.skip(&TokenKind::Else)?;
 
-        match self.tokens.current_kind() {
+        match self.state.tokens.current_kind() {
             TokenKind::If => {
                 // Expecting "else if ..." statement
                 let alt = self.parse()?;
@@ -63,7 +63,7 @@ impl ConditionalParser<'_> {
 
             TokenKind::LBrace => {
                 // Expecting block
-                let block = BlockParser::new(self.tokens).parse()?;
+                let block = BlockParser::new(self.state).parse()?;
 
                 *end_pos = block.span.end;
 
@@ -76,7 +76,7 @@ impl ConditionalParser<'_> {
             kind => Err(ParsingError::UnexpectedToken {
                 expect: TokenKind::Else,
                 found: kind.clone(),
-                span: self.tokens.current().span,
+                span: self.state.tokens.current().span,
             }),
         }
     }

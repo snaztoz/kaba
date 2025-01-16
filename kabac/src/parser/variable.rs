@@ -1,27 +1,27 @@
 use super::{
     error::{ParsingError, Result},
     expression::ExpressionParser,
-    stream::TokenStream,
+    state::ParserState,
     tn::TypeNotationParser,
 };
 use crate::{ast::AstNode, lexer::token::TokenKind};
 
 pub struct VariableDeclarationParser<'a> {
-    tokens: &'a TokenStream,
+    state: &'a ParserState<'a>,
 }
 
 impl<'a> VariableDeclarationParser<'a> {
-    pub const fn new(tokens: &'a TokenStream) -> Self {
-        Self { tokens }
+    pub const fn new(state: &'a ParserState<'a>) -> Self {
+        Self { state }
     }
 }
 
 impl VariableDeclarationParser<'_> {
     pub fn parse(&self) -> Result<AstNode> {
-        let start = self.tokens.current().span.start;
+        let start = self.state.tokens.current().span.start;
 
         // Expecting "var" keyword
-        self.tokens.skip(&TokenKind::Var)?;
+        self.state.tokens.skip(&TokenKind::Var)?;
 
         // Parse symbol
         let sym = self.parse_sym()?;
@@ -30,18 +30,19 @@ impl VariableDeclarationParser<'_> {
         let tn = self.parse_tn()?;
 
         // Expecting "="
-        self.tokens.skip(&TokenKind::Assign)?;
+        self.state.tokens.skip(&TokenKind::Assign)?;
 
         // Parse value
-        let expr = ExpressionParser::new(self.tokens).parse()?;
+        let expr = ExpressionParser::new(self.state).parse()?;
 
         let end = expr.span().end;
 
         // Expecting ";"
-        self.tokens.skip(&TokenKind::Semicolon)?;
+        self.state.tokens.skip(&TokenKind::Semicolon)?;
 
         Ok(AstNode::VariableDeclaration {
             sym: Box::new(sym),
+            sym_id: self.state.next_id(),
             tn: tn.map(Box::new),
             val: Box::new(expr.unwrap_group()),
             span: start..end,
@@ -49,29 +50,29 @@ impl VariableDeclarationParser<'_> {
     }
 
     fn parse_sym(&self) -> Result<AstNode> {
-        match self.tokens.current_kind() {
+        match self.state.tokens.current_kind() {
             TokenKind::Symbol(name) => {
                 let sym = AstNode::Symbol {
                     name,
-                    span: self.tokens.current().span.clone(),
+                    span: self.state.tokens.current().span.clone(),
                 };
 
-                self.tokens.advance();
+                self.state.tokens.advance();
 
                 Ok(sym)
             }
             _ => Err(ParsingError::UnexpectedToken {
                 expect: TokenKind::Symbol(String::from("foo")),
-                found: self.tokens.current_kind().clone(),
-                span: self.tokens.current().span,
+                found: self.state.tokens.current_kind().clone(),
+                span: self.state.tokens.current().span,
             }),
         }
     }
 
     fn parse_tn(&self) -> Result<Option<AstNode>> {
-        let tn = if self.tokens.current_is(&TokenKind::Colon) {
-            self.tokens.skip(&TokenKind::Colon)?;
-            Some(TypeNotationParser::new(self.tokens).parse()?)
+        let tn = if self.state.tokens.current_is(&TokenKind::Colon) {
+            self.state.tokens.skip(&TokenKind::Colon)?;
+            Some(TypeNotationParser::new(self.state).parse()?)
         } else {
             None
         };
@@ -96,6 +97,7 @@ mod tests {
                     name: String::from("abc"),
                     span: 4..7,
                 }),
+                sym_id: 1,
                 tn: None,
                 val: Box::new(AstNode::Mul {
                     lhs: Box::new(AstNode::Literal {
@@ -122,6 +124,7 @@ mod tests {
                     name: String::from("x"),
                     span: 4..5,
                 }),
+                sym_id: 1,
                 tn: None,
                 val: Box::new(AstNode::Add {
                     lhs: Box::new(AstNode::Literal {
@@ -148,6 +151,7 @@ mod tests {
                     name: String::from("x"),
                     span: 4..5,
                 }),
+                sym_id: 1,
                 tn: None,
                 val: Box::new(AstNode::Symbol {
                     name: String::from("foo"),
@@ -172,6 +176,7 @@ mod tests {
                     name: String::from("x"),
                     span: 4..5,
                 }),
+                sym_id: 1,
                 tn: Some(Box::from(AstNode::TypeNotation {
                     tn: TypeNotation::Symbol(String::from("int")),
                     span: 7..10,
@@ -194,6 +199,7 @@ mod tests {
                     name: String::from("x"),
                     span: 4..5,
                 }),
+                sym_id: 1,
                 tn: Some(Box::from(AstNode::TypeNotation {
                     tn: TypeNotation::Callable {
                         params_tn: vec![AstNode::TypeNotation {
@@ -225,6 +231,7 @@ mod tests {
                     name: String::from("x"),
                     span: 4..5,
                 }),
+                sym_id: 1,
                 tn: Some(Box::from(AstNode::TypeNotation {
                     tn: TypeNotation::Callable {
                         params_tn: vec![
@@ -271,6 +278,7 @@ mod tests {
                     name: String::from("x"),
                     span: 4..5,
                 }),
+                sym_id: 1,
                 tn: Some(Box::new(AstNode::TypeNotation {
                     tn: TypeNotation::Array {
                         elem_tn: Box::new(AstNode::TypeNotation {
