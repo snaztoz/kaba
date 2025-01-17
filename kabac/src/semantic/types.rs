@@ -27,6 +27,29 @@ pub enum Type {
 }
 
 impl Type {
+    pub const fn is_basic_t(&self) -> bool {
+        matches!(
+            self,
+            Self::Void | Self::Bool | Self::Int(_) | Self::Float(_) | Self::Char | Self::String
+        )
+    }
+
+    pub fn is_basic_t_str(sym: &str) -> bool {
+        matches!(
+            sym,
+            "void"
+                | "bool"
+                | "sbyte"
+                | "short"
+                | "int"
+                | "long"
+                | "float"
+                | "double"
+                | "char"
+                | "string"
+        )
+    }
+
     pub fn is_compatible_with(&self, other: &Type) -> bool {
         if self == other {
             return true;

@@ -2,10 +2,10 @@ use super::{
     body::BodyAnalyzer,
     error::Result,
     expression::ExpressionAnalyzer,
-    state::{scope::ScopeVariant, SharedState},
+    state::{AnalyzerState, ScopeVariant},
     types::{assert, Type},
 };
-use crate::ast::AstNode;
+use crate::ast::{AstNode, SymbolId};
 
 /// Analyzer for `each` loop statement.
 ///
@@ -40,11 +40,11 @@ use crate::ast::AstNode;
 /// ```
 pub struct EachLoopAnalyzer<'a> {
     node: &'a AstNode,
-    state: &'a SharedState,
+    state: &'a AnalyzerState,
 }
 
 impl<'a> EachLoopAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
         Self { node, state }
     }
 }
@@ -60,13 +60,19 @@ impl EachLoopAnalyzer<'_> {
 
         // Check all statements inside the body with a new scope
 
-        self.state.with_scope(ScopeVariant::Loop, || {
-            self.state
-                .save_sym_or_else(&elem_sym, elem_t.clone(), || unreachable!())
-                .unwrap();
+        self.state
+            .with_scope(self.scope_id(), ScopeVariant::Loop, || {
+                self.state
+                    .save_entity_or_else(
+                        self.elem_sym_id(),
+                        &elem_sym,
+                        elem_t.clone(),
+                        || unreachable!(),
+                    )
+                    .unwrap();
 
-            BodyAnalyzer::new(self.node, self.state).analyze()
-        })?;
+                BodyAnalyzer::new(self.node, self.state).analyze()
+            })?;
 
         Ok(Type::Void)
     }
@@ -82,6 +88,22 @@ impl EachLoopAnalyzer<'_> {
     fn elem_sym(&self) -> &AstNode {
         if let AstNode::Each { elem_sym, .. } = self.node {
             elem_sym
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn elem_sym_id(&self) -> SymbolId {
+        if let AstNode::Each { elem_sym_id, .. } = self.node {
+            *elem_sym_id
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn scope_id(&self) -> SymbolId {
+        if let AstNode::Each { scope_id, .. } = self.node {
+            *scope_id
         } else {
             unreachable!()
         }

@@ -1,6 +1,6 @@
 use super::{
     error::{Error, Result},
-    state::SharedState,
+    state::AnalyzerState,
     types::Type,
 };
 use crate::ast::AstNode;
@@ -8,13 +8,13 @@ use logos::Span;
 
 pub struct TypeNotationAnalyzer<'a> {
     node: &'a AstNode,
-    state: &'a SharedState,
+    state: &'a AnalyzerState,
 
     void_allowed: bool,
 }
 
 impl<'a> TypeNotationAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
         Self {
             node,
             state,

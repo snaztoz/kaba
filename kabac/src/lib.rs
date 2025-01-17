@@ -3,7 +3,7 @@
 pub use ast::{AstNode, FunctionParam, Literal};
 pub use error::{Error, Result};
 pub use logos::Span;
-pub use semantic::state::symtable::SymTable;
+pub use semantic::state::SymbolTableData;
 
 mod ast;
 mod error;
@@ -11,7 +11,7 @@ mod lexer;
 mod parser;
 mod semantic;
 
-pub fn compile(src: &str) -> Result<(AstNode, SymTable)> {
+pub fn compile(src: &str) -> Result<(AstNode, SymbolTableData)> {
     let src = normalize_newlines(src);
 
     let tokens = lexer::lex(&src).map_err(|e| Error {

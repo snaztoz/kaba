@@ -1,4 +1,4 @@
-use super::{error::Result, state::SharedState, statement::StatementAnalyzer, types::Type};
+use super::{error::Result, state::AnalyzerState, statement::StatementAnalyzer, types::Type};
 use crate::ast::AstNode;
 
 /// Analyzer for a statement body.
@@ -7,11 +7,11 @@ use crate::ast::AstNode;
 /// call the [`StatementAnalyzer`] on each statement found in current body.
 pub struct BodyAnalyzer<'a> {
     node: &'a AstNode,
-    state: &'a SharedState,
+    state: &'a AnalyzerState,
 }
 
 impl<'a> BodyAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
         Self { node, state }
     }
 }

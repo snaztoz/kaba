@@ -4,7 +4,7 @@
 use self::error::{Error, Result};
 use crate::ast::AstNode;
 use function::{FunctionDeclarationAnalyzer, FunctionDefinitionAnalyzer};
-use state::{symtable::SymTable, SharedState};
+use state::{AnalyzerState, SymbolTableData};
 
 mod assignment;
 mod body;
@@ -24,26 +24,26 @@ mod variable;
 mod while_loop;
 
 /// Provides a quick way to run semantic analysis on a Kaba AST.
-pub fn analyze(program: &AstNode) -> Result<SymTable> {
+pub fn analyze(program: &AstNode) -> Result<SymbolTableData> {
     ProgramAnalyzer::new(program).analyze()
 }
 
 struct ProgramAnalyzer<'a> {
     program: &'a AstNode,
-    state: SharedState,
+    state: AnalyzerState,
 }
 
 impl<'a> ProgramAnalyzer<'a> {
     fn new(program: &'a AstNode) -> Self {
         Self {
             program,
-            state: SharedState::new(),
+            state: AnalyzerState::new(),
         }
     }
 }
 
 impl ProgramAnalyzer<'_> {
-    fn analyze(self) -> Result<SymTable> {
+    fn analyze(self) -> Result<SymbolTableData> {
         for stmt in self.body() {
             self.ensure_global_statement(stmt)?;
             FunctionDeclarationAnalyzer::new(stmt, &self.state).analyze()?;
@@ -53,7 +53,7 @@ impl ProgramAnalyzer<'_> {
             FunctionDefinitionAnalyzer::new(stmt, &self.state).analyze()?;
         }
 
-        Ok(self.state.take_st())
+        Ok(self.state.take_symbols())
     }
 
     fn ensure_global_statement(&self, stmt: &AstNode) -> Result<()> {

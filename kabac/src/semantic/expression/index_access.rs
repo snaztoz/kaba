@@ -3,7 +3,7 @@ use crate::{
     ast::AstNode,
     semantic::{
         error::Result,
-        state::SharedState,
+        state::AnalyzerState,
         types::{assert, Type},
     },
 };
@@ -11,11 +11,11 @@ use crate::{
 /// Analyzer for index access expression rule.
 pub struct IndexAccessAnalyzer<'a> {
     node: &'a AstNode,
-    state: &'a SharedState,
+    state: &'a AnalyzerState,
 }
 
 impl<'a> IndexAccessAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
         Self { node, state }
     }
 }

@@ -2,10 +2,10 @@ use super::{
     body::BodyAnalyzer,
     error::Result,
     expression::ExpressionAnalyzer,
-    state::{scope::ScopeVariant, SharedState},
+    state::{AnalyzerState, ScopeVariant},
     types::{assert, Type},
 };
-use crate::ast::AstNode;
+use crate::ast::{AstNode, ScopeId};
 
 /// Analyzer for conditional branch statement.
 ///
@@ -69,11 +69,11 @@ use crate::ast::AstNode;
 /// ```
 pub struct ConditionalBranchAnalyzer<'a> {
     node: &'a AstNode,
-    state: &'a SharedState,
+    state: &'a AnalyzerState,
 }
 
 impl<'a> ConditionalBranchAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
         Self { node, state }
     }
 }
@@ -85,9 +85,11 @@ impl ConditionalBranchAnalyzer<'_> {
 
         // Check all statements inside the body with a new scope
 
-        let return_t = self.state.with_scope(ScopeVariant::Conditional, || {
-            BodyAnalyzer::new(self.node, self.state).analyze()
-        })?;
+        let return_t = self
+            .state
+            .with_scope(self.scope_id(), ScopeVariant::Conditional, || {
+                BodyAnalyzer::new(self.node, self.state).analyze()
+            })?;
 
         if self.or_else().is_none() {
             // Non-exhaustive branches, set to "Void"
@@ -110,12 +112,14 @@ impl ConditionalBranchAnalyzer<'_> {
                 }
             }
 
-            AstNode::Else { .. } => {
+            AstNode::Else { scope_id, .. } => {
                 // Check all statements inside the body with a new scope
 
-                let branch_return_t = self.state.with_scope(ScopeVariant::Conditional, || {
-                    BodyAnalyzer::new(self.or_else().unwrap(), self.state).analyze()
-                })?;
+                let branch_return_t =
+                    self.state
+                        .with_scope(*scope_id, ScopeVariant::Conditional, || {
+                            BodyAnalyzer::new(self.or_else().unwrap(), self.state).analyze()
+                        })?;
 
                 if return_t != Type::Void && branch_return_t != Type::Void {
                     Ok(return_t)
@@ -131,6 +135,14 @@ impl ConditionalBranchAnalyzer<'_> {
     fn cond(&self) -> &AstNode {
         if let AstNode::If { cond, .. } = self.node {
             cond
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn scope_id(&self) -> ScopeId {
+        if let AstNode::If { scope_id, .. } = self.node {
+            *scope_id
         } else {
             unreachable!()
         }

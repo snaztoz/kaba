@@ -1,7 +1,7 @@
 use super::{
     error::{Error, Result},
     expression::ExpressionAnalyzer,
-    state::SharedState,
+    state::AnalyzerState,
     types::{assert, Type},
 };
 use crate::ast::AstNode;
@@ -49,11 +49,11 @@ use logos::Span;
 /// ```
 pub struct AssignmentAnalyzer<'a> {
     node: &'a AstNode,
-    state: &'a SharedState,
+    state: &'a AnalyzerState,
 }
 
 impl<'a> AssignmentAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
         Self { node, state }
     }
 }
