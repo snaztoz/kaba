@@ -9,17 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Support for JS code generation.
+- Support for JS code generation (by [@snaztoz](https://github.com/snaztoz) in [#57](https://github.com/snaztoz/kaba/pull/57))
 
 ### Changed
 
-- (Internal) main binary is splitted from runtime prototype.
-- (Internal) symbol table's data structure.
+- (Internal) main binary is splitted from runtime prototype (by [@snaztoz](https://github.com/snaztoz) in [#55](https://github.com/snaztoz/kaba/pull/55))
+- (Internal) symbol table's data structure (by [@snaztoz](https://github.com/snaztoz) in [a2ba193](https://github.com/snaztoz/kaba/pull/57/commits/a2ba193abfd2d57162fcc9d85a38c18002770f56))
 
 ### Fixed
 
-- Prevent creating symbols using built-in type names.
-- Prevent function call with mismatched args length.
+- Prevent creating symbols using built-in type names (by [@snaztoz](https://github.com/snaztoz) in [#58](https://github.com/snaztoz/kaba/pull/58))
+- Prevent function call with mismatched args length (by [@snaztoz](https://github.com/snaztoz) in [#59](https://github.com/snaztoz/kaba/pull/59))
 
 ## [0.5.1] - 2025-01-02
 
