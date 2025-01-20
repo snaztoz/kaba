@@ -7,10 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Support for JS code generation.
+
 ### Changed
 
 - (Internal) main binary is splitted from runtime prototype.
 - (Internal) symbol table's data structure.
+
+### Fixed
+
+- Prevent creating symbols using built-in type names.
 
 ## [0.5.1] - 2025-01-02
 
