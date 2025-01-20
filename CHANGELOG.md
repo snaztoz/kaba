@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - (Internal) main binary is splitted from runtime prototype.
+- (Internal) symbol table's data structure.
 
 ## [0.5.1] - 2025-01-02
 
