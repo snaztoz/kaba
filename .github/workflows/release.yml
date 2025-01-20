@@ -47,7 +47,7 @@ jobs:
       - name: Install wasm-pack (if building WASM)
         if: matrix.build == 'wasm'
         run: |
-          curl https://rustwasm.github.io/wasm-pack/installer.sh -sSf | sh
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Build
         if: matrix.build != 'wasm'
