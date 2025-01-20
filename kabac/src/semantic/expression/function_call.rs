@@ -29,6 +29,14 @@ impl FunctionCallAnalyzer<'_> {
         let args_t = self.args_t()?;
         let (params_t, return_t) = fn_t.unwrap_callable();
 
+        if params_t.len() != args_t.len() {
+            return Err(Error::FunctionCallArgumentsLengthMismatch {
+                expected: params_t.len(),
+                get: args_t.len(),
+                span: self.span().clone(),
+            });
+        }
+
         for (param_t, arg_t) in params_t.iter().zip(&args_t) {
             if !arg_t.is_assignable_to(param_t) {
                 return Err(Error::InvalidFunctionCallArgument {

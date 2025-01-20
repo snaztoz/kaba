@@ -104,6 +104,7 @@ fn compile_conditional_branches(stmt: &AstNode, sym_table: &SymbolTableData, buf
 
         match or_else.as_deref() {
             Some(AstNode::If { .. }) => {
+                buff.push_str("else ");
                 compile_conditional_branches(or_else.as_ref().unwrap(), sym_table, buff)
             }
             Some(AstNode::Else { body, .. }) => {
@@ -366,14 +367,14 @@ mod tests {
             fn main() {
                 if !false {
                     if false {} else {}
-                }
+                } else if true {}
             }
         "});
 
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            wrap("function main(){if(!false){if(false){}else{}}}"),
+            wrap("function main(){if(!false){if(false){}else{}}else if(true){}}"),
         );
     }
 

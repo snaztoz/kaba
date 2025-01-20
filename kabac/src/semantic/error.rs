@@ -70,6 +70,12 @@ pub enum Error {
         span: Span,
     },
 
+    FunctionCallArgumentsLengthMismatch {
+        expected: usize,
+        get: usize,
+        span: Span,
+    },
+
     InvalidFunctionCallArgument {
         args: Vec<Type>,
         span: Span,
@@ -98,6 +104,7 @@ impl Error {
             | Self::NonSignableNumberType { span, .. }
             | Self::NonBooleanType { span, .. }
             | Self::UnexpectedStatement { span, .. }
+            | Self::FunctionCallArgumentsLengthMismatch { span, .. }
             | Self::InvalidFunctionCallArgument { span, .. }
             | Self::NonCallableType { span, .. }
             | Self::NonIterableType { span, .. }
@@ -141,6 +148,9 @@ impl Display for Error {
             }
             Self::UnexpectedStatement { stmt_str, .. } => {
                 write!(f, "unexpected {stmt_str}")
+            }
+            Self::FunctionCallArgumentsLengthMismatch { expected, get, .. } => {
+                write!(f, "expecting {expected} argument(s), but get {get} instead")
             }
             Self::InvalidFunctionCallArgument { args, .. } => {
                 write!(
