@@ -360,6 +360,32 @@ mod tests {
     }
 
     #[test]
+    fn prevent_calling_function_with_missing_args() {
+        assert_is_err(indoc! {"
+                fn main() {
+                    foo();
+                }
+
+                fn foo(x: sbyte): sbyte {
+                    return x;
+                }
+            "});
+    }
+
+    #[test]
+    fn prevent_calling_function_with_too_many_args() {
+        assert_is_err(indoc! {"
+                fn main() {
+                    foo(5, 7);
+                }
+
+                fn foo(x: sbyte): sbyte {
+                    return x;
+                }
+            "});
+    }
+
+    #[test]
     fn aliasing_function_identifier() {
         assert_is_ok(indoc! {"
                 fn main() {
