@@ -119,17 +119,13 @@ impl AnalyzerState {
     where
         F: FnOnce() -> Error,
     {
-        if Type::is_basic_t_str(sym) {
-            todo!("handle builtin type as symbol error");
-        };
-
         //
         // Save to scope table
         //
 
         let scope_id = *self.current_scope_id.borrow();
 
-        if self.scopes.has_sym(scope_id, sym) {
+        if Type::is_basic_t_str(sym) || self.scopes.has_sym(scope_id, sym) {
             return Err(err());
         }
 

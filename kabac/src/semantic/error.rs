@@ -125,10 +125,10 @@ impl Display for Error {
                 write!(f, "{lhs} can not be an assignment's lhs")
             }
             Self::SymbolAlreadyExist { sym, .. } => {
-                write!(f, "`{sym}` already exists in current scope")
+                write!(f, "`{sym}` already exists in the current scope")
             }
             Self::SymbolDoesNotExist { sym, .. } => {
-                write!(f, "`{sym}` does not exist in current scope")
+                write!(f, "`{sym}` does not exist in the current scope")
             }
             Self::NonNumberType { .. } => {
                 write!(f, "not a number")
