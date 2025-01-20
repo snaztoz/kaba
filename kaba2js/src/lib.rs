@@ -1,13 +1,15 @@
 use kabac::{AstNode, Literal, Result, SymbolTableData};
 
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
+
 pub fn compile(src: &str) -> Result<String> {
     let (ast, sym_table) = kabac::compile(src)?;
 
     let mut buff = String::new();
     if let AstNode::Program { body, .. } = ast {
-        buff.push_str("function($print){");
         compile_body(&body, &sym_table, &mut buff);
-        buff.push_str("main();}");
+        buff.push_str("main();");
     }
 
     Ok(buff)
@@ -276,7 +278,7 @@ mod tests {
     use indoc::indoc;
 
     fn wrap(program: &str) -> String {
-        format!("function($print){{{program}main();}}")
+        format!("{program}main();")
     }
 
     #[test]

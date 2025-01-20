@@ -6,8 +6,12 @@ license.workspace = true
 authors.workspace = true
 rust-version.workspace = true
 
+[lib]
+crate-type = ["rlib", "cdylib"]
+
 [dependencies]
 kabac = { path = "../kabac" }
+wasm-bindgen = "0.2"
 
 [dev-dependencies]
 indoc = "2.0.4"
