@@ -65,7 +65,7 @@ impl VariableDeclarationAnalyzer<'_> {
             None => val_t,
         };
 
-        self.save_symbol(var_t, self.span())?;
+        self.save_symbol(var_t)?;
 
         Ok(Type::Void)
     }
@@ -81,6 +81,14 @@ impl VariableDeclarationAnalyzer<'_> {
     fn sym_id(&self) -> SymbolId {
         if let AstNode::VariableDeclaration { sym_id, .. } = self.node {
             *sym_id
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn sym_span(&self) -> Span {
+        if let AstNode::VariableDeclaration { sym, .. } = self.node {
+            sym.unwrap_symbol().1
         } else {
             unreachable!()
         }
@@ -110,12 +118,12 @@ impl VariableDeclarationAnalyzer<'_> {
         }
     }
 
-    fn save_symbol(&self, t: Type, span: &Span) -> Result<()> {
+    fn save_symbol(&self, t: Type) -> Result<()> {
         self.state
             .save_entity_or_else(self.sym_id(), &self.sym_string(), t, || {
                 Error::SymbolAlreadyExist {
                     sym: self.sym_string(),
-                    span: span.clone(),
+                    span: self.sym_span().clone(),
                 }
             })
     }
@@ -140,6 +148,15 @@ mod tests {
         assert_is_ok(indoc! {"
                 fn main() {
                     var x = 5;
+                }
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_builtin_type_symbol() {
+        assert_is_err(indoc! {"
+                fn main() {
+                    var int = 5;
                 }
             "});
     }
