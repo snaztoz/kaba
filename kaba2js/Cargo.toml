@@ -7,3 +7,7 @@ authors.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+kabac = { path = "../kabac" }
+
+[dev-dependencies]
+indoc = "2.0.4"

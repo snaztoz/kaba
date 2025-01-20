@@ -7,7 +7,7 @@ use std::{cell::RefCell, collections::HashMap};
 
 pub const GLOBAL_SCOPE_ID: ScopeId = 1;
 
-pub type SymbolTableData = HashMap<SymbolId, SymbolType>;
+pub type SymbolTableData = HashMap<SymbolId, SymbolEntry>;
 type ScopeTableData = HashMap<ScopeId, ScopeEntry>;
 
 pub struct AnalyzerState {
@@ -38,7 +38,7 @@ impl AnalyzerState {
             let entry = self.scopes.get(scope_id).unwrap();
 
             if let Some(sym_id) = entry.symbols.get(sym) {
-                return self.symbols.get(*sym_id);
+                return self.symbols.get(*sym_id).map(|entry| entry.t);
             }
 
             // Traverse upward
@@ -139,7 +139,13 @@ impl AnalyzerState {
         // Save to symbol table
         //
 
-        self.symbols.add(id, SymbolType::Entity(t));
+        self.symbols.add(
+            id,
+            SymbolEntry {
+                name: String::from(sym),
+                t: SymbolType::Entity(t),
+            },
+        );
 
         Ok(())
     }
@@ -182,13 +188,19 @@ impl SymbolTable {
         self.table.take()
     }
 
-    fn get(&self, id: SymbolId) -> Option<SymbolType> {
+    fn get(&self, id: SymbolId) -> Option<SymbolEntry> {
         self.table.borrow().get(&id).cloned()
     }
 
-    fn add(&self, id: SymbolId, t: SymbolType) {
-        self.table.borrow_mut().insert(id, t);
+    fn add(&self, id: SymbolId, entry: SymbolEntry) {
+        self.table.borrow_mut().insert(id, entry);
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct SymbolEntry {
+    pub name: String,
+    pub t: SymbolType,
 }
 
 #[derive(Clone, Debug)]
