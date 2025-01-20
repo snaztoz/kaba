@@ -2,7 +2,7 @@ use super::{
     assignment::AssignmentRunner, error::Result, state::RuntimeState, value::RuntimeValue,
 };
 use crate::runtime::body::BodyRunner;
-use kabac::ast::{AstNode, FunctionParam, Literal};
+use kabac::{AstNode, FunctionParam, Literal};
 use std::collections::HashMap;
 
 pub struct ExpressionRunner<'a> {
@@ -19,7 +19,7 @@ impl<'a> ExpressionRunner<'a> {
 
     fn run_function_call(&self, callee: &'a AstNode, args: &'a [AstNode]) -> Result<RuntimeValue> {
         let f_ptr = match callee {
-            AstNode::Identifier { name, .. } => self.state.get_value(name).unwrap(),
+            AstNode::Symbol { name, .. } => self.state.get_value(name).unwrap(),
 
             AstNode::FunctionCall { callee, args, .. } => self.run_function_call(callee, args)?,
             AstNode::IndexAccess { object, index, .. } => self.run_index_access(object, index)?,
@@ -115,8 +115,8 @@ impl ExpressionRunner<'_> {
                 Ok(self.run_binary_op(&lhs_val, &rhs_val))
             }
 
-            AstNode::Not { child, .. } | AstNode::Neg { child, .. } => {
-                let val = ExpressionRunner::new(child, self.root, self.state).run()?;
+            AstNode::Not { expr, .. } | AstNode::Neg { expr, .. } => {
+                let val = ExpressionRunner::new(expr, self.root, self.state).run()?;
 
                 Ok(self.run_unary_op(&val))
             }
@@ -124,7 +124,7 @@ impl ExpressionRunner<'_> {
             AstNode::FunctionCall { callee, args, .. } => self.run_function_call(callee, args),
             AstNode::IndexAccess { object, index, .. } => self.run_index_access(object, index),
 
-            AstNode::Identifier { name, .. } => self.state.get_value(name),
+            AstNode::Symbol { name, .. } => self.state.get_value(name),
             AstNode::Literal { lit, .. } => self.literal_to_value(lit),
 
             _ => unreachable!(),
@@ -353,10 +353,10 @@ impl ExpressionRunner<'_> {
             if let AstNode::FunctionDefinition { params, .. } = f {
                 self.state.ss.borrow_mut().push(HashMap::new());
 
-                for (i, FunctionParam { id, .. }) in params.iter().enumerate() {
-                    let (id, _) = id.unwrap_identifier();
+                for (i, FunctionParam { sym, .. }) in params.iter().enumerate() {
+                    let (sym, _) = sym.unwrap_symbol();
                     let val = &args[i];
-                    self.state.store_value(&id, val.clone());
+                    self.state.store_value(&sym, val.clone());
                 }
 
                 BodyRunner::new(f, self.root, self.state).run()?;

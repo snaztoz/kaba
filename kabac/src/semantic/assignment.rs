@@ -1,7 +1,7 @@
 use super::{
     error::{Error, Result},
     expression::ExpressionAnalyzer,
-    state::SharedState,
+    state::AnalyzerState,
     types::{assert, Type},
 };
 use crate::ast::AstNode;
@@ -49,11 +49,11 @@ use logos::Span;
 /// ```
 pub struct AssignmentAnalyzer<'a> {
     node: &'a AstNode,
-    state: &'a SharedState,
+    state: &'a AnalyzerState,
 }
 
 impl<'a> AssignmentAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
         Self { node, state }
     }
 }
@@ -78,7 +78,7 @@ impl AssignmentAnalyzer<'_> {
     }
 
     fn analyze_lhs(&self) -> Result<()> {
-        if !self.lhs().is_valid_assignment_lhs() {
+        if !self.lhs().is_lval() {
             return Err(Error::InvalidAssignmentLhs {
                 lhs: self.lhs().to_string(),
                 span: self.lhs().span().clone(),

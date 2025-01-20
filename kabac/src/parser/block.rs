@@ -1,4 +1,4 @@
-use super::{error::ParsingError, statement::StatementParser, stream::TokenStream, Result};
+use super::{error::ParsingError, state::ParserState, statement::StatementParser, Result};
 use crate::{ast::AstNode, lexer::token::TokenKind};
 use logos::Span;
 
@@ -8,29 +8,29 @@ pub struct Block {
 }
 
 pub struct BlockParser<'a> {
-    tokens: &'a TokenStream,
+    state: &'a ParserState<'a>,
 }
 
 impl<'a> BlockParser<'a> {
-    pub const fn new(tokens: &'a TokenStream) -> Self {
-        Self { tokens }
+    pub const fn new(state: &'a ParserState) -> Self {
+        Self { state }
     }
 }
 
 impl BlockParser<'_> {
     pub fn parse(&self) -> Result<Block> {
-        let start = self.tokens.current().span.start;
+        let start = self.state.tokens.current().span.start;
 
         // Expecting "{"
-        self.tokens.skip(&TokenKind::LBrace)?;
+        self.state.tokens.skip(&TokenKind::LBrace)?;
 
         // Expecting statements
         let stmts = self.parse_stmts()?;
 
-        let end = self.tokens.current().span.end;
+        let end = self.state.tokens.current().span.end;
 
         // Expecting "}"
-        self.tokens.skip(&TokenKind::RBrace)?;
+        self.state.tokens.skip(&TokenKind::RBrace)?;
 
         Ok(Block {
             body: stmts,
@@ -41,19 +41,19 @@ impl BlockParser<'_> {
     fn parse_stmts(&self) -> Result<Vec<AstNode>> {
         let mut stmts = vec![];
         loop {
-            if self.tokens.current_is(&TokenKind::RBrace) {
+            if self.state.tokens.current_is(&TokenKind::RBrace) {
                 break;
             }
 
-            if self.tokens.current_is(&TokenKind::Eof) {
+            if self.state.tokens.current_is(&TokenKind::Eof) {
                 return Err(ParsingError::UnexpectedToken {
                     expect: TokenKind::RBrace,
                     found: TokenKind::Eof,
-                    span: self.tokens.current().span,
+                    span: self.state.tokens.current().span,
                 });
             }
 
-            let stmt = StatementParser::new(self.tokens).parse()?;
+            let stmt = StatementParser::new(self.state).parse()?;
             stmts.push(stmt);
         }
 

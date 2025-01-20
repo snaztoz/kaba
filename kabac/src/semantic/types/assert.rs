@@ -103,8 +103,8 @@ where
         Ok(())
     } else {
         Err(Error::InvalidAssignmentType {
-            var_t: to.to_string(),
-            val_t: from.to_string(),
+            var_t: to.clone(),
+            val_t: from.clone(),
             span: err_span(),
         })
     }

@@ -1,5 +1,5 @@
 use super::{
-    block::BlockParser, error::ParsingError, stream::TokenStream, tn::TypeNotationParser, Result,
+    block::BlockParser, error::ParsingError, state::ParserState, tn::TypeNotationParser, Result,
 };
 use crate::{
     ast::{AstNode, FunctionParam},
@@ -7,87 +7,92 @@ use crate::{
 };
 
 pub struct FunctionDefinitionParser<'a> {
-    tokens: &'a TokenStream,
+    state: &'a ParserState<'a>,
 }
 
 impl<'a> FunctionDefinitionParser<'a> {
-    pub const fn new(tokens: &'a TokenStream) -> Self {
-        Self { tokens }
+    pub const fn new(state: &'a ParserState) -> Self {
+        Self { state }
     }
 }
 
 impl FunctionDefinitionParser<'_> {
     pub fn parse(&self) -> Result<AstNode> {
-        let start = self.tokens.current().span.start;
+        let start = self.state.tokens.current().span.start;
 
         // Expecting "fn" keyword
-        self.tokens.skip(&TokenKind::Fn)?;
+        self.state.tokens.skip(&TokenKind::Fn)?;
 
-        // Expecting identifier
-        let id = self.parse_id()?;
+        // Expecting symbol
+        let sym_id = self.state.next_symbol_id();
+        let sym = self.parse_sym()?;
 
         // Expecting "("
-        self.tokens.skip(&TokenKind::LParen)?;
+        self.state.tokens.skip(&TokenKind::LParen)?;
 
         // Expecting >= 0 function parameter declaration(s)
         let params = self.parse_params()?;
 
         // Expecting ")"
-        self.tokens.skip(&TokenKind::RParen)?;
+        self.state.tokens.skip(&TokenKind::RParen)?;
 
         // Expecting return type notation (optional)
         let return_tn = self.parse_return_tn()?;
 
         // Expecting function body
-        let block = BlockParser::new(self.tokens).parse()?;
+        let scope_id = self.state.next_scope_id();
+        let block = BlockParser::new(self.state).parse()?;
 
         Ok(AstNode::FunctionDefinition {
             params,
-            id: Box::new(id),
+            sym: Box::new(sym),
+            sym_id,
             return_tn: return_tn.map(Box::new),
             body: block.body,
+            scope_id,
             span: start..block.span.end,
         })
     }
 
-    fn parse_id(&self) -> Result<AstNode> {
-        let id = match self.tokens.current_kind() {
-            TokenKind::Identifier(name) => Ok(AstNode::Identifier {
+    fn parse_sym(&self) -> Result<AstNode> {
+        let sym = match self.state.tokens.current_kind() {
+            TokenKind::Symbol(name) => Ok(AstNode::Symbol {
                 name,
-                span: self.tokens.current().span,
+                span: self.state.tokens.current().span,
             }),
 
             kind => Err(ParsingError::UnexpectedToken {
-                expect: TokenKind::Identifier(String::from("function_name")),
+                expect: TokenKind::Symbol(String::from("function_name")),
                 found: kind.clone(),
-                span: self.tokens.current().span,
+                span: self.state.tokens.current().span,
             }),
         };
 
-        self.tokens.advance();
+        self.state.tokens.advance();
 
-        id
+        sym
     }
 
     fn parse_params(&self) -> Result<Vec<FunctionParam>> {
         let mut params = vec![];
-        while !self.tokens.current_is(&TokenKind::RParen) {
-            // Expecting identifier
-            let id = self.parse_id()?;
+        while !self.state.tokens.current_is(&TokenKind::RParen) {
+            // Expecting symbol
+            let sym_id = self.state.next_symbol_id();
+            let sym = self.parse_sym()?;
 
             // Expecting ":"
-            self.tokens.skip(&TokenKind::Colon)?;
+            self.state.tokens.skip(&TokenKind::Colon)?;
 
             // Expecting type notation
-            let tn = TypeNotationParser::new(self.tokens).parse()?;
+            let tn = TypeNotationParser::new(self.state).parse()?;
 
-            params.push(FunctionParam { id, tn });
+            params.push(FunctionParam { sym, sym_id, tn });
 
             // Expecting either "," or ")"
 
-            match self.tokens.current_kind() {
+            match self.state.tokens.current_kind() {
                 TokenKind::Comma => {
-                    self.tokens.skip(&TokenKind::Comma)?;
+                    self.state.tokens.skip(&TokenKind::Comma)?;
                     continue;
                 }
 
@@ -97,7 +102,7 @@ impl FunctionDefinitionParser<'_> {
                     return Err(ParsingError::UnexpectedToken {
                         expect: TokenKind::RParen,
                         found: kind.clone(),
-                        span: self.tokens.current().span,
+                        span: self.state.tokens.current().span,
                     });
                 }
             }
@@ -107,13 +112,13 @@ impl FunctionDefinitionParser<'_> {
     }
 
     fn parse_return_tn(&self) -> Result<Option<AstNode>> {
-        if !self.tokens.current_is(&TokenKind::Colon) {
+        if !self.state.tokens.current_is(&TokenKind::Colon) {
             return Ok(None);
         }
 
-        self.tokens.skip(&TokenKind::Colon)?;
+        self.state.tokens.skip(&TokenKind::Colon)?;
 
-        Ok(Some(TypeNotationParser::new(self.tokens).parse()?))
+        Ok(Some(TypeNotationParser::new(self.state).parse()?))
     }
 }
 
@@ -129,13 +134,15 @@ mod tests {
         assert_ast(
             "fn foo() {}",
             AstNode::FunctionDefinition {
-                id: Box::new(AstNode::Identifier {
+                sym: Box::new(AstNode::Symbol {
                     name: String::from("foo"),
                     span: 3..6,
                 }),
+                sym_id: 1,
                 params: vec![],
                 return_tn: None,
                 body: vec![],
+                scope_id: 2,
                 span: 0..11,
             },
         );
@@ -146,34 +153,38 @@ mod tests {
         assert_ast(
             "fn foo(x: int, y: bool,) {}",
             AstNode::FunctionDefinition {
-                id: Box::new(AstNode::Identifier {
+                sym: Box::new(AstNode::Symbol {
                     name: String::from("foo"),
                     span: 3..6,
                 }),
+                sym_id: 1,
                 params: vec![
                     FunctionParam {
-                        id: AstNode::Identifier {
+                        sym: AstNode::Symbol {
                             name: String::from("x"),
                             span: 7..8,
                         },
+                        sym_id: 2,
                         tn: AstNode::TypeNotation {
-                            tn: TypeNotation::Identifier(String::from("int")),
+                            tn: TypeNotation::Symbol(String::from("int")),
                             span: 10..13,
                         },
                     },
                     FunctionParam {
-                        id: AstNode::Identifier {
+                        sym: AstNode::Symbol {
                             name: String::from("y"),
                             span: 15..16,
                         },
+                        sym_id: 3,
                         tn: AstNode::TypeNotation {
-                            tn: TypeNotation::Identifier(String::from("bool")),
+                            tn: TypeNotation::Symbol(String::from("bool")),
                             span: 18..22,
                         },
                     },
                 ],
                 return_tn: None,
                 body: vec![],
+                scope_id: 2,
                 span: 0..27,
             },
         );
@@ -184,32 +195,35 @@ mod tests {
         assert_ast(
             "fn write(x: int) { print(x); }",
             AstNode::FunctionDefinition {
-                id: Box::new(AstNode::Identifier {
+                sym: Box::new(AstNode::Symbol {
                     name: String::from("write"),
                     span: 3..8,
                 }),
+                sym_id: 1,
                 params: vec![FunctionParam {
-                    id: AstNode::Identifier {
+                    sym: AstNode::Symbol {
                         name: String::from("x"),
                         span: 9..10,
                     },
+                    sym_id: 2,
                     tn: AstNode::TypeNotation {
-                        tn: TypeNotation::Identifier(String::from("int")),
+                        tn: TypeNotation::Symbol(String::from("int")),
                         span: 12..15,
                     },
                 }],
                 return_tn: None,
                 body: vec![AstNode::FunctionCall {
-                    callee: Box::new(AstNode::Identifier {
+                    callee: Box::new(AstNode::Symbol {
                         name: String::from("print"),
                         span: 19..24,
                     }),
-                    args: vec![AstNode::Identifier {
+                    args: vec![AstNode::Symbol {
                         name: String::from("x"),
                         span: 25..26,
                     }],
                     span: 19..27,
                 }],
+                scope_id: 2,
                 span: 0..30,
             },
         );
@@ -220,13 +234,14 @@ mod tests {
         assert_ast(
             "fn foo(): int { return 5; }",
             AstNode::FunctionDefinition {
-                id: Box::new(AstNode::Identifier {
+                sym: Box::new(AstNode::Symbol {
                     name: String::from("foo"),
                     span: 3..6,
                 }),
+                sym_id: 1,
                 params: vec![],
                 return_tn: Some(Box::new(AstNode::TypeNotation {
-                    tn: TypeNotation::Identifier(String::from("int")),
+                    tn: TypeNotation::Symbol(String::from("int")),
                     span: 10..13,
                 })),
                 body: vec![AstNode::Return {
@@ -236,6 +251,7 @@ mod tests {
                     })),
                     span: 16..24,
                 }],
+                scope_id: 2,
                 span: 0..27,
             },
         );

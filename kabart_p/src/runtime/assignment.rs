@@ -1,7 +1,7 @@
 use super::{
     error::Result, expression::ExpressionRunner, state::RuntimeState, value::RuntimeValue,
 };
-use kabac::ast::AstNode;
+use kabac::AstNode;
 
 pub struct AssignmentRunner<'a> {
     ast: &'a AstNode,
@@ -174,7 +174,7 @@ impl AssignmentRunner<'_> {
         };
 
         let lhs = match lhs_node.as_ref() {
-            AstNode::Identifier { name, .. } => Lhs::Identifier(name.to_string()),
+            AstNode::Symbol { name, .. } => Lhs::Identifier(name.to_string()),
 
             AstNode::IndexAccess { object, index, .. } => {
                 let arr = ExpressionRunner::new(object, self.root, self.state).run()?;

@@ -2,7 +2,7 @@ use super::{
     body::BodyRunner, error::Result, expression::ExpressionRunner, state::RuntimeState,
     value::RuntimeValue,
 };
-use kabac::ast::AstNode;
+use kabac::AstNode;
 use std::collections::HashMap;
 
 pub struct StatementRunner<'a> {
@@ -27,8 +27,8 @@ impl<'a> StatementRunner<'a> {
 impl StatementRunner<'_> {
     pub fn run(&self) -> Result<()> {
         match self.ast {
-            AstNode::VariableDeclaration { id, val, .. } => {
-                let name = id.unwrap_identifier().0;
+            AstNode::VariableDeclaration { sym, val, .. } => {
+                let name = sym.unwrap_symbol().0;
                 let val = ExpressionRunner::new(val, self.root, self.state).run()?;
                 self.state.store_value(&name, val);
             }
@@ -145,7 +145,7 @@ impl StatementRunner<'_> {
 
     fn run_each(&self) -> Result<()> {
         if let AstNode::Each {
-            iterable, elem_id, ..
+            iterable, elem_sym, ..
         } = self.ast
         {
             let val = ExpressionRunner::new(iterable, self.root, self.state).run()?;
@@ -155,10 +155,10 @@ impl StatementRunner<'_> {
                 unreachable!()
             };
 
-            let id = elem_id.unwrap_identifier().0;
+            let sym = elem_sym.unwrap_symbol().0;
 
             for item in iterable {
-                let scope = HashMap::from([(id.clone(), item.clone())]);
+                let scope = HashMap::from([(sym.clone(), item.clone())]);
 
                 self.state.ss.borrow_mut().push(scope);
                 BodyRunner::new(self.ast, self.root, self.state).run()?;

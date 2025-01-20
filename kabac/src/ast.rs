@@ -6,17 +6,23 @@
 use logos::Span;
 use std::fmt::Display;
 
+pub type Id = u32;
+pub type SymbolId = Id;
+pub type ScopeId = Id;
+
 /// The representation of each node that make up a whole Kaba AST.
 #[derive(Debug, PartialEq)]
 pub enum AstNode {
     // The root of all other AstNode variants
     Program {
         body: Vec<AstNode>,
+        scope_id: ScopeId,
         span: Span,
     },
 
     VariableDeclaration {
-        id: Box<AstNode>,
+        sym: Box<AstNode>,
+        sym_id: SymbolId,
         tn: Option<Box<AstNode>>,
         val: Box<AstNode>,
         span: Span,
@@ -25,25 +31,30 @@ pub enum AstNode {
     If {
         cond: Box<AstNode>,
         body: Vec<AstNode>,
+        scope_id: ScopeId,
         or_else: Option<Box<AstNode>>,
         span: Span,
     },
 
     Else {
         body: Vec<AstNode>,
+        scope_id: ScopeId,
         span: Span,
     },
 
     While {
         cond: Box<AstNode>,
         body: Vec<AstNode>,
+        scope_id: ScopeId,
         span: Span,
     },
 
     Each {
-        elem_id: Box<AstNode>,
+        elem_sym: Box<AstNode>,
+        elem_sym_id: SymbolId,
         iterable: Box<AstNode>,
         body: Vec<AstNode>,
+        scope_id: ScopeId,
         span: Span,
     },
 
@@ -56,10 +67,12 @@ pub enum AstNode {
     },
 
     FunctionDefinition {
-        id: Box<AstNode>,
+        sym: Box<AstNode>,
+        sym_id: SymbolId,
         params: Vec<FunctionParam>,
         return_tn: Option<Box<AstNode>>,
         body: Vec<AstNode>,
+        scope_id: ScopeId,
         span: Span,
     },
 
@@ -188,12 +201,12 @@ pub enum AstNode {
     },
 
     Not {
-        child: Box<AstNode>,
+        expr: Box<AstNode>,
         span: Span,
     },
 
     Neg {
-        child: Box<AstNode>,
+        expr: Box<AstNode>,
         span: Span,
     },
 
@@ -212,11 +225,11 @@ pub enum AstNode {
     // This variant is only used as the span information holder and then will be
     // removed. It won't be present in the final resulting ASTs.
     Group {
-        child: Box<AstNode>,
+        expr: Box<AstNode>,
         span: Span,
     },
 
-    Identifier {
+    Symbol {
         name: String,
         span: Span,
     },
@@ -270,28 +283,28 @@ impl AstNode {
             | Self::FunctionCall { span, .. }
             | Self::IndexAccess { span, .. }
             | Self::Group { span, .. }
-            | Self::Identifier { span, .. }
+            | Self::Symbol { span, .. }
             | Self::TypeNotation { span, .. }
             | Self::Literal { span, .. } => span,
         }
     }
 
-    pub const fn is_valid_assignment_lhs(&self) -> bool {
-        matches!(self, Self::Identifier { .. }) || matches!(self, Self::IndexAccess { .. })
+    pub const fn is_lval(&self) -> bool {
+        matches!(self, Self::Symbol { .. }) || matches!(self, Self::IndexAccess { .. })
     }
 
-    pub fn unwrap_identifier(&self) -> (String, Span) {
-        if let AstNode::Identifier { name, span } = self {
+    pub fn unwrap_symbol(&self) -> (String, Span) {
+        if let AstNode::Symbol { name, span } = self {
             (name.clone(), span.clone())
         } else {
-            panic!("calling `unwrap_identifier` on non-identifier AstNode: {self:?}")
+            unreachable!()
         }
     }
 
     pub fn unwrap_group(self) -> AstNode {
-        if let AstNode::Group { child, .. } = self {
+        if let AstNode::Group { expr, .. } = self {
             // unwrap recursively
-            child.unwrap_group()
+            expr.unwrap_group()
         } else {
             self
         }
@@ -400,8 +413,8 @@ impl Display for AstNode {
             Self::IndexAccess { .. } => {
                 write!(f, "index access expression")
             }
-            Self::Identifier { .. } => {
-                write!(f, "identifier")
+            Self::Symbol { .. } => {
+                write!(f, "symbol")
             }
             Self::TypeNotation { .. } => {
                 write!(f, "type notation")
@@ -417,16 +430,19 @@ impl Display for AstNode {
 
 #[derive(Debug, PartialEq)]
 pub struct FunctionParam {
-    pub id: AstNode,
+    pub sym: AstNode,
+    pub sym_id: SymbolId,
     pub tn: AstNode,
 }
 
 #[derive(Debug, PartialEq)]
 pub enum TypeNotation {
-    Identifier(String),
+    Symbol(String),
+
     Array {
         elem_tn: Box<AstNode>,
     },
+
     Callable {
         params_tn: Vec<AstNode>,
         return_tn: Box<AstNode>,
@@ -436,7 +452,7 @@ pub enum TypeNotation {
 impl Display for TypeNotation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Identifier(id) => write!(f, "{id}"),
+            Self::Symbol(sym) => write!(f, "{sym}"),
 
             Self::Array { elem_tn } => {
                 write!(f, "[]{elem_tn}")

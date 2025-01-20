@@ -1,5 +1,5 @@
 [workspace]
-members = ["kaba", "kabac", "kabart_p"]
+members = ["kaba", "kaba2js", "kabac", "kabart_p"]
 resolver = "2"
 
 [workspace.package]

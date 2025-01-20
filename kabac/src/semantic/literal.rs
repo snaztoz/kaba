@@ -1,7 +1,7 @@
 use super::{
     error::Result,
     expression::ExpressionAnalyzer,
-    state::SharedState,
+    state::AnalyzerState,
     tn::TypeNotationAnalyzer,
     types::{assert, FloatType, IntType, Type},
 };
@@ -10,11 +10,11 @@ use crate::ast::Literal;
 /// Analyzer for a literal expressions, such as numbers or arrays.
 pub struct LiteralAnalyzer<'a> {
     lit: &'a Literal,
-    state: &'a SharedState,
+    state: &'a AnalyzerState,
 }
 
 impl<'a> LiteralAnalyzer<'a> {
-    pub const fn new(lit: &'a Literal, state: &'a SharedState) -> Self {
+    pub const fn new(lit: &'a Literal, state: &'a AnalyzerState) -> Self {
         Self { lit, state }
     }
 }

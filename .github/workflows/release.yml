@@ -19,14 +19,15 @@ jobs:
           - build: linux
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-
           - build: macos
             os: macos-latest
             target: x86_64-apple-darwin
-
           - build: windows
             os: windows-latest
             target: x86_64-pc-windows-msvc
+          - build: wasm
+            os: ubuntu-latest
+            target: wasm32-unknown-unknown
 
     steps:
       - name: Checkout
@@ -40,28 +41,47 @@ jobs:
         run: rustup show
 
       - name: Add target for cross-compilation
+        if: matrix.build != 'wasm'
         run: rustup target add ${{ matrix.target }}
 
+      - name: Install wasm-pack (if building WASM)
+        if: matrix.build == 'wasm'
+        run: |
+          curl https://rustwasm.github.io/wasm-pack/installer.sh -sSf | sh
+
       - name: Build
+        if: matrix.build != 'wasm'
         uses: actions-rs/cargo@v1
         with:
           use-cross: true
           command: build
           args: --verbose --release --target ${{ matrix.target }}
 
+      - name: Build for WASM
+        if: matrix.build == 'wasm'
+        run: |
+          wasm-pack build --target web --release
+          echo "WASM_ASSET=pkg" >> $GITHUB_ENV
+
       - name: Build archive
         shell: bash
         run: |
           binary_name="kaba"
 
+          if [ "${{ matrix.build }}" = "wasm" ]; then
+            tar -czf "wasm-pkg-${{ env.VERSION }}.tar.gz" ${{ env.WASM_ASSET }}
+            echo "ASSET=wasm-pkg-${{ env.VERSION }}.tar.gz" >> $GITHUB_ENV
+            exit 0
+          fi
+
           dirname="$binary_name-${{ env.VERSION }}-${{ matrix.target }}"
           mkdir "$dirname"
+
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             mv "target/${{ matrix.target }}/release/$binary_name.exe" "$dirname"
           else
             mv "target/${{ matrix.target }}/release/$binary_name" "$dirname"
           fi
-
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             7z a "$dirname.zip" "$dirname"
             echo "ASSET=$dirname.zip" >> $GITHUB_ENV

@@ -2,6 +2,8 @@
 
 use logos::Span;
 
+pub type Result<'a, T> = std::result::Result<T, Error>;
+
 /// Wraps error variants that may occur during the compilation process,
 /// alongside with the information of its source code file path and the source
 /// code itself.

@@ -1,6 +1,6 @@
 use super::{
     error::{ParsingError, Result},
-    stream::TokenStream,
+    state::ParserState,
 };
 use crate::{
     ast::{AstNode, TypeNotation},
@@ -8,25 +8,25 @@ use crate::{
 };
 
 pub struct TypeNotationParser<'a> {
-    tokens: &'a TokenStream,
+    state: &'a ParserState<'a>,
 }
 
 impl<'a> TypeNotationParser<'a> {
-    pub const fn new(tokens: &'a TokenStream) -> Self {
-        Self { tokens }
+    pub const fn new(state: &'a ParserState) -> Self {
+        Self { state }
     }
 }
 
 impl TypeNotationParser<'_> {
     pub fn parse(&self) -> Result<AstNode> {
-        match self.tokens.current_kind() {
-            TokenKind::Identifier(name) => {
+        match self.state.tokens.current_kind() {
+            TokenKind::Symbol(name) => {
                 let tn = AstNode::TypeNotation {
-                    tn: TypeNotation::Identifier(name),
-                    span: self.tokens.current().span.clone(),
+                    tn: TypeNotation::Symbol(name),
+                    span: self.state.tokens.current().span.clone(),
                 };
 
-                self.tokens.advance();
+                self.state.tokens.advance();
 
                 Ok(tn)
             }
@@ -35,21 +35,21 @@ impl TypeNotationParser<'_> {
             TokenKind::LParen => self.parse_function_tn(),
 
             _ => Err(ParsingError::UnexpectedToken {
-                expect: TokenKind::Identifier(String::from("foo")),
-                found: self.tokens.current().kind.clone(),
-                span: self.tokens.current().span,
+                expect: TokenKind::Symbol(String::from("foo")),
+                found: self.state.tokens.current().kind.clone(),
+                span: self.state.tokens.current().span,
             }),
         }
     }
 
     fn parse_array_tn(&self) -> Result<AstNode> {
-        let start = self.tokens.current().span.start;
+        let start = self.state.tokens.current().span.start;
 
         // Expecting "["
-        self.tokens.skip(&TokenKind::LBrack)?;
+        self.state.tokens.skip(&TokenKind::LBrack)?;
 
         // Expecting "]"
-        self.tokens.skip(&TokenKind::RBrack)?;
+        self.state.tokens.skip(&TokenKind::RBrack)?;
 
         // Parse array element type
         let elem_tn = self.parse()?;
@@ -65,22 +65,22 @@ impl TypeNotationParser<'_> {
     }
 
     fn parse_function_tn(&self) -> Result<AstNode> {
-        let start = self.tokens.current().span.start;
+        let start = self.state.tokens.current().span.start;
 
         // Expecting "("
-        self.tokens.skip(&TokenKind::LParen)?;
+        self.state.tokens.skip(&TokenKind::LParen)?;
 
         // Expecting parameter type notation(s)
         let mut params_tn = vec![];
-        while !self.tokens.current_is(&TokenKind::RParen) {
+        while !self.state.tokens.current_is(&TokenKind::RParen) {
             // Expecting type notation
             let tn = self.parse()?;
 
             params_tn.push(tn);
 
-            match self.tokens.current_kind() {
+            match self.state.tokens.current_kind() {
                 TokenKind::Comma => {
-                    self.tokens.skip(&TokenKind::Comma)?;
+                    self.state.tokens.skip(&TokenKind::Comma)?;
                     continue;
                 }
 
@@ -90,17 +90,17 @@ impl TypeNotationParser<'_> {
                     return Err(ParsingError::UnexpectedToken {
                         expect: TokenKind::RParen,
                         found: kind.clone(),
-                        span: self.tokens.current().span,
+                        span: self.state.tokens.current().span,
                     });
                 }
             }
         }
 
         // Expecting ")"
-        self.tokens.skip(&TokenKind::RParen)?;
+        self.state.tokens.skip(&TokenKind::RParen)?;
 
         // Expecting "->"
-        self.tokens.skip(&TokenKind::RightPoint)?;
+        self.state.tokens.skip(&TokenKind::RightPoint)?;
 
         // Expecting return type notation
         let return_tn = Box::new(self.parse()?);

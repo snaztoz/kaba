@@ -5,17 +5,13 @@ pub mod assert;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd)]
 pub enum Type {
+    // Basic types
     Void,
-
-    // Primitive types
     Bool,
     Int(IntType),
     Float(FloatType),
     Char,
     String,
-
-    // Other types (e.g. class)
-    Identifier(String),
 
     // Compound types
     Array {
@@ -25,9 +21,35 @@ pub enum Type {
         params_t: Vec<Self>,
         return_t: Box<Self>,
     },
+
+    // Other types (e.g. class)
+    Symbol(String),
 }
 
 impl Type {
+    pub const fn is_basic_t(&self) -> bool {
+        matches!(
+            self,
+            Self::Void | Self::Bool | Self::Int(_) | Self::Float(_) | Self::Char | Self::String
+        )
+    }
+
+    pub fn is_basic_t_str(sym: &str) -> bool {
+        matches!(
+            sym,
+            "void"
+                | "bool"
+                | "sbyte"
+                | "short"
+                | "int"
+                | "long"
+                | "float"
+                | "double"
+                | "char"
+                | "string"
+        )
+    }
+
     pub fn is_compatible_with(&self, other: &Type) -> bool {
         if self == other {
             return true;
@@ -145,17 +167,17 @@ impl<'a> From<&'a AstNode> for Type {
     fn from(value: &'a AstNode) -> Self {
         if let AstNode::TypeNotation { tn, .. } = value {
             match tn {
-                TypeNotation::Identifier(id) if id == "void" => Self::Void,
-                TypeNotation::Identifier(id) if id == "bool" => Self::Bool,
-                TypeNotation::Identifier(id) if id == "sbyte" => Self::Int(IntType::SByte),
-                TypeNotation::Identifier(id) if id == "short" => Self::Int(IntType::Short),
-                TypeNotation::Identifier(id) if id == "int" => Self::Int(IntType::Int),
-                TypeNotation::Identifier(id) if id == "long" => Self::Int(IntType::Long),
-                TypeNotation::Identifier(id) if id == "float" => Self::Float(FloatType::Float),
-                TypeNotation::Identifier(id) if id == "double" => Self::Float(FloatType::Double),
-                TypeNotation::Identifier(id) if id == "char" => Self::Char,
-                TypeNotation::Identifier(id) if id == "string" => Self::String,
-                TypeNotation::Identifier(id) => Self::Identifier(id.to_string()),
+                TypeNotation::Symbol(sym) if sym == "void" => Self::Void,
+                TypeNotation::Symbol(sym) if sym == "bool" => Self::Bool,
+                TypeNotation::Symbol(sym) if sym == "sbyte" => Self::Int(IntType::SByte),
+                TypeNotation::Symbol(sym) if sym == "short" => Self::Int(IntType::Short),
+                TypeNotation::Symbol(sym) if sym == "int" => Self::Int(IntType::Int),
+                TypeNotation::Symbol(sym) if sym == "long" => Self::Int(IntType::Long),
+                TypeNotation::Symbol(sym) if sym == "float" => Self::Float(FloatType::Float),
+                TypeNotation::Symbol(sym) if sym == "double" => Self::Float(FloatType::Double),
+                TypeNotation::Symbol(sym) if sym == "char" => Self::Char,
+                TypeNotation::Symbol(sym) if sym == "string" => Self::String,
+                TypeNotation::Symbol(sym) => Self::Symbol(sym.clone()),
 
                 TypeNotation::Array { elem_tn } => Self::Array {
                     elem_t: Box::new(Self::from(elem_tn.as_ref())),
@@ -190,7 +212,7 @@ impl Display for Type {
             Self::Char => write!(f, "char"),
             Self::String => write!(f, "string"),
 
-            Self::Identifier(id) => write!(f, "{id}"),
+            Self::Symbol(id) => write!(f, "{id}"),
 
             Self::Array { elem_t, .. } => write!(f, "[]{elem_t}"),
 

@@ -2,10 +2,10 @@ use super::{
     body::BodyAnalyzer,
     error::Result,
     expression::ExpressionAnalyzer,
-    state::{scope::ScopeVariant, SharedState},
+    state::{AnalyzerState, ScopeVariant},
     types::{assert, Type},
 };
-use crate::ast::AstNode;
+use crate::ast::{AstNode, ScopeId};
 
 /// Analyzer for `while` loop statement.
 ///
@@ -41,11 +41,11 @@ use crate::ast::AstNode;
 /// ```
 pub struct WhileLoopAnalyzer<'a> {
     node: &'a AstNode,
-    state: &'a SharedState,
+    state: &'a AnalyzerState,
 }
 
 impl<'a> WhileLoopAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
         Self { node, state }
     }
 }
@@ -59,9 +59,10 @@ impl WhileLoopAnalyzer<'_> {
 
         // Check all statements inside the body with a new scope
 
-        self.state.with_scope(ScopeVariant::Loop, || {
-            BodyAnalyzer::new(self.node, self.state).analyze()
-        })?;
+        self.state
+            .with_scope(self.scope_id(), ScopeVariant::Loop, || {
+                BodyAnalyzer::new(self.node, self.state).analyze()
+            })?;
 
         Ok(Type::Void)
     }
@@ -69,6 +70,14 @@ impl WhileLoopAnalyzer<'_> {
     fn cond(&self) -> &AstNode {
         if let AstNode::While { cond, .. } = self.node {
             cond
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn scope_id(&self) -> ScopeId {
+        if let AstNode::While { scope_id, .. } = self.node {
+            *scope_id
         } else {
             unreachable!()
         }

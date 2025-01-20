@@ -1,11 +1,11 @@
 use super::{
     error::{Error, Result},
     expression::ExpressionAnalyzer,
-    state::SharedState,
+    state::AnalyzerState,
     tn::TypeNotationAnalyzer,
     types::{assert, FloatType, IntType, Type},
 };
-use crate::ast::AstNode;
+use crate::ast::{AstNode, SymbolId};
 use logos::Span;
 
 /// Analyzer for variable declaration statement.
@@ -40,11 +40,11 @@ use logos::Span;
 /// ```
 pub struct VariableDeclarationAnalyzer<'a> {
     node: &'a AstNode,
-    state: &'a SharedState,
+    state: &'a AnalyzerState,
 }
 
 impl<'a> VariableDeclarationAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
         Self { node, state }
     }
 }
@@ -65,14 +65,22 @@ impl VariableDeclarationAnalyzer<'_> {
             None => val_t,
         };
 
-        self.save_symbol(&self.id_string(), var_t, self.span())?;
+        self.save_symbol(var_t, self.span())?;
 
         Ok(Type::Void)
     }
 
-    fn id_string(&self) -> String {
-        if let AstNode::VariableDeclaration { id, .. } = self.node {
-            id.unwrap_identifier().0
+    fn sym_string(&self) -> String {
+        if let AstNode::VariableDeclaration { sym, .. } = self.node {
+            sym.unwrap_symbol().0
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn sym_id(&self) -> SymbolId {
+        if let AstNode::VariableDeclaration { sym_id, .. } = self.node {
+            *sym_id
         } else {
             unreachable!()
         }
@@ -102,11 +110,13 @@ impl VariableDeclarationAnalyzer<'_> {
         }
     }
 
-    fn save_symbol(&self, id: &str, t: Type, span: &Span) -> Result<()> {
+    fn save_symbol(&self, t: Type, span: &Span) -> Result<()> {
         self.state
-            .save_sym_or_else(id, t, || Error::SymbolAlreadyExist {
-                id: String::from(id),
-                span: span.clone(),
+            .save_entity_or_else(self.sym_id(), &self.sym_string(), t, || {
+                Error::SymbolAlreadyExist {
+                    sym: self.sym_string(),
+                    span: span.clone(),
+                }
             })
     }
 }

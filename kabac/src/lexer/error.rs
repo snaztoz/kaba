@@ -6,7 +6,7 @@ pub type Result<T> = std::result::Result<T, LexingError>;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum LexingError {
-    InvalidIdentifier {
+    InvalidSymbol {
         token: String,
         span: Span,
     },
@@ -41,7 +41,7 @@ pub enum LexingError {
 impl LexingError {
     pub fn span(&self) -> Span {
         match self {
-            Self::InvalidIdentifier { span, .. }
+            Self::InvalidSymbol { span, .. }
             | Self::UnexpectedEof { span, .. }
             | Self::UnexpectedToken { span, .. }
             | Self::UnknownToken { span, .. }
@@ -56,8 +56,8 @@ impl LexingError {
 impl Display for LexingError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::InvalidIdentifier { token, .. } => {
-                write!(f, "not a valid identifier: `{token}`")
+            Self::InvalidSymbol { token, .. } => {
+                write!(f, "not a valid symbol: `{token}`")
             }
             Self::UnexpectedEof { .. } => {
                 write!(f, "not expecting an end-of-file (EOF)")

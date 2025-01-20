@@ -3,7 +3,7 @@ use crate::{
     ast::AstNode,
     semantic::{
         error::{Error, Result},
-        state::SharedState,
+        state::AnalyzerState,
         types::{assert, Type},
     },
 };
@@ -12,11 +12,11 @@ use logos::Span;
 /// Analyzer for function call expression rule.
 pub struct FunctionCallAnalyzer<'a> {
     node: &'a AstNode,
-    state: &'a SharedState,
+    state: &'a AnalyzerState,
 }
 
 impl<'a> FunctionCallAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
         Self { node, state }
     }
 }

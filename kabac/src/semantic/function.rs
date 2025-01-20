@@ -1,24 +1,24 @@
 use super::{
     body::BodyAnalyzer,
     error::{Error, Result},
-    state::{scope::ScopeVariant, SharedState},
+    state::{AnalyzerState, ScopeVariant},
     tn::TypeNotationAnalyzer,
     types::Type,
 };
-use crate::ast::{AstNode, FunctionParam};
+use crate::ast::{AstNode, FunctionParam, SymbolId};
 use logos::Span;
 
 /// Analyzer for function declarations.
 ///
 /// This analyzer assumes that the data from function declarations (i.e.
-/// function signature informations) are already stored in the [`SharedState`].
+/// function signature informations) are already stored in the [`AnalyzerState`].
 pub struct FunctionDeclarationAnalyzer<'a> {
     node: &'a AstNode,
-    state: &'a SharedState,
+    state: &'a AnalyzerState,
 }
 
 impl<'a> FunctionDeclarationAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
         Self { node, state }
     }
 }
@@ -32,7 +32,7 @@ impl FunctionDeclarationAnalyzer<'_> {
         let return_t = Box::new(self.return_t());
 
         let fn_t = Type::Callable { params_t, return_t };
-        self.save_fn_t_to_stack(fn_t.clone())?;
+        self.save_fn_t(fn_t.clone())?;
 
         Ok(fn_t)
     }
@@ -68,19 +68,29 @@ impl FunctionDeclarationAnalyzer<'_> {
         self.return_tn().map_or(Type::Void, Type::from)
     }
 
-    // Save function information to the ScopeStack.
-    fn save_fn_t_to_stack(&self, fn_t: Type) -> Result<()> {
-        let (id, id_span) = self.id().unwrap_identifier();
+    // Save function information to the scope.
+    fn save_fn_t(&self, fn_t: Type) -> Result<()> {
+        let (sym, sym_span) = self.sym().unwrap_symbol();
         self.state
-            .save_sym_or_else(&id, fn_t.clone(), || Error::SymbolAlreadyExist {
-                id: id.clone(),
-                span: id_span,
+            .save_entity_or_else(self.sym_id(), &sym, fn_t.clone(), || {
+                Error::SymbolAlreadyExist {
+                    sym: sym.clone(),
+                    span: sym_span,
+                }
             })
     }
 
-    fn id(&self) -> &AstNode {
-        if let AstNode::FunctionDefinition { id, .. } = self.node {
-            id
+    fn sym(&self) -> &AstNode {
+        if let AstNode::FunctionDefinition { sym, .. } = self.node {
+            sym
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn sym_id(&self) -> SymbolId {
+        if let AstNode::FunctionDefinition { sym_id, .. } = self.node {
+            *sym_id
         } else {
             unreachable!()
         }
@@ -106,14 +116,14 @@ impl FunctionDeclarationAnalyzer<'_> {
 /// Analyzer for function definition.
 ///
 /// This analyzer assumes that the data from function declarations (i.e.
-/// function signature informations) are already stored in the ScopeStack.
+/// function signature informations) are already stored in the scope table.
 pub struct FunctionDefinitionAnalyzer<'a> {
     node: &'a AstNode,
-    state: &'a SharedState,
+    state: &'a AnalyzerState,
 }
 
 impl<'a> FunctionDefinitionAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
         Self { node, state }
     }
 }
@@ -122,6 +132,7 @@ impl FunctionDefinitionAnalyzer<'_> {
     pub fn analyze(&self) -> Result<Type> {
         let return_t = self.fn_t().unwrap_callable().1;
         self.state.with_scope(
+            self.scope_id(),
             ScopeVariant::Function {
                 return_t: return_t.clone(),
             },
@@ -139,7 +150,7 @@ impl FunctionDefinitionAnalyzer<'_> {
                     return Err(Error::ReturnTypeMismatch {
                         expected: return_t,
                         get: Type::Void,
-                        span: self.id().span().clone(),
+                        span: self.sym().span().clone(),
                     });
                 }
 
@@ -150,51 +161,63 @@ impl FunctionDefinitionAnalyzer<'_> {
         Ok(Type::Void)
     }
 
-    fn save_params_to_stack(&self, params: &[((String, Span), Type)]) -> Result<()> {
-        for ((id, id_span), t) in params {
+    fn save_params_to_stack(&self, params: &[((SymbolId, String, Span), Type)]) -> Result<()> {
+        for ((sym_id, sym, sym_span), t) in params {
             self.state
-                .save_sym_or_else(id, t.clone(), || Error::SymbolAlreadyExist {
-                    id: id.clone(),
-                    span: id_span.clone(),
+                .save_entity_or_else(*sym_id, sym, t.clone(), || Error::SymbolAlreadyExist {
+                    sym: sym.clone(),
+                    span: sym_span.clone(),
                 })?;
         }
 
         Ok(())
     }
 
-    fn params(&self) -> Vec<((String, Span), Type)> {
+    fn params(&self) -> Vec<((SymbolId, String, Span), Type)> {
+        let params_sym = self.params_sym();
         let params_t = self.fn_t().unwrap_callable().0;
-        let params_id = self.params_id();
 
-        params_id
+        params_sym
             .iter()
             .cloned()
             .zip(params_t.iter().cloned())
             .collect::<Vec<_>>()
     }
 
-    fn id(&self) -> &AstNode {
-        if let AstNode::FunctionDefinition { id, .. } = self.node {
-            id
+    fn sym(&self) -> &AstNode {
+        if let AstNode::FunctionDefinition { sym, .. } = self.node {
+            sym
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn scope_id(&self) -> SymbolId {
+        if let AstNode::FunctionDefinition { scope_id, .. } = self.node {
+            *scope_id
         } else {
             unreachable!()
         }
     }
 
     fn fn_t(&self) -> Type {
-        if let AstNode::FunctionDefinition { id, .. } = self.node {
-            let id_str = &id.unwrap_identifier().0;
-            self.state.get_sym_t(id_str).unwrap()
+        if let AstNode::FunctionDefinition { sym, .. } = self.node {
+            let sym_string = &sym.unwrap_symbol().0;
+            self.state.get_sym_t(sym_string).unwrap().unwrap_entity()
         } else {
             unreachable!()
         }
     }
 
-    fn params_id(&self) -> Vec<(String, Span)> {
+    fn params_sym(&self) -> Vec<(SymbolId, String, Span)> {
         if let AstNode::FunctionDefinition { params, .. } = self.node {
             params
                 .iter()
-                .map(|p| p.id.unwrap_identifier())
+                .map(|p| {
+                    let id = p.sym_id;
+                    let (sym, span) = p.sym.unwrap_symbol();
+                    (id, sym, span)
+                })
                 .collect::<Vec<_>>()
         } else {
             unreachable!()
@@ -324,7 +347,7 @@ mod tests {
     }
 
     #[test]
-    fn prevent_indocompatible_int_type_on_function_return_value() {
+    fn prevent_incompatible_int_type_on_function_return_value() {
         assert_is_err(indoc! {"
                 fn main() {
                     var x: int = foo();

@@ -1,6 +1,6 @@
 use super::{
     error::{Error, Result},
-    state::SharedState,
+    state::AnalyzerState,
     types::Type,
 };
 use crate::ast::AstNode;
@@ -8,13 +8,13 @@ use logos::Span;
 
 pub struct TypeNotationAnalyzer<'a> {
     node: &'a AstNode,
-    state: &'a SharedState,
+    state: &'a AnalyzerState,
 
     void_allowed: bool,
 }
 
 impl<'a> TypeNotationAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
         Self {
             node,
             state,
@@ -33,7 +33,7 @@ impl TypeNotationAnalyzer<'_> {
         // The provided type must exist in the current scope
         if !self.state.has_t(&self.t()) {
             return Err(Error::SymbolDoesNotExist {
-                id: self.t().to_string(),
+                sym: self.t().to_string(),
                 span: self.span().clone(),
             });
         }

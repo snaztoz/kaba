@@ -3,7 +3,7 @@ use super::{
     each_loop::EachLoopAnalyzer,
     error::{Error, Result},
     expression::ExpressionAnalyzer,
-    state::SharedState,
+    state::AnalyzerState,
     types::{assert, Type},
     variable::VariableDeclarationAnalyzer,
     while_loop::WhileLoopAnalyzer,
@@ -18,11 +18,11 @@ use logos::Span;
 /// as the AssignmentAnalyzer.
 pub struct StatementAnalyzer<'a> {
     node: &'a AstNode,
-    state: &'a SharedState,
+    state: &'a AnalyzerState,
 }
 
 impl<'a> StatementAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
         Self { node, state }
     }
 }
@@ -41,9 +41,9 @@ impl StatementAnalyzer<'_> {
 
             AstNode::Break { span } | AstNode::Continue { span } => self.analyze_loop_control(span),
 
-            AstNode::FunctionDefinition { id, .. } => Err(Error::UnexpectedStatement {
+            AstNode::FunctionDefinition { sym, .. } => Err(Error::UnexpectedStatement {
                 stmt_str: self.node.to_string(),
-                span: id.span().clone(),
+                span: sym.span().clone(),
             }),
 
             AstNode::Return { expr, span } => self.analyze_return(expr, span),

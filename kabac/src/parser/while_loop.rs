@@ -1,34 +1,36 @@
-use super::{block::BlockParser, expression::ExpressionParser, stream::TokenStream, Result};
+use super::{block::BlockParser, expression::ExpressionParser, state::ParserState, Result};
 use crate::{ast::AstNode, lexer::token::TokenKind};
 
 pub struct WhileLoopParser<'a> {
-    tokens: &'a TokenStream,
+    state: &'a ParserState<'a>,
 }
 
 impl<'a> WhileLoopParser<'a> {
-    pub const fn new(tokens: &'a TokenStream) -> Self {
-        Self { tokens }
+    pub const fn new(state: &'a ParserState) -> Self {
+        Self { state }
     }
 }
 
 impl WhileLoopParser<'_> {
     pub fn parse(&self) -> Result<AstNode> {
-        let start = self.tokens.current().span.start;
+        let start = self.state.tokens.current().span.start;
 
         // Expecting "while" keyword
-        self.tokens.skip(&TokenKind::While)?;
+        self.state.tokens.skip(&TokenKind::While)?;
 
         // Expecting expression
-        let cond = ExpressionParser::new(self.tokens).parse()?;
+        let cond = ExpressionParser::new(self.state).parse()?;
 
         // Expecting block
-        let block = BlockParser::new(self.tokens).parse()?;
+        let scope_id = self.state.next_scope_id();
+        let block = BlockParser::new(self.state).parse()?;
 
         let end = block.span.end;
 
         Ok(AstNode::While {
             cond: Box::new(cond),
             body: block.body,
+            scope_id,
             span: start..end,
         })
     }
@@ -51,6 +53,7 @@ mod tests {
                     span: 6..10,
                 }),
                 body: vec![],
+                scope_id: 2,
                 span: 0..13,
             },
         );
@@ -69,6 +72,7 @@ mod tests {
                     AstNode::Continue { span: 13..21 },
                     AstNode::Break { span: 23..28 },
                 ],
+                scope_id: 2,
                 span: 0..31,
             },
         );

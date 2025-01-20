@@ -4,7 +4,7 @@ use super::{
     assignment::AssignmentAnalyzer,
     error::{Error, Result},
     literal::LiteralAnalyzer,
-    state::SharedState,
+    state::AnalyzerState,
     types::{assert, FloatType, IntType, Type},
 };
 use crate::ast::AstNode;
@@ -17,11 +17,11 @@ mod index_access;
 /// Analyzer for expression rules.
 pub struct ExpressionAnalyzer<'a> {
     node: &'a AstNode,
-    state: &'a SharedState,
+    state: &'a AnalyzerState,
 }
 
 impl<'a> ExpressionAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a SharedState) -> Self {
+    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
         Self { node, state }
     }
 }
@@ -55,17 +55,17 @@ impl ExpressionAnalyzer<'_> {
             | AstNode::Div { lhs, rhs, .. }
             | AstNode::Mod { lhs, rhs, .. } => self.analyze_binary_math_expr(lhs, rhs),
 
-            AstNode::Not { child, .. } => self.analyze_logical_not_expr(child),
-            AstNode::Neg { child, .. } => self.analyze_neg_expr(child),
+            AstNode::Not { expr, .. } => self.analyze_logical_not_expr(expr),
+            AstNode::Neg { expr, .. } => self.analyze_neg_expr(expr),
 
-            AstNode::Identifier { name, span } => {
-                self.state
-                    .get_sym_t(name)
-                    .ok_or_else(|| Error::SymbolDoesNotExist {
-                        id: String::from(name),
-                        span: span.clone(),
-                    })
-            }
+            AstNode::Symbol { name, span } => self
+                .state
+                .get_sym_t(name)
+                .ok_or_else(|| Error::SymbolDoesNotExist {
+                    sym: String::from(name),
+                    span: span.clone(),
+                })
+                .map(|st| st.unwrap_entity()),
 
             AstNode::Literal { lit, .. } => LiteralAnalyzer::new(lit, self.state).analyze(),
 
