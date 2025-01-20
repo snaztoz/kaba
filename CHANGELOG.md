@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Prevent creating symbols using built-in type names.
+- Prevent function call with mismatched args length.
 
 ## [0.5.1] - 2025-01-02
 
