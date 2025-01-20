@@ -60,8 +60,8 @@ jobs:
       - name: Build for WASM
         if: matrix.build == 'wasm'
         run: |
-          wasm-pack build --target web --release
-          echo "WASM_ASSET=pkg" >> $GITHUB_ENV
+          wasm-pack build --target web --release ./kaba2js
+          echo "WASM_ASSET=./kaba2js/pkg" >> $GITHUB_ENV
 
       - name: Build archive
         shell: bash
