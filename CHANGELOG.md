@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2] - 2025-01-20
+
 ### Added
 
 - Support for JS code generation (by [@snaztoz](https://github.com/snaztoz) in [#57](https://github.com/snaztoz/kaba/pull/57))
