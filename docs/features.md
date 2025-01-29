@@ -236,7 +236,7 @@ Because the size is not included in the type notation, an integer array like `[1
 Kaba can infer the type of an array:
 
 ```text
-fn main {
+fn main() {
     var arr = [bool false, true, true];
 
     // The type of `arr` is `[]bool`
