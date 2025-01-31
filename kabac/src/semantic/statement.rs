@@ -1,7 +1,7 @@
 use super::{
     conditional::ConditionalBranchAnalyzer,
     each_loop::EachLoopAnalyzer,
-    error::{Error, Result},
+    error::{Result, SemanticError, SemanticErrorVariant},
     expression::ExpressionAnalyzer,
     state::AnalyzerState,
     types::{assert, Type},
@@ -41,8 +41,8 @@ impl StatementAnalyzer<'_> {
 
             AstNode::Break { span } | AstNode::Continue { span } => self.analyze_loop_control(span),
 
-            AstNode::FunctionDefinition { sym, .. } => Err(Error::UnexpectedStatement {
-                stmt_str: self.node.to_string(),
+            AstNode::FunctionDefinition { sym, .. } => Err(SemanticError {
+                variant: SemanticErrorVariant::UnexpectedStatement(self.node.to_string()),
                 span: sym.span().clone(),
             }),
 
@@ -56,8 +56,8 @@ impl StatementAnalyzer<'_> {
 
     fn analyze_loop_control(&self, span: &Span) -> Result<Type> {
         if !self.state.is_inside_loop() {
-            return Err(Error::UnexpectedStatement {
-                stmt_str: self.node.to_string(),
+            return Err(SemanticError {
+                variant: SemanticErrorVariant::UnexpectedStatement(self.node.to_string()),
                 span: span.clone(),
             });
         }
@@ -71,22 +71,21 @@ impl StatementAnalyzer<'_> {
             .map(|expr| ExpressionAnalyzer::new(expr, self.state).analyze())
             .unwrap_or(Ok(Type::Void))?;
 
-        let return_t = self
-            .state
-            .nearest_return_t()
-            .ok_or_else(|| Error::UnexpectedStatement {
-                stmt_str: self.node.to_string(),
-                span: span.clone(),
-            })?;
+        let return_t = self.state.nearest_return_t().ok_or_else(|| SemanticError {
+            variant: SemanticErrorVariant::UnexpectedStatement(self.node.to_string()),
+            span: span.clone(),
+        })?;
 
         assert::is_assignable(&expr_t, &return_t, || match expr {
             Some(expr) => expr.span().clone(),
             None => span.clone(),
         })
-        .map_err(|err| Error::ReturnTypeMismatch {
-            expected: return_t.clone(),
-            get: expr_t,
-            span: err.span().clone(),
+        .map_err(|err| SemanticError {
+            variant: SemanticErrorVariant::ReturnTypeMismatch {
+                expected: return_t.clone(),
+                get: expr_t,
+            },
+            ..err
         })?;
 
         Ok(return_t)
@@ -95,7 +94,8 @@ impl StatementAnalyzer<'_> {
     fn analyze_debug(&self, expr: &AstNode) -> Result<Type> {
         let expr_t = ExpressionAnalyzer::new(expr, self.state).analyze()?;
         if expr_t == Type::Void {
-            return Err(Error::UnexpectedVoidTypeExpression {
+            return Err(SemanticError {
+                variant: SemanticErrorVariant::UnexpectedVoidTypeExpression,
                 span: expr.span().clone(),
             });
         }

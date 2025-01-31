@@ -1,4 +1,7 @@
-use super::{error::ParsingError, Result};
+use super::{
+    error::{ParsingError, ParsingErrorVariant},
+    Result,
+};
 use crate::lexer::token::{Token, TokenKind};
 use std::cell::RefCell;
 
@@ -40,9 +43,11 @@ impl TokenStream {
     fn expect_current(&self, expect: &TokenKind) -> Result<()> {
         let current = self.current();
         if &current.kind != expect {
-            return Err(ParsingError::UnexpectedToken {
-                expect: expect.clone(),
-                found: current.kind.clone(),
+            return Err(ParsingError {
+                variant: ParsingErrorVariant::UnexpectedToken {
+                    expect: expect.clone(),
+                    found: current.kind.clone(),
+                },
                 span: current.span,
             });
         }

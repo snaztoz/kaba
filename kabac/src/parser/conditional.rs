@@ -1,5 +1,8 @@
 use super::{
-    block::BlockParser, error::ParsingError, expression::ExpressionParser, state::ParserState,
+    block::BlockParser,
+    error::{ParsingError, ParsingErrorVariant},
+    expression::ExpressionParser,
+    state::ParserState,
     Result,
 };
 use crate::{ast::AstNode, lexer::token::TokenKind};
@@ -77,9 +80,11 @@ impl ConditionalParser<'_> {
                 }))
             }
 
-            kind => Err(ParsingError::UnexpectedToken {
-                expect: TokenKind::Else,
-                found: kind.clone(),
+            kind => Err(ParsingError {
+                variant: ParsingErrorVariant::UnexpectedToken {
+                    expect: TokenKind::Else,
+                    found: kind.clone(),
+                },
                 span: self.state.tokens.current().span,
             }),
         }

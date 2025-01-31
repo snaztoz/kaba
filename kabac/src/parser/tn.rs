@@ -1,5 +1,5 @@
 use super::{
-    error::{ParsingError, Result},
+    error::{ParsingError, ParsingErrorVariant, Result},
     state::ParserState,
 };
 use crate::{
@@ -34,9 +34,11 @@ impl TypeNotationParser<'_> {
             TokenKind::LBrack => self.parse_array_tn(),
             TokenKind::LParen => self.parse_function_tn(),
 
-            _ => Err(ParsingError::UnexpectedToken {
-                expect: TokenKind::Symbol(String::from("foo")),
-                found: self.state.tokens.current().kind.clone(),
+            _ => Err(ParsingError {
+                variant: ParsingErrorVariant::UnexpectedToken {
+                    expect: TokenKind::Symbol(String::from("foo")),
+                    found: self.state.tokens.current().kind.clone(),
+                },
                 span: self.state.tokens.current().span,
             }),
         }
@@ -87,9 +89,11 @@ impl TypeNotationParser<'_> {
                 TokenKind::RParen => continue,
 
                 kind => {
-                    return Err(ParsingError::UnexpectedToken {
-                        expect: TokenKind::RParen,
-                        found: kind.clone(),
+                    return Err(ParsingError {
+                        variant: ParsingErrorVariant::UnexpectedToken {
+                            expect: TokenKind::RParen,
+                            found: kind.clone(),
+                        },
                         span: self.state.tokens.current().span,
                     });
                 }

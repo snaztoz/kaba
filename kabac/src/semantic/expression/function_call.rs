@@ -2,7 +2,7 @@ use super::ExpressionAnalyzer;
 use crate::{
     ast::AstNode,
     semantic::{
-        error::{Error, Result},
+        error::{Result, SemanticError, SemanticErrorVariant},
         state::AnalyzerState,
         types::{assert, Type},
     },
@@ -30,17 +30,19 @@ impl FunctionCallAnalyzer<'_> {
         let (params_t, return_t) = fn_t.unwrap_callable();
 
         if params_t.len() != args_t.len() {
-            return Err(Error::FunctionCallArgumentsLengthMismatch {
-                expected: params_t.len(),
-                get: args_t.len(),
+            return Err(SemanticError {
+                variant: SemanticErrorVariant::ArgumentLengthMismatch {
+                    expected: params_t.len(),
+                    get: args_t.len(),
+                },
                 span: self.span().clone(),
             });
         }
 
         for (param_t, arg_t) in params_t.iter().zip(&args_t) {
             if !arg_t.is_assignable_to(param_t) {
-                return Err(Error::InvalidFunctionCallArgument {
-                    args: args_t,
+                return Err(SemanticError {
+                    variant: SemanticErrorVariant::InvalidArguments { args_t },
                     span: self.span().clone(),
                 });
             }

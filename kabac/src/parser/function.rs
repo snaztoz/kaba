@@ -1,5 +1,9 @@
 use super::{
-    block::BlockParser, error::ParsingError, state::ParserState, tn::TypeNotationParser, Result,
+    block::BlockParser,
+    error::{ParsingError, ParsingErrorVariant},
+    state::ParserState,
+    tn::TypeNotationParser,
+    Result,
 };
 use crate::{
     ast::{AstNode, FunctionParam},
@@ -61,9 +65,11 @@ impl FunctionDefinitionParser<'_> {
                 span: self.state.tokens.current().span,
             }),
 
-            kind => Err(ParsingError::UnexpectedToken {
-                expect: TokenKind::Symbol(String::from("function_name")),
-                found: kind.clone(),
+            kind => Err(ParsingError {
+                variant: ParsingErrorVariant::UnexpectedToken {
+                    expect: TokenKind::Symbol(String::from("function_name")),
+                    found: kind.clone(),
+                },
                 span: self.state.tokens.current().span,
             }),
         };
@@ -99,9 +105,11 @@ impl FunctionDefinitionParser<'_> {
                 TokenKind::RParen => continue,
 
                 kind => {
-                    return Err(ParsingError::UnexpectedToken {
-                        expect: TokenKind::RParen,
-                        found: kind.clone(),
+                    return Err(ParsingError {
+                        variant: ParsingErrorVariant::UnexpectedToken {
+                            expect: TokenKind::RParen,
+                            found: kind.clone(),
+                        },
                         span: self.state.tokens.current().span,
                     });
                 }

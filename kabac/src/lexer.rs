@@ -1,7 +1,7 @@
 //! This module contains the required logic operations during the tokenizing
 //! stage of a Kaba source code.
 
-use error::{LexingError, Result};
+use error::Result;
 use logos::Logos;
 use token::{Token, TokenKind};
 
@@ -19,14 +19,7 @@ pub fn lex(src: &str) -> Result<Vec<Token>> {
     let mut tokens = vec![];
 
     while let Some(token) = l.next() {
-        let kind = token.map_err(|e| match e {
-            LexingError::Default => LexingError::UnknownToken {
-                token: String::from(l.slice()),
-                span: l.span(),
-            },
-            _ => e,
-        })?;
-
+        let kind = token?;
         if kind.is_comment() {
             continue;
         }

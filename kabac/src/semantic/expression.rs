@@ -2,7 +2,7 @@ use std::cmp;
 
 use super::{
     assignment::AssignmentAnalyzer,
-    error::{Error, Result},
+    error::{Result, SemanticError, SemanticErrorVariant},
     literal::LiteralAnalyzer,
     state::AnalyzerState,
     types::{assert, FloatType, IntType, Type},
@@ -61,8 +61,8 @@ impl ExpressionAnalyzer<'_> {
             AstNode::Symbol { name, span } => self
                 .state
                 .get_sym_t(name)
-                .ok_or_else(|| Error::SymbolDoesNotExist {
-                    sym: String::from(name),
+                .ok_or_else(|| SemanticError {
+                    variant: SemanticErrorVariant::SymbolDoesNotExist(String::from(name)),
                     span: span.clone(),
                 })
                 .map(|st| st.unwrap_entity()),

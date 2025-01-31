@@ -1,4 +1,9 @@
-use super::{error::ParsingError, state::ParserState, tn::TypeNotationParser, Result};
+use super::{
+    error::{ParsingError, ParsingErrorVariant},
+    state::ParserState,
+    tn::TypeNotationParser,
+    Result,
+};
 use crate::{
     ast::{AstNode, Literal},
     lexer::token::TokenKind,
@@ -467,9 +472,11 @@ impl ExpressionParser<'_> {
 
             TokenKind::LBrack => self.parse_array_literal(),
 
-            kind => Err(ParsingError::UnexpectedToken {
-                expect: TokenKind::Symbol(String::from("foo")),
-                found: kind.clone(),
+            kind => Err(ParsingError {
+                variant: ParsingErrorVariant::UnexpectedToken {
+                    expect: TokenKind::Symbol(String::from("foo")),
+                    found: kind.clone(),
+                },
                 span: token.span,
             }),
         }
@@ -499,9 +506,11 @@ impl ExpressionParser<'_> {
 
                 kind => {
                     // Error if encountering neither "," or ")"
-                    return Err(ParsingError::UnexpectedToken {
-                        expect: TokenKind::RParen,
-                        found: kind.clone(),
+                    return Err(ParsingError {
+                        variant: ParsingErrorVariant::UnexpectedToken {
+                            expect: TokenKind::RParen,
+                            found: kind.clone(),
+                        },
                         span: self.state.tokens.current().span,
                     });
                 }
@@ -540,9 +549,11 @@ impl ExpressionParser<'_> {
 
                 kind => {
                     // Error if encountering neither "," or "]"
-                    return Err(ParsingError::UnexpectedToken {
-                        expect: TokenKind::RBrack,
-                        found: kind.clone(),
+                    return Err(ParsingError {
+                        variant: ParsingErrorVariant::UnexpectedToken {
+                            expect: TokenKind::RBrack,
+                            found: kind.clone(),
+                        },
                         span: self.state.tokens.current().span,
                     });
                 }
@@ -569,7 +580,11 @@ mod tests {
     use crate::{
         ast::{AstNode, Literal, TypeNotation},
         lexer::{self, token::TokenKind},
-        parser::{error::ParsingError, parse, test_util::assert_ast},
+        parser::{
+            error::{ParsingError, ParsingErrorVariant},
+            parse,
+            test_util::assert_ast,
+        },
     };
 
     #[test]
@@ -1202,9 +1217,11 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
-            ParsingError::UnexpectedToken {
-                expect: TokenKind::RParen,
-                found: TokenKind::Semicolon,
+            ParsingError {
+                variant: ParsingErrorVariant::UnexpectedToken {
+                    expect: TokenKind::RParen,
+                    found: TokenKind::Semicolon
+                },
                 span: 8..9,
             }
         );

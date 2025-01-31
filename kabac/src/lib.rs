@@ -16,17 +16,17 @@ pub fn compile(src: &str) -> Result<(AstNode, SymbolTableData)> {
 
     let tokens = lexer::lex(&src).map_err(|e| Error {
         message: e.to_string(),
-        span: Some(e.span()),
+        span: Some(e.span),
     })?;
 
     let ast = parser::parse(tokens).map_err(|e| Error {
         message: e.to_string(),
-        span: Some(e.span()),
+        span: Some(e.span),
     })?;
 
     let sym_table = semantic::analyze(&ast).map_err(|e| Error {
         message: e.to_string(),
-        span: Some(e.span().clone()),
+        span: Some(e.span),
     })?;
 
     Ok((ast, sym_table))

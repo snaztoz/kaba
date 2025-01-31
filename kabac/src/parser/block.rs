@@ -1,4 +1,9 @@
-use super::{error::ParsingError, state::ParserState, statement::StatementParser, Result};
+use super::{
+    error::{ParsingError, ParsingErrorVariant},
+    state::ParserState,
+    statement::StatementParser,
+    Result,
+};
 use crate::{ast::AstNode, lexer::token::TokenKind};
 use logos::Span;
 
@@ -46,9 +51,11 @@ impl BlockParser<'_> {
             }
 
             if self.state.tokens.current_is(&TokenKind::Eof) {
-                return Err(ParsingError::UnexpectedToken {
-                    expect: TokenKind::RBrace,
-                    found: TokenKind::Eof,
+                return Err(ParsingError {
+                    variant: ParsingErrorVariant::UnexpectedToken {
+                        expect: TokenKind::RBrace,
+                        found: TokenKind::Eof,
+                    },
                     span: self.state.tokens.current().span,
                 });
             }

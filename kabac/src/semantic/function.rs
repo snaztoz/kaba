@@ -1,6 +1,6 @@
 use super::{
     body::BodyAnalyzer,
-    error::{Error, Result},
+    error::{Result, SemanticError, SemanticErrorVariant},
     state::{AnalyzerState, ScopeVariant},
     tn::TypeNotationAnalyzer,
     types::Type,
@@ -72,11 +72,9 @@ impl FunctionDeclarationAnalyzer<'_> {
     fn save_fn_t(&self, fn_t: Type) -> Result<()> {
         let (sym, sym_span) = self.sym().unwrap_symbol();
         self.state
-            .save_entity_or_else(self.sym_id(), &sym, fn_t.clone(), || {
-                Error::SymbolAlreadyExist {
-                    sym: sym.clone(),
-                    span: sym_span,
-                }
+            .save_entity_or_else(self.sym_id(), &sym, fn_t.clone(), || SemanticError {
+                variant: SemanticErrorVariant::SymbolAlreadyExist(sym.clone()),
+                span: sym_span,
             })
     }
 
@@ -147,9 +145,11 @@ impl FunctionDefinitionAnalyzer<'_> {
                 let body_t = BodyAnalyzer::new(self.node, self.state).analyze()?;
 
                 if return_t != Type::Void && body_t == Type::Void {
-                    return Err(Error::ReturnTypeMismatch {
-                        expected: return_t,
-                        get: Type::Void,
+                    return Err(SemanticError {
+                        variant: SemanticErrorVariant::ReturnTypeMismatch {
+                            expected: return_t,
+                            get: Type::Void,
+                        },
                         span: self.sym().span().clone(),
                     });
                 }
@@ -164,8 +164,8 @@ impl FunctionDefinitionAnalyzer<'_> {
     fn save_params_to_stack(&self, params: &[((SymbolId, String, Span), Type)]) -> Result<()> {
         for ((sym_id, sym, sym_span), t) in params {
             self.state
-                .save_entity_or_else(*sym_id, sym, t.clone(), || Error::SymbolAlreadyExist {
-                    sym: sym.clone(),
+                .save_entity_or_else(*sym_id, sym, t.clone(), || SemanticError {
+                    variant: SemanticErrorVariant::SymbolAlreadyExist(sym.clone()),
                     span: sym_span.clone(),
                 })?;
         }

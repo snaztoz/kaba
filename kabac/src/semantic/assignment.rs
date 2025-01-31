@@ -1,5 +1,5 @@
 use super::{
-    error::{Error, Result},
+    error::{Result, SemanticError, SemanticErrorVariant},
     expression::ExpressionAnalyzer,
     state::AnalyzerState,
     types::{assert, Type},
@@ -79,8 +79,8 @@ impl AssignmentAnalyzer<'_> {
 
     fn analyze_lhs(&self) -> Result<()> {
         if !self.lhs().is_lval() {
-            return Err(Error::InvalidAssignmentLhs {
-                lhs: self.lhs().to_string(),
+            return Err(SemanticError {
+                variant: SemanticErrorVariant::InvalidLValue,
                 span: self.lhs().span().clone(),
             });
         }

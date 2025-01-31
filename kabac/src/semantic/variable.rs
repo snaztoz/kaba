@@ -1,5 +1,5 @@
 use super::{
-    error::{Error, Result},
+    error::{Result, SemanticError, SemanticErrorVariant},
     expression::ExpressionAnalyzer,
     state::AnalyzerState,
     tn::TypeNotationAnalyzer,
@@ -120,11 +120,9 @@ impl VariableDeclarationAnalyzer<'_> {
 
     fn save_symbol(&self, t: Type) -> Result<()> {
         self.state
-            .save_entity_or_else(self.sym_id(), &self.sym_string(), t, || {
-                Error::SymbolAlreadyExist {
-                    sym: self.sym_string(),
-                    span: self.sym_span().clone(),
-                }
+            .save_entity_or_else(self.sym_id(), &self.sym_string(), t, || SemanticError {
+                variant: SemanticErrorVariant::SymbolAlreadyExist(self.sym_string()),
+                span: self.sym_span().clone(),
             })
     }
 }

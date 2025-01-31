@@ -1,5 +1,5 @@
 use super::{
-    error::{Error, Result},
+    error::{Result, SemanticError, SemanticErrorVariant},
     state::AnalyzerState,
     types::Type,
 };
@@ -32,14 +32,15 @@ impl TypeNotationAnalyzer<'_> {
     pub fn analyze(&self) -> Result<Type> {
         // The provided type must exist in the current scope
         if !self.state.has_t(&self.t()) {
-            return Err(Error::SymbolDoesNotExist {
-                sym: self.t().to_string(),
+            return Err(SemanticError {
+                variant: SemanticErrorVariant::SymbolDoesNotExist(self.t().to_string()),
                 span: self.span().clone(),
             });
         }
 
         if !self.void_allowed && self.t() == Type::Void {
-            return Err(Error::VoidTypeVariable {
+            return Err(SemanticError {
+                variant: SemanticErrorVariant::VoidTypeVariable,
                 span: self.span().clone(),
             });
         }

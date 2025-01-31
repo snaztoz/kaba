@@ -1,5 +1,5 @@
 use super::{
-    error::{ParsingError, Result},
+    error::{ParsingError, ParsingErrorVariant, Result},
     expression::ExpressionParser,
     state::ParserState,
     tn::TypeNotationParser,
@@ -62,9 +62,11 @@ impl VariableDeclarationParser<'_> {
 
                 Ok(sym)
             }
-            _ => Err(ParsingError::UnexpectedToken {
-                expect: TokenKind::Symbol(String::from("foo")),
-                found: self.state.tokens.current_kind().clone(),
+            _ => Err(ParsingError {
+                variant: ParsingErrorVariant::UnexpectedToken {
+                    expect: TokenKind::Symbol(String::from("foo")),
+                    found: self.state.tokens.current_kind().clone(),
+                },
                 span: self.state.tokens.current().span,
             }),
         }

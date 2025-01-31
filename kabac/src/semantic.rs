@@ -1,8 +1,9 @@
 //! This module contains the implementation for semantic analyzing stage of the
 //! compiler.
 
-use self::error::{Error, Result};
+use self::error::{Result, SemanticError};
 use crate::ast::AstNode;
+use error::SemanticErrorVariant;
 use function::{FunctionDeclarationAnalyzer, FunctionDefinitionAnalyzer};
 use state::{AnalyzerState, SymbolTableData};
 
@@ -66,8 +67,8 @@ impl ProgramAnalyzer<'_> {
         match stmt {
             AstNode::FunctionDefinition { .. } => Ok(()),
 
-            n => Err(Error::UnexpectedStatement {
-                stmt_str: n.to_string(),
+            n => Err(SemanticError {
+                variant: SemanticErrorVariant::UnexpectedStatement(n.to_string()),
                 span: stmt.span().clone(),
             }),
         }
