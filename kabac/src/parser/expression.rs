@@ -263,7 +263,7 @@ fn parse_additive_expression(state: &ParserState) -> Result<AstNode> {
 
 fn parse_multiplicative_expression(state: &ParserState) -> Result<AstNode> {
     // Parse first term
-    let mut lhs = parse_unary_expression(state)?;
+    let mut lhs = parse_unary_expression(state, false)?;
 
     loop {
         // Expecting "*", "/" or "%" (all are optional)
@@ -271,7 +271,7 @@ fn parse_multiplicative_expression(state: &ParserState) -> Result<AstNode> {
             TokenKind::Mul => {
                 state.tokens.skip(&TokenKind::Mul)?;
 
-                let rhs = parse_unary_expression(state)?;
+                let rhs = parse_unary_expression(state, false)?;
                 let span = lhs.span().start..rhs.span().end;
 
                 lhs = AstNode::Mul {
@@ -283,7 +283,7 @@ fn parse_multiplicative_expression(state: &ParserState) -> Result<AstNode> {
             TokenKind::Div => {
                 state.tokens.skip(&TokenKind::Div)?;
 
-                let rhs = parse_unary_expression(state)?;
+                let rhs = parse_unary_expression(state, false)?;
                 let span = lhs.span().start..rhs.span().end;
 
                 lhs = AstNode::Div {
@@ -295,7 +295,7 @@ fn parse_multiplicative_expression(state: &ParserState) -> Result<AstNode> {
             TokenKind::Mod => {
                 state.tokens.skip(&TokenKind::Mod)?;
 
-                let rhs = parse_unary_expression(state)?;
+                let rhs = parse_unary_expression(state, false)?;
                 let span = lhs.span().start..rhs.span().end;
 
                 lhs = AstNode::Mod {
@@ -309,7 +309,7 @@ fn parse_multiplicative_expression(state: &ParserState) -> Result<AstNode> {
     }
 }
 
-fn parse_unary_expression(state: &ParserState) -> Result<AstNode> {
+fn parse_unary_expression(state: &ParserState, is_negated: bool) -> Result<AstNode> {
     //  Prefixed by >= 0 "negation" or "not" expression
     if state.tokens.current_is(&TokenKind::Sub) {
         return parse_prefix_expression(state, &TokenKind::Sub);
@@ -318,7 +318,7 @@ fn parse_unary_expression(state: &ParserState) -> Result<AstNode> {
     }
 
     // Parse primary expression
-    let mut expr = parse_primary_expression(state)?;
+    let mut expr = parse_primary_expression(state, is_negated)?;
 
     // Followed by >= 0 function call, field access, or indexed access
     //
@@ -328,14 +328,11 @@ fn parse_unary_expression(state: &ParserState) -> Result<AstNode> {
             TokenKind::LParen => {
                 let callee_start = expr.span().start;
 
-                // Expecting "("
                 state.tokens.skip(&TokenKind::LParen)?;
 
                 let args = parse_function_call(state)?;
-
                 let span = callee_start..state.tokens.current().span.end;
 
-                // Expecting ")"
                 state.tokens.skip(&TokenKind::RParen)?;
 
                 expr = AstNode::FunctionCall {
@@ -348,15 +345,12 @@ fn parse_unary_expression(state: &ParserState) -> Result<AstNode> {
             TokenKind::LBrack => {
                 let callee_start = expr.span().start;
 
-                // Expecting "("
                 state.tokens.skip(&TokenKind::LBrack)?;
 
                 // Expecting expression
                 let index = parse(state)?;
-
                 let span = callee_start..state.tokens.current().span.end;
 
-                // Expecting ")"
                 state.tokens.skip(&TokenKind::RBrack)?;
 
                 expr = AstNode::IndexAccess {
@@ -377,14 +371,29 @@ fn parse_prefix_expression(state: &ParserState, token: &TokenKind) -> Result<Ast
     let start = state.tokens.current().span.start;
     state.tokens.skip(token)?;
 
-    let expr = parse_unary_expression(state)?;
+    let expr = parse_unary_expression(state, matches!(token, TokenKind::Sub))?;
     let span = start..expr.span().end;
 
     match token {
-        TokenKind::Sub => Ok(AstNode::Neg {
-            expr: Box::new(expr.unwrap_group()),
-            span,
-        }),
+        TokenKind::Sub => {
+            // Don't wrap the expression in a negation operation if it's only
+            // a literal. Instead, just update the span.
+            if let AstNode::Literal {
+                lit: Literal::Int(n),
+                ..
+            } = expr
+            {
+                return Ok(AstNode::Literal {
+                    lit: Literal::Int(n),
+                    span: start..expr.span().end,
+                });
+            }
+
+            Ok(AstNode::Neg {
+                expr: Box::new(expr.unwrap_group()),
+                span,
+            })
+        }
         TokenKind::Not => Ok(AstNode::Not {
             expr: Box::new(expr.unwrap_group()),
             span,
@@ -394,7 +403,7 @@ fn parse_prefix_expression(state: &ParserState, token: &TokenKind) -> Result<Ast
     }
 }
 
-fn parse_primary_expression(state: &ParserState) -> Result<AstNode> {
+fn parse_primary_expression(state: &ParserState, is_negated: bool) -> Result<AstNode> {
     let token = state.tokens.current();
 
     match token.kind {
@@ -425,8 +434,27 @@ fn parse_primary_expression(state: &ParserState) -> Result<AstNode> {
         }
         TokenKind::Int(n) => {
             state.tokens.advance();
+
+            //
+            // The limit of integer literals are i32::MAX or i32::MAX+1 if
+            // and only if `is_negated` is true.
+            //
+            let i32_max = i32::MAX as u32;
+            if n > i32_max + 1 || (n == i32_max + 1 && !is_negated) {
+                return Err(ParsingError {
+                    variant: ParsingErrorVariant::NumberLiteralLimitExceeded,
+                    span: token.span,
+                });
+            }
+
+            let lit: i32 = match n {
+                n if n == i32_max + 1 => i32::MIN,
+                n if is_negated => -(n as i32),
+                n => n as i32,
+            };
+
             Ok(AstNode::Literal {
-                lit: Literal::Int(n),
+                lit: Literal::Int(lit),
                 span: token.span,
             })
         }
@@ -571,9 +599,33 @@ mod tests {
         parser::{
             error::{ParsingError, ParsingErrorVariant},
             parse,
-            test_util::assert_ast,
+            test_util::{assert_ast, assert_is_err},
         },
     };
+
+    #[test]
+    fn integer_literals() {
+        assert_ast(
+            "2147483647 + -2147483648;",
+            AstNode::Add {
+                lhs: Box::new(AstNode::Literal {
+                    lit: Literal::Int(2147483647),
+                    span: 0..10,
+                }),
+                rhs: Box::new(AstNode::Literal {
+                    lit: Literal::Int(-2147483648),
+                    span: 13..24,
+                }),
+                span: 0..24,
+            },
+        );
+    }
+
+    #[test]
+    fn exceeding_integer_literals_limit() {
+        assert_is_err("2147483648;");
+        assert_is_err("-2147483649;");
+    }
 
     #[test]
     fn math_expression() {
@@ -648,11 +700,8 @@ mod tests {
                     name: String::from("x"),
                     span: 0..1,
                 }),
-                rhs: Box::new(AstNode::Neg {
-                    expr: Box::new(AstNode::Literal {
-                        lit: Literal::Int(5),
-                        span: 6..7,
-                    }),
+                rhs: Box::new(AstNode::Literal {
+                    lit: Literal::Int(-5),
                     span: 5..7,
                 }),
                 span: 0..8,
@@ -669,11 +718,8 @@ mod tests {
                     name: String::from("x"),
                     span: 0..1,
                 }),
-                rhs: Box::new(AstNode::Neg {
-                    expr: Box::new(AstNode::Literal {
-                        lit: Literal::Int(5),
-                        span: 7..8,
-                    }),
+                rhs: Box::new(AstNode::Literal {
+                    lit: Literal::Int(-5),
                     span: 6..8,
                 }),
                 span: 0..9,
@@ -690,11 +736,8 @@ mod tests {
                     name: String::from("x"),
                     span: 0..1,
                 }),
-                rhs: Box::new(AstNode::Neg {
-                    expr: Box::new(AstNode::Literal {
-                        lit: Literal::Int(5),
-                        span: 7..8,
-                    }),
+                rhs: Box::new(AstNode::Literal {
+                    lit: Literal::Int(-5),
                     span: 6..8,
                 }),
                 span: 0..9,
@@ -711,11 +754,8 @@ mod tests {
                     name: String::from("x"),
                     span: 0..1,
                 }),
-                rhs: Box::new(AstNode::Neg {
-                    expr: Box::new(AstNode::Literal {
-                        lit: Literal::Int(5),
-                        span: 7..8,
-                    }),
+                rhs: Box::new(AstNode::Literal {
+                    lit: Literal::Int(-5),
                     span: 6..8,
                 }),
                 span: 0..9,
@@ -732,11 +772,8 @@ mod tests {
                     name: String::from("x"),
                     span: 0..1,
                 }),
-                rhs: Box::new(AstNode::Neg {
-                    expr: Box::new(AstNode::Literal {
-                        lit: Literal::Int(5),
-                        span: 7..8,
-                    }),
+                rhs: Box::new(AstNode::Literal {
+                    lit: Literal::Int(-5),
                     span: 6..8,
                 }),
                 span: 0..9,
@@ -753,11 +790,8 @@ mod tests {
                     name: String::from("x"),
                     span: 0..1,
                 }),
-                rhs: Box::new(AstNode::Neg {
-                    expr: Box::new(AstNode::Literal {
-                        lit: Literal::Int(5),
-                        span: 7..8,
-                    }),
+                rhs: Box::new(AstNode::Literal {
+                    lit: Literal::Int(-5),
                     span: 6..8,
                 }),
                 span: 0..9,
@@ -934,11 +968,8 @@ mod tests {
                         span: 8..12,
                     }),
                     rhs: Box::new(AstNode::Neg {
-                        expr: Box::new(AstNode::Neg {
-                            expr: Box::new(AstNode::Literal {
-                                lit: Literal::Int(7),
-                                span: 19..20,
-                            }),
+                        expr: Box::new(AstNode::Literal {
+                            lit: Literal::Int(-7),
                             span: 18..20,
                         }),
                         span: 16..21,

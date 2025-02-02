@@ -17,7 +17,7 @@ pub fn lex_symbol(lex: &mut Lexer<TokenKind>) -> Result<String> {
     Ok(String::from(value))
 }
 
-pub fn lex_integer(lex: &mut Lexer<TokenKind>) -> i32 {
+pub fn lex_integer(lex: &mut Lexer<TokenKind>) -> u32 {
     lex.slice().parse().unwrap()
 }
 

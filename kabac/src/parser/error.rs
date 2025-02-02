@@ -19,6 +19,7 @@ impl Display for ParsingError {
 #[derive(Clone, Debug, PartialEq)]
 pub enum ParsingErrorVariant {
     UnexpectedToken { expect: TokenKind, found: TokenKind },
+    NumberLiteralLimitExceeded,
 }
 
 impl Display for ParsingErrorVariant {
@@ -26,6 +27,9 @@ impl Display for ParsingErrorVariant {
         match self {
             Self::UnexpectedToken { expect, found, .. } => {
                 write!(f, "expecting to find {expect} but get {found} instead",)
+            }
+            Self::NumberLiteralLimitExceeded => {
+                write!(f, "number literal limit exceeded")
             }
         }
     }

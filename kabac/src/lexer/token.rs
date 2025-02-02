@@ -23,7 +23,7 @@ pub enum TokenKind {
     //
 
     #[regex("[0-9]+", priority = 2, callback = rule::lex_integer)]
-    Int(i32),
+    Int(u32),
 
     #[regex(r"[0-9]+\.[0-9]+", callback = rule::lex_float)]
     Float(f32),
