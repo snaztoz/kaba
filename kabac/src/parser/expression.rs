@@ -9,570 +9,558 @@ use crate::{
     lexer::token::TokenKind,
 };
 
-pub struct ExpressionParser<'a> {
-    state: &'a ParserState<'a>,
+pub fn parse(state: &ParserState) -> Result<AstNode> {
+    parse_assignment(state)
 }
 
-impl<'a> ExpressionParser<'a> {
-    pub const fn new(state: &'a ParserState) -> Self {
-        Self { state }
+fn parse_assignment(state: &ParserState) -> Result<AstNode> {
+    // Parse first term
+    let lhs = parse_logical_and_or_expression(state)?;
+
+    // Expecting "=", "+=", "-=", "*=", "/=", or "%=" (optional)
+    match state.tokens.current_kind() {
+        TokenKind::Assign => {
+            state.tokens.skip(&TokenKind::Assign)?;
+
+            let rhs = parse_logical_and_or_expression(state)?;
+            let span = lhs.span().start..rhs.span().end;
+
+            Ok(AstNode::Assign {
+                lhs: Box::new(lhs.unwrap_group()),
+                rhs: Box::new(rhs.unwrap_group()),
+                span,
+            })
+        }
+        TokenKind::AddAssign => {
+            state.tokens.skip(&TokenKind::AddAssign)?;
+
+            let rhs = parse_logical_and_or_expression(state)?;
+            let span = lhs.span().start..rhs.span().end;
+
+            Ok(AstNode::AddAssign {
+                lhs: Box::new(lhs.unwrap_group()),
+                rhs: Box::new(rhs.unwrap_group()),
+                span,
+            })
+        }
+        TokenKind::SubAssign => {
+            state.tokens.skip(&TokenKind::SubAssign)?;
+
+            let rhs = parse_logical_and_or_expression(state)?;
+            let span = lhs.span().start..rhs.span().end;
+
+            Ok(AstNode::SubAssign {
+                lhs: Box::new(lhs.unwrap_group()),
+                rhs: Box::new(rhs.unwrap_group()),
+                span,
+            })
+        }
+        TokenKind::MulAssign => {
+            state.tokens.skip(&TokenKind::MulAssign)?;
+
+            let rhs = parse_logical_and_or_expression(state)?;
+            let span = lhs.span().start..rhs.span().end;
+
+            Ok(AstNode::MulAssign {
+                lhs: Box::new(lhs.unwrap_group()),
+                rhs: Box::new(rhs.unwrap_group()),
+                span,
+            })
+        }
+        TokenKind::DivAssign => {
+            state.tokens.skip(&TokenKind::DivAssign)?;
+
+            let rhs = parse_logical_and_or_expression(state)?;
+            let span = lhs.span().start..rhs.span().end;
+
+            Ok(AstNode::DivAssign {
+                lhs: Box::new(lhs.unwrap_group()),
+                rhs: Box::new(rhs.unwrap_group()),
+                span,
+            })
+        }
+        TokenKind::ModAssign => {
+            state.tokens.skip(&TokenKind::ModAssign)?;
+
+            let rhs = parse_logical_and_or_expression(state)?;
+            let span = lhs.span().start..rhs.span().end;
+
+            Ok(AstNode::ModAssign {
+                lhs: Box::new(lhs.unwrap_group()),
+                rhs: Box::new(rhs.unwrap_group()),
+                span,
+            })
+        }
+        _ => Ok(lhs),
     }
 }
 
-impl ExpressionParser<'_> {
-    pub fn parse(&self) -> Result<AstNode> {
-        self.parse_assignment()
-    }
+fn parse_logical_and_or_expression(state: &ParserState) -> Result<AstNode> {
+    // Parse first term
+    let mut lhs = parse_equality_expression(state)?;
 
-    fn parse_assignment(&self) -> Result<AstNode> {
-        // Parse first term
-        let lhs = self.parse_logical_and_or_expression()?;
+    loop {
+        // Expecting "||" or "&&" (both are optional)
+        match state.tokens.current_kind() {
+            TokenKind::Or => {
+                state.tokens.skip(&TokenKind::Or)?;
 
-        // Expecting "=", "+=", "-=", "*=", "/=", or "%=" (optional)
-        match self.state.tokens.current_kind() {
-            TokenKind::Assign => {
-                self.state.tokens.skip(&TokenKind::Assign)?;
-
-                let rhs = self.parse_logical_and_or_expression()?;
+                let rhs = parse_equality_expression(state)?;
                 let span = lhs.span().start..rhs.span().end;
 
-                Ok(AstNode::Assign {
+                lhs = AstNode::Or {
                     lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
                     span,
-                })
+                };
             }
-            TokenKind::AddAssign => {
-                self.state.tokens.skip(&TokenKind::AddAssign)?;
+            TokenKind::And => {
+                state.tokens.skip(&TokenKind::And)?;
 
-                let rhs = self.parse_logical_and_or_expression()?;
+                let rhs = parse_equality_expression(state)?;
                 let span = lhs.span().start..rhs.span().end;
 
-                Ok(AstNode::AddAssign {
+                lhs = AstNode::And {
                     lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
                     span,
-                })
+                };
             }
-            TokenKind::SubAssign => {
-                self.state.tokens.skip(&TokenKind::SubAssign)?;
-
-                let rhs = self.parse_logical_and_or_expression()?;
-                let span = lhs.span().start..rhs.span().end;
-
-                Ok(AstNode::SubAssign {
-                    lhs: Box::new(lhs.unwrap_group()),
-                    rhs: Box::new(rhs.unwrap_group()),
-                    span,
-                })
-            }
-            TokenKind::MulAssign => {
-                self.state.tokens.skip(&TokenKind::MulAssign)?;
-
-                let rhs = self.parse_logical_and_or_expression()?;
-                let span = lhs.span().start..rhs.span().end;
-
-                Ok(AstNode::MulAssign {
-                    lhs: Box::new(lhs.unwrap_group()),
-                    rhs: Box::new(rhs.unwrap_group()),
-                    span,
-                })
-            }
-            TokenKind::DivAssign => {
-                self.state.tokens.skip(&TokenKind::DivAssign)?;
-
-                let rhs = self.parse_logical_and_or_expression()?;
-                let span = lhs.span().start..rhs.span().end;
-
-                Ok(AstNode::DivAssign {
-                    lhs: Box::new(lhs.unwrap_group()),
-                    rhs: Box::new(rhs.unwrap_group()),
-                    span,
-                })
-            }
-            TokenKind::ModAssign => {
-                self.state.tokens.skip(&TokenKind::ModAssign)?;
-
-                let rhs = self.parse_logical_and_or_expression()?;
-                let span = lhs.span().start..rhs.span().end;
-
-                Ok(AstNode::ModAssign {
-                    lhs: Box::new(lhs.unwrap_group()),
-                    rhs: Box::new(rhs.unwrap_group()),
-                    span,
-                })
-            }
-            _ => Ok(lhs),
+            _ => return Ok(lhs),
         }
     }
+}
 
-    fn parse_logical_and_or_expression(&self) -> Result<AstNode> {
-        // Parse first term
-        let mut lhs = self.parse_equality_expression()?;
+fn parse_equality_expression(state: &ParserState) -> Result<AstNode> {
+    // Parse first term
+    let mut lhs = parse_comparison_expression(state)?;
 
-        loop {
-            // Expecting "||" or "&&" (both are optional)
-            match self.state.tokens.current_kind() {
-                TokenKind::Or => {
-                    self.state.tokens.skip(&TokenKind::Or)?;
+    loop {
+        // Expecting "==" or "!=" (both are optional)
+        match state.tokens.current_kind() {
+            TokenKind::Eq => {
+                state.tokens.skip(&TokenKind::Eq)?;
 
-                    let rhs = self.parse_equality_expression()?;
-                    let span = lhs.span().start..rhs.span().end;
-
-                    lhs = AstNode::Or {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
-                        span,
-                    };
-                }
-                TokenKind::And => {
-                    self.state.tokens.skip(&TokenKind::And)?;
-
-                    let rhs = self.parse_equality_expression()?;
-                    let span = lhs.span().start..rhs.span().end;
-
-                    lhs = AstNode::And {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
-                        span,
-                    };
-                }
-                _ => return Ok(lhs),
-            }
-        }
-    }
-
-    fn parse_equality_expression(&self) -> Result<AstNode> {
-        // Parse first term
-        let mut lhs = self.parse_comparison_expression()?;
-
-        loop {
-            // Expecting "==" or "!=" (both are optional)
-            match self.state.tokens.current_kind() {
-                TokenKind::Eq => {
-                    self.state.tokens.skip(&TokenKind::Eq)?;
-
-                    let rhs = self.parse_comparison_expression()?;
-                    let span = lhs.span().start..rhs.span().end;
-
-                    lhs = AstNode::Eq {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
-                        span,
-                    };
-                }
-                TokenKind::Neq => {
-                    self.state.tokens.skip(&TokenKind::Neq)?;
-
-                    let rhs = self.parse_comparison_expression()?;
-                    let span = lhs.span().start..rhs.span().end;
-
-                    lhs = AstNode::Neq {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
-                        span,
-                    };
-                }
-                _ => return Ok(lhs),
-            }
-        }
-    }
-
-    fn parse_comparison_expression(&self) -> Result<AstNode> {
-        // Parse first term
-        let lhs = self.parse_additive_expression()?;
-
-        // Expecting ">", ">=", "<" or "<=" (all are optional)
-        match self.state.tokens.current_kind() {
-            TokenKind::Gt => {
-                self.state.tokens.skip(&TokenKind::Gt)?;
-
-                let rhs = self.parse_additive_expression()?;
+                let rhs = parse_comparison_expression(state)?;
                 let span = lhs.span().start..rhs.span().end;
 
-                Ok(AstNode::Gt {
+                lhs = AstNode::Eq {
                     lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
                     span,
-                })
+                };
             }
-            TokenKind::Gte => {
-                self.state.tokens.skip(&TokenKind::Gte)?;
+            TokenKind::Neq => {
+                state.tokens.skip(&TokenKind::Neq)?;
 
-                let rhs = self.parse_additive_expression()?;
+                let rhs = parse_comparison_expression(state)?;
                 let span = lhs.span().start..rhs.span().end;
 
-                Ok(AstNode::Gte {
+                lhs = AstNode::Neq {
                     lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
                     span,
-                })
+                };
             }
-            TokenKind::Lt => {
-                self.state.tokens.skip(&TokenKind::Lt)?;
-
-                let rhs = self.parse_additive_expression()?;
-                let span = lhs.span().start..rhs.span().end;
-
-                Ok(AstNode::Lt {
-                    lhs: Box::new(lhs.unwrap_group()),
-                    rhs: Box::new(rhs.unwrap_group()),
-                    span,
-                })
-            }
-            TokenKind::Lte => {
-                self.state.tokens.skip(&TokenKind::Lte)?;
-
-                let rhs = self.parse_additive_expression()?;
-                let span = lhs.span().start..rhs.span().end;
-
-                Ok(AstNode::Lte {
-                    lhs: Box::new(lhs.unwrap_group()),
-                    rhs: Box::new(rhs.unwrap_group()),
-                    span,
-                })
-            }
-            _ => Ok(lhs),
+            _ => return Ok(lhs),
         }
     }
+}
 
-    fn parse_additive_expression(&self) -> Result<AstNode> {
-        // Parse first term
-        let mut lhs = self.parse_multiplicative_expression()?;
+fn parse_comparison_expression(state: &ParserState) -> Result<AstNode> {
+    // Parse first term
+    let lhs = parse_additive_expression(state)?;
 
-        loop {
-            // Expecting "+" or "-" (both are optional)
-            match self.state.tokens.current_kind() {
-                TokenKind::Add => {
-                    self.state.tokens.skip(&TokenKind::Add)?;
+    // Expecting ">", ">=", "<" or "<=" (all are optional)
+    match state.tokens.current_kind() {
+        TokenKind::Gt => {
+            state.tokens.skip(&TokenKind::Gt)?;
 
-                    let rhs = self.parse_multiplicative_expression()?;
-                    let span = lhs.span().start..rhs.span().end;
+            let rhs = parse_additive_expression(state)?;
+            let span = lhs.span().start..rhs.span().end;
 
-                    lhs = AstNode::Add {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
-                        span,
-                    };
-                }
-                TokenKind::Sub => {
-                    self.state.tokens.skip(&TokenKind::Sub)?;
-
-                    let rhs = self.parse_multiplicative_expression()?;
-                    let span = lhs.span().start..rhs.span().end;
-
-                    lhs = AstNode::Sub {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
-                        span,
-                    };
-                }
-                _ => return Ok(lhs),
-            }
-        }
-    }
-
-    fn parse_multiplicative_expression(&self) -> Result<AstNode> {
-        // Parse first term
-        let mut lhs = self.parse_unary_expression()?;
-
-        loop {
-            // Expecting "*", "/" or "%" (all are optional)
-            match self.state.tokens.current_kind() {
-                TokenKind::Mul => {
-                    self.state.tokens.skip(&TokenKind::Mul)?;
-
-                    let rhs = self.parse_unary_expression()?;
-                    let span = lhs.span().start..rhs.span().end;
-
-                    lhs = AstNode::Mul {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
-                        span,
-                    };
-                }
-                TokenKind::Div => {
-                    self.state.tokens.skip(&TokenKind::Div)?;
-
-                    let rhs = self.parse_unary_expression()?;
-                    let span = lhs.span().start..rhs.span().end;
-
-                    lhs = AstNode::Div {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
-                        span,
-                    };
-                }
-                TokenKind::Mod => {
-                    self.state.tokens.skip(&TokenKind::Mod)?;
-
-                    let rhs = self.parse_unary_expression()?;
-                    let span = lhs.span().start..rhs.span().end;
-
-                    lhs = AstNode::Mod {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
-                        span,
-                    };
-                }
-                _ => return Ok(lhs),
-            }
-        }
-    }
-
-    fn parse_unary_expression(&self) -> Result<AstNode> {
-        //  Prefixed by >= 0 "negation" or "not" expression
-        if self.state.tokens.current_is(&TokenKind::Sub) {
-            return self.parse_prefix_expression(&TokenKind::Sub);
-        } else if self.state.tokens.current_is(&TokenKind::Not) {
-            return self.parse_prefix_expression(&TokenKind::Not);
-        }
-
-        // Parse primary expression
-        let mut expr = self.parse_primary_expression()?;
-
-        // Followed by >= 0 function call, field access, or indexed access
-        //
-        // TODO: field access
-        loop {
-            match self.state.tokens.current_kind() {
-                TokenKind::LParen => {
-                    let callee_start = expr.span().start;
-
-                    // Expecting "("
-                    self.state.tokens.skip(&TokenKind::LParen)?;
-
-                    let args = self.parse_function_call()?;
-
-                    let span = callee_start..self.state.tokens.current().span.end;
-
-                    // Expecting ")"
-                    self.state.tokens.skip(&TokenKind::RParen)?;
-
-                    expr = AstNode::FunctionCall {
-                        callee: Box::new(expr.unwrap_group()),
-                        args,
-                        span,
-                    };
-                }
-
-                TokenKind::LBrack => {
-                    let callee_start = expr.span().start;
-
-                    // Expecting "("
-                    self.state.tokens.skip(&TokenKind::LBrack)?;
-
-                    // Expecting expression
-                    let index = self.parse()?;
-
-                    let span = callee_start..self.state.tokens.current().span.end;
-
-                    // Expecting ")"
-                    self.state.tokens.skip(&TokenKind::RBrack)?;
-
-                    expr = AstNode::IndexAccess {
-                        object: Box::new(expr.unwrap_group()),
-                        index: Box::new(index),
-                        span,
-                    };
-                }
-
-                _ => break,
-            }
-        }
-
-        Ok(expr)
-    }
-
-    fn parse_prefix_expression(&self, token: &TokenKind) -> Result<AstNode> {
-        let start = self.state.tokens.current().span.start;
-        self.state.tokens.skip(token)?;
-
-        let expr = self.parse_unary_expression()?;
-        let span = start..expr.span().end;
-
-        match token {
-            TokenKind::Sub => Ok(AstNode::Neg {
-                expr: Box::new(expr.unwrap_group()),
+            Ok(AstNode::Gt {
+                lhs: Box::new(lhs.unwrap_group()),
+                rhs: Box::new(rhs.unwrap_group()),
                 span,
-            }),
-            TokenKind::Not => Ok(AstNode::Not {
-                expr: Box::new(expr.unwrap_group()),
-                span,
-            }),
+            })
+        }
+        TokenKind::Gte => {
+            state.tokens.skip(&TokenKind::Gte)?;
 
-            _ => unreachable!(),
+            let rhs = parse_additive_expression(state)?;
+            let span = lhs.span().start..rhs.span().end;
+
+            Ok(AstNode::Gte {
+                lhs: Box::new(lhs.unwrap_group()),
+                rhs: Box::new(rhs.unwrap_group()),
+                span,
+            })
+        }
+        TokenKind::Lt => {
+            state.tokens.skip(&TokenKind::Lt)?;
+
+            let rhs = parse_additive_expression(state)?;
+            let span = lhs.span().start..rhs.span().end;
+
+            Ok(AstNode::Lt {
+                lhs: Box::new(lhs.unwrap_group()),
+                rhs: Box::new(rhs.unwrap_group()),
+                span,
+            })
+        }
+        TokenKind::Lte => {
+            state.tokens.skip(&TokenKind::Lte)?;
+
+            let rhs = parse_additive_expression(state)?;
+            let span = lhs.span().start..rhs.span().end;
+
+            Ok(AstNode::Lte {
+                lhs: Box::new(lhs.unwrap_group()),
+                rhs: Box::new(rhs.unwrap_group()),
+                span,
+            })
+        }
+        _ => Ok(lhs),
+    }
+}
+
+fn parse_additive_expression(state: &ParserState) -> Result<AstNode> {
+    // Parse first term
+    let mut lhs = parse_multiplicative_expression(state)?;
+
+    loop {
+        // Expecting "+" or "-" (both are optional)
+        match state.tokens.current_kind() {
+            TokenKind::Add => {
+                state.tokens.skip(&TokenKind::Add)?;
+
+                let rhs = parse_multiplicative_expression(state)?;
+                let span = lhs.span().start..rhs.span().end;
+
+                lhs = AstNode::Add {
+                    lhs: Box::new(lhs.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                };
+            }
+            TokenKind::Sub => {
+                state.tokens.skip(&TokenKind::Sub)?;
+
+                let rhs = parse_multiplicative_expression(state)?;
+                let span = lhs.span().start..rhs.span().end;
+
+                lhs = AstNode::Sub {
+                    lhs: Box::new(lhs.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                };
+            }
+            _ => return Ok(lhs),
         }
     }
+}
 
-    fn parse_primary_expression(&self) -> Result<AstNode> {
-        let token = self.state.tokens.current();
+fn parse_multiplicative_expression(state: &ParserState) -> Result<AstNode> {
+    // Parse first term
+    let mut lhs = parse_unary_expression(state)?;
 
-        match token.kind {
+    loop {
+        // Expecting "*", "/" or "%" (all are optional)
+        match state.tokens.current_kind() {
+            TokenKind::Mul => {
+                state.tokens.skip(&TokenKind::Mul)?;
+
+                let rhs = parse_unary_expression(state)?;
+                let span = lhs.span().start..rhs.span().end;
+
+                lhs = AstNode::Mul {
+                    lhs: Box::new(lhs.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                };
+            }
+            TokenKind::Div => {
+                state.tokens.skip(&TokenKind::Div)?;
+
+                let rhs = parse_unary_expression(state)?;
+                let span = lhs.span().start..rhs.span().end;
+
+                lhs = AstNode::Div {
+                    lhs: Box::new(lhs.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                };
+            }
+            TokenKind::Mod => {
+                state.tokens.skip(&TokenKind::Mod)?;
+
+                let rhs = parse_unary_expression(state)?;
+                let span = lhs.span().start..rhs.span().end;
+
+                lhs = AstNode::Mod {
+                    lhs: Box::new(lhs.unwrap_group()),
+                    rhs: Box::new(rhs.unwrap_group()),
+                    span,
+                };
+            }
+            _ => return Ok(lhs),
+        }
+    }
+}
+
+fn parse_unary_expression(state: &ParserState) -> Result<AstNode> {
+    //  Prefixed by >= 0 "negation" or "not" expression
+    if state.tokens.current_is(&TokenKind::Sub) {
+        return parse_prefix_expression(state, &TokenKind::Sub);
+    } else if state.tokens.current_is(&TokenKind::Not) {
+        return parse_prefix_expression(state, &TokenKind::Not);
+    }
+
+    // Parse primary expression
+    let mut expr = parse_primary_expression(state)?;
+
+    // Followed by >= 0 function call, field access, or indexed access
+    //
+    // TODO: field access
+    loop {
+        match state.tokens.current_kind() {
             TokenKind::LParen => {
-                // Parse group expression
+                let callee_start = expr.span().start;
 
-                let lparen_start = token.span.start;
-                self.state.tokens.skip(&TokenKind::LParen)?;
+                // Expecting "("
+                state.tokens.skip(&TokenKind::LParen)?;
 
-                let expr = self.parse()?;
+                let args = parse_function_call(state)?;
 
-                let span = lparen_start..self.state.tokens.current().span.end;
-                self.state.tokens.skip(&TokenKind::RParen)?;
+                let span = callee_start..state.tokens.current().span.end;
 
-                Ok(AstNode::Group {
-                    expr: Box::new(expr),
+                // Expecting ")"
+                state.tokens.skip(&TokenKind::RParen)?;
+
+                expr = AstNode::FunctionCall {
+                    callee: Box::new(expr.unwrap_group()),
+                    args,
                     span,
-                })
+                };
             }
 
-            // Expecting either symbols or literals
-            TokenKind::Symbol(name) => {
-                self.state.tokens.advance();
-                Ok(AstNode::Symbol {
-                    name,
-                    span: token.span,
-                })
-            }
-            TokenKind::Int(n) => {
-                self.state.tokens.advance();
-                Ok(AstNode::Literal {
-                    lit: Literal::Int(n),
-                    span: token.span,
-                })
-            }
-            TokenKind::Float(n) => {
-                self.state.tokens.advance();
-                Ok(AstNode::Literal {
-                    lit: Literal::Float(n),
-                    span: token.span,
-                })
-            }
-            TokenKind::Bool(b) => {
-                self.state.tokens.advance();
-                Ok(AstNode::Literal {
-                    lit: Literal::Bool(b),
-                    span: token.span,
-                })
-            }
-            TokenKind::Char(c) => {
-                self.state.tokens.advance();
-                Ok(AstNode::Literal {
-                    lit: Literal::Char(c),
-                    span: token.span,
-                })
-            }
-            TokenKind::String(s) => {
-                self.state.tokens.advance();
-                Ok(AstNode::Literal {
-                    lit: Literal::String(s),
-                    span: token.span,
-                })
+            TokenKind::LBrack => {
+                let callee_start = expr.span().start;
+
+                // Expecting "("
+                state.tokens.skip(&TokenKind::LBrack)?;
+
+                // Expecting expression
+                let index = parse(state)?;
+
+                let span = callee_start..state.tokens.current().span.end;
+
+                // Expecting ")"
+                state.tokens.skip(&TokenKind::RBrack)?;
+
+                expr = AstNode::IndexAccess {
+                    object: Box::new(expr.unwrap_group()),
+                    index: Box::new(index),
+                    span,
+                };
             }
 
-            TokenKind::LBrack => self.parse_array_literal(),
+            _ => break,
+        }
+    }
 
-            kind => Err(ParsingError {
-                variant: ParsingErrorVariant::UnexpectedToken {
-                    expect: TokenKind::Symbol(String::from("foo")),
-                    found: kind.clone(),
-                },
+    Ok(expr)
+}
+
+fn parse_prefix_expression(state: &ParserState, token: &TokenKind) -> Result<AstNode> {
+    let start = state.tokens.current().span.start;
+    state.tokens.skip(token)?;
+
+    let expr = parse_unary_expression(state)?;
+    let span = start..expr.span().end;
+
+    match token {
+        TokenKind::Sub => Ok(AstNode::Neg {
+            expr: Box::new(expr.unwrap_group()),
+            span,
+        }),
+        TokenKind::Not => Ok(AstNode::Not {
+            expr: Box::new(expr.unwrap_group()),
+            span,
+        }),
+
+        _ => unreachable!(),
+    }
+}
+
+fn parse_primary_expression(state: &ParserState) -> Result<AstNode> {
+    let token = state.tokens.current();
+
+    match token.kind {
+        TokenKind::LParen => {
+            // Parse group expression
+
+            let lparen_start = token.span.start;
+            state.tokens.skip(&TokenKind::LParen)?;
+
+            let expr = parse(state)?;
+
+            let span = lparen_start..state.tokens.current().span.end;
+            state.tokens.skip(&TokenKind::RParen)?;
+
+            Ok(AstNode::Group {
+                expr: Box::new(expr),
+                span,
+            })
+        }
+
+        // Expecting either symbols or literals
+        TokenKind::Symbol(name) => {
+            state.tokens.advance();
+            Ok(AstNode::Symbol {
+                name,
                 span: token.span,
-            }),
+            })
         }
-    }
-
-    fn parse_function_call(&self) -> Result<Vec<AstNode>> {
-        // Can have >= 0 arguments
-        let mut args = vec![];
-
-        loop {
-            // Stop when encounter a closing parentheses
-            if self.state.tokens.current_is(&TokenKind::RParen) {
-                return Ok(args);
-            }
-
-            // Parse argument
-            args.push(self.parse()?);
-
-            // Continue if encounter "," or break out of loop if encounter ")"
-            match self.state.tokens.current_kind() {
-                TokenKind::Comma => {
-                    self.state.tokens.skip(&TokenKind::Comma)?;
-                    continue;
-                }
-
-                TokenKind::RParen => continue,
-
-                kind => {
-                    // Error if encountering neither "," or ")"
-                    return Err(ParsingError {
-                        variant: ParsingErrorVariant::UnexpectedToken {
-                            expect: TokenKind::RParen,
-                            found: kind.clone(),
-                        },
-                        span: self.state.tokens.current().span,
-                    });
-                }
-            }
+        TokenKind::Int(n) => {
+            state.tokens.advance();
+            Ok(AstNode::Literal {
+                lit: Literal::Int(n),
+                span: token.span,
+            })
         }
-    }
-
-    fn parse_array_literal(&self) -> Result<AstNode> {
-        let start = self.state.tokens.current().span.start;
-
-        // Expecting "["
-        self.state.tokens.skip(&TokenKind::LBrack)?;
-
-        // Expecting type notation
-        let elem_tn = TypeNotationParser::new(self.state).parse()?;
-
-        // Can have >= 0 elements
-        let mut elems = vec![];
-        loop {
-            // Stop when encounter a closing bracket
-            if self.state.tokens.current_is(&TokenKind::RBrack) {
-                break;
-            }
-
-            // Parse element
-            elems.push(self.parse()?);
-
-            // Continue if encounter "," or break out of loop if encounter ")"
-            match self.state.tokens.current_kind() {
-                TokenKind::Comma => {
-                    self.state.tokens.skip(&TokenKind::Comma)?;
-                    continue;
-                }
-
-                TokenKind::RBrack => continue,
-
-                kind => {
-                    // Error if encountering neither "," or "]"
-                    return Err(ParsingError {
-                        variant: ParsingErrorVariant::UnexpectedToken {
-                            expect: TokenKind::RBrack,
-                            found: kind.clone(),
-                        },
-                        span: self.state.tokens.current().span,
-                    });
-                }
-            }
+        TokenKind::Float(n) => {
+            state.tokens.advance();
+            Ok(AstNode::Literal {
+                lit: Literal::Float(n),
+                span: token.span,
+            })
+        }
+        TokenKind::Bool(b) => {
+            state.tokens.advance();
+            Ok(AstNode::Literal {
+                lit: Literal::Bool(b),
+                span: token.span,
+            })
+        }
+        TokenKind::Char(c) => {
+            state.tokens.advance();
+            Ok(AstNode::Literal {
+                lit: Literal::Char(c),
+                span: token.span,
+            })
+        }
+        TokenKind::String(s) => {
+            state.tokens.advance();
+            Ok(AstNode::Literal {
+                lit: Literal::String(s),
+                span: token.span,
+            })
         }
 
-        let end = self.state.tokens.current().span.end;
+        TokenKind::LBrack => parse_array_literal(state),
 
-        // Expecting "]"
-        self.state.tokens.skip(&TokenKind::RBrack)?;
-
-        Ok(AstNode::Literal {
-            lit: Literal::Array {
-                elem_tn: Box::new(elem_tn),
-                elems,
+        kind => Err(ParsingError {
+            variant: ParsingErrorVariant::UnexpectedToken {
+                expect: TokenKind::Symbol(String::from("foo")),
+                found: kind.clone(),
             },
-            span: start..end,
-        })
+            span: token.span,
+        }),
     }
+}
+
+fn parse_function_call(state: &ParserState) -> Result<Vec<AstNode>> {
+    // Can have >= 0 arguments
+    let mut args = vec![];
+
+    loop {
+        // Stop when encounter a closing parentheses
+        if state.tokens.current_is(&TokenKind::RParen) {
+            return Ok(args);
+        }
+
+        // Parse argument
+        args.push(parse(state)?);
+
+        // Continue if encounter "," or break out of loop if encounter ")"
+        match state.tokens.current_kind() {
+            TokenKind::Comma => {
+                state.tokens.skip(&TokenKind::Comma)?;
+                continue;
+            }
+
+            TokenKind::RParen => continue,
+
+            kind => {
+                // Error if encountering neither "," or ")"
+                return Err(ParsingError {
+                    variant: ParsingErrorVariant::UnexpectedToken {
+                        expect: TokenKind::RParen,
+                        found: kind.clone(),
+                    },
+                    span: state.tokens.current().span,
+                });
+            }
+        }
+    }
+}
+
+fn parse_array_literal(state: &ParserState) -> Result<AstNode> {
+    let start = state.tokens.current().span.start;
+
+    // Expecting "["
+    state.tokens.skip(&TokenKind::LBrack)?;
+
+    // Expecting type notation
+    let elem_tn = TypeNotationParser::new(state).parse()?;
+
+    // Can have >= 0 elements
+    let mut elems = vec![];
+    loop {
+        // Stop when encounter a closing bracket
+        if state.tokens.current_is(&TokenKind::RBrack) {
+            break;
+        }
+
+        // Parse element
+        elems.push(parse(state)?);
+
+        // Continue if encounter "," or break out of loop if encounter ")"
+        match state.tokens.current_kind() {
+            TokenKind::Comma => {
+                state.tokens.skip(&TokenKind::Comma)?;
+                continue;
+            }
+
+            TokenKind::RBrack => continue,
+
+            kind => {
+                // Error if encountering neither "," or "]"
+                return Err(ParsingError {
+                    variant: ParsingErrorVariant::UnexpectedToken {
+                        expect: TokenKind::RBrack,
+                        found: kind.clone(),
+                    },
+                    span: state.tokens.current().span,
+                });
+            }
+        }
+    }
+
+    let end = state.tokens.current().span.end;
+
+    // Expecting "]"
+    state.tokens.skip(&TokenKind::RBrack)?;
+
+    Ok(AstNode::Literal {
+        lit: Literal::Array {
+            elem_tn: Box::new(elem_tn),
+            elems,
+        },
+        span: start..end,
+    })
 }
 
 #[cfg(test)]

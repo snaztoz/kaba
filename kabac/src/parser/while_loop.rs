@@ -1,39 +1,27 @@
-use super::{block::BlockParser, expression::ExpressionParser, state::ParserState, Result};
+use super::{block, expression, state::ParserState, Result};
 use crate::{ast::AstNode, lexer::token::TokenKind};
 
-pub struct WhileLoopParser<'a> {
-    state: &'a ParserState<'a>,
-}
+pub fn parse(state: &ParserState) -> Result<AstNode> {
+    let start = state.tokens.current().span.start;
 
-impl<'a> WhileLoopParser<'a> {
-    pub const fn new(state: &'a ParserState) -> Self {
-        Self { state }
-    }
-}
+    // Expecting "while" keyword
+    state.tokens.skip(&TokenKind::While)?;
 
-impl WhileLoopParser<'_> {
-    pub fn parse(&self) -> Result<AstNode> {
-        let start = self.state.tokens.current().span.start;
+    // Expecting expression
+    let cond = expression::parse(state)?;
 
-        // Expecting "while" keyword
-        self.state.tokens.skip(&TokenKind::While)?;
+    // Expecting block
+    let scope_id = state.next_scope_id();
+    let block = block::parse(state)?;
 
-        // Expecting expression
-        let cond = ExpressionParser::new(self.state).parse()?;
+    let end = block.span.end;
 
-        // Expecting block
-        let scope_id = self.state.next_scope_id();
-        let block = BlockParser::new(self.state).parse()?;
-
-        let end = block.span.end;
-
-        Ok(AstNode::While {
-            cond: Box::new(cond),
-            body: block.body,
-            scope_id,
-            span: start..end,
-        })
-    }
+    Ok(AstNode::While {
+        cond: Box::new(cond),
+        body: block.body,
+        scope_id,
+        span: start..end,
+    })
 }
 
 #[cfg(test)]

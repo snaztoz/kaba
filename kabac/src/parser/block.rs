@@ -1,8 +1,7 @@
 use super::{
     error::{ParsingError, ParsingErrorVariant},
     state::ParserState,
-    statement::StatementParser,
-    Result,
+    statement, Result,
 };
 use crate::{ast::AstNode, lexer::token::TokenKind};
 use logos::Span;
@@ -12,58 +11,46 @@ pub struct Block {
     pub span: Span,
 }
 
-pub struct BlockParser<'a> {
-    state: &'a ParserState<'a>,
+pub fn parse(state: &ParserState) -> Result<Block> {
+    let start = state.tokens.current().span.start;
+
+    // Expecting "{"
+    state.tokens.skip(&TokenKind::LBrace)?;
+
+    // Expecting statements
+    let stmts = parse_stmts(state)?;
+
+    let end = state.tokens.current().span.end;
+
+    // Expecting "}"
+    state.tokens.skip(&TokenKind::RBrace)?;
+
+    Ok(Block {
+        body: stmts,
+        span: start..end,
+    })
 }
 
-impl<'a> BlockParser<'a> {
-    pub const fn new(state: &'a ParserState) -> Self {
-        Self { state }
-    }
-}
-
-impl BlockParser<'_> {
-    pub fn parse(&self) -> Result<Block> {
-        let start = self.state.tokens.current().span.start;
-
-        // Expecting "{"
-        self.state.tokens.skip(&TokenKind::LBrace)?;
-
-        // Expecting statements
-        let stmts = self.parse_stmts()?;
-
-        let end = self.state.tokens.current().span.end;
-
-        // Expecting "}"
-        self.state.tokens.skip(&TokenKind::RBrace)?;
-
-        Ok(Block {
-            body: stmts,
-            span: start..end,
-        })
-    }
-
-    fn parse_stmts(&self) -> Result<Vec<AstNode>> {
-        let mut stmts = vec![];
-        loop {
-            if self.state.tokens.current_is(&TokenKind::RBrace) {
-                break;
-            }
-
-            if self.state.tokens.current_is(&TokenKind::Eof) {
-                return Err(ParsingError {
-                    variant: ParsingErrorVariant::UnexpectedToken {
-                        expect: TokenKind::RBrace,
-                        found: TokenKind::Eof,
-                    },
-                    span: self.state.tokens.current().span,
-                });
-            }
-
-            let stmt = StatementParser::new(self.state).parse()?;
-            stmts.push(stmt);
+fn parse_stmts(state: &ParserState) -> Result<Vec<AstNode>> {
+    let mut stmts = vec![];
+    loop {
+        if state.tokens.current_is(&TokenKind::RBrace) {
+            break;
         }
 
-        Ok(stmts)
+        if state.tokens.current_is(&TokenKind::Eof) {
+            return Err(ParsingError {
+                variant: ParsingErrorVariant::UnexpectedToken {
+                    expect: TokenKind::RBrace,
+                    found: TokenKind::Eof,
+                },
+                span: state.tokens.current().span,
+            });
+        }
+
+        let stmt = statement::parse(state)?;
+        stmts.push(stmt);
     }
+
+    Ok(stmts)
 }

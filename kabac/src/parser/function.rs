@@ -1,5 +1,5 @@
 use super::{
-    block::BlockParser,
+    block,
     error::{ParsingError, ParsingErrorVariant},
     state::ParserState,
     tn::TypeNotationParser,
@@ -10,124 +10,112 @@ use crate::{
     lexer::token::TokenKind,
 };
 
-pub struct FunctionDefinitionParser<'a> {
-    state: &'a ParserState<'a>,
+pub fn parse(state: &ParserState) -> Result<AstNode> {
+    let start = state.tokens.current().span.start;
+
+    // Expecting "fn" keyword
+    state.tokens.skip(&TokenKind::Fn)?;
+
+    // Expecting symbol
+    let sym_id = state.next_symbol_id();
+    let sym = parse_sym(state)?;
+
+    // Expecting "("
+    state.tokens.skip(&TokenKind::LParen)?;
+
+    // Expecting >= 0 function parameter declaration(s)
+    let params = parse_params(state)?;
+
+    // Expecting ")"
+    state.tokens.skip(&TokenKind::RParen)?;
+
+    // Expecting return type notation (optional)
+    let return_tn = parse_return_tn(state)?;
+
+    // Expecting function body
+    let scope_id = state.next_scope_id();
+    let block = block::parse(state)?;
+
+    Ok(AstNode::FunctionDefinition {
+        params,
+        sym: Box::new(sym),
+        sym_id,
+        return_tn: return_tn.map(Box::new),
+        body: block.body,
+        scope_id,
+        span: start..block.span.end,
+    })
 }
 
-impl<'a> FunctionDefinitionParser<'a> {
-    pub const fn new(state: &'a ParserState) -> Self {
-        Self { state }
-    }
+fn parse_sym(state: &ParserState) -> Result<AstNode> {
+    let sym = match state.tokens.current_kind() {
+        TokenKind::Symbol(name) => Ok(AstNode::Symbol {
+            name,
+            span: state.tokens.current().span,
+        }),
+
+        kind => Err(ParsingError {
+            variant: ParsingErrorVariant::UnexpectedToken {
+                expect: TokenKind::Symbol(String::from("function_name")),
+                found: kind.clone(),
+            },
+            span: state.tokens.current().span,
+        }),
+    };
+
+    state.tokens.advance();
+
+    sym
 }
 
-impl FunctionDefinitionParser<'_> {
-    pub fn parse(&self) -> Result<AstNode> {
-        let start = self.state.tokens.current().span.start;
-
-        // Expecting "fn" keyword
-        self.state.tokens.skip(&TokenKind::Fn)?;
-
+fn parse_params(state: &ParserState) -> Result<Vec<FunctionParam>> {
+    let mut params = vec![];
+    while !state.tokens.current_is(&TokenKind::RParen) {
         // Expecting symbol
-        let sym_id = self.state.next_symbol_id();
-        let sym = self.parse_sym()?;
+        let sym_id = state.next_symbol_id();
+        let sym = parse_sym(state)?;
 
-        // Expecting "("
-        self.state.tokens.skip(&TokenKind::LParen)?;
+        // Expecting ":"
+        state.tokens.skip(&TokenKind::Colon)?;
 
-        // Expecting >= 0 function parameter declaration(s)
-        let params = self.parse_params()?;
+        // Expecting type notation
+        let tn = TypeNotationParser::new(state).parse()?;
 
-        // Expecting ")"
-        self.state.tokens.skip(&TokenKind::RParen)?;
+        params.push(FunctionParam { sym, sym_id, tn });
 
-        // Expecting return type notation (optional)
-        let return_tn = self.parse_return_tn()?;
+        // Expecting either "," or ")"
 
-        // Expecting function body
-        let scope_id = self.state.next_scope_id();
-        let block = BlockParser::new(self.state).parse()?;
+        match state.tokens.current_kind() {
+            TokenKind::Comma => {
+                state.tokens.skip(&TokenKind::Comma)?;
+                continue;
+            }
 
-        Ok(AstNode::FunctionDefinition {
-            params,
-            sym: Box::new(sym),
-            sym_id,
-            return_tn: return_tn.map(Box::new),
-            body: block.body,
-            scope_id,
-            span: start..block.span.end,
-        })
-    }
+            TokenKind::RParen => continue,
 
-    fn parse_sym(&self) -> Result<AstNode> {
-        let sym = match self.state.tokens.current_kind() {
-            TokenKind::Symbol(name) => Ok(AstNode::Symbol {
-                name,
-                span: self.state.tokens.current().span,
-            }),
-
-            kind => Err(ParsingError {
-                variant: ParsingErrorVariant::UnexpectedToken {
-                    expect: TokenKind::Symbol(String::from("function_name")),
-                    found: kind.clone(),
-                },
-                span: self.state.tokens.current().span,
-            }),
-        };
-
-        self.state.tokens.advance();
-
-        sym
-    }
-
-    fn parse_params(&self) -> Result<Vec<FunctionParam>> {
-        let mut params = vec![];
-        while !self.state.tokens.current_is(&TokenKind::RParen) {
-            // Expecting symbol
-            let sym_id = self.state.next_symbol_id();
-            let sym = self.parse_sym()?;
-
-            // Expecting ":"
-            self.state.tokens.skip(&TokenKind::Colon)?;
-
-            // Expecting type notation
-            let tn = TypeNotationParser::new(self.state).parse()?;
-
-            params.push(FunctionParam { sym, sym_id, tn });
-
-            // Expecting either "," or ")"
-
-            match self.state.tokens.current_kind() {
-                TokenKind::Comma => {
-                    self.state.tokens.skip(&TokenKind::Comma)?;
-                    continue;
-                }
-
-                TokenKind::RParen => continue,
-
-                kind => {
-                    return Err(ParsingError {
-                        variant: ParsingErrorVariant::UnexpectedToken {
-                            expect: TokenKind::RParen,
-                            found: kind.clone(),
-                        },
-                        span: self.state.tokens.current().span,
-                    });
-                }
+            kind => {
+                return Err(ParsingError {
+                    variant: ParsingErrorVariant::UnexpectedToken {
+                        expect: TokenKind::RParen,
+                        found: kind.clone(),
+                    },
+                    span: state.tokens.current().span,
+                });
             }
         }
-
-        Ok(params)
     }
 
-    fn parse_return_tn(&self) -> Result<Option<AstNode>> {
-        if !self.state.tokens.current_is(&TokenKind::Colon) {
-            return Ok(None);
-        }
+    Ok(params)
+}
 
-        self.state.tokens.skip(&TokenKind::Colon)?;
-
-        Ok(Some(TypeNotationParser::new(self.state).parse()?))
+fn parse_return_tn(state: &ParserState) -> Result<Option<AstNode>> {
+    if !state.tokens.current_is(&TokenKind::Colon) {
+        return Ok(None);
     }
+
+    state.tokens.skip(&TokenKind::Colon)?;
+
+    Ok(Some(TypeNotationParser::new(state).parse()?))
 }
 
 #[cfg(test)]

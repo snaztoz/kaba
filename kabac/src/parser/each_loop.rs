@@ -1,75 +1,63 @@
 use super::{
-    block::BlockParser,
+    block,
     error::{ParsingError, ParsingErrorVariant},
-    expression::ExpressionParser,
+    expression,
     state::ParserState,
     Result,
 };
 use crate::{ast::AstNode, lexer::token::TokenKind};
 
-pub struct EachLoopParser<'a> {
-    state: &'a ParserState<'a>,
+pub fn parse(state: &ParserState) -> Result<AstNode> {
+    let start = state.tokens.current().span.start;
+
+    // Expecting "each" keyword
+    state.tokens.skip(&TokenKind::Each)?;
+
+    // Expecting element symbol
+    let elem_sym_id = state.next_symbol_id();
+    let elem_sym = parse_sym(state)?;
+
+    // Expecting "in" keyword
+    state.tokens.skip(&TokenKind::In)?;
+
+    // Expecting expression
+    let arr = expression::parse(state)?;
+
+    // Expecting block
+    let scope_id = state.next_scope_id();
+    let block = block::parse(state)?;
+
+    let end = block.span.end;
+
+    Ok(AstNode::Each {
+        iterable: Box::new(arr),
+        elem_sym: Box::new(elem_sym),
+        elem_sym_id,
+        body: block.body,
+        scope_id,
+        span: start..end,
+    })
 }
 
-impl<'a> EachLoopParser<'a> {
-    pub const fn new(state: &'a ParserState) -> Self {
-        Self { state }
-    }
-}
+fn parse_sym(state: &ParserState) -> Result<AstNode> {
+    let sym = match state.tokens.current_kind() {
+        TokenKind::Symbol(name) => Ok(AstNode::Symbol {
+            name,
+            span: state.tokens.current().span,
+        }),
 
-impl EachLoopParser<'_> {
-    pub fn parse(&self) -> Result<AstNode> {
-        let start = self.state.tokens.current().span.start;
+        kind => Err(ParsingError {
+            variant: ParsingErrorVariant::UnexpectedToken {
+                expect: TokenKind::Symbol(String::from("elem")),
+                found: kind.clone(),
+            },
+            span: state.tokens.current().span,
+        }),
+    };
 
-        // Expecting "each" keyword
-        self.state.tokens.skip(&TokenKind::Each)?;
+    state.tokens.advance();
 
-        // Expecting element symbol
-        let elem_sym_id = self.state.next_symbol_id();
-        let elem_sym = self.parse_sym()?;
-
-        // Expecting "in" keyword
-        self.state.tokens.skip(&TokenKind::In)?;
-
-        // Expecting expression
-        let arr = ExpressionParser::new(self.state).parse()?;
-
-        // Expecting block
-        let scope_id = self.state.next_scope_id();
-        let block = BlockParser::new(self.state).parse()?;
-
-        let end = block.span.end;
-
-        Ok(AstNode::Each {
-            iterable: Box::new(arr),
-            elem_sym: Box::new(elem_sym),
-            elem_sym_id,
-            body: block.body,
-            scope_id,
-            span: start..end,
-        })
-    }
-
-    fn parse_sym(&self) -> Result<AstNode> {
-        let sym = match self.state.tokens.current_kind() {
-            TokenKind::Symbol(name) => Ok(AstNode::Symbol {
-                name,
-                span: self.state.tokens.current().span,
-            }),
-
-            kind => Err(ParsingError {
-                variant: ParsingErrorVariant::UnexpectedToken {
-                    expect: TokenKind::Symbol(String::from("elem")),
-                    found: kind.clone(),
-                },
-                span: self.state.tokens.current().span,
-            }),
-        };
-
-        self.state.tokens.advance();
-
-        sym
-    }
+    sym
 }
 
 #[cfg(test)]
