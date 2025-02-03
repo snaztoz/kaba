@@ -250,7 +250,7 @@ impl ExpressionRunner<'_> {
 
     fn math_add(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
         match (lhs, rhs) {
-            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l + r),
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l.wrapping_add(*r)),
             (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l + r),
             _ => unreachable!(),
         }
@@ -258,7 +258,7 @@ impl ExpressionRunner<'_> {
 
     fn math_sub(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
         match (lhs, rhs) {
-            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l - r),
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l.wrapping_sub(*r)),
             (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l - r),
             _ => unreachable!(),
         }
@@ -266,7 +266,7 @@ impl ExpressionRunner<'_> {
 
     fn math_mul(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
         match (lhs, rhs) {
-            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l * r),
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l.wrapping_mul(*r)),
             (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l * r),
             _ => unreachable!(),
         }
@@ -274,7 +274,7 @@ impl ExpressionRunner<'_> {
 
     fn math_div(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
         match (lhs, rhs) {
-            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l / r),
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l.wrapping_div(*r)),
             (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l / r),
             _ => unreachable!(),
         }
@@ -282,7 +282,7 @@ impl ExpressionRunner<'_> {
 
     fn math_mod(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
         match (lhs, rhs) {
-            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l % r),
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l.wrapping_rem(*r)),
             (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l % r),
             _ => unreachable!(),
         }
