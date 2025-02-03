@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Integer literal limit size.
+- Fix math expressions wrapping in runtime.
 
 ## [0.5.2] - 2025-01-20
 
