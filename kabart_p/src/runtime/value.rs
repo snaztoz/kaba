@@ -5,7 +5,7 @@ pub enum RuntimeValue {
     Void,
     Int(i32),
     Float(f32),
-    Boolean(bool),
+    Bool(bool),
     Char(char),
     String(String),
     Function(usize),
@@ -36,7 +36,7 @@ impl Display for RuntimeValue {
             Self::Void => write!(f, "void"),
             Self::Int(n) => write!(f, "{n}"),
             Self::Float(n) => write!(f, "{n}"),
-            Self::Boolean(b) => write!(f, "{b}"),
+            Self::Bool(b) => write!(f, "{b}"),
             Self::Char(c) => write!(f, "{c}"),
             Self::String(s) => write!(f, "{s}"),
 

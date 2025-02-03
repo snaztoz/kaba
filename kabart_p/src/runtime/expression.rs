@@ -60,7 +60,7 @@ impl<'a> ExpressionRunner<'a> {
         let val = match lit {
             Literal::Void => RuntimeValue::Void,
 
-            Literal::Bool(b) => RuntimeValue::Boolean(*b),
+            Literal::Bool(b) => RuntimeValue::Bool(*b),
             Literal::Int(n) => RuntimeValue::Int(*n),
             Literal::Float(n) => RuntimeValue::Float(*n),
             Literal::Char(c) => RuntimeValue::Char(*c),
@@ -162,90 +162,49 @@ impl ExpressionRunner<'_> {
 
     fn run_or(&self, lhs_val: &RuntimeValue, rhs_val: &RuntimeValue) -> RuntimeValue {
         // Use short-circuiting
-
-        if let RuntimeValue::Boolean(b) = lhs_val {
-            if *b {
-                return RuntimeValue::Boolean(true);
-            }
+        match (lhs_val, rhs_val) {
+            (RuntimeValue::Bool(l), RuntimeValue::Bool(r)) => RuntimeValue::Bool(*l || *r),
+            _ => RuntimeValue::Bool(false),
         }
-        if let RuntimeValue::Boolean(b) = rhs_val {
-            if *b {
-                return RuntimeValue::Boolean(true);
-            }
-        }
-
-        RuntimeValue::Boolean(false)
     }
 
     fn run_and(&self, lhs_val: &RuntimeValue, rhs_val: &RuntimeValue) -> RuntimeValue {
         // Use short-circuiting
-
-        if let RuntimeValue::Boolean(b_lhs) = lhs_val {
-            if *b_lhs {
-                if let RuntimeValue::Boolean(b_rhs) = rhs_val {
-                    if *b_rhs {
-                        return RuntimeValue::Boolean(true);
-                    }
-                }
-            }
+        match (lhs_val, rhs_val) {
+            (RuntimeValue::Bool(l), RuntimeValue::Bool(r)) => RuntimeValue::Bool(*l && *r),
+            _ => RuntimeValue::Bool(false),
         }
-
-        RuntimeValue::Boolean(false)
     }
 
     fn run_not(&self, child: &RuntimeValue) -> RuntimeValue {
         match child {
-            RuntimeValue::Boolean(b) => RuntimeValue::Boolean(!b),
+            RuntimeValue::Bool(b) => RuntimeValue::Bool(!b),
             _ => unreachable!(),
         }
     }
 
     fn run_eq(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        if lhs == rhs {
-            RuntimeValue::Boolean(true)
-        } else {
-            RuntimeValue::Boolean(false)
-        }
+        RuntimeValue::Bool(lhs == rhs)
     }
 
     fn run_neq(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        if lhs != rhs {
-            RuntimeValue::Boolean(true)
-        } else {
-            RuntimeValue::Boolean(false)
-        }
+        RuntimeValue::Bool(lhs != rhs)
     }
 
     fn run_gt(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        if lhs > rhs {
-            RuntimeValue::Boolean(true)
-        } else {
-            RuntimeValue::Boolean(false)
-        }
+        RuntimeValue::Bool(lhs > rhs)
     }
 
     fn run_gte(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        if lhs >= rhs {
-            RuntimeValue::Boolean(true)
-        } else {
-            RuntimeValue::Boolean(false)
-        }
+        RuntimeValue::Bool(lhs >= rhs)
     }
 
     fn run_lt(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        if lhs < rhs {
-            RuntimeValue::Boolean(true)
-        } else {
-            RuntimeValue::Boolean(false)
-        }
+        RuntimeValue::Bool(lhs < rhs)
     }
 
     fn run_lte(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        if lhs <= rhs {
-            RuntimeValue::Boolean(true)
-        } else {
-            RuntimeValue::Boolean(false)
-        }
+        RuntimeValue::Bool(lhs <= rhs)
     }
 
     fn math_add(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
