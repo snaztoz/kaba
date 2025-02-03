@@ -215,81 +215,41 @@ impl AssignmentRunner<'_> {
     }
 
     fn math_add(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        match lhs {
-            RuntimeValue::Integer(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Integer(l + r),
-                RuntimeValue::Float(r) => RuntimeValue::Float(f64::from(*l) + r),
-                _ => unreachable!(),
-            },
-            RuntimeValue::Float(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Float(l + f64::from(*r)),
-                RuntimeValue::Float(r) => RuntimeValue::Float(l + r),
-                _ => unreachable!(),
-            },
+        match (lhs, rhs) {
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l + r),
+            (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l + r),
             _ => unreachable!(),
         }
     }
 
     fn math_sub(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        match lhs {
-            RuntimeValue::Integer(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Integer(l - r),
-                RuntimeValue::Float(r) => RuntimeValue::Float(f64::from(*l) - r),
-                _ => unreachable!(),
-            },
-            RuntimeValue::Float(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Float(l - f64::from(*r)),
-                RuntimeValue::Float(r) => RuntimeValue::Float(l - r),
-                _ => unreachable!(),
-            },
+        match (lhs, rhs) {
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l - r),
+            (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l - r),
             _ => unreachable!(),
         }
     }
 
     fn math_mul(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        match lhs {
-            RuntimeValue::Integer(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Integer(l * r),
-                RuntimeValue::Float(r) => RuntimeValue::Float(f64::from(*l) * r),
-                _ => unreachable!(),
-            },
-            RuntimeValue::Float(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Float(l * f64::from(*r)),
-                RuntimeValue::Float(r) => RuntimeValue::Float(l * r),
-                _ => unreachable!(),
-            },
+        match (lhs, rhs) {
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l * r),
+            (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l * r),
             _ => unreachable!(),
         }
     }
 
     fn math_div(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        match lhs {
-            RuntimeValue::Integer(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Integer(l / r),
-                RuntimeValue::Float(r) => RuntimeValue::Float(f64::from(*l) / r),
-                _ => unreachable!(),
-            },
-            RuntimeValue::Float(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Float(l / f64::from(*r)),
-                RuntimeValue::Float(r) => RuntimeValue::Float(l / r),
-                _ => unreachable!(),
-            },
+        match (lhs, rhs) {
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l / r),
+            (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l / r),
             _ => unreachable!(),
         }
     }
 
     fn math_mod(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        match lhs {
-            RuntimeValue::Integer(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Integer(l % r),
-                RuntimeValue::Float(r) => RuntimeValue::Float(f64::from(*l) % r),
-                _ => unreachable!(),
-            },
-            RuntimeValue::Float(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Float(l % f64::from(*r)),
-                RuntimeValue::Float(r) => RuntimeValue::Float(l % r),
-                _ => unreachable!(),
-            },
+        match (lhs, rhs) {
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l % r),
+            (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l % r),
             _ => unreachable!(),
         }
     }

@@ -1,85 +1,75 @@
 use super::{
-    error::{ParsingError, Result},
-    expression::ExpressionParser,
+    error::{ParsingError, ParsingErrorVariant, Result},
+    expression,
     state::ParserState,
     tn::TypeNotationParser,
 };
 use crate::{ast::AstNode, lexer::token::TokenKind};
 
-pub struct VariableDeclarationParser<'a> {
-    state: &'a ParserState<'a>,
+pub fn parse(state: &ParserState) -> Result<AstNode> {
+    let start = state.tokens.current().span.start;
+
+    // Expecting "var" keyword
+    state.tokens.skip(&TokenKind::Var)?;
+
+    // Parse symbol
+    let sym_id = state.next_symbol_id();
+    let sym = parse_sym(state)?;
+
+    // Parse type notation (optional)
+    let tn = parse_tn(state)?;
+
+    // Expecting "="
+    state.tokens.skip(&TokenKind::Assign)?;
+
+    // Parse value
+    let expr = expression::parse(state)?;
+
+    let end = expr.span().end;
+
+    // Expecting ";"
+    state.tokens.skip(&TokenKind::Semicolon)?;
+
+    Ok(AstNode::VariableDeclaration {
+        sym: Box::new(sym),
+        sym_id,
+        tn: tn.map(Box::new),
+        val: Box::new(expr.unwrap_group()),
+        span: start..end,
+    })
 }
 
-impl<'a> VariableDeclarationParser<'a> {
-    pub const fn new(state: &'a ParserState<'a>) -> Self {
-        Self { state }
-    }
-}
+fn parse_sym(state: &ParserState) -> Result<AstNode> {
+    match state.tokens.current_kind() {
+        TokenKind::Symbol(name) => {
+            let sym = AstNode::Symbol {
+                name,
+                span: state.tokens.current().span.clone(),
+            };
 
-impl VariableDeclarationParser<'_> {
-    pub fn parse(&self) -> Result<AstNode> {
-        let start = self.state.tokens.current().span.start;
+            state.tokens.advance();
 
-        // Expecting "var" keyword
-        self.state.tokens.skip(&TokenKind::Var)?;
-
-        // Parse symbol
-        let sym_id = self.state.next_symbol_id();
-        let sym = self.parse_sym()?;
-
-        // Parse type notation (optional)
-        let tn = self.parse_tn()?;
-
-        // Expecting "="
-        self.state.tokens.skip(&TokenKind::Assign)?;
-
-        // Parse value
-        let expr = ExpressionParser::new(self.state).parse()?;
-
-        let end = expr.span().end;
-
-        // Expecting ";"
-        self.state.tokens.skip(&TokenKind::Semicolon)?;
-
-        Ok(AstNode::VariableDeclaration {
-            sym: Box::new(sym),
-            sym_id,
-            tn: tn.map(Box::new),
-            val: Box::new(expr.unwrap_group()),
-            span: start..end,
-        })
-    }
-
-    fn parse_sym(&self) -> Result<AstNode> {
-        match self.state.tokens.current_kind() {
-            TokenKind::Symbol(name) => {
-                let sym = AstNode::Symbol {
-                    name,
-                    span: self.state.tokens.current().span.clone(),
-                };
-
-                self.state.tokens.advance();
-
-                Ok(sym)
-            }
-            _ => Err(ParsingError::UnexpectedToken {
-                expect: TokenKind::Symbol(String::from("foo")),
-                found: self.state.tokens.current_kind().clone(),
-                span: self.state.tokens.current().span,
-            }),
+            Ok(sym)
         }
+        _ => Err(ParsingError {
+            variant: ParsingErrorVariant::UnexpectedToken {
+                expect: TokenKind::Symbol(String::from("foo")),
+                found: state.tokens.current_kind().clone(),
+            },
+            span: state.tokens.current().span,
+        }),
     }
+}
 
-    fn parse_tn(&self) -> Result<Option<AstNode>> {
-        let tn = if self.state.tokens.current_is(&TokenKind::Colon) {
-            self.state.tokens.skip(&TokenKind::Colon)?;
-            Some(TypeNotationParser::new(self.state).parse()?)
-        } else {
-            None
-        };
+fn parse_tn(state: &ParserState) -> Result<Option<AstNode>> {
+    let tn = if state.tokens.current_is(&TokenKind::Colon) {
+        state.tokens.skip(&TokenKind::Colon)?;
+        Some(TypeNotationParser::new(state).parse()?)
+    } else {
+        None
+    };
 
-        Ok(tn)
-    }
+    Ok(tn)
 }
 
 #[cfg(test)]

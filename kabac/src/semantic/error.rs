@@ -2,121 +2,42 @@ use super::types::Type;
 use logos::Span;
 use std::fmt::Display;
 
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = std::result::Result<T, SemanticError>;
 
 #[derive(Debug, PartialEq)]
-pub enum Error {
-    VoidTypeVariable {
-        span: Span,
-    },
-
-    TypeMismatch {
-        type_a: Type,
-        type_b: Type,
-        span: Span,
-    },
-
-    UnexpectedStatement {
-        stmt_str: String,
-        span: Span,
-    },
-
-    InvalidAssignmentType {
-        var_t: Type,
-        val_t: Type,
-        span: Span,
-    },
-
-    InvalidAssignmentLhs {
-        lhs: String,
-        span: Span,
-    },
-
-    SymbolAlreadyExist {
-        sym: String,
-        span: Span,
-    },
-
-    SymbolDoesNotExist {
-        sym: String,
-        span: Span,
-    },
-
-    NonNumberType {
-        span: Span,
-    },
-
-    NonSignableNumberType {
-        t: Type,
-        span: Span,
-    },
-
-    NonBooleanType {
-        span: Span,
-    },
-
-    NonCallableType {
-        t: Type,
-        span: Span,
-    },
-
-    NonIterableType {
-        t: Type,
-        span: Span,
-    },
-
-    NonIndexableType {
-        t: Type,
-        span: Span,
-    },
-
-    FunctionCallArgumentsLengthMismatch {
-        expected: usize,
-        get: usize,
-        span: Span,
-    },
-
-    InvalidFunctionCallArgument {
-        args: Vec<Type>,
-        span: Span,
-    },
-
-    ReturnTypeMismatch {
-        expected: Type,
-        get: Type,
-        span: Span,
-    },
-
-    UnexpectedVoidTypeExpression {
-        span: Span,
-    },
+pub struct SemanticError {
+    pub variant: SemanticErrorVariant,
+    pub span: Span,
 }
 
-impl Error {
-    pub fn span(&self) -> &Span {
-        match self {
-            Self::VoidTypeVariable { span, .. }
-            | Self::InvalidAssignmentType { span, .. }
-            | Self::InvalidAssignmentLhs { span, .. }
-            | Self::SymbolAlreadyExist { span, .. }
-            | Self::SymbolDoesNotExist { span, .. }
-            | Self::NonNumberType { span, .. }
-            | Self::NonSignableNumberType { span, .. }
-            | Self::NonBooleanType { span, .. }
-            | Self::UnexpectedStatement { span, .. }
-            | Self::FunctionCallArgumentsLengthMismatch { span, .. }
-            | Self::InvalidFunctionCallArgument { span, .. }
-            | Self::NonCallableType { span, .. }
-            | Self::NonIterableType { span, .. }
-            | Self::NonIndexableType { span, .. }
-            | Self::TypeMismatch { span, .. }
-            | Self::ReturnTypeMismatch { span, .. }
-            | Self::UnexpectedVoidTypeExpression { span } => span,
-        }
+impl Display for SemanticError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.variant.fmt(f)
     }
 }
 
-impl Display for Error {
+#[derive(Debug, PartialEq)]
+pub enum SemanticErrorVariant {
+    VoidTypeVariable,
+    TypeMismatch { type_a: Type, type_b: Type },
+    InvalidAssignmentType { var_t: Type, val_t: Type },
+    InvalidLValue,
+    UnexpectedStatement(String),
+    SymbolAlreadyExist(String),
+    SymbolDoesNotExist(String),
+    NonNumberType,
+    NonSignableNumberType,
+    NonBooleanType,
+    NonCallableType,
+    NonIterableType,
+    NonIndexableType,
+    ArgumentLengthMismatch { expected: usize, get: usize },
+    InvalidArguments { args_t: Vec<Type> },
+    ReturnTypeMismatch { expected: Type, get: Type },
+    UnexpectedVoidTypeExpression,
+}
+
+impl Display for SemanticErrorVariant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::VoidTypeVariable { .. } => {
@@ -128,47 +49,44 @@ impl Display for Error {
                     "unable to assign value of type `{val_t}` to type `{var_t}`"
                 )
             }
-            Self::InvalidAssignmentLhs { lhs, .. } => {
-                write!(f, "{lhs} can not be an assignment's lhs")
+            Self::InvalidLValue => {
+                write!(f, "not a valid lvalue")
             }
-            Self::SymbolAlreadyExist { sym, .. } => {
+            Self::SymbolAlreadyExist(sym) => {
                 write!(f, "`{sym}` already exists in the current scope")
             }
-            Self::SymbolDoesNotExist { sym, .. } => {
+            Self::SymbolDoesNotExist(sym) => {
                 write!(f, "`{sym}` does not exist in the current scope")
             }
             Self::NonNumberType { .. } => {
                 write!(f, "not a number")
             }
-            Self::NonSignableNumberType { t, .. } => {
-                write!(f, "not a signable number: `{t}`")
+            Self::NonSignableNumberType => {
+                write!(f, "not a signable number")
             }
             Self::NonBooleanType { .. } => {
                 write!(f, "not a boolean")
             }
-            Self::UnexpectedStatement { stmt_str, .. } => {
+            Self::UnexpectedStatement(stmt_str) => {
                 write!(f, "unexpected {stmt_str}")
             }
-            Self::FunctionCallArgumentsLengthMismatch { expected, get, .. } => {
+            Self::ArgumentLengthMismatch { expected, get, .. } => {
                 write!(f, "expecting {expected} argument(s), but get {get} instead")
             }
-            Self::InvalidFunctionCallArgument { args, .. } => {
+            Self::InvalidArguments { args_t, .. } => {
                 write!(
                     f,
-                    "unable to call function with argument(s) of type {args:?}"
+                    "unable to call function with argument(s) of type {args_t:?}"
                 )
             }
-            Self::NonCallableType { t, .. } => {
-                write!(f, "unable to call a non-callable type: `{t}`")
+            Self::NonCallableType => {
+                write!(f, "not a callable type")
             }
-            Self::NonIterableType { t, .. } => {
-                write!(f, "unable to iterate over non-iterable type: `{t}`")
+            Self::NonIterableType => {
+                write!(f, "not an iterable type")
             }
-            Self::NonIndexableType { t, .. } => {
-                write!(
-                    f,
-                    "unable to access the index of a non-indexable type: `{t}`"
-                )
+            Self::NonIndexableType => {
+                write!(f, "not an indexable type")
             }
             Self::TypeMismatch { type_a, type_b, .. } => {
                 write!(f, "type mismatch: `{type_a}` and `{type_b}`",)

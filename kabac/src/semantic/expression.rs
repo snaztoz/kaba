@@ -2,7 +2,7 @@ use std::cmp;
 
 use super::{
     assignment::AssignmentAnalyzer,
-    error::{Error, Result},
+    error::{Result, SemanticError, SemanticErrorVariant},
     literal::LiteralAnalyzer,
     state::AnalyzerState,
     types::{assert, FloatType, IntType, Type},
@@ -61,8 +61,8 @@ impl ExpressionAnalyzer<'_> {
             AstNode::Symbol { name, span } => self
                 .state
                 .get_sym_t(name)
-                .ok_or_else(|| Error::SymbolDoesNotExist {
-                    sym: String::from(name),
+                .ok_or_else(|| SemanticError {
+                    variant: SemanticErrorVariant::SymbolDoesNotExist(String::from(name)),
                     span: span.clone(),
                 })
                 .map(|st| st.unwrap_entity()),
@@ -174,11 +174,11 @@ impl ExpressionAnalyzer<'_> {
         let rhs_val = rhs_t.unwrap_unbounded_int();
 
         let n = match self.node {
-            AstNode::Add { .. } => lhs_val + rhs_val,
-            AstNode::Sub { .. } => lhs_val - rhs_val,
-            AstNode::Mul { .. } => lhs_val * rhs_val,
-            AstNode::Div { .. } => lhs_val / rhs_val,
-            AstNode::Mod { .. } => lhs_val % rhs_val,
+            AstNode::Add { .. } => lhs_val.wrapping_add(rhs_val),
+            AstNode::Sub { .. } => lhs_val.wrapping_sub(rhs_val),
+            AstNode::Mul { .. } => lhs_val.wrapping_mul(rhs_val),
+            AstNode::Div { .. } => lhs_val.wrapping_div(rhs_val),
+            AstNode::Mod { .. } => lhs_val.wrapping_rem(rhs_val),
             _ => unreachable!(),
         };
 
@@ -215,6 +215,17 @@ mod tests {
 
         assert!(res.is_ok());
         assert!(matches!(res.unwrap(), Type::Int(IntType::Unbounded(-1))));
+    }
+
+    #[test]
+    fn math_with_overflowing_literals_expression() {
+        let res = eval_expr("2147483647 + 1;", &[]);
+
+        assert!(res.is_ok());
+        assert!(matches!(
+            res.unwrap(),
+            Type::Int(IntType::Unbounded(-2147483648))
+        ));
     }
 
     #[test]

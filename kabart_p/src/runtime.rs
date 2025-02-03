@@ -109,6 +109,30 @@ mod tests {
     }
 
     #[test]
+    fn overflowing_math() {
+        assert_output_equal(
+            indoc! {"
+                fn main() {
+                    debug 2147483647 + 1;
+
+                    var a = 2147483647;
+                    debug a + 2;
+
+                    var b = -2147483648;
+                    debug b - 1;
+
+                    var c = -2147483648;
+                    debug c * -1;
+
+                    var d = -2147483648;
+                    debug d / -1;
+                }
+            "},
+            "-2147483648\n-2147483647\n2147483647\n-2147483648\n-2147483648\n".as_bytes(),
+        );
+    }
+
+    #[test]
     fn changing_value() {
         assert_output_equal(
             indoc! {"

@@ -1,5 +1,5 @@
 use super::{
-    error::{Error, Result},
+    error::{Result, SemanticError},
     types::Type,
 };
 use crate::ast::{ScopeId, SymbolId};
@@ -117,7 +117,7 @@ impl AnalyzerState {
     /// If symbol is already exist in the scope, it will run the `err` closure.
     pub fn save_entity_or_else<F>(&self, id: SymbolId, sym: &str, t: Type, err: F) -> Result<()>
     where
-        F: FnOnce() -> Error,
+        F: FnOnce() -> SemanticError,
     {
         //
         // Save to scope table

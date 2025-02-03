@@ -1,5 +1,5 @@
 use super::{
-    error::{LexingError, Result},
+    error::{LexingError, LexingErrorVariant, Result},
     token::TokenKind,
 };
 use logos::Lexer;
@@ -8,8 +8,8 @@ pub fn lex_symbol(lex: &mut Lexer<TokenKind>) -> Result<String> {
     let value = lex.slice();
 
     if value.chars().next().unwrap().is_numeric() {
-        return Err(LexingError::InvalidSymbol {
-            token: String::from(value),
+        return Err(LexingError {
+            variant: LexingErrorVariant::InvalidSymbol,
             span: lex.span(),
         });
     }
@@ -17,7 +17,7 @@ pub fn lex_symbol(lex: &mut Lexer<TokenKind>) -> Result<String> {
     Ok(String::from(value))
 }
 
-pub fn lex_integer(lex: &mut Lexer<TokenKind>) -> i32 {
+pub fn lex_integer(lex: &mut Lexer<TokenKind>) -> u32 {
     lex.slice().parse().unwrap()
 }
 
@@ -37,7 +37,8 @@ pub fn lex_char(lex: &mut Lexer<TokenKind>) -> Result<char> {
     let c = match lex.remainder().chars().next() {
         Some(c) => c,
         None => {
-            return Err(LexingError::UnexpectedEof {
+            return Err(LexingError {
+                variant: LexingErrorVariant::UnexpectedEof,
                 span: lex.span().end..lex.span().end,
             })
         }
@@ -48,7 +49,8 @@ pub fn lex_char(lex: &mut Lexer<TokenKind>) -> Result<char> {
     let c = match c {
         '\\' => lex_escape_character(lex)?,
         '\'' => {
-            return Err(LexingError::UnexpectedToken {
+            return Err(LexingError {
+                variant: LexingErrorVariant::UnexpectedToken,
                 span: lex.span().end - 1..lex.span().end,
             })
         }
@@ -58,12 +60,14 @@ pub fn lex_char(lex: &mut Lexer<TokenKind>) -> Result<char> {
     match lex.remainder().chars().next() {
         Some('\'') => (),
         Some(_) => {
-            return Err(LexingError::UnexpectedToken {
+            return Err(LexingError {
+                variant: LexingErrorVariant::UnexpectedToken,
                 span: lex.span().end..lex.span().end,
             })
         }
         None => {
-            return Err(LexingError::UnexpectedEof {
+            return Err(LexingError {
+                variant: LexingErrorVariant::UnexpectedEof,
                 span: lex.span().end..lex.span().end,
             })
         }
@@ -91,7 +95,8 @@ pub fn lex_string(lex: &mut Lexer<TokenKind>) -> Result<String> {
         }
     }
 
-    Err(LexingError::UnexpectedEof {
+    Err(LexingError {
+        variant: LexingErrorVariant::UnexpectedEof,
         span: lex.source().len()..lex.source().len(),
     })
 }
@@ -100,7 +105,8 @@ pub fn lex_escape_character(lex: &mut Lexer<TokenKind>) -> Result<char> {
     let c = match lex.remainder().chars().next() {
         Some(c) => c,
         None => {
-            return Err(LexingError::UnexpectedEof {
+            return Err(LexingError {
+                variant: LexingErrorVariant::UnexpectedEof,
                 span: lex.span().end..lex.span().end,
             })
         }
@@ -117,8 +123,8 @@ pub fn lex_escape_character(lex: &mut Lexer<TokenKind>) -> Result<char> {
         'x' => lex_hex(lex)?,
 
         _ => {
-            return Err(LexingError::UnsupportedEscapeCharacter {
-                c,
+            return Err(LexingError {
+                variant: LexingErrorVariant::UnsupportedEscapeCharacter,
                 span: lex.span().end - 2..lex.span().end,
             })
         }
@@ -134,7 +140,8 @@ pub fn lex_hex(lex: &mut Lexer<TokenKind>) -> Result<char> {
         let c = match lex.remainder().chars().next() {
             Some(c) => c,
             None => {
-                return Err(LexingError::UnexpectedEof {
+                return Err(LexingError {
+                    variant: LexingErrorVariant::UnexpectedEof,
                     span: lex.span().end..lex.span().end,
                 })
             }
@@ -146,8 +153,8 @@ pub fn lex_hex(lex: &mut Lexer<TokenKind>) -> Result<char> {
 
     u8::from_str_radix(&buff, 16)
         .map(|b| b as char)
-        .map_err(|_| LexingError::InvalidHexNumber {
-            n: buff,
+        .map_err(|_| LexingError {
+            variant: LexingErrorVariant::InvalidHexNumber,
             span: lex.span().end - 2..lex.span().end,
         })
 }

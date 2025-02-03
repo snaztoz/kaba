@@ -7,7 +7,6 @@ use crate::{
 };
 use error::Result;
 use state::ParserState;
-use statement::StatementParser;
 use stream::TokenStream;
 
 mod block;
@@ -36,7 +35,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<AstNode> {
     let global_scope_id = parser_state.next_scope_id();
 
     while !tokens.current_is(&TokenKind::Eof) {
-        let stmt = StatementParser::new(&parser_state).parse()?;
+        let stmt = statement::parse(&parser_state)?;
         body.push(stmt)
     }
 

@@ -41,7 +41,7 @@ impl<'a> ExpressionRunner<'a> {
         let index = ExpressionRunner::new(index, self.root, self.state).run()?;
 
         if let RuntimeValue::Array(ptr) = object_arr {
-            if let RuntimeValue::Integer(i) = index {
+            if let RuntimeValue::Int(i) = index {
                 let arr = &self.state.array_arena.borrow()[ptr];
                 let i = usize::try_from(i).unwrap();
 
@@ -60,9 +60,9 @@ impl<'a> ExpressionRunner<'a> {
         let val = match lit {
             Literal::Void => RuntimeValue::Void,
 
-            Literal::Bool(b) => RuntimeValue::Boolean(*b),
-            Literal::Int(n) => RuntimeValue::Integer(*n),
-            Literal::Float(n) => RuntimeValue::Float(f64::from(*n)),
+            Literal::Bool(b) => RuntimeValue::Bool(*b),
+            Literal::Int(n) => RuntimeValue::Int(*n),
+            Literal::Float(n) => RuntimeValue::Float(*n),
             Literal::Char(c) => RuntimeValue::Char(*c),
             Literal::String(s) => RuntimeValue::String(s.clone()),
 
@@ -162,175 +162,94 @@ impl ExpressionRunner<'_> {
 
     fn run_or(&self, lhs_val: &RuntimeValue, rhs_val: &RuntimeValue) -> RuntimeValue {
         // Use short-circuiting
-
-        if let RuntimeValue::Boolean(b) = lhs_val {
-            if *b {
-                return RuntimeValue::Boolean(true);
-            }
+        match (lhs_val, rhs_val) {
+            (RuntimeValue::Bool(l), RuntimeValue::Bool(r)) => RuntimeValue::Bool(*l || *r),
+            _ => RuntimeValue::Bool(false),
         }
-        if let RuntimeValue::Boolean(b) = rhs_val {
-            if *b {
-                return RuntimeValue::Boolean(true);
-            }
-        }
-
-        RuntimeValue::Boolean(false)
     }
 
     fn run_and(&self, lhs_val: &RuntimeValue, rhs_val: &RuntimeValue) -> RuntimeValue {
         // Use short-circuiting
-
-        if let RuntimeValue::Boolean(b_lhs) = lhs_val {
-            if *b_lhs {
-                if let RuntimeValue::Boolean(b_rhs) = rhs_val {
-                    if *b_rhs {
-                        return RuntimeValue::Boolean(true);
-                    }
-                }
-            }
+        match (lhs_val, rhs_val) {
+            (RuntimeValue::Bool(l), RuntimeValue::Bool(r)) => RuntimeValue::Bool(*l && *r),
+            _ => RuntimeValue::Bool(false),
         }
-
-        RuntimeValue::Boolean(false)
     }
 
     fn run_not(&self, child: &RuntimeValue) -> RuntimeValue {
         match child {
-            RuntimeValue::Boolean(b) => RuntimeValue::Boolean(!b),
+            RuntimeValue::Bool(b) => RuntimeValue::Bool(!b),
             _ => unreachable!(),
         }
     }
 
     fn run_eq(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        if lhs == rhs {
-            RuntimeValue::Boolean(true)
-        } else {
-            RuntimeValue::Boolean(false)
-        }
+        RuntimeValue::Bool(lhs == rhs)
     }
 
     fn run_neq(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        if lhs != rhs {
-            RuntimeValue::Boolean(true)
-        } else {
-            RuntimeValue::Boolean(false)
-        }
+        RuntimeValue::Bool(lhs != rhs)
     }
 
     fn run_gt(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        if lhs > rhs {
-            RuntimeValue::Boolean(true)
-        } else {
-            RuntimeValue::Boolean(false)
-        }
+        RuntimeValue::Bool(lhs > rhs)
     }
 
     fn run_gte(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        if lhs >= rhs {
-            RuntimeValue::Boolean(true)
-        } else {
-            RuntimeValue::Boolean(false)
-        }
+        RuntimeValue::Bool(lhs >= rhs)
     }
 
     fn run_lt(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        if lhs < rhs {
-            RuntimeValue::Boolean(true)
-        } else {
-            RuntimeValue::Boolean(false)
-        }
+        RuntimeValue::Bool(lhs < rhs)
     }
 
     fn run_lte(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        if lhs <= rhs {
-            RuntimeValue::Boolean(true)
-        } else {
-            RuntimeValue::Boolean(false)
-        }
+        RuntimeValue::Bool(lhs <= rhs)
     }
 
     fn math_add(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        match lhs {
-            RuntimeValue::Integer(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Integer(l + r),
-                RuntimeValue::Float(r) => RuntimeValue::Float(f64::from(*l) + r),
-                _ => unreachable!(),
-            },
-            RuntimeValue::Float(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Float(l + f64::from(*r)),
-                RuntimeValue::Float(r) => RuntimeValue::Float(l + r),
-                _ => unreachable!(),
-            },
+        match (lhs, rhs) {
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l.wrapping_add(*r)),
+            (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l + r),
             _ => unreachable!(),
         }
     }
 
     fn math_sub(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        match lhs {
-            RuntimeValue::Integer(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Integer(l - r),
-                RuntimeValue::Float(r) => RuntimeValue::Float(f64::from(*l) - r),
-                _ => unreachable!(),
-            },
-            RuntimeValue::Float(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Float(l - f64::from(*r)),
-                RuntimeValue::Float(r) => RuntimeValue::Float(l - r),
-                _ => unreachable!(),
-            },
+        match (lhs, rhs) {
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l.wrapping_sub(*r)),
+            (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l - r),
             _ => unreachable!(),
         }
     }
 
     fn math_mul(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        match lhs {
-            RuntimeValue::Integer(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Integer(l * r),
-                RuntimeValue::Float(r) => RuntimeValue::Float(f64::from(*l) * r),
-                _ => unreachable!(),
-            },
-            RuntimeValue::Float(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Float(l * f64::from(*r)),
-                RuntimeValue::Float(r) => RuntimeValue::Float(l * r),
-                _ => unreachable!(),
-            },
+        match (lhs, rhs) {
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l.wrapping_mul(*r)),
+            (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l * r),
             _ => unreachable!(),
         }
     }
 
     fn math_div(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        match lhs {
-            RuntimeValue::Integer(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Integer(l / r),
-                RuntimeValue::Float(r) => RuntimeValue::Float(f64::from(*l) / r),
-                _ => unreachable!(),
-            },
-            RuntimeValue::Float(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Float(l / f64::from(*r)),
-                RuntimeValue::Float(r) => RuntimeValue::Float(l / r),
-                _ => unreachable!(),
-            },
+        match (lhs, rhs) {
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l.wrapping_div(*r)),
+            (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l / r),
             _ => unreachable!(),
         }
     }
 
     fn math_mod(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
-        match lhs {
-            RuntimeValue::Integer(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Integer(l % r),
-                RuntimeValue::Float(r) => RuntimeValue::Float(f64::from(*l) % r),
-                _ => unreachable!(),
-            },
-            RuntimeValue::Float(l) => match rhs {
-                RuntimeValue::Integer(r) => RuntimeValue::Float(l % f64::from(*r)),
-                RuntimeValue::Float(r) => RuntimeValue::Float(l % r),
-                _ => unreachable!(),
-            },
+        match (lhs, rhs) {
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l.wrapping_rem(*r)),
+            (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l % r),
             _ => unreachable!(),
         }
     }
 
     fn math_neg(&self, child: &RuntimeValue) -> RuntimeValue {
         match child {
-            RuntimeValue::Integer(n) => RuntimeValue::Integer(-n),
+            RuntimeValue::Int(n) => RuntimeValue::Int(-n),
             RuntimeValue::Float(n) => RuntimeValue::Float(-n),
             _ => unreachable!(),
         }

@@ -1,5 +1,5 @@
 use super::Type;
-use crate::semantic::error::{Error, Result};
+use crate::semantic::error::{Result, SemanticError, SemanticErrorVariant};
 use logos::Span;
 
 pub fn is_number<F>(t: &Type, err_span: F) -> Result<()>
@@ -9,7 +9,10 @@ where
     if matches!(t, Type::Int(_)) || matches!(t, Type::Float(_)) {
         Ok(())
     } else {
-        Err(Error::NonNumberType { span: err_span() })
+        Err(SemanticError {
+            variant: SemanticErrorVariant::NonNumberType,
+            span: err_span(),
+        })
     }
 }
 
@@ -20,8 +23,8 @@ where
     if matches!(t, Type::Int(_)) || matches!(t, Type::Float(_)) {
         Ok(())
     } else {
-        Err(Error::NonSignableNumberType {
-            t: t.clone(),
+        Err(SemanticError {
+            variant: SemanticErrorVariant::NonSignableNumberType,
             span: err_span(),
         })
     }
@@ -35,9 +38,11 @@ where
         return Ok(());
     }
 
-    Err(Error::TypeMismatch {
-        type_a: a.clone(),
-        type_b: b.clone(),
+    Err(SemanticError {
+        variant: SemanticErrorVariant::TypeMismatch {
+            type_a: a.clone(),
+            type_b: b.clone(),
+        },
         span: err_span(),
     })
 }
@@ -49,7 +54,10 @@ where
     if t == &Type::Bool {
         Ok(())
     } else {
-        Err(Error::NonBooleanType { span: err_span() })
+        Err(SemanticError {
+            variant: SemanticErrorVariant::NonBooleanType,
+            span: err_span(),
+        })
     }
 }
 
@@ -60,8 +68,8 @@ where
     if matches!(t, Type::Callable { .. }) {
         Ok(())
     } else {
-        Err(Error::NonCallableType {
-            t: t.clone(),
+        Err(SemanticError {
+            variant: SemanticErrorVariant::NonCallableType,
             span: err_span(),
         })
     }
@@ -74,8 +82,8 @@ where
     if matches!(t, Type::Array { .. }) {
         Ok(())
     } else {
-        Err(Error::NonIterableType {
-            t: t.clone(),
+        Err(SemanticError {
+            variant: SemanticErrorVariant::NonIterableType,
             span: err_span(),
         })
     }
@@ -88,8 +96,8 @@ where
     if matches!(t, Type::Array { .. }) {
         Ok(())
     } else {
-        Err(Error::NonIndexableType {
-            t: t.clone(),
+        Err(SemanticError {
+            variant: SemanticErrorVariant::NonIndexableType,
             span: err_span(),
         })
     }
@@ -102,9 +110,11 @@ where
     if from.is_assignable_to(to) {
         Ok(())
     } else {
-        Err(Error::InvalidAssignmentType {
-            var_t: to.clone(),
-            val_t: from.clone(),
+        Err(SemanticError {
+            variant: SemanticErrorVariant::InvalidAssignmentType {
+                var_t: to.clone(),
+                val_t: from.clone(),
+            },
             span: err_span(),
         })
     }

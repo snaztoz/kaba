@@ -1,88 +1,81 @@
 use super::{
-    block::BlockParser, error::ParsingError, expression::ExpressionParser, state::ParserState,
+    block,
+    error::{ParsingError, ParsingErrorVariant},
+    expression,
+    state::ParserState,
     Result,
 };
 use crate::{ast::AstNode, lexer::token::TokenKind};
 
-pub struct ConditionalParser<'a> {
-    state: &'a ParserState<'a>,
+pub fn parse(state: &ParserState) -> Result<AstNode> {
+    let start = state.tokens.current().span.start;
+    let mut end;
+
+    // Expecting "if" keyword
+    state.tokens.skip(&TokenKind::If)?;
+
+    // Expecting expression
+    let cond = expression::parse(state)?;
+
+    // Expecting block
+    let scope_id = state.next_scope_id();
+    let block = block::parse(state)?;
+
+    end = block.span.end;
+
+    // Expecting >= 0 "else if" or 1 "else"
+    let or_else = parse_alt_branch(state, &mut end)?;
+
+    Ok(AstNode::If {
+        cond: Box::new(cond),
+        body: block.body,
+        scope_id,
+        or_else: or_else.map(Box::new),
+        span: start..end,
+    })
 }
 
-impl<'a> ConditionalParser<'a> {
-    pub const fn new(state: &'a ParserState) -> Self {
-        Self { state }
-    }
-}
-
-impl ConditionalParser<'_> {
-    pub fn parse(&self) -> Result<AstNode> {
-        let start = self.state.tokens.current().span.start;
-        let mut end;
-
-        // Expecting "if" keyword
-        self.state.tokens.skip(&TokenKind::If)?;
-
-        // Expecting expression
-        let cond = ExpressionParser::new(self.state).parse()?;
-
-        // Expecting block
-        let scope_id = self.state.next_scope_id();
-        let block = BlockParser::new(self.state).parse()?;
-
-        end = block.span.end;
-
-        // Expecting >= 0 "else if" or 1 "else"
-        let or_else = self.parse_alt_branches(&mut end)?;
-
-        Ok(AstNode::If {
-            cond: Box::new(cond),
-            body: block.body,
-            scope_id,
-            or_else: or_else.map(Box::new),
-            span: start..end,
-        })
+fn parse_alt_branch(state: &ParserState, end_pos: &mut usize) -> Result<Option<AstNode>> {
+    if !state.tokens.current_is(&TokenKind::Else) {
+        return Ok(None);
     }
 
-    fn parse_alt_branches(&self, end_pos: &mut usize) -> Result<Option<AstNode>> {
-        if !self.state.tokens.current_is(&TokenKind::Else) {
-            return Ok(None);
+    let start = state.tokens.current().span.start;
+
+    // Expecting "else" keyword
+    state.tokens.skip(&TokenKind::Else)?;
+
+    match state.tokens.current_kind() {
+        TokenKind::If => {
+            // Expecting "else if ..." statement
+            let alt = parse(state)?;
+
+            *end_pos = alt.span().end;
+
+            Ok(Some(alt))
         }
 
-        let start = self.state.tokens.current().span.start;
+        TokenKind::LBrace => {
+            // Expecting block
+            let scope_id = state.next_scope_id();
+            let block = block::parse(state)?;
 
-        // Expecting "else" keyword
-        self.state.tokens.skip(&TokenKind::Else)?;
+            *end_pos = block.span.end;
 
-        match self.state.tokens.current_kind() {
-            TokenKind::If => {
-                // Expecting "else if ..." statement
-                let alt = self.parse()?;
+            Ok(Some(AstNode::Else {
+                body: block.body,
+                scope_id,
+                span: start..block.span.end,
+            }))
+        }
 
-                *end_pos = alt.span().end;
-
-                Ok(Some(alt))
-            }
-
-            TokenKind::LBrace => {
-                // Expecting block
-                let scope_id = self.state.next_scope_id();
-                let block = BlockParser::new(self.state).parse()?;
-
-                *end_pos = block.span.end;
-
-                Ok(Some(AstNode::Else {
-                    body: block.body,
-                    scope_id,
-                    span: start..block.span.end,
-                }))
-            }
-
-            kind => Err(ParsingError::UnexpectedToken {
+        kind => Err(ParsingError {
+            variant: ParsingErrorVariant::UnexpectedToken {
                 expect: TokenKind::Else,
                 found: kind.clone(),
-                span: self.state.tokens.current().span,
-            }),
-        }
+            },
+            span: state.tokens.current().span,
+        }),
     }
 }
 

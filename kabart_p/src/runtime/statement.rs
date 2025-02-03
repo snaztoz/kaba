@@ -73,7 +73,7 @@ impl StatementRunner<'_> {
         };
 
         let should_exec = match cond_val {
-            RuntimeValue::Boolean(b) => b,
+            RuntimeValue::Bool(b) => b,
             _ => unreachable!(),
         };
 
@@ -118,7 +118,7 @@ impl StatementRunner<'_> {
             };
 
             let should_exec = match cond_val {
-                RuntimeValue::Boolean(b) => b,
+                RuntimeValue::Bool(b) => b,
                 _ => unreachable!(),
             };
 
