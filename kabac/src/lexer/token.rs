@@ -49,7 +49,7 @@ pub enum TokenKind {
     #[token("break")]    Break,
     #[token("continue")] Continue,
     #[token("in")]       In,
-    #[token("fn")]       Fn,
+    #[token("def")]      Def,
     #[token("return")]   Return,
     #[token("debug")]    Debug,
 
@@ -126,7 +126,7 @@ impl Display for TokenKind {
             Self::Break => write!(f, "`break` keyword"),
             Self::Continue => write!(f, "`continue` keyword"),
             Self::In => write!(f, "`in` keyword"),
-            Self::Fn => write!(f, "`fn` keyword"),
+            Self::Def => write!(f, "`def` keyword"),
             Self::Return => write!(f, "`return` keyword"),
             Self::Debug => write!(f, "`debug` keyword"),
 

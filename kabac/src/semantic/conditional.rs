@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn if_else_statements() {
         assert_is_ok(indoc! {"
-                fn main() {
+                def main() {
                     var condition1 = 5 < 10;
                     var condition2 = 0.5 < 0.75;
 
@@ -185,7 +185,7 @@ mod tests {
     #[test]
     fn nested_if_statements() {
         assert_is_ok(indoc! {"
-                fn main() {
+                def main() {
                     if 1 + 1 == 2 {
                         if 2 + 2 == 4 {
                             if 3 + 3 == 6 {
@@ -200,7 +200,7 @@ mod tests {
     #[test]
     fn using_variable_declared_inside_conditional_scope_from_outside() {
         assert_is_err(indoc! {"
-                fn main() {
+                def main() {
                     if true {
                         var x = 50;
                         debug x;
@@ -214,7 +214,7 @@ mod tests {
     #[test]
     fn using_math_expression_as_condition_in_if_statement() {
         assert_is_err(indoc! {"
-                fn main() {
+                def main() {
                     if 1 + 1 {
                         debug 1;
                     }
@@ -225,7 +225,7 @@ mod tests {
     #[test]
     fn using_variable_declared_in_sibling_branch_scope() {
         assert_is_err(indoc! {"
-                fn main() {
+                def main() {
                     if true {
                         var x = 50;
                     } else {

@@ -14,7 +14,7 @@ pub fn parse(state: &ParserState) -> Result<AstNode> {
         TokenKind::While => return while_loop::parse(state),
         TokenKind::Each => return each_loop::parse(state),
         TokenKind::Break | TokenKind::Continue => return parse_loop_control(state),
-        TokenKind::Fn => return function::parse(state),
+        TokenKind::Def => return function::parse(state),
         TokenKind::Return => return parse_return_statement(state),
         TokenKind::Debug => return parse_debug_statement(state),
         _ => (),

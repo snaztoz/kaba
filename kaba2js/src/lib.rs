@@ -284,7 +284,7 @@ mod tests {
 
     #[test]
     fn main_function() {
-        let result = compile("fn main() {return;}");
+        let result = compile("def main() {return;}");
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), wrap("function main(){return;}"));
@@ -293,7 +293,7 @@ mod tests {
     #[test]
     fn var_declaration_with_literals() {
         let result = compile(indoc! {"
-            fn main() {
+            def main() {
                 var x = 5;
                 var foo = [[]int [int 1, 2, x], [int]];
             }
@@ -309,7 +309,7 @@ mod tests {
     #[test]
     fn var_declaration_with_math_expr() {
         let result = compile(indoc! {"
-            fn main() {
+            def main() {
                 var x = 5;
                 var y = 1 + 5 / x - 2 * 7 % 2;
             }
@@ -326,7 +326,7 @@ mod tests {
     fn char_and_string_val() {
         let result = compile(
             r#"
-            fn main() {
+            def main() {
                 var x = '1';
                 var y = "Hello, World!";
             }
@@ -343,7 +343,7 @@ mod tests {
     #[test]
     fn binary_operations() {
         let result = compile(indoc! {"
-            fn main() {
+            def main() {
                 var x = 5;
                 x += 1;
                 x -= 1;
@@ -364,7 +364,7 @@ mod tests {
     #[test]
     fn conditional_branches() {
         let result = compile(indoc! {"
-            fn main() {
+            def main() {
                 if !false {
                     if false {} else {}
                 } else if true {}
@@ -381,7 +381,7 @@ mod tests {
     #[test]
     fn while_loop() {
         let result = compile(indoc! {"
-            fn main() {
+            def main() {
                 while true {
                     var i = 0;
                     break;
@@ -399,7 +399,7 @@ mod tests {
     #[test]
     fn each_loop() {
         let result = compile(indoc! {"
-            fn main() {
+            def main() {
                 var arr = [int 1, 2, 3];
                 each n in arr {
                     var i = n * 2;
@@ -417,7 +417,7 @@ mod tests {
     #[test]
     fn index_access() {
         let result = compile(indoc! {"
-            fn main() {
+            def main() {
                 var arr = [int 1, 2, 3];
                 arr[0];
             }
@@ -433,11 +433,11 @@ mod tests {
     #[test]
     fn function_call() {
         let result = compile(indoc! {"
-            fn foo(): int {
+            def foo(): int {
                 return 5;
             }
 
-            fn main() {
+            def main() {
                 var x = foo();
             }
         "});
@@ -452,7 +452,7 @@ mod tests {
     #[test]
     fn print_value() {
         let result = compile(indoc! {r#"
-            fn main() {
+            def main() {
                 debug "Hello, World!";
             }
         "#});
