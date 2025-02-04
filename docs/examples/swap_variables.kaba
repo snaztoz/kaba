@@ -1,6 +1,6 @@
 // Swap the value between 2 variables
 
-fn main() {
+def main {
     var x = 10;
     var y = 20;
 

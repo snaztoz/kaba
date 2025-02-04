@@ -1,10 +1,10 @@
 // A simple fibonacci implementation
 
-fn main() {
+def main {
     debug fibonacci(6);
 }
 
-fn fibonacci(n: int): int {
+def fibonacci(n: int): int {
     if n <= 0 {
         return 0;
     } else if n == 1 || n == 2 {

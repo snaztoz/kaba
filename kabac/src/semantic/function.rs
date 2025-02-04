@@ -233,18 +233,18 @@ mod tests {
     #[test]
     fn defining_function_without_parameter_or_return_type() {
         assert_is_ok(indoc! {"
-                fn add() {}
+                def add {}
             "});
     }
 
     #[test]
     fn defining_duplicated_functions() {
         assert_is_err(indoc! {"
-                fn print_sum_of(a: int, b: int) {
+                def print_sum_of(a: int, b: int) {
                     debug a + b;
                 }
 
-                fn print_sum_of(a: float, b: float) {
+                def print_sum_of(a: float, b: float) {
                     debug a + b;
                 }
             "});
@@ -253,7 +253,7 @@ mod tests {
     #[test]
     fn defining_functions_both_with_parameters_and_return_type() {
         assert_is_ok(indoc! {"
-                fn sum(x: int, y: int): int {
+                def sum(x: int, y: int): int {
                     return x + y;
                 }
             "});
@@ -262,7 +262,7 @@ mod tests {
     #[test]
     fn recursive_fibonacci_function() {
         assert_is_ok(indoc! {"
-                fn fibonacci(n: int): int {
+                def fibonacci(n: int): int {
                     if n == 0 {
                         return 0;
                     } else if n == 1 || n == 2 {
@@ -276,7 +276,7 @@ mod tests {
     #[test]
     fn recursive_functions_with_void_return_type() {
         assert_is_ok(indoc! {"
-                fn count_to_zero(n: int) {
+                def count_to_zero(n: int) {
                     debug n;
                     if n == 0 {
                         return;
@@ -284,7 +284,7 @@ mod tests {
                     count_to_zero(n-1);
                 }
 
-                fn main() {
+                def main {
                     count_to_zero(10);
                 }
             "});
@@ -293,11 +293,11 @@ mod tests {
     #[test]
     fn returning_from_functions_with_conditional_and_loop_statements() {
         assert_is_ok(indoc! {"
-                fn first(): int {
+                def first: int {
                     return 5;
                 }
 
-                fn second(): int {
+                def second: int {
                     if false {
                         return 0;
                     } else {
@@ -305,21 +305,21 @@ mod tests {
                     }
                 }
 
-                fn third(): int {
+                def third: int {
                     if false {
                         return 0;
                     }
                     return 1;
                 }
 
-                fn fourth(): int {
+                def fourth: int {
                     while false {
                         return 0;
                     }
                     return 1;
                 }
 
-                fn fifth(): int {
+                def fifth: int {
                     return 1;
 
                     if false {
@@ -332,15 +332,15 @@ mod tests {
     #[test]
     fn defining_functions_not_in_order() {
         assert_is_ok(indoc! {"
-                fn main() {
+                def main {
                     call_foo();
                 }
 
-                fn call_foo() {
+                def call_foo {
                     call_bar();
                 }
 
-                fn call_bar() {
+                def call_bar {
                     debug true;
                 }
             "})
@@ -349,11 +349,11 @@ mod tests {
     #[test]
     fn prevent_incompatible_int_type_on_function_return_value() {
         assert_is_err(indoc! {"
-                fn main() {
+                def main {
                     var x: int = foo();
                 }
 
-                fn foo(): sbyte {
+                def foo: sbyte {
                     return 5;
                 }
             "});
@@ -362,11 +362,11 @@ mod tests {
     #[test]
     fn prevent_calling_function_with_missing_args() {
         assert_is_err(indoc! {"
-                fn main() {
+                def main {
                     foo();
                 }
 
-                fn foo(x: sbyte): sbyte {
+                def foo(x: sbyte): sbyte {
                     return x;
                 }
             "});
@@ -375,11 +375,11 @@ mod tests {
     #[test]
     fn prevent_calling_function_with_too_many_args() {
         assert_is_err(indoc! {"
-                fn main() {
+                def main {
                     foo(5, 7);
                 }
 
-                fn foo(x: sbyte): sbyte {
+                def foo(x: sbyte): sbyte {
                     return x;
                 }
             "});
@@ -388,13 +388,13 @@ mod tests {
     #[test]
     fn aliasing_function_identifier() {
         assert_is_ok(indoc! {"
-                fn main() {
+                def main {
                     var aliased = return_two;
 
                     debug aliased();
                 }
 
-                fn return_two(): int {
+                def return_two: int {
                     return 2;
                 }
             "});
@@ -403,15 +403,15 @@ mod tests {
     #[test]
     fn using_function_type_as_function_parameter() {
         assert_is_ok(indoc! {"
-                fn main() {
+                def main {
                     debug get_num(produce);
                 }
 
-                fn get_num(producer: () -> int): int {
+                def get_num(producer: () -> int): int {
                     return producer() + 5;
                 }
 
-                fn produce(): int {
+                def produce: int {
                     return 10;
                 }
             "});
@@ -420,15 +420,15 @@ mod tests {
     #[test]
     fn calling_function_returned_by_another_function_call() {
         assert_is_ok(indoc! {"
-                fn main() {
+                def main {
                     debug foo()();
                 }
 
-                fn foo(): () -> int {
+                def foo: () -> int {
                     return bar;
                 }
 
-                fn bar(): int {
+                def bar: int {
                     return 25;
                 }
             "});
@@ -437,19 +437,18 @@ mod tests {
     #[test]
     fn calling_function_with_array_parameter() {
         assert_is_ok(indoc! {"
-                fn main() {
+                def main {
                     foo([int 1, 2, 3]);
                 }
 
-                fn foo(arr: []int) {
-                }
+                def foo(arr: []int) {}
             "});
     }
 
     #[test]
     fn calling_function_with_array_parameter_using_different_array_sizes() {
         assert_is_ok(indoc! {"
-                fn main() {
+                def main {
                     foo([int 1, 2, 3]);
 
                     foo([int]);
@@ -457,22 +456,21 @@ mod tests {
                     foo([int 1]);
                 }
 
-                fn foo(arr: []int) {
-                }
+                def foo(arr: []int) {}
             "});
     }
 
     #[test]
     fn returning_array_from_a_function() {
         assert_is_ok(indoc! {"
-                fn main() {
+                def main {
                     var arr_1: []int = foo();
                     var arr_2: []int = foo();
 
                     arr_1[0] = 10;
                 }
 
-                fn foo(): []int {
+                def foo: []int {
                     return [int 1, 2, 3];
                 }
             "});
@@ -481,9 +479,9 @@ mod tests {
     #[test]
     fn defining_function_not_in_global_scope() {
         assert_is_err(indoc! {"
-                fn main() {
+                def main {
                     if true {
-                        fn foo() {}
+                        def foo {}
                     }
                 }
             "});
@@ -492,35 +490,35 @@ mod tests {
     #[test]
     fn defining_function_with_a_non_existing_return_type() {
         assert_is_err(indoc! {"
-                fn foo(): NonExistingType { }
+                def foo: NonExistingType { }
             "});
     }
 
     #[test]
     fn defining_function_with_duplicated_parameter_name() {
         assert_is_err(indoc! {"
-                fn add_sum_of(x: int, x: int) { }
+                def add_sum_of(x: int, x: int) { }
             "});
     }
 
     #[test]
     fn defining_function_with_a_non_existing_parameter_type() {
         assert_is_err(indoc! {"
-                fn foo(x: NonExistingType) { }
+                def foo(x: NonExistingType) { }
             "});
     }
 
     #[test]
     fn defining_function_with_void_parameter_type() {
         assert_is_err(indoc! {"
-                fn foo(x: Void) { }
+                def foo(x: Void) { }
             "});
     }
 
     #[test]
     fn returning_value_from_function_with_void_return_type() {
         assert_is_err(indoc! {"
-                fn foo() {
+                def foo {
                     return 5;
                 }
             "});
@@ -529,7 +527,7 @@ mod tests {
     #[test]
     fn returning_value_from_function_with_mismatched_return_type() {
         assert_is_err(indoc! {"
-                fn sum(x: int, y: int): int {
+                def sum(x: int, y: int): int {
                     return 5.0;
                 }
             "});
@@ -538,7 +536,7 @@ mod tests {
     #[test]
     fn invalid_statement_after_return() {
         assert_is_err(indoc! {"
-                fn get_five(): int {
+                def get_five: int {
                     return 5;
                     1 + true; // should be error
                 }
@@ -548,7 +546,7 @@ mod tests {
     #[test]
     fn returning_non_existing_variable() {
         assert_is_err(indoc! {"
-                fn foo(): int {
+                def foo: int {
                     return not_exist;
                 }
             "});
@@ -557,7 +555,7 @@ mod tests {
     #[test]
     fn defining_function_with_missing_return_in_other_branches() {
         assert_is_err(indoc! {"
-                fn foo(): int {
+                def foo: int {
                     if false {
                         return 5;
                     }
@@ -568,7 +566,7 @@ mod tests {
     #[test]
     fn defining_function_with_missing_return_in_else_branch_or_outer_scope() {
         assert_is_err(indoc! {"
-                fn foo(): int {
+                def foo: int {
                     if false {
                         return 0;
                     } else if !true {
@@ -581,7 +579,7 @@ mod tests {
     #[test]
     fn defining_function_with_missing_return_in_outer_scope_of_while_statement() {
         assert_is_err(indoc! {"
-                fn foo(): int {
+                def foo: int {
                     while false {
                         return 0;
                     }

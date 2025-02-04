@@ -49,10 +49,10 @@ Kaba only supports single-line comment, which is prefixed by the `//` symbol:
 
 ## Defining functions
 
-To define functions, use the `fn` keyword:
+To define functions, use the `def` keyword:
 
 ```text
-fn foo() {
+def foo() {
     // do nothing
 }
 ```
@@ -62,7 +62,15 @@ From the example above, `foo()` return type is `void` (not returning anything).
 To return a value from functions, use the `return` keyword (and don't forget to specify the type notation as well):
 
 ```text
-fn yield_five(): int {
+def yield_five(): int {
+    return 5;
+}
+```
+
+If the function does not receive any parameters, we can omit the parentheses:
+
+```
+def yield_five: int {
     return 5;
 }
 ```
@@ -72,11 +80,11 @@ fn yield_five(): int {
 The entry point to a Kaba program is a function called `main()`:
 
 ```text
-fn main() {
+def main {
     do_nothing();
 }
 
-fn do_nothing() {}
+def do_nothing {}
 ```
 
 ## Creating variables
@@ -84,7 +92,7 @@ fn do_nothing() {}
 To create variables, use the `var` keyword:
 
 ```text
-fn main() {
+def main {
     var x = 5;
 }
 ```
@@ -94,7 +102,7 @@ The value must always be specified, while the variable's type can be inferred fr
 If you want to specify the type manually, use the following syntax:
 
 ```text
-fn main() {
+def main {
     var x: int = 5;
 }
 ```
@@ -102,7 +110,7 @@ fn main() {
 If value type is incompatible with the variable, the compiler will throw an error:
 
 ```text
-fn main() {
+def main {
     var x: int = 10.0;  // ERROR
 }
 ```
@@ -114,7 +122,7 @@ Kaba is a strongly-typed language, so the type of operands in various operations
 For example, the following program will results in compilation error:
 
 ```text
-fn main() {
+def main {
     var x = 5;
 
     x = 10.0;   // ERROR!
@@ -126,7 +134,7 @@ fn main() {
 Shorthand assignments are also supported:
 
 ```text
-fn main() {
+def main {
     var x = 10;
 
     x += 1;
@@ -142,21 +150,21 @@ fn main() {
 To display value to `stdout`, use the `debug` statement:
 
 ```text
-fn main() {
+def main {
     var x = 101;
 
     debug x;
 }
 ```
 
-Note that the compiler will reject if the expression evaluates to `void` type:
+Note that the compiler will reject the program if the expression evaluates to `void` type:
 
 ```text
-fn main() {
-    debug my_void_fn();  // ERROR
+def main {
+    debug my_void_def();  // ERROR
 }
 
-fn my_void_fn() {}
+def my_void_def {}
 ```
 
 ## Data types
@@ -188,7 +196,7 @@ Currently, Kaba only support these (non-`void`) data types:
 (... more to come!)
 
 ```text
-fn main() {
+def main {
     var a: int = 10;
 
     var b: float = 5.0;
@@ -204,7 +212,7 @@ fn main() {
     var g: []int = [int 99, 101];
 }
 
-fn foo() {}
+def foo() {}
 ```
 
 ### About `char` type
@@ -236,7 +244,7 @@ Because the size is not included in the type notation, an integer array like `[1
 Kaba can infer the type of an array:
 
 ```text
-fn main() {
+def main {
     var arr = [bool false, true, true];
 
     // The type of `arr` is `[]bool`
@@ -248,7 +256,7 @@ fn main() {
 More complex scenarios are also supported:
 
 ```text
-fn main() {
+def main {
     var arr = [[]int [int], [int 4, 5]];
     foo(arr);
 
@@ -256,7 +264,7 @@ fn main() {
     foo(arr);
 }
 
-fn foo(arr: [][]int) {
+def foo(arr: [][]int) {
     debug arr[1][1];
 }
 ```
@@ -268,7 +276,7 @@ fn foo(arr: [][]int) {
 Basic math operations such as addition, subtraction, etc. are supported:
 
 ```text
-fn main() {
+def main {
     debug 23 + 5 * 30 / (2 - 9);
 
     debug 5 % 2;
@@ -280,7 +288,7 @@ fn main() {
 Operations like "less than", "equal", etc. are supported:
 
 ```text
-fn main() {
+def main {
     debug 50 == 50;
     debug 50 != 10;
     debug 43 > 2;
@@ -295,7 +303,7 @@ fn main() {
 Logical "or", "and", and "not" are supported:
 
 ```text
-fn main() {
+def main {
     debug false || true;
     debug false && false;
     debug !false;
@@ -307,7 +315,7 @@ fn main() {
 Kaba also support "if... else..." statement:
 
 ```text
-fn main() {
+def main {
     var condition = 50 > 10;
     var condition2 = 50 > 20;
 
@@ -327,7 +335,7 @@ fn main() {
 To looping over while a condition is met, use the `while` statement:
 
 ```text
-fn main() {
+def main {
     var i = 0;
 
     while i < 10 {
@@ -342,7 +350,7 @@ fn main() {
 To exit from a loop early, use the `break` statement:
 
 ```text
-fn main() {
+def main {
     var i = 0;
 
     while i < 10 {
@@ -358,7 +366,7 @@ fn main() {
 To skip an iteration, use the `continue` statement:
 
 ```text
-fn main() {
+def main {
     var i = 0;
 
     while i < 10 {
@@ -376,7 +384,7 @@ fn main() {
 To simplify looping over elements of an iterable, use the `each` loop statement:
 
 ```text
-fn main() {
+def main {
     each n in [int 1, 2, 3, 4] {
         debug n * 2;
     }
@@ -386,7 +394,7 @@ fn main() {
 Similar to the `while` statement, we can also use `continue` and `break` statements in inside of it:
 
 ```text
-fn main() {
+def main {
     each n in [int 1, 2, 3, 4, 5, 6] {
         if n == 3 {
             continue;

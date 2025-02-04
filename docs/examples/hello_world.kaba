@@ -1,5 +1,5 @@
 // Display "Hello, World!" in the screen
 
-fn main() {
+def main {
     debug "Hello, world!";
 }

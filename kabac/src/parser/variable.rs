@@ -2,7 +2,7 @@ use super::{
     error::{ParsingError, ParsingErrorVariant, Result},
     expression,
     state::ParserState,
-    tn::TypeNotationParser,
+    tn,
 };
 use crate::{ast::AstNode, lexer::token::TokenKind};
 
@@ -64,7 +64,7 @@ fn parse_sym(state: &ParserState) -> Result<AstNode> {
 fn parse_tn(state: &ParserState) -> Result<Option<AstNode>> {
     let tn = if state.tokens.current_is(&TokenKind::Colon) {
         state.tokens.skip(&TokenKind::Colon)?;
-        Some(TypeNotationParser::new(state).parse()?)
+        Some(tn::parse(state)?)
     } else {
         None
     };
