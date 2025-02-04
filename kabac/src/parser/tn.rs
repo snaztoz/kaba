@@ -7,116 +7,104 @@ use crate::{
     lexer::token::TokenKind,
 };
 
-pub struct TypeNotationParser<'a> {
-    state: &'a ParserState<'a>,
-}
+pub fn parse(state: &ParserState) -> Result<AstNode> {
+    match state.tokens.current_kind() {
+        TokenKind::Symbol(name) => {
+            let tn = AstNode::TypeNotation {
+                tn: TypeNotation::Symbol(name),
+                span: state.tokens.current().span.clone(),
+            };
 
-impl<'a> TypeNotationParser<'a> {
-    pub const fn new(state: &'a ParserState) -> Self {
-        Self { state }
-    }
-}
+            state.tokens.advance();
 
-impl TypeNotationParser<'_> {
-    pub fn parse(&self) -> Result<AstNode> {
-        match self.state.tokens.current_kind() {
-            TokenKind::Symbol(name) => {
-                let tn = AstNode::TypeNotation {
-                    tn: TypeNotation::Symbol(name),
-                    span: self.state.tokens.current().span.clone(),
-                };
-
-                self.state.tokens.advance();
-
-                Ok(tn)
-            }
-
-            TokenKind::LBrack => self.parse_array_tn(),
-            TokenKind::LParen => self.parse_function_tn(),
-
-            _ => Err(ParsingError {
-                variant: ParsingErrorVariant::UnexpectedToken {
-                    expect: TokenKind::Symbol(String::from("foo")),
-                    found: self.state.tokens.current().kind.clone(),
-                },
-                span: self.state.tokens.current().span,
-            }),
-        }
-    }
-
-    fn parse_array_tn(&self) -> Result<AstNode> {
-        let start = self.state.tokens.current().span.start;
-
-        // Expecting "["
-        self.state.tokens.skip(&TokenKind::LBrack)?;
-
-        // Expecting "]"
-        self.state.tokens.skip(&TokenKind::RBrack)?;
-
-        // Parse array element type
-        let elem_tn = self.parse()?;
-
-        let end = elem_tn.span().end;
-
-        Ok(AstNode::TypeNotation {
-            tn: TypeNotation::Array {
-                elem_tn: Box::new(elem_tn),
-            },
-            span: start..end,
-        })
-    }
-
-    fn parse_function_tn(&self) -> Result<AstNode> {
-        let start = self.state.tokens.current().span.start;
-
-        // Expecting "("
-        self.state.tokens.skip(&TokenKind::LParen)?;
-
-        // Expecting parameter type notation(s)
-        let mut params_tn = vec![];
-        while !self.state.tokens.current_is(&TokenKind::RParen) {
-            // Expecting type notation
-            let tn = self.parse()?;
-
-            params_tn.push(tn);
-
-            match self.state.tokens.current_kind() {
-                TokenKind::Comma => {
-                    self.state.tokens.skip(&TokenKind::Comma)?;
-                    continue;
-                }
-
-                TokenKind::RParen => continue,
-
-                kind => {
-                    return Err(ParsingError {
-                        variant: ParsingErrorVariant::UnexpectedToken {
-                            expect: TokenKind::RParen,
-                            found: kind.clone(),
-                        },
-                        span: self.state.tokens.current().span,
-                    });
-                }
-            }
+            Ok(tn)
         }
 
-        // Expecting ")"
-        self.state.tokens.skip(&TokenKind::RParen)?;
+        TokenKind::LBrack => parse_array_tn(state),
+        TokenKind::LParen => parse_function_tn(state),
 
-        // Expecting "->"
-        self.state.tokens.skip(&TokenKind::RightPoint)?;
-
-        // Expecting return type notation
-        let return_tn = Box::new(self.parse()?);
-
-        let end = return_tn.span().end;
-
-        Ok(AstNode::TypeNotation {
-            tn: TypeNotation::Callable {
-                params_tn,
-                return_tn,
+        _ => Err(ParsingError {
+            variant: ParsingErrorVariant::UnexpectedToken {
+                expect: TokenKind::Symbol(String::from("foo")),
+                found: state.tokens.current().kind.clone(),
             },
-            span: start..end,
-        })
+            span: state.tokens.current().span,
+        }),
     }
+}
+
+fn parse_array_tn(state: &ParserState) -> Result<AstNode> {
+    let start = state.tokens.current().span.start;
+
+    // Expecting "["
+    state.tokens.skip(&TokenKind::LBrack)?;
+
+    // Expecting "]"
+    state.tokens.skip(&TokenKind::RBrack)?;
+
+    // Parse array element type
+    let elem_tn = parse(state)?;
+
+    let end = elem_tn.span().end;
+
+    Ok(AstNode::TypeNotation {
+        tn: TypeNotation::Array {
+            elem_tn: Box::new(elem_tn),
+        },
+        span: start..end,
+    })
+}
+
+fn parse_function_tn(state: &ParserState) -> Result<AstNode> {
+    let start = state.tokens.current().span.start;
+
+    // Expecting "("
+    state.tokens.skip(&TokenKind::LParen)?;
+
+    // Expecting parameter type notation(s)
+    let mut params_tn = vec![];
+    while !state.tokens.current_is(&TokenKind::RParen) {
+        // Expecting type notation
+        let tn = parse(state)?;
+
+        params_tn.push(tn);
+
+        match state.tokens.current_kind() {
+            TokenKind::Comma => {
+                state.tokens.skip(&TokenKind::Comma)?;
+                continue;
+            }
+
+            TokenKind::RParen => continue,
+
+            kind => {
+                return Err(ParsingError {
+                    variant: ParsingErrorVariant::UnexpectedToken {
+                        expect: TokenKind::RParen,
+                        found: kind.clone(),
+                    },
+                    span: state.tokens.current().span,
+                });
+            }
+        }
+    }
+
+    // Expecting ")"
+    state.tokens.skip(&TokenKind::RParen)?;
+
+    // Expecting "->"
+    state.tokens.skip(&TokenKind::RightPoint)?;
+
+    // Expecting return type notation
+    let return_tn = Box::new(parse(state)?);
+
+    let end = return_tn.span().end;
+
+    Ok(AstNode::TypeNotation {
+        tn: TypeNotation::Callable {
+            params_tn,
+            return_tn,
+        },
+        span: start..end,
+    })
 }

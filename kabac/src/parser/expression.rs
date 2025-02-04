@@ -1,8 +1,7 @@
 use super::{
     error::{ParsingError, ParsingErrorVariant},
     state::ParserState,
-    tn::TypeNotationParser,
-    Result,
+    tn, Result,
 };
 use crate::{
     ast::{AstNode, Literal},
@@ -542,7 +541,7 @@ fn parse_array_literal(state: &ParserState) -> Result<AstNode> {
     state.tokens.skip(&TokenKind::LBrack)?;
 
     // Expecting type notation
-    let elem_tn = TypeNotationParser::new(state).parse()?;
+    let elem_tn = tn::parse(state)?;
 
     // Can have >= 0 elements
     let mut elems = vec![];

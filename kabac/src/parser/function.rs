@@ -2,8 +2,7 @@ use super::{
     block,
     error::{ParsingError, ParsingErrorVariant},
     state::ParserState,
-    tn::TypeNotationParser,
-    Result,
+    tn, Result,
 };
 use crate::{
     ast::{AstNode, FunctionParam},
@@ -79,7 +78,7 @@ fn parse_params(state: &ParserState) -> Result<Vec<FunctionParam>> {
         state.tokens.skip(&TokenKind::Colon)?;
 
         // Expecting type notation
-        let tn = TypeNotationParser::new(state).parse()?;
+        let tn = tn::parse(state)?;
 
         params.push(FunctionParam { sym, sym_id, tn });
 
@@ -115,7 +114,7 @@ fn parse_return_tn(state: &ParserState) -> Result<Option<AstNode>> {
 
     state.tokens.skip(&TokenKind::Colon)?;
 
-    Ok(Some(TypeNotationParser::new(state).parse()?))
+    Ok(Some(tn::parse(state)?))
 }
 
 #[cfg(test)]
