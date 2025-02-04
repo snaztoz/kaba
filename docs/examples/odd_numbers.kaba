@@ -1,6 +1,6 @@
 // Display all positive odd numbers below 0.
 
-fn main() {
+def main {
     var i = 0;
 
     while i < 10 {

@@ -19,7 +19,7 @@ Next, create a [Kaba program file](docs/features.md) (the extension **must be** 
 For this example, let's create a file called `hello.kaba` with the following code:
 
 ```text
-fn main() {
+def main {
     debug "Hello, World!";
 }
 ```
@@ -48,7 +48,7 @@ See [docs/examples](docs/examples) directory for the examples of already-working
 
 ## 🎯 Next Goals
 
-The current priority is to add support for `struct` data type.
+The current priority is to add support for `record` data type.
 
 ## ⚒️ Contributing
 
