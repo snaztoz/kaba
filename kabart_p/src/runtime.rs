@@ -84,7 +84,7 @@ mod tests {
     fn simple_outputting() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     var x = 10;
                     debug x;
                 }
@@ -97,7 +97,7 @@ mod tests {
     fn multiplication_result() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     var x = 5;
                     var y = 10;
 
@@ -112,7 +112,7 @@ mod tests {
     fn overflowing_math() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     debug 2147483647 + 1;
 
                     var a = 2147483647;
@@ -136,7 +136,7 @@ mod tests {
     fn changing_value() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     var x = 2048;
                     debug x;
 
@@ -152,7 +152,7 @@ mod tests {
     fn conditional_branch() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     var x = 2048;
                     if true {
                         var x = 1024;
@@ -169,7 +169,7 @@ mod tests {
     fn multiple_conditional_branches() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     var x = 2048;
                     if false {
                         x = 1024;
@@ -189,7 +189,7 @@ mod tests {
     fn simple_loop() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     var x = 0;
                     while true {
                         debug x;
@@ -208,7 +208,7 @@ mod tests {
     fn boolean_logic_operators() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     if false && true {
                         debug 1;
                     }
@@ -228,7 +228,7 @@ mod tests {
     fn loop_with_conditional_branches() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     var x = 0;
                     while true {
                         x = x + 1;
@@ -249,7 +249,7 @@ mod tests {
     fn shorthand_operators() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     var x = 5;
                     x += 5;
                     debug x;
@@ -271,7 +271,7 @@ mod tests {
     fn function_call() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     debug add_two(5);
                 }
 
@@ -279,7 +279,7 @@ mod tests {
                     return n + get_two();
                 }
 
-                def get_two(): int {
+                def get_two: int {
                     return 2;
                 }
             "},
@@ -291,7 +291,7 @@ mod tests {
     fn calling_function_with_variable_argument() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     var x = 10;
                     dbg(x);
                 }
@@ -308,15 +308,15 @@ mod tests {
     fn doing_math_on_function_call_results() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     debug one() + two();
                 }
 
-                def one(): int {
+                def one: int {
                     return 1;
                 }
 
-                def two(): int {
+                def two: int {
                     return 2;
                 }
             "},
@@ -328,7 +328,7 @@ mod tests {
     fn function_accept_string_parameter_and_return_value() {
         assert_output_equal(
             indoc! {r#"
-                def main() {
+                def main {
                     debug greet("snaztoz");
                 }
 
@@ -346,7 +346,7 @@ mod tests {
     fn recursion() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     debug fibonacci(3);
                 }
 
@@ -365,7 +365,7 @@ mod tests {
     fn recursive_counter() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     count_to_zero(5);
                 }
 
@@ -385,7 +385,7 @@ mod tests {
     fn function_as_argument_to_function_call() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     print(produce);
                 }
 
@@ -397,7 +397,7 @@ mod tests {
                     debug y();
                 }
 
-                def produce(): int {
+                def produce: int {
                     return 5;
                 }
             "},
@@ -409,15 +409,15 @@ mod tests {
     fn calling_function_returned_from_another_function_call() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     debug foo()();
                 }
 
-                def foo(): () -> int {
+                def foo: () -> int {
                     return bar;
                 }
 
-                def bar(): int {
+                def bar: int {
                     return 25;
                 }
             "},
@@ -429,7 +429,7 @@ mod tests {
     fn debug_array() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     debug [[]int [int 1, 2], [int 3, 4]][1][0];
 
                     var arr = [int 1, 3];
@@ -445,7 +445,7 @@ mod tests {
     fn assign_to_array() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     var arr = [int 0, 1, 2];
 
                     arr[0] = 99;
@@ -469,7 +469,7 @@ mod tests {
     fn calling_array_elements() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     var arr = [(int) -> int
                         add_one,
                         add_two,
@@ -503,7 +503,7 @@ mod tests {
     fn returning_array_from_a_function() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     var arr_1 = foo();
                     var arr_2 = foo();
 
@@ -516,7 +516,7 @@ mod tests {
                     debug arr_2[0];
                 }
 
-                def foo(): []int {
+                def foo: []int {
                     return [int 0];
                 }
             "},
@@ -528,7 +528,7 @@ mod tests {
     fn iterate_array_using_each_loop_statement() {
         assert_output_equal(
             indoc! {"
-                def main() {
+                def main {
                     each n in [int 1, 2, 3, 4, 5, 6] {
                         if n == 3 {
                             continue;

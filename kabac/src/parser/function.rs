@@ -19,14 +19,17 @@ pub fn parse(state: &ParserState) -> Result<AstNode> {
     let sym_id = state.next_symbol_id();
     let sym = parse_sym(state)?;
 
-    // Expecting "("
-    state.tokens.skip(&TokenKind::LParen)?;
+    // Expecting parameters (optional)
+    let params = if state.tokens.current_is(&TokenKind::LParen) {
+        // Expecting >= 0 function parameter declaration(s)
+        state.tokens.skip(&TokenKind::LParen)?;
+        let params = parse_params(state)?;
+        state.tokens.skip(&TokenKind::RParen)?;
 
-    // Expecting >= 0 function parameter declaration(s)
-    let params = parse_params(state)?;
-
-    // Expecting ")"
-    state.tokens.skip(&TokenKind::RParen)?;
+        params
+    } else {
+        vec![]
+    };
 
     // Expecting return type notation (optional)
     let return_tn = parse_return_tn(state)?;
@@ -126,6 +129,25 @@ mod tests {
 
     #[test]
     fn empty_function_definition() {
+        assert_ast(
+            "def foo {}",
+            AstNode::FunctionDefinition {
+                sym: Box::new(AstNode::Symbol {
+                    name: String::from("foo"),
+                    span: 4..7,
+                }),
+                sym_id: 1,
+                params: vec![],
+                return_tn: None,
+                body: vec![],
+                scope_id: 2,
+                span: 0..10,
+            },
+        );
+    }
+
+    #[test]
+    fn function_definition_with_zero_parameters_but_with_parentheses() {
         assert_ast(
             "def foo() {}",
             AstNode::FunctionDefinition {
@@ -227,7 +249,7 @@ mod tests {
     #[test]
     fn function_definition_with_return_statement() {
         assert_ast(
-            "def foo(): int { return 5; }",
+            "def foo: int { return 5; }",
             AstNode::FunctionDefinition {
                 sym: Box::new(AstNode::Symbol {
                     name: String::from("foo"),
@@ -237,17 +259,17 @@ mod tests {
                 params: vec![],
                 return_tn: Some(Box::new(AstNode::TypeNotation {
                     tn: TypeNotation::Symbol(String::from("int")),
-                    span: 11..14,
+                    span: 9..12,
                 })),
                 body: vec![AstNode::Return {
                     expr: Some(Box::new(AstNode::Literal {
                         lit: Literal::Int(5),
-                        span: 24..25,
+                        span: 22..23,
                     })),
-                    span: 17..25,
+                    span: 15..23,
                 }],
                 scope_id: 2,
-                span: 0..28,
+                span: 0..26,
             },
         );
     }
