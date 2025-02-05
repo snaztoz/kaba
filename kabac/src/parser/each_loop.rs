@@ -1,10 +1,4 @@
-use super::{
-    block,
-    error::{ParsingError, ParsingErrorVariant},
-    expression,
-    state::ParserState,
-    Result,
-};
+use super::{block, expression, state::ParserState, sym, Result};
 use crate::{ast::AstNode, lexer::token::TokenKind};
 
 pub fn parse(state: &ParserState) -> Result<AstNode> {
@@ -15,7 +9,7 @@ pub fn parse(state: &ParserState) -> Result<AstNode> {
 
     // Expecting element symbol
     let elem_sym_id = state.next_symbol_id();
-    let elem_sym = parse_sym(state)?;
+    let elem_sym = sym::parse(state, "item name")?;
 
     // Expecting "in" keyword
     state.tokens.skip(&TokenKind::In)?;
@@ -37,27 +31,6 @@ pub fn parse(state: &ParserState) -> Result<AstNode> {
         scope_id,
         span: start..end,
     })
-}
-
-fn parse_sym(state: &ParserState) -> Result<AstNode> {
-    let sym = match state.tokens.current_kind() {
-        TokenKind::Symbol(name) => Ok(AstNode::Symbol {
-            name,
-            span: state.tokens.current().span,
-        }),
-
-        kind => Err(ParsingError {
-            variant: ParsingErrorVariant::UnexpectedToken {
-                expect: TokenKind::Symbol(String::from("elem")),
-                found: kind.clone(),
-            },
-            span: state.tokens.current().span,
-        }),
-    };
-
-    state.tokens.advance();
-
-    sym
 }
 
 #[cfg(test)]

@@ -18,6 +18,7 @@ mod function;
 mod state;
 mod statement;
 mod stream;
+mod sym;
 #[cfg(test)]
 mod test_util;
 mod tn;

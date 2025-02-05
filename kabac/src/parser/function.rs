@@ -2,7 +2,7 @@ use super::{
     block,
     error::{ParsingError, ParsingErrorVariant},
     state::ParserState,
-    tn, Result,
+    sym, tn, Result,
 };
 use crate::{
     ast::{AstNode, FunctionParam},
@@ -17,7 +17,7 @@ pub fn parse(state: &ParserState) -> Result<AstNode> {
 
     // Expecting symbol
     let sym_id = state.next_symbol_id();
-    let sym = parse_sym(state)?;
+    let sym = sym::parse(state, "function name")?;
 
     // Expecting parameters (optional)
     let params = if state.tokens.current_is(&TokenKind::LParen) {
@@ -49,33 +49,12 @@ pub fn parse(state: &ParserState) -> Result<AstNode> {
     })
 }
 
-fn parse_sym(state: &ParserState) -> Result<AstNode> {
-    let sym = match state.tokens.current_kind() {
-        TokenKind::Symbol(name) => Ok(AstNode::Symbol {
-            name,
-            span: state.tokens.current().span,
-        }),
-
-        kind => Err(ParsingError {
-            variant: ParsingErrorVariant::UnexpectedToken {
-                expect: TokenKind::Symbol(String::from("function_name")),
-                found: kind.clone(),
-            },
-            span: state.tokens.current().span,
-        }),
-    };
-
-    state.tokens.advance();
-
-    sym
-}
-
 fn parse_params(state: &ParserState) -> Result<Vec<FunctionParam>> {
     let mut params = vec![];
     while !state.tokens.current_is(&TokenKind::RParen) {
         // Expecting symbol
         let sym_id = state.next_symbol_id();
-        let sym = parse_sym(state)?;
+        let sym = sym::parse(state, "parameter name")?;
 
         // Expecting ":"
         state.tokens.skip(&TokenKind::Colon)?;

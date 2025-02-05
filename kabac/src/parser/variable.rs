@@ -1,9 +1,4 @@
-use super::{
-    error::{ParsingError, ParsingErrorVariant, Result},
-    expression,
-    state::ParserState,
-    tn,
-};
+use super::{error::Result, expression, state::ParserState, sym, tn};
 use crate::{ast::AstNode, lexer::token::TokenKind};
 
 pub fn parse(state: &ParserState) -> Result<AstNode> {
@@ -14,7 +9,7 @@ pub fn parse(state: &ParserState) -> Result<AstNode> {
 
     // Parse symbol
     let sym_id = state.next_symbol_id();
-    let sym = parse_sym(state)?;
+    let sym = sym::parse(state, "variable name")?;
 
     // Parse type notation (optional)
     let tn = parse_tn(state)?;
@@ -37,28 +32,6 @@ pub fn parse(state: &ParserState) -> Result<AstNode> {
         val: Box::new(expr.unwrap_group()),
         span: start..end,
     })
-}
-
-fn parse_sym(state: &ParserState) -> Result<AstNode> {
-    match state.tokens.current_kind() {
-        TokenKind::Symbol(name) => {
-            let sym = AstNode::Symbol {
-                name,
-                span: state.tokens.current().span.clone(),
-            };
-
-            state.tokens.advance();
-
-            Ok(sym)
-        }
-        _ => Err(ParsingError {
-            variant: ParsingErrorVariant::UnexpectedToken {
-                expect: TokenKind::Symbol(String::from("foo")),
-                found: state.tokens.current_kind().clone(),
-            },
-            span: state.tokens.current().span,
-        }),
-    }
 }
 
 fn parse_tn(state: &ParserState) -> Result<Option<AstNode>> {
