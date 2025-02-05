@@ -1,5 +1,6 @@
 use super::{
-    conditional, each_loop, expression, function, state::ParserState, variable, while_loop, Result,
+    conditional, each_loop, expression, function, record, state::ParserState, variable, while_loop,
+    Result,
 };
 use crate::{
     ast::AstNode,
@@ -17,6 +18,7 @@ pub fn parse(state: &ParserState) -> Result<AstNode> {
         TokenKind::Def => return function::parse(state),
         TokenKind::Return => return parse_return_statement(state),
         TokenKind::Debug => return parse_debug_statement(state),
+        TokenKind::Record => return record::parse(state),
         _ => (),
     }
 

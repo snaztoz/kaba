@@ -86,6 +86,13 @@ pub enum AstNode {
         span: Span,
     },
 
+    RecordDefinition {
+        sym: Box<AstNode>,
+        sym_id: SymbolId,
+        fields: Vec<RecordField>,
+        span: Span,
+    },
+
     Assign {
         lhs: Box<AstNode>,
         rhs: Box<AstNode>,
@@ -259,6 +266,7 @@ impl AstNode {
             | Self::FunctionDefinition { span, .. }
             | Self::Return { span, .. }
             | Self::Debug { span, .. }
+            | Self::RecordDefinition { span, .. }
             | Self::Assign { span, .. }
             | Self::AddAssign { span, .. }
             | Self::SubAssign { span, .. }
@@ -343,6 +351,9 @@ impl Display for AstNode {
             }
             Self::Debug { .. } => {
                 write!(f, "`debug` statement")
+            }
+            Self::RecordDefinition { .. } => {
+                write!(f, "record definition")
             }
             Self::Assign { .. } => {
                 write!(f, "`assign` expression")
@@ -430,6 +441,13 @@ impl Display for AstNode {
 
 #[derive(Debug, PartialEq)]
 pub struct FunctionParam {
+    pub sym: AstNode,
+    pub sym_id: SymbolId,
+    pub tn: AstNode,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct RecordField {
     pub sym: AstNode,
     pub sym_id: SymbolId,
     pub tn: AstNode,

@@ -15,6 +15,7 @@ mod each_loop;
 mod error;
 mod expression;
 mod function;
+mod record;
 mod state;
 mod statement;
 mod stream;

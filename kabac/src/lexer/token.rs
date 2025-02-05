@@ -51,6 +51,7 @@ pub enum TokenKind {
     #[token("in")]       In,
     #[token("def")]      Def,
     #[token("return")]   Return,
+    #[token("record")]   Record,
     #[token("debug")]    Debug,
 
     //
@@ -111,7 +112,7 @@ impl TokenKind {
 impl Display for TokenKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Symbol(_) => write!(f, "symbol"),
+            Self::Symbol(s) => write!(f, "{s}"),
             Self::Int(_) => write!(f, "integer literal"),
             Self::Float(_) => write!(f, "float literal"),
             Self::Bool(b) => write!(f, "boolean `{b}` literal"),
@@ -128,6 +129,7 @@ impl Display for TokenKind {
             Self::In => write!(f, "`in` keyword"),
             Self::Def => write!(f, "`def` keyword"),
             Self::Return => write!(f, "`return` keyword"),
+            Self::Record => write!(f, "`record` keyword"),
             Self::Debug => write!(f, "`debug` keyword"),
 
             Self::Add => write!(f, "addition operator (`+`)"),
