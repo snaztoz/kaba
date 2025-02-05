@@ -34,6 +34,10 @@ impl Type {
         )
     }
 
+    pub const fn is_void(&self) -> bool {
+        matches!(self, Type::Void)
+    }
+
     pub fn is_basic_t_str(sym: &str) -> bool {
         matches!(
             sym,

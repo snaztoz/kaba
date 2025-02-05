@@ -5,223 +5,94 @@ use super::{
     tn::TypeNotationAnalyzer,
     types::Type,
 };
-use crate::ast::{AstNode, FunctionParam, SymbolId};
-use logos::Span;
+use crate::ast::{AstNode, FunctionParam};
 
-/// Analyzer for function declarations.
-///
-/// This analyzer assumes that the data from function declarations (i.e.
-/// function signature informations) are already stored in the [`AnalyzerState`].
-pub struct FunctionDeclarationAnalyzer<'a> {
-    node: &'a AstNode,
-    state: &'a AnalyzerState,
+pub fn analyze_declaration(state: &AnalyzerState, node: &AstNode) -> Result<()> {
+    analyze_params_tn(state, node)?;
+    analyze_return_tn(state, node)?;
+
+    save_function_t(state, node)
 }
 
-impl<'a> FunctionDeclarationAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
-        Self { node, state }
-    }
-}
+pub fn analyze_definition(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+    let scope_id = node.scope_id();
 
-impl FunctionDeclarationAnalyzer<'_> {
-    pub fn analyze(&self) -> Result<Type> {
-        self.analyze_params_tn()?;
-        self.analyze_return_tn()?;
+    let (params_t, return_t) = get_function_t(state, node).unwrap_callable();
+    let scope_variant = ScopeVariant::Function {
+        return_t: return_t.clone(),
+    };
 
-        let params_t = self.params_t();
-        let return_t = Box::new(self.return_t());
+    state.with_scope(scope_id, scope_variant, || {
+        let params = node.params().iter().zip(params_t);
 
-        let fn_t = Type::Callable { params_t, return_t };
-        self.save_fn_t(fn_t.clone())?;
+        for (param, t) in params {
+            let sym_id = param.sym_id;
+            let (sym, sym_span) = &param.sym.unwrap_symbol();
 
-        Ok(fn_t)
-    }
+            state.save_entity_or_else(sym_id, sym, t.clone(), || SemanticError {
+                variant: SemanticErrorVariant::SymbolAlreadyExist(String::from(sym)),
+                span: sym_span.clone(),
+            })?;
+        }
 
-    fn analyze_params_tn(&self) -> Result<()> {
-        for FunctionParam { tn, .. } in self.params() {
-            TypeNotationAnalyzer::new(tn, self.state).analyze()?;
+        // Analyze function body
+        //
+        // We do this last in order to accommodate features such as
+        // recursive function call.
+
+        let body_t = BodyAnalyzer::new(node, state).analyze()?;
+
+        if !return_t.is_void() && body_t.is_void() {
+            return Err(SemanticError {
+                variant: SemanticErrorVariant::ReturnTypeMismatch {
+                    expected: return_t,
+                    get: Type::Void,
+                },
+                span: node.sym().span().clone(),
+            });
         }
 
         Ok(())
-    }
+    })?;
 
-    fn analyze_return_tn(&self) -> Result<()> {
-        if let Some(tn) = self.return_tn() {
-            TypeNotationAnalyzer::new(tn, self.state)
-                .allow_void()
-                .analyze()?;
-        }
-
-        Ok(())
-    }
-
-    fn params_t(&self) -> Vec<Type> {
-        let mut params_t = vec![];
-        for FunctionParam { tn, .. } in self.params() {
-            params_t.push(Type::from(tn));
-        }
-
-        params_t
-    }
-
-    fn return_t(&self) -> Type {
-        self.return_tn().map_or(Type::Void, Type::from)
-    }
-
-    // Save function information to the scope.
-    fn save_fn_t(&self, fn_t: Type) -> Result<()> {
-        let (sym, sym_span) = self.sym().unwrap_symbol();
-        self.state
-            .save_entity_or_else(self.sym_id(), &sym, fn_t.clone(), || SemanticError {
-                variant: SemanticErrorVariant::SymbolAlreadyExist(sym.clone()),
-                span: sym_span,
-            })
-    }
-
-    fn sym(&self) -> &AstNode {
-        if let AstNode::FunctionDefinition { sym, .. } = self.node {
-            sym
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn sym_id(&self) -> SymbolId {
-        if let AstNode::FunctionDefinition { sym_id, .. } = self.node {
-            *sym_id
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn params(&self) -> &[FunctionParam] {
-        if let AstNode::FunctionDefinition { params, .. } = self.node {
-            params
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn return_tn(&self) -> Option<&AstNode> {
-        if let AstNode::FunctionDefinition { return_tn, .. } = self.node {
-            return_tn.as_deref()
-        } else {
-            unreachable!()
-        }
-    }
+    Ok(Type::Void)
 }
 
-/// Analyzer for function definition.
-///
-/// This analyzer assumes that the data from function declarations (i.e.
-/// function signature informations) are already stored in the scope table.
-pub struct FunctionDefinitionAnalyzer<'a> {
-    node: &'a AstNode,
-    state: &'a AnalyzerState,
+fn analyze_params_tn(state: &AnalyzerState, node: &AstNode) -> Result<()> {
+    for FunctionParam { tn, .. } in node.params() {
+        TypeNotationAnalyzer::new(tn, state).analyze()?;
+    }
+    Ok(())
 }
 
-impl<'a> FunctionDefinitionAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
-        Self { node, state }
+fn analyze_return_tn(state: &AnalyzerState, node: &AstNode) -> Result<()> {
+    if let Some(tn) = node.return_tn() {
+        TypeNotationAnalyzer::new(tn, state)
+            .allow_void()
+            .analyze()?;
     }
+    Ok(())
 }
 
-impl FunctionDefinitionAnalyzer<'_> {
-    pub fn analyze(&self) -> Result<Type> {
-        let return_t = self.fn_t().unwrap_callable().1;
-        self.state.with_scope(
-            self.scope_id(),
-            ScopeVariant::Function {
-                return_t: return_t.clone(),
-            },
-            || {
-                self.save_params_to_stack(&self.params())?;
+fn save_function_t(state: &AnalyzerState, node: &AstNode) -> Result<()> {
+    let (sym, sym_span) = node.sym().unwrap_symbol();
 
-                // Analyze function body
-                //
-                // We do this last in order to accommodate features such as
-                // recursive function call.
+    let params_t = node.params().iter().map(|p| Type::from(&p.tn)).collect();
+    let return_t = Box::new(node.return_tn().map_or(Type::Void, Type::from));
+    let function_t = Type::Callable { params_t, return_t };
 
-                let body_t = BodyAnalyzer::new(self.node, self.state).analyze()?;
+    state.save_entity_or_else(node.sym_id(), &sym, function_t, || SemanticError {
+        variant: SemanticErrorVariant::SymbolAlreadyExist(sym.clone()),
+        span: sym_span,
+    })
+}
 
-                if return_t != Type::Void && body_t == Type::Void {
-                    return Err(SemanticError {
-                        variant: SemanticErrorVariant::ReturnTypeMismatch {
-                            expected: return_t,
-                            get: Type::Void,
-                        },
-                        span: self.sym().span().clone(),
-                    });
-                }
-
-                Ok(())
-            },
-        )?;
-
-        Ok(Type::Void)
-    }
-
-    fn save_params_to_stack(&self, params: &[((SymbolId, String, Span), Type)]) -> Result<()> {
-        for ((sym_id, sym, sym_span), t) in params {
-            self.state
-                .save_entity_or_else(*sym_id, sym, t.clone(), || SemanticError {
-                    variant: SemanticErrorVariant::SymbolAlreadyExist(sym.clone()),
-                    span: sym_span.clone(),
-                })?;
-        }
-
-        Ok(())
-    }
-
-    fn params(&self) -> Vec<((SymbolId, String, Span), Type)> {
-        let params_sym = self.params_sym();
-        let params_t = self.fn_t().unwrap_callable().0;
-
-        params_sym
-            .iter()
-            .cloned()
-            .zip(params_t.iter().cloned())
-            .collect::<Vec<_>>()
-    }
-
-    fn sym(&self) -> &AstNode {
-        if let AstNode::FunctionDefinition { sym, .. } = self.node {
-            sym
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn scope_id(&self) -> SymbolId {
-        if let AstNode::FunctionDefinition { scope_id, .. } = self.node {
-            *scope_id
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn fn_t(&self) -> Type {
-        if let AstNode::FunctionDefinition { sym, .. } = self.node {
-            let sym_string = &sym.unwrap_symbol().0;
-            self.state.get_sym_t(sym_string).unwrap().unwrap_entity()
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn params_sym(&self) -> Vec<(SymbolId, String, Span)> {
-        if let AstNode::FunctionDefinition { params, .. } = self.node {
-            params
-                .iter()
-                .map(|p| {
-                    let id = p.sym_id;
-                    let (sym, span) = p.sym.unwrap_symbol();
-                    (id, sym, span)
-                })
-                .collect::<Vec<_>>()
-        } else {
-            unreachable!()
-        }
+fn get_function_t(state: &AnalyzerState, node: &AstNode) -> Type {
+    if let AstNode::FunctionDefinition { sym, .. } = node {
+        let sym_string = &sym.unwrap_symbol().0;
+        state.get_sym_t(sym_string).unwrap().unwrap_entity()
+    } else {
+        unreachable!()
     }
 }
 

@@ -2,14 +2,14 @@ use super::{error::Result, types::Type};
 use crate::{
     ast::{AstNode, SymbolId},
     lexer, parser,
-    semantic::{expression::ExpressionAnalyzer, state::AnalyzerState, ProgramAnalyzer},
+    semantic::{self, expression::ExpressionAnalyzer, state::AnalyzerState},
 };
 
 pub fn assert_is_ok(input: &str) {
     let tokens = lexer::lex(input).unwrap();
     let ast = parser::parse(tokens).unwrap();
 
-    let result = ProgramAnalyzer::new(&ast).analyze();
+    let result = semantic::analyze(&ast);
 
     assert!(result.is_ok());
 }
@@ -18,7 +18,7 @@ pub fn assert_is_err(input: &str) {
     let tokens = lexer::lex(input).unwrap();
     let ast = parser::parse(tokens).unwrap();
 
-    let result = ProgramAnalyzer::new(&ast).analyze();
+    let result = semantic::analyze(&ast);
 
     assert!(result.is_err());
 }

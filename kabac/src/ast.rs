@@ -301,6 +301,50 @@ impl AstNode {
         matches!(self, Self::Symbol { .. }) || matches!(self, Self::IndexAccess { .. })
     }
 
+    pub fn sym(&self) -> &AstNode {
+        match self {
+            Self::FunctionDefinition { sym, .. } => sym,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn sym_id(&self) -> SymbolId {
+        match self {
+            Self::FunctionDefinition { sym_id, .. } => *sym_id,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn body(&self) -> &[AstNode] {
+        match self {
+            Self::Program { body, .. } => body,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn scope_id(&self) -> ScopeId {
+        match self {
+            Self::Program { scope_id, .. } | Self::FunctionDefinition { scope_id, .. } => *scope_id,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn params(&self) -> &[FunctionParam] {
+        if let AstNode::FunctionDefinition { params, .. } = self {
+            params
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn return_tn(&self) -> Option<&AstNode> {
+        if let AstNode::FunctionDefinition { return_tn, .. } = self {
+            return_tn.as_deref()
+        } else {
+            unreachable!()
+        }
+    }
+
     pub fn unwrap_symbol(&self) -> (String, Span) {
         if let AstNode::Symbol { name, span } = self {
             (name.clone(), span.clone())
