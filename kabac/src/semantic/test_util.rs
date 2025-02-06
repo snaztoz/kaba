@@ -2,7 +2,7 @@ use super::{error::Result, types::Type};
 use crate::{
     ast::{AstNode, SymbolId},
     lexer, parser,
-    semantic::{self, expression::ExpressionAnalyzer, state::AnalyzerState},
+    semantic::{self, expression, state::AnalyzerState},
 };
 
 pub fn assert_is_ok(input: &str) {
@@ -49,7 +49,7 @@ pub fn eval_expr(input: &str, symbols: &[(&str, Type)]) -> Result<Type> {
                 .save_entity_or_else(sym_id, sym, t.clone(), || unreachable!())
                 .unwrap();
         }
-        ExpressionAnalyzer::new(&body[0], &state).analyze()
+        expression::analyze(&state, &body[0])
     } else {
         unreachable!();
     }

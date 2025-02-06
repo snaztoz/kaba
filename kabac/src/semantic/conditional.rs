@@ -1,13 +1,13 @@
 use super::{
-    body::BodyAnalyzer,
+    body,
     error::Result,
-    expression::ExpressionAnalyzer,
+    expression,
     state::{AnalyzerState, ScopeVariant},
     types::{assert, Type},
 };
-use crate::ast::{AstNode, ScopeId};
+use crate::ast::AstNode;
 
-/// Analyzer for conditional branch statement.
+/// Analyze conditional branch statement.
 ///
 /// ### ✅ Valid Examples
 ///
@@ -67,93 +67,67 @@ use crate::ast::{AstNode, ScopeId};
 ///     }
 /// }
 /// ```
-pub struct ConditionalBranchAnalyzer<'a> {
-    node: &'a AstNode,
-    state: &'a AnalyzerState,
-}
+pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+    let cond_t = expression::analyze(state, unwrap_cond(node))?;
+    assert::is_boolean(&cond_t, || unwrap_cond(node).span().clone())?;
 
-impl<'a> ConditionalBranchAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
-        Self { node, state }
+    // Check all statements inside the body with a new scope
+
+    let return_t = state.with_scope(node.scope_id(), ScopeVariant::Conditional, || {
+        body::analyze(state, node)
+    })?;
+
+    if unwrap_or_else_branch(node).is_none() {
+        // Non-exhaustive branches, set to "Void"
+        return Ok(Type::Void);
     }
-}
 
-impl ConditionalBranchAnalyzer<'_> {
-    pub fn analyze(&self) -> Result<Type> {
-        let cond_t = ExpressionAnalyzer::new(self.cond(), self.state).analyze()?;
-        assert::is_boolean(&cond_t, || self.cond().span().clone())?;
+    let or_else_branch = unwrap_or_else_branch(node).unwrap();
+    match or_else_branch {
+        AstNode::If { .. } => {
+            // All conditional branches must returning a value (exhaustive)
+            // for this statement to be considered as returning value
 
-        // Check all statements inside the body with a new scope
+            let branch_return_t = analyze(state, or_else_branch)?;
 
-        let return_t = self
-            .state
-            .with_scope(self.scope_id(), ScopeVariant::Conditional, || {
-                BodyAnalyzer::new(self.node, self.state).analyze()
+            if return_t != Type::Void && branch_return_t != Type::Void {
+                Ok(return_t)
+            } else {
+                Ok(Type::Void)
+            }
+        }
+
+        AstNode::Else { scope_id, .. } => {
+            // Check all statements inside the body with a new scope
+
+            let branch_return_t = state.with_scope(*scope_id, ScopeVariant::Conditional, || {
+                body::analyze(state, or_else_branch)
             })?;
 
-        if self.or_else().is_none() {
-            // Non-exhaustive branches, set to "Void"
-            return Ok(Type::Void);
-        }
-
-        match self.or_else().unwrap() {
-            AstNode::If { .. } => {
-                // All conditional branches must returning a value (exhaustive)
-                // for this statement to be considered as returning value
-
-                let branch_return_t =
-                    ConditionalBranchAnalyzer::new(self.or_else().unwrap(), self.state)
-                        .analyze()?;
-
-                if return_t != Type::Void && branch_return_t != Type::Void {
-                    Ok(return_t)
-                } else {
-                    Ok(Type::Void)
-                }
+            if return_t != Type::Void && branch_return_t != Type::Void {
+                Ok(return_t)
+            } else {
+                Ok(Type::Void)
             }
-
-            AstNode::Else { scope_id, .. } => {
-                // Check all statements inside the body with a new scope
-
-                let branch_return_t =
-                    self.state
-                        .with_scope(*scope_id, ScopeVariant::Conditional, || {
-                            BodyAnalyzer::new(self.or_else().unwrap(), self.state).analyze()
-                        })?;
-
-                if return_t != Type::Void && branch_return_t != Type::Void {
-                    Ok(return_t)
-                } else {
-                    Ok(Type::Void)
-                }
-            }
-
-            _ => unreachable!(),
         }
+
+        _ => unreachable!(),
     }
+}
 
-    fn cond(&self) -> &AstNode {
-        if let AstNode::If { cond, .. } = self.node {
-            cond
-        } else {
-            unreachable!()
-        }
+fn unwrap_cond(node: &AstNode) -> &AstNode {
+    if let AstNode::If { cond, .. } = node {
+        cond
+    } else {
+        unreachable!()
     }
+}
 
-    fn scope_id(&self) -> ScopeId {
-        if let AstNode::If { scope_id, .. } = self.node {
-            *scope_id
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn or_else(&self) -> Option<&AstNode> {
-        if let AstNode::If { or_else, .. } = self.node {
-            or_else.as_deref()
-        } else {
-            unreachable!()
-        }
+fn unwrap_or_else_branch(node: &AstNode) -> Option<&AstNode> {
+    if let AstNode::If { or_else, .. } = node {
+        or_else.as_deref()
+    } else {
+        unreachable!()
     }
 }
 

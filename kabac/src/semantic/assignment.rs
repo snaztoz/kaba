@@ -1,13 +1,12 @@
 use super::{
     error::{Result, SemanticError, SemanticErrorVariant},
-    expression::ExpressionAnalyzer,
+    expression,
     state::AnalyzerState,
     types::{assert, Type},
 };
 use crate::ast::AstNode;
-use logos::Span;
 
-/// Analyzer for assignment statements.
+/// Analyze assignment statements.
 ///
 /// It handles the analyzing of plain and shorthand assignment operations.
 ///
@@ -47,83 +46,81 @@ use logos::Span;
 /// var x = true;
 /// x += false;
 /// ```
-pub struct AssignmentAnalyzer<'a> {
-    node: &'a AstNode,
-    state: &'a AnalyzerState,
-}
+pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+    analyze_lhs(node)?;
 
-impl<'a> AssignmentAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
-        Self { node, state }
+    match node {
+        AstNode::Assign { .. } => analyze_assignment(state, node),
+
+        AstNode::AddAssign { .. }
+        | AstNode::SubAssign { .. }
+        | AstNode::MulAssign { .. }
+        | AstNode::DivAssign { .. }
+        | AstNode::ModAssign { .. } => analyze_shorthand_assignment(state, node),
+
+        _ => unreachable!(),
     }
 }
 
-impl AssignmentAnalyzer<'_> {
-    pub fn analyze(&self) -> Result<Type> {
-        self.analyze_lhs()?;
+fn analyze_assignment(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+    let (lhs, rhs, span) = if let AstNode::Assign { lhs, rhs, span } = node {
+        (lhs, rhs, span)
+    } else {
+        unreachable!()
+    };
 
-        match self.node {
-            AstNode::Assign { lhs, rhs, span } => self.analyze_assignment(lhs, rhs, span),
+    let lhs_t = expression::analyze(state, lhs)?;
+    let rhs_t = expression::analyze(state, rhs)?;
 
-            AstNode::AddAssign { lhs, rhs, span }
-            | AstNode::SubAssign { lhs, rhs, span }
-            | AstNode::MulAssign { lhs, rhs, span }
-            | AstNode::DivAssign { lhs, rhs, span }
-            | AstNode::ModAssign { lhs, rhs, span } => {
-                self.analyze_shorthand_assignment(lhs, rhs, span)
-            }
+    assert::is_assignable(&rhs_t, &lhs_t, || span.clone())?;
 
-            _ => unreachable!(),
-        }
+    Ok(Type::Void)
+}
+
+fn analyze_shorthand_assignment(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+    let (lhs, rhs, span) = match node {
+        AstNode::AddAssign { lhs, rhs, span }
+        | AstNode::SubAssign { lhs, rhs, span }
+        | AstNode::MulAssign { lhs, rhs, span }
+        | AstNode::DivAssign { lhs, rhs, span }
+        | AstNode::ModAssign { lhs, rhs, span } => (lhs, rhs, span),
+
+        _ => unreachable!(),
+    };
+
+    let lhs_t = expression::analyze(state, lhs)?;
+    let rhs_t = expression::analyze(state, rhs)?;
+
+    assert::is_number(&lhs_t, || lhs.span().clone())?;
+    assert::is_number(&rhs_t, || rhs.span().clone())?;
+    assert::is_assignable(&rhs_t, &lhs_t, || span.clone())?;
+
+    Ok(Type::Void)
+}
+
+fn analyze_lhs(node: &AstNode) -> Result<()> {
+    let lhs = unwrap_lhs(node);
+
+    if !lhs.is_lval() {
+        return Err(SemanticError {
+            variant: SemanticErrorVariant::InvalidLValue,
+            span: lhs.span().clone(),
+        });
     }
 
-    fn analyze_lhs(&self) -> Result<()> {
-        if !self.lhs().is_lval() {
-            return Err(SemanticError {
-                variant: SemanticErrorVariant::InvalidLValue,
-                span: self.lhs().span().clone(),
-            });
-        }
+    Ok(())
+}
 
-        Ok(())
-    }
+fn unwrap_lhs(node: &AstNode) -> &AstNode {
+    match node {
+        AstNode::Assign { lhs, .. }
+        | AstNode::AddAssign { lhs, .. }
+        | AstNode::SubAssign { lhs, .. }
+        | AstNode::MulAssign { lhs, .. }
+        | AstNode::DivAssign { lhs, .. }
+        | AstNode::ModAssign { lhs, .. } => lhs,
 
-    fn analyze_assignment(&self, lhs: &AstNode, rhs: &AstNode, span: &Span) -> Result<Type> {
-        let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
-        let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
-
-        assert::is_assignable(&rhs_t, &lhs_t, || span.clone())?;
-
-        Ok(Type::Void)
-    }
-
-    fn analyze_shorthand_assignment(
-        &self,
-        lhs: &AstNode,
-        rhs: &AstNode,
-        span: &Span,
-    ) -> Result<Type> {
-        let lhs_t = ExpressionAnalyzer::new(lhs, self.state).analyze()?;
-        let rhs_t = ExpressionAnalyzer::new(rhs, self.state).analyze()?;
-
-        assert::is_number(&lhs_t, || lhs.span().clone())?;
-        assert::is_number(&rhs_t, || rhs.span().clone())?;
-        assert::is_assignable(&rhs_t, &lhs_t, || span.clone())?;
-
-        Ok(Type::Void)
-    }
-
-    fn lhs(&self) -> &AstNode {
-        match self.node {
-            AstNode::Assign { lhs, .. }
-            | AstNode::AddAssign { lhs, .. }
-            | AstNode::SubAssign { lhs, .. }
-            | AstNode::MulAssign { lhs, .. }
-            | AstNode::DivAssign { lhs, .. }
-            | AstNode::ModAssign { lhs, .. } => lhs,
-
-            _ => unreachable!(),
-        }
+        _ => unreachable!(),
     }
 }
 

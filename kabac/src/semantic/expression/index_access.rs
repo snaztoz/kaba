@@ -1,54 +1,43 @@
-use super::ExpressionAnalyzer;
 use crate::{
     ast::AstNode,
     semantic::{
         error::Result,
+        expression,
         state::AnalyzerState,
         types::{assert, Type},
     },
 };
 
-/// Analyzer for index access expression rule.
-pub struct IndexAccessAnalyzer<'a> {
-    node: &'a AstNode,
-    state: &'a AnalyzerState,
-}
+/// Analyze index access expression.
+pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+    let obj = unwrap_obj(node);
+    let obj_t = expression::analyze(state, obj)?;
+    assert::is_indexable(&obj_t, || obj.span().clone())?;
 
-impl<'a> IndexAccessAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
-        Self { node, state }
+    let index = unwrap_index(node);
+    let index_t = expression::analyze(state, index)?;
+    assert::is_number(&index_t, || index.span().clone())?;
+
+    match obj_t {
+        Type::Array { elem_t } => Ok(*elem_t),
+
+        _ => unreachable!(),
     }
 }
 
-impl IndexAccessAnalyzer<'_> {
-    pub fn analyze(&self) -> Result<Type> {
-        let obj_t = ExpressionAnalyzer::new(self.obj(), self.state).analyze()?;
-        assert::is_indexable(&obj_t, || self.obj().span().clone())?;
-
-        let index_t = ExpressionAnalyzer::new(self.index(), self.state).analyze()?;
-        assert::is_number(&index_t, || self.index().span().clone())?;
-
-        match obj_t {
-            Type::Array { elem_t } => Ok(*elem_t),
-
-            _ => unreachable!(),
-        }
+fn unwrap_obj(node: &AstNode) -> &AstNode {
+    if let AstNode::IndexAccess { object, .. } = node {
+        object
+    } else {
+        unreachable!()
     }
+}
 
-    fn obj(&self) -> &AstNode {
-        if let AstNode::IndexAccess { object, .. } = self.node {
-            object
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn index(&self) -> &AstNode {
-        if let AstNode::IndexAccess { index, .. } = self.node {
-            index
-        } else {
-            unreachable!()
-        }
+fn unwrap_index(node: &AstNode) -> &AstNode {
+    if let AstNode::IndexAccess { index, .. } = node {
+        index
+    } else {
+        unreachable!()
     }
 }
 

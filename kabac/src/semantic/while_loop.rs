@@ -1,13 +1,13 @@
 use super::{
-    body::BodyAnalyzer,
+    body,
     error::Result,
-    expression::ExpressionAnalyzer,
+    expression,
     state::{AnalyzerState, ScopeVariant},
     types::{assert, Type},
 };
-use crate::ast::{AstNode, ScopeId};
+use crate::ast::AstNode;
 
-/// Analyzer for `while` loop statement.
+/// Analyze `while` loop statement.
 ///
 /// ### ✅ Valid Examples
 ///
@@ -39,48 +39,26 @@ use crate::ast::{AstNode, ScopeId};
 ///     # Invalid
 /// }
 /// ```
-pub struct WhileLoopAnalyzer<'a> {
-    node: &'a AstNode,
-    state: &'a AnalyzerState,
+pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+    // Expecting boolean type for the condition
+
+    let cond_t = expression::analyze(state, unwrap_cond(node))?;
+    assert::is_boolean(&cond_t, || unwrap_cond(node).span().clone())?;
+
+    // Check all statements inside the body with a new scope
+
+    state.with_scope(node.scope_id(), ScopeVariant::Loop, || {
+        body::analyze(state, node)
+    })?;
+
+    Ok(Type::Void)
 }
 
-impl<'a> WhileLoopAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
-        Self { node, state }
-    }
-}
-
-impl WhileLoopAnalyzer<'_> {
-    pub fn analyze(&self) -> Result<Type> {
-        // Expecting boolean type for the condition
-
-        let cond_t = ExpressionAnalyzer::new(self.cond(), self.state).analyze()?;
-        assert::is_boolean(&cond_t, || self.cond().span().clone())?;
-
-        // Check all statements inside the body with a new scope
-
-        self.state
-            .with_scope(self.scope_id(), ScopeVariant::Loop, || {
-                BodyAnalyzer::new(self.node, self.state).analyze()
-            })?;
-
-        Ok(Type::Void)
-    }
-
-    fn cond(&self) -> &AstNode {
-        if let AstNode::While { cond, .. } = self.node {
-            cond
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn scope_id(&self) -> ScopeId {
-        if let AstNode::While { scope_id, .. } = self.node {
-            *scope_id
-        } else {
-            unreachable!()
-        }
+fn unwrap_cond(node: &AstNode) -> &AstNode {
+    if let AstNode::While { cond, .. } = node {
+        cond
+    } else {
+        unreachable!()
     }
 }
 

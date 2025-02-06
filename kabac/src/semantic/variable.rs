@@ -1,14 +1,13 @@
 use super::{
     error::{Result, SemanticError, SemanticErrorVariant},
-    expression::ExpressionAnalyzer,
+    expression,
     state::AnalyzerState,
-    tn::TypeNotationAnalyzer,
+    tn,
     types::{assert, FloatType, IntType, Type},
 };
-use crate::ast::{AstNode, SymbolId};
-use logos::Span;
+use crate::ast::AstNode;
 
-/// Analyzer for variable declaration statement.
+/// Analyze variable declaration statement.
 ///
 /// ### ✅ Valid Examples
 ///
@@ -38,92 +37,49 @@ use logos::Span;
 /// ```text
 /// var x: int = 5.0;
 /// ```
-pub struct VariableDeclarationAnalyzer<'a> {
-    node: &'a AstNode,
-    state: &'a AnalyzerState,
+pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+    let val_t = expression::analyze(state, unwrap_val(node))?;
+
+    let var_t = match unwrap_tn(node) {
+        Some(var_tn) => {
+            let t = tn::analyze(state, var_tn, false)?;
+            assert::is_assignable(&val_t, &t, || node.span().clone())?;
+            t
+        }
+
+        None if val_t.is_unbounded_int() => Type::Int(IntType::Int),
+        None if val_t.is_unbounded_float() => Type::Float(FloatType::Double),
+        None => val_t,
+    };
+
+    save_symbol(state, node, var_t)?;
+
+    Ok(Type::Void)
 }
 
-impl<'a> VariableDeclarationAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
-        Self { node, state }
+fn save_symbol(state: &AnalyzerState, node: &AstNode, t: Type) -> Result<()> {
+    let sym_id = node.sym_id();
+    let (sym, sym_span) = node.sym().unwrap_symbol();
+
+    state.save_entity_or_else(sym_id, &sym, t, || SemanticError {
+        variant: SemanticErrorVariant::SymbolAlreadyExist(sym.clone()),
+        span: sym_span,
+    })
+}
+
+fn unwrap_tn(node: &AstNode) -> Option<&AstNode> {
+    if let AstNode::VariableDeclaration { tn, .. } = node {
+        tn.as_deref()
+    } else {
+        unreachable!()
     }
 }
 
-impl VariableDeclarationAnalyzer<'_> {
-    pub fn analyze(&self) -> Result<Type> {
-        let val_t = ExpressionAnalyzer::new(self.val(), self.state).analyze()?;
-
-        let var_t = match self.tn() {
-            Some(tn) => {
-                let t = TypeNotationAnalyzer::new(tn, self.state).analyze()?;
-                assert::is_assignable(&val_t, &t, || self.span().clone())?;
-                t
-            }
-
-            None if val_t.is_unbounded_int() => Type::Int(IntType::Int),
-            None if val_t.is_unbounded_float() => Type::Float(FloatType::Double),
-            None => val_t,
-        };
-
-        self.save_symbol(var_t)?;
-
-        Ok(Type::Void)
-    }
-
-    fn sym_string(&self) -> String {
-        if let AstNode::VariableDeclaration { sym, .. } = self.node {
-            sym.unwrap_symbol().0
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn sym_id(&self) -> SymbolId {
-        if let AstNode::VariableDeclaration { sym_id, .. } = self.node {
-            *sym_id
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn sym_span(&self) -> Span {
-        if let AstNode::VariableDeclaration { sym, .. } = self.node {
-            sym.unwrap_symbol().1
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn tn(&self) -> Option<&AstNode> {
-        if let AstNode::VariableDeclaration { tn, .. } = self.node {
-            tn.as_deref()
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn val(&self) -> &AstNode {
-        if let AstNode::VariableDeclaration { val, .. } = self.node {
-            val
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn span(&self) -> &Span {
-        if let AstNode::VariableDeclaration { span, .. } = self.node {
-            span
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn save_symbol(&self, t: Type) -> Result<()> {
-        self.state
-            .save_entity_or_else(self.sym_id(), &self.sym_string(), t, || SemanticError {
-                variant: SemanticErrorVariant::SymbolAlreadyExist(self.sym_string()),
-                span: self.sym_span().clone(),
-            })
+fn unwrap_val(node: &AstNode) -> &AstNode {
+    if let AstNode::VariableDeclaration { val, .. } = node {
+        val
+    } else {
+        unreachable!()
     }
 }
 

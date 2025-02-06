@@ -1,8 +1,8 @@
 use super::{
-    body::BodyAnalyzer,
+    body,
     error::{Result, SemanticError, SemanticErrorVariant},
     state::{AnalyzerState, ScopeVariant},
-    tn::TypeNotationAnalyzer,
+    tn,
     types::Type,
 };
 use crate::ast::{AstNode, FunctionParam};
@@ -40,7 +40,7 @@ pub fn analyze_definition(state: &AnalyzerState, node: &AstNode) -> Result<Type>
         // We do this last in order to accommodate features such as
         // recursive function call.
 
-        let body_t = BodyAnalyzer::new(node, state).analyze()?;
+        let body_t = body::analyze(state, node)?;
 
         if !return_t.is_void() && body_t.is_void() {
             return Err(SemanticError {
@@ -59,17 +59,15 @@ pub fn analyze_definition(state: &AnalyzerState, node: &AstNode) -> Result<Type>
 }
 
 fn analyze_params_tn(state: &AnalyzerState, node: &AstNode) -> Result<()> {
-    for FunctionParam { tn, .. } in node.params() {
-        TypeNotationAnalyzer::new(tn, state).analyze()?;
+    for FunctionParam { tn: param_tn, .. } in node.params() {
+        tn::analyze(state, param_tn, false)?;
     }
     Ok(())
 }
 
 fn analyze_return_tn(state: &AnalyzerState, node: &AstNode) -> Result<()> {
-    if let Some(tn) = node.return_tn() {
-        TypeNotationAnalyzer::new(tn, state)
-            .allow_void()
-            .analyze()?;
+    if let Some(return_tn) = node.return_tn() {
+        tn::analyze(state, return_tn, true)?;
     }
     Ok(())
 }

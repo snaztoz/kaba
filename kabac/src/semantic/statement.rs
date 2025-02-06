@@ -1,107 +1,102 @@
 use super::{
-    conditional::ConditionalBranchAnalyzer,
-    each_loop::EachLoopAnalyzer,
+    conditional, each_loop,
     error::{Result, SemanticError, SemanticErrorVariant},
-    expression::ExpressionAnalyzer,
+    expression,
     state::AnalyzerState,
     types::{assert, Type},
-    variable::VariableDeclarationAnalyzer,
-    while_loop::WhileLoopAnalyzer,
+    variable, while_loop,
 };
 use crate::ast::AstNode;
-use logos::Span;
 
-/// Analyzer for a single statement.
+/// Analyze a statement.
 ///
 /// It analyzes simple statements, such as loop control analyzeing, and also
 /// acts as an aggregate for another (more specific) statement analyzers, such
 /// as the AssignmentAnalyzer.
-pub struct StatementAnalyzer<'a> {
-    node: &'a AstNode,
-    state: &'a AnalyzerState,
-}
+pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+    match node {
+        AstNode::VariableDeclaration { .. } => variable::analyze(state, node),
+        AstNode::If { .. } => conditional::analyze(state, node),
+        AstNode::While { .. } => while_loop::analyze(state, node),
+        AstNode::Each { .. } => each_loop::analyze(state, node),
+        AstNode::Break { .. } | AstNode::Continue { .. } => analyze_loop_control(state, node),
 
-impl<'a> StatementAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
-        Self { node, state }
+        AstNode::FunctionDefinition { sym, .. } => Err(SemanticError {
+            variant: SemanticErrorVariant::UnexpectedStatement(node.to_string()),
+            span: sym.span().clone(),
+        }),
+
+        AstNode::Return { .. } => analyze_return(state, node),
+        AstNode::Debug { .. } => analyze_debug(state, node),
+
+        expr => expression::analyze(state, expr),
     }
 }
 
-impl StatementAnalyzer<'_> {
-    pub fn analyze(&self) -> Result<Type> {
-        match self.node {
-            AstNode::VariableDeclaration { .. } => {
-                VariableDeclarationAnalyzer::new(self.node, self.state).analyze()
-            }
+fn analyze_loop_control(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+    let span = match node {
+        AstNode::Break { span, .. } | AstNode::Continue { span, .. } => span,
+        _ => unreachable!(),
+    };
 
-            AstNode::If { .. } => ConditionalBranchAnalyzer::new(self.node, self.state).analyze(),
-
-            AstNode::While { .. } => WhileLoopAnalyzer::new(self.node, self.state).analyze(),
-            AstNode::Each { .. } => EachLoopAnalyzer::new(self.node, self.state).analyze(),
-
-            AstNode::Break { span } | AstNode::Continue { span } => self.analyze_loop_control(span),
-
-            AstNode::FunctionDefinition { sym, .. } => Err(SemanticError {
-                variant: SemanticErrorVariant::UnexpectedStatement(self.node.to_string()),
-                span: sym.span().clone(),
-            }),
-
-            AstNode::Return { expr, span } => self.analyze_return(expr, span),
-
-            AstNode::Debug { expr, .. } => self.analyze_debug(expr),
-
-            expr => ExpressionAnalyzer::new(expr, self.state).analyze(),
-        }
-    }
-
-    fn analyze_loop_control(&self, span: &Span) -> Result<Type> {
-        if !self.state.is_inside_loop() {
-            return Err(SemanticError {
-                variant: SemanticErrorVariant::UnexpectedStatement(self.node.to_string()),
-                span: span.clone(),
-            });
-        }
-
-        Ok(Type::Void)
-    }
-
-    fn analyze_return(&self, expr: &Option<Box<AstNode>>, span: &Span) -> Result<Type> {
-        let expr_t = expr
-            .as_ref()
-            .map(|expr| ExpressionAnalyzer::new(expr, self.state).analyze())
-            .unwrap_or(Ok(Type::Void))?;
-
-        let return_t = self.state.nearest_return_t().ok_or_else(|| SemanticError {
-            variant: SemanticErrorVariant::UnexpectedStatement(self.node.to_string()),
+    if !state.is_inside_loop() {
+        return Err(SemanticError {
+            variant: SemanticErrorVariant::UnexpectedStatement(node.to_string()),
             span: span.clone(),
-        })?;
-
-        assert::is_assignable(&expr_t, &return_t, || match expr {
-            Some(expr) => expr.span().clone(),
-            None => span.clone(),
-        })
-        .map_err(|err| SemanticError {
-            variant: SemanticErrorVariant::ReturnTypeMismatch {
-                expected: return_t.clone(),
-                get: expr_t,
-            },
-            ..err
-        })?;
-
-        Ok(return_t)
+        });
     }
 
-    fn analyze_debug(&self, expr: &AstNode) -> Result<Type> {
-        let expr_t = ExpressionAnalyzer::new(expr, self.state).analyze()?;
-        if expr_t == Type::Void {
-            return Err(SemanticError {
-                variant: SemanticErrorVariant::UnexpectedVoidTypeExpression,
-                span: expr.span().clone(),
-            });
-        }
+    Ok(Type::Void)
+}
 
-        Ok(Type::Void)
+fn analyze_return(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+    let (expr, span) = if let AstNode::Return { expr, span } = node {
+        (expr, span)
+    } else {
+        unreachable!()
+    };
+
+    let expr_t = expr
+        .as_ref()
+        .map(|expr| expression::analyze(state, expr))
+        .unwrap_or(Ok(Type::Void))?;
+
+    let return_t = state.nearest_return_t().ok_or_else(|| SemanticError {
+        variant: SemanticErrorVariant::UnexpectedStatement(node.to_string()),
+        span: span.clone(),
+    })?;
+
+    assert::is_assignable(&expr_t, &return_t, || match expr {
+        Some(expr) => expr.span().clone(),
+        None => span.clone(),
+    })
+    .map_err(|err| SemanticError {
+        variant: SemanticErrorVariant::ReturnTypeMismatch {
+            expected: return_t.clone(),
+            get: expr_t,
+        },
+        ..err
+    })?;
+
+    Ok(return_t)
+}
+
+fn analyze_debug(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+    let expr = if let AstNode::Debug { expr, .. } = node {
+        expr
+    } else {
+        unreachable!()
+    };
+
+    let expr_t = expression::analyze(state, expr)?;
+    if expr_t == Type::Void {
+        return Err(SemanticError {
+            variant: SemanticErrorVariant::UnexpectedVoidTypeExpression,
+            span: expr.span().clone(),
+        });
     }
+
+    Ok(Type::Void)
 }
 
 #[cfg(test)]

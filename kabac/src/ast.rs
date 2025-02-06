@@ -303,28 +303,40 @@ impl AstNode {
 
     pub fn sym(&self) -> &AstNode {
         match self {
-            Self::FunctionDefinition { sym, .. } => sym,
+            Self::FunctionDefinition { sym, .. } | Self::VariableDeclaration { sym, .. } => sym,
             _ => unreachable!(),
         }
     }
 
     pub fn sym_id(&self) -> SymbolId {
         match self {
-            Self::FunctionDefinition { sym_id, .. } => *sym_id,
+            Self::FunctionDefinition { sym_id, .. } | Self::VariableDeclaration { sym_id, .. } => {
+                *sym_id
+            }
             _ => unreachable!(),
         }
     }
 
     pub fn body(&self) -> &[AstNode] {
         match self {
-            Self::Program { body, .. } => body,
+            Self::Program { body, .. }
+            | AstNode::FunctionDefinition { body, .. }
+            | AstNode::If { body, .. }
+            | AstNode::Else { body, .. }
+            | AstNode::While { body, .. }
+            | AstNode::Each { body, .. } => body,
             _ => unreachable!(),
         }
     }
 
     pub fn scope_id(&self) -> ScopeId {
         match self {
-            Self::Program { scope_id, .. } | Self::FunctionDefinition { scope_id, .. } => *scope_id,
+            Self::Program { scope_id, .. }
+            | Self::FunctionDefinition { scope_id, .. }
+            | Self::If { scope_id, .. }
+            | Self::Else { scope_id, .. }
+            | Self::While { scope_id, .. }
+            | Self::Each { scope_id, .. } => *scope_id,
             _ => unreachable!(),
         }
     }

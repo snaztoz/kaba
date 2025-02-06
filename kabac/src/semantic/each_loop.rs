@@ -1,13 +1,13 @@
 use super::{
-    body::BodyAnalyzer,
+    body,
     error::Result,
-    expression::ExpressionAnalyzer,
+    expression,
     state::{AnalyzerState, ScopeVariant},
     types::{assert, Type},
 };
 use crate::ast::{AstNode, SymbolId};
 
-/// Analyzer for `each` loop statement.
+/// Analyze `each` loop statement.
 ///
 /// ### ✅ Valid Examples
 ///
@@ -38,75 +38,52 @@ use crate::ast::{AstNode, SymbolId};
 ///     // Invalid
 /// }
 /// ```
-pub struct EachLoopAnalyzer<'a> {
-    node: &'a AstNode,
-    state: &'a AnalyzerState,
+pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+    let expr_t = expression::analyze(state, unwrap_iterable(node))?;
+    assert::is_iterable(&expr_t, || unwrap_iterable(node).span().clone())?;
+
+    let elem_sym = unwrap_elem_sym(node).unwrap_symbol().0;
+    let elem_t = expr_t.unwrap_array();
+
+    // Check all statements inside the body with a new scope
+
+    state.with_scope(node.scope_id(), ScopeVariant::Loop, || {
+        state
+            .save_entity_or_else(
+                unwrap_elem_sym_id(node),
+                &elem_sym,
+                elem_t.clone(),
+                || unreachable!(),
+            )
+            .unwrap();
+
+        body::analyze(state, node)
+    })?;
+
+    Ok(Type::Void)
 }
 
-impl<'a> EachLoopAnalyzer<'a> {
-    pub const fn new(node: &'a AstNode, state: &'a AnalyzerState) -> Self {
-        Self { node, state }
+fn unwrap_iterable(node: &AstNode) -> &AstNode {
+    if let AstNode::Each { iterable, .. } = node {
+        iterable
+    } else {
+        unreachable!()
     }
 }
 
-impl EachLoopAnalyzer<'_> {
-    pub fn analyze(&self) -> Result<Type> {
-        let expr_t = ExpressionAnalyzer::new(self.iterable(), self.state).analyze()?;
-
-        assert::is_iterable(&expr_t, || self.iterable().span().clone())?;
-
-        let elem_sym = self.elem_sym().unwrap_symbol().0;
-        let elem_t = expr_t.unwrap_array();
-
-        // Check all statements inside the body with a new scope
-
-        self.state
-            .with_scope(self.scope_id(), ScopeVariant::Loop, || {
-                self.state
-                    .save_entity_or_else(
-                        self.elem_sym_id(),
-                        &elem_sym,
-                        elem_t.clone(),
-                        || unreachable!(),
-                    )
-                    .unwrap();
-
-                BodyAnalyzer::new(self.node, self.state).analyze()
-            })?;
-
-        Ok(Type::Void)
+fn unwrap_elem_sym(node: &AstNode) -> &AstNode {
+    if let AstNode::Each { elem_sym, .. } = node {
+        elem_sym
+    } else {
+        unreachable!()
     }
+}
 
-    fn iterable(&self) -> &AstNode {
-        if let AstNode::Each { iterable, .. } = self.node {
-            iterable
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn elem_sym(&self) -> &AstNode {
-        if let AstNode::Each { elem_sym, .. } = self.node {
-            elem_sym
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn elem_sym_id(&self) -> SymbolId {
-        if let AstNode::Each { elem_sym_id, .. } = self.node {
-            *elem_sym_id
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn scope_id(&self) -> SymbolId {
-        if let AstNode::Each { scope_id, .. } = self.node {
-            *scope_id
-        } else {
-            unreachable!()
-        }
+fn unwrap_elem_sym_id(node: &AstNode) -> SymbolId {
+    if let AstNode::Each { elem_sym_id, .. } = node {
+        *elem_sym_id
+    } else {
+        unreachable!()
     }
 }
 

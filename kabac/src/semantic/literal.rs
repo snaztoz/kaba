@@ -1,55 +1,53 @@
 use super::{
     error::Result,
-    expression::ExpressionAnalyzer,
+    expression,
     state::AnalyzerState,
-    tn::TypeNotationAnalyzer,
+    tn,
     types::{assert, FloatType, IntType, Type},
 };
-use crate::ast::Literal;
+use crate::{ast::Literal, AstNode};
 
-/// Analyzer for a literal expressions, such as numbers or arrays.
-pub struct LiteralAnalyzer<'a> {
-    lit: &'a Literal,
-    state: &'a AnalyzerState,
-}
+/// Analyze literal expressions, such as numbers or arrays.
+pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+    let lit = unwrap_literal(node);
 
-impl<'a> LiteralAnalyzer<'a> {
-    pub const fn new(lit: &'a Literal, state: &'a AnalyzerState) -> Self {
-        Self { lit, state }
+    match lit {
+        Literal::Void => Ok(Type::Void),
+
+        Literal::Bool(_) => Ok(Type::Bool),
+        Literal::Int(n) => Ok(Type::Int(IntType::Unbounded(*n))),
+        Literal::Float(n) => Ok(Type::Float(FloatType::Unbounded(*n))),
+        Literal::Char(_) => Ok(Type::Char),
+        Literal::String(_) => Ok(Type::String),
+
+        Literal::Array { .. } => analyze_array(state, lit),
     }
 }
 
-impl LiteralAnalyzer<'_> {
-    pub fn analyze(&self) -> Result<Type> {
-        match self.lit {
-            Literal::Void => Ok(Type::Void),
-
-            Literal::Bool(_) => Ok(Type::Bool),
-            Literal::Int(n) => Ok(Type::Int(IntType::Unbounded(*n))),
-            Literal::Float(n) => Ok(Type::Float(FloatType::Unbounded(*n))),
-            Literal::Char(_) => Ok(Type::Char),
-            Literal::String(_) => Ok(Type::String),
-
-            Literal::Array { .. } => self.analyze_array(),
-        }
-    }
-
-    fn analyze_array(&self) -> Result<Type> {
-        let (elem_t, elems) = if let Literal::Array { elem_tn, elems } = self.lit {
-            let elem_t = TypeNotationAnalyzer::new(elem_tn, self.state).analyze()?;
+fn analyze_array(state: &AnalyzerState, lit: &Literal) -> Result<Type> {
+    let (elem_t, elems) = match lit {
+        Literal::Array { elem_tn, elems } => {
+            let elem_t = tn::analyze(state, elem_tn, false)?;
             (elem_t, elems)
-        } else {
-            unreachable!()
-        };
-
-        for elem in elems {
-            let t = ExpressionAnalyzer::new(elem, self.state).analyze()?;
-            assert::is_compatible(&elem_t, &t, || elem.span().clone())?;
         }
 
-        Ok(Type::Array {
-            elem_t: Box::new(elem_t),
-        })
+        _ => unreachable!(),
+    };
+
+    for elem in elems {
+        let t = expression::analyze(state, elem)?;
+        assert::is_compatible(&elem_t, &t, || elem.span().clone())?;
+    }
+
+    Ok(Type::Array {
+        elem_t: Box::new(elem_t),
+    })
+}
+
+fn unwrap_literal(node: &AstNode) -> &Literal {
+    match node {
+        AstNode::Literal { lit, .. } => lit,
+        _ => unreachable!(),
     }
 }
 
