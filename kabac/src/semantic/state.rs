@@ -1,19 +1,16 @@
-use super::{
-    error::{Result, SemanticError},
-    types::Type,
-};
+use super::types::{Type, BASIC_T};
 use crate::ast::{ScopeId, SymbolId};
-use std::{cell::RefCell, collections::HashMap};
+use scope::{ScopeTable, ScopeVariant, GLOBAL_SCOPE_ID};
+use std::cell::RefCell;
+use symbol::{SymbolTable, SymbolTableData, SymbolType};
 
-pub const GLOBAL_SCOPE_ID: ScopeId = 1;
-
-pub type SymbolTableData = HashMap<SymbolId, SymbolEntry>;
-type ScopeTableData = HashMap<ScopeId, ScopeEntry>;
+mod scope;
+pub mod symbol;
 
 pub struct AnalyzerState {
     symbols: SymbolTable,
     scopes: ScopeTable,
-    current_scope_id: RefCell<ScopeId>,
+    _current_scope_id: RefCell<ScopeId>,
 }
 
 impl AnalyzerState {
@@ -21,33 +18,12 @@ impl AnalyzerState {
         Self {
             symbols: SymbolTable::new(),
             scopes: ScopeTable::new(),
-            current_scope_id: RefCell::new(GLOBAL_SCOPE_ID),
+            _current_scope_id: RefCell::new(GLOBAL_SCOPE_ID),
         }
     }
 
     pub fn take_symbols(self) -> SymbolTableData {
         self.symbols.take()
-    }
-
-    /// Get the type associated with a `sym` in the current active scope or its
-    /// ancestors.
-    pub fn get_sym_t(&self, sym: &str) -> Option<SymbolType> {
-        let mut scope_id = *self.current_scope_id.borrow();
-
-        loop {
-            let entry = self.scopes.get(scope_id).unwrap();
-
-            if let Some(sym_id) = entry.symbols.get(sym) {
-                return self.symbols.get(*sym_id).map(|entry| entry.t);
-            }
-
-            // Traverse upward
-            if let Some(id) = entry.parent_id {
-                scope_id = id;
-            } else {
-                return None;
-            }
-        }
     }
 
     /// Check if a type exists in the current active scope or its ancestors.
@@ -62,10 +38,31 @@ impl AnalyzerState {
             Type::Array { elem_t } => self.has_t(elem_t),
 
             Type::Symbol(name) => {
-                matches!(self.get_sym_t(name), Some(SymbolType::_TypeDefinition(_)))
+                matches!(self.get_sym_t(name), Some(SymbolType::TypeDefinition(_)))
             }
 
             _ => unreachable!(),
+        }
+    }
+
+    /// Get the type associated with a `sym` in the current active scope or its
+    /// ancestors.
+    pub fn get_sym_t(&self, sym: &str) -> Option<SymbolType> {
+        let mut scope_id = self.current_scope_id();
+
+        loop {
+            let scope_entry = self.scopes.get(scope_id);
+
+            if let Some(symbol_id) = scope_entry.symbols.get(sym) {
+                return self.symbols.get_t(*symbol_id);
+            }
+
+            // Traverse upward
+            if let Some(id) = scope_entry.parent_id {
+                scope_id = id;
+            } else {
+                return None;
+            }
         }
     }
 
@@ -73,17 +70,17 @@ impl AnalyzerState {
     ///
     /// Returns `None` if no function can be found.
     pub fn nearest_return_t(&self) -> Option<Type> {
-        let mut scope_id = *self.current_scope_id.borrow();
+        let mut scope_id = self.current_scope_id();
 
         loop {
-            let entry = self.scopes.get(scope_id).unwrap();
+            let scope_entry = self.scopes.get(scope_id);
 
-            if let ScopeVariant::Function { return_t } = &entry.variant {
-                return Some(return_t.clone());
+            if scope_entry.variant.is_function() {
+                return Some(scope_entry.variant.unwrap_function_return_t());
             }
 
             // Traverse upward
-            if let Some(id) = entry.parent_id {
+            if let Some(id) = scope_entry.parent_id {
                 scope_id = id;
             } else {
                 return None;
@@ -94,17 +91,17 @@ impl AnalyzerState {
     /// Check if the current active scope is a loop or contained within a loop
     /// scope ancestor.
     pub fn is_inside_loop(&self) -> bool {
-        let mut scope_id = *self.current_scope_id.borrow();
+        let mut scope_id = self.current_scope_id();
 
         loop {
-            let entry = self.scopes.get(scope_id).unwrap();
+            let scope_entry = self.scopes.get(scope_id);
 
-            if let ScopeVariant::Loop = &entry.variant {
+            if scope_entry.variant.is_loop() {
                 return true;
             }
 
             // Traverse upward
-            if let Some(id) = entry.parent_id {
+            if let Some(id) = scope_entry.parent_id {
                 scope_id = id;
             } else {
                 return false;
@@ -112,179 +109,70 @@ impl AnalyzerState {
         }
     }
 
-    /// Save symbol and its associated type to current active scope.
+    /// Check if the given `sym` can be saved. A symbol can't be saved if:
     ///
-    /// If symbol is already exist in the scope, it will run the `err` closure.
-    pub fn save_entity_or_else<F>(&self, id: SymbolId, sym: &str, t: Type, err: F) -> Result<()>
-    where
-        F: FnOnce() -> SemanticError,
-    {
-        //
+    ///  1. It is a builtin (reserved) name,
+    ///  2. or it's already exist in the current scope.
+    pub fn can_save_sym(&self, sym: &str) -> bool {
+        !BASIC_T.contains(&sym) && !self.scopes.has_sym(self.current_scope_id(), sym)
+    }
+
+    /// Save symbol and its associated type to current active scope.
+    pub fn save_entity(&self, sym_id: SymbolId, sym: &str, t: Type) {
         // Save to scope table
-        //
+        self.scopes.add_sym(sym_id, sym, self.current_scope_id());
 
-        let scope_id = *self.current_scope_id.borrow();
-
-        if Type::is_basic_t_str(sym) || self.scopes.has_sym(scope_id, sym) {
-            return Err(err());
-        }
-
-        self.scopes.add_sym(id, sym, scope_id);
-
-        //
         // Save to symbol table
-        //
+        self.symbols.add_entity(sym_id, sym, t);
+    }
 
-        self.symbols.add(
-            id,
-            SymbolEntry {
-                name: String::from(sym),
-                t: SymbolType::Entity(t),
-            },
-        );
+    /// Execute `action` within a new function scope.
+    pub fn with_function_scope<U, F>(&self, scope_id: ScopeId, return_t: Type, action: F) -> U
+    where
+        F: FnOnce() -> U,
+    {
+        self.with_scope(scope_id, ScopeVariant::Function { return_t }, action)
+    }
 
-        Ok(())
+    /// Execute `action` within a new conditional scope.
+    pub fn with_conditional_scope<U, F>(&self, scope_id: ScopeId, action: F) -> U
+    where
+        F: FnOnce() -> U,
+    {
+        self.with_scope(scope_id, ScopeVariant::Conditional, action)
+    }
+
+    /// Execute `action` within a new loop scope.
+    pub fn with_loop_scope<U, F>(&self, scope_id: ScopeId, action: F) -> U
+    where
+        F: FnOnce() -> U,
+    {
+        self.with_scope(scope_id, ScopeVariant::Loop, action)
     }
 
     /// Execute `action` within a scope of `variant` variant.
     ///
     /// It automatically handles the creating and exiting of the new scope.
-    pub fn with_scope<U, F>(&self, id: ScopeId, variant: ScopeVariant, action: F) -> U
+    fn with_scope<U, F>(&self, scope_id: ScopeId, scope_variant: ScopeVariant, action: F) -> U
     where
         F: FnOnce() -> U,
     {
-        let parent_id = *self.current_scope_id.borrow();
+        let current_id = self.current_scope_id();
 
-        self.scopes.add(id, variant, parent_id);
+        self.scopes.add(scope_id, scope_variant, current_id);
 
-        // Entering child scope
-        *self.current_scope_id.borrow_mut() = id;
-
+        self.enter_scope(scope_id);
         let result = action();
-
-        // Exiting child scope
-        *self.current_scope_id.borrow_mut() = parent_id;
+        self.enter_scope(current_id);
 
         result
     }
-}
 
-pub struct SymbolTable {
-    table: RefCell<SymbolTableData>,
-}
-
-impl SymbolTable {
-    fn new() -> Self {
-        Self {
-            table: RefCell::new(HashMap::new()),
-        }
+    fn current_scope_id(&self) -> ScopeId {
+        *self._current_scope_id.borrow()
     }
 
-    fn take(self) -> SymbolTableData {
-        self.table.take()
+    fn enter_scope(&self, scope_id: ScopeId) {
+        *self._current_scope_id.borrow_mut() = scope_id;
     }
-
-    fn get(&self, id: SymbolId) -> Option<SymbolEntry> {
-        self.table.borrow().get(&id).cloned()
-    }
-
-    fn add(&self, id: SymbolId, entry: SymbolEntry) {
-        self.table.borrow_mut().insert(id, entry);
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct SymbolEntry {
-    pub name: String,
-    pub t: SymbolType,
-}
-
-#[derive(Clone, Debug)]
-pub enum SymbolType {
-    _TypeDefinition(Type),
-    Entity(Type),
-}
-
-impl SymbolType {
-    pub fn unwrap_entity(self) -> Type {
-        if let Self::Entity(ent) = self {
-            ent
-        } else {
-            unreachable!()
-        }
-    }
-}
-
-#[derive(Debug)]
-struct ScopeTable {
-    table: RefCell<ScopeTableData>,
-}
-
-impl ScopeTable {
-    fn new() -> Self {
-        let mut table = HashMap::new();
-
-        table.insert(
-            GLOBAL_SCOPE_ID,
-            ScopeEntry {
-                variant: ScopeVariant::Global,
-                symbols: HashMap::new(),
-                parent_id: None,
-                children_id: vec![],
-            },
-        );
-
-        Self {
-            table: RefCell::new(table),
-        }
-    }
-
-    fn get(&self, id: ScopeId) -> Option<ScopeEntry> {
-        self.table.borrow().get(&id).cloned()
-    }
-
-    fn add(&self, id: ScopeId, variant: ScopeVariant, parent_id: ScopeId) {
-        let mut table = self.table.borrow_mut();
-
-        // Insert the new child data
-        table.insert(
-            id,
-            ScopeEntry {
-                variant,
-                symbols: HashMap::new(),
-                parent_id: Some(parent_id),
-                children_id: vec![],
-            },
-        );
-
-        // Update parent scope data
-        table.get_mut(&parent_id).unwrap().children_id.push(id);
-    }
-
-    fn has_sym(&self, id: ScopeId, sym: &str) -> bool {
-        let scope = self.get(id).unwrap();
-        scope.symbols.contains_key(sym)
-    }
-
-    fn add_sym(&self, id: SymbolId, sym: &str, scope_id: ScopeId) {
-        let mut table = self.table.borrow_mut();
-        let scope = table.get_mut(&scope_id).unwrap();
-        scope.symbols.insert(String::from(sym), id);
-    }
-}
-
-#[derive(Clone, Debug)]
-struct ScopeEntry {
-    variant: ScopeVariant,
-    symbols: HashMap<String, SymbolId>,
-    parent_id: Option<ScopeId>,
-    children_id: Vec<ScopeId>,
-}
-
-#[derive(Clone, Debug)]
-pub enum ScopeVariant {
-    Global,
-    Function { return_t: Type },
-    Conditional,
-    Loop,
 }

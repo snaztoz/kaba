@@ -2,7 +2,7 @@ use super::{
     body,
     error::Result,
     expression,
-    state::{AnalyzerState, ScopeVariant},
+    state::AnalyzerState,
     types::{assert, Type},
 };
 use crate::ast::{AstNode, SymbolId};
@@ -47,16 +47,8 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
 
     // Check all statements inside the body with a new scope
 
-    state.with_scope(node.scope_id(), ScopeVariant::Loop, || {
-        state
-            .save_entity_or_else(
-                unwrap_elem_sym_id(node),
-                &elem_sym,
-                elem_t.clone(),
-                || unreachable!(),
-            )
-            .unwrap();
-
+    state.with_loop_scope(node.scope_id(), || {
+        state.save_entity(unwrap_elem_sym_id(node), &elem_sym, elem_t);
         body::analyze(state, node)
     })?;
 

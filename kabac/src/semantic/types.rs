@@ -3,6 +3,10 @@ use std::{cmp::Ordering, fmt::Display, hash::Hash};
 
 pub mod assert;
 
+pub static BASIC_T: &[&str] = &[
+    "void", "bool", "sbyte", "short", "int", "long", "float", "double", "char", "string",
+];
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd)]
 pub enum Type {
     // Basic types
@@ -36,22 +40,6 @@ impl Type {
 
     pub const fn is_void(&self) -> bool {
         matches!(self, Type::Void)
-    }
-
-    pub fn is_basic_t_str(sym: &str) -> bool {
-        matches!(
-            sym,
-            "void"
-                | "bool"
-                | "sbyte"
-                | "short"
-                | "int"
-                | "long"
-                | "float"
-                | "double"
-                | "char"
-                | "string"
-        )
     }
 
     pub fn is_compatible_with(&self, other: &Type) -> bool {

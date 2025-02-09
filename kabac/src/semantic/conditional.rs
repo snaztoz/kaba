@@ -2,7 +2,7 @@ use super::{
     body,
     error::Result,
     expression,
-    state::{AnalyzerState, ScopeVariant},
+    state::AnalyzerState,
     types::{assert, Type},
 };
 use crate::ast::AstNode;
@@ -73,9 +73,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
 
     // Check all statements inside the body with a new scope
 
-    let return_t = state.with_scope(node.scope_id(), ScopeVariant::Conditional, || {
-        body::analyze(state, node)
-    })?;
+    let return_t = state.with_conditional_scope(node.scope_id(), || body::analyze(state, node))?;
 
     if unwrap_or_else_branch(node).is_none() {
         // Non-exhaustive branches, set to "Void"
@@ -100,9 +98,8 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
         AstNode::Else { scope_id, .. } => {
             // Check all statements inside the body with a new scope
 
-            let branch_return_t = state.with_scope(*scope_id, ScopeVariant::Conditional, || {
-                body::analyze(state, or_else_branch)
-            })?;
+            let branch_return_t =
+                state.with_conditional_scope(*scope_id, || body::analyze(state, or_else_branch))?;
 
             if return_t != Type::Void && branch_return_t != Type::Void {
                 Ok(return_t)

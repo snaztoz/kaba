@@ -2,7 +2,7 @@ use super::{
     body,
     error::Result,
     expression,
-    state::{AnalyzerState, ScopeVariant},
+    state::AnalyzerState,
     types::{assert, Type},
 };
 use crate::ast::AstNode;
@@ -47,9 +47,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
 
     // Check all statements inside the body with a new scope
 
-    state.with_scope(node.scope_id(), ScopeVariant::Loop, || {
-        body::analyze(state, node)
-    })?;
+    state.with_loop_scope(node.scope_id(), || body::analyze(state, node))?;
 
     Ok(Type::Void)
 }

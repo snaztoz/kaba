@@ -45,9 +45,7 @@ pub fn eval_expr(input: &str, symbols: &[(&str, Type)]) -> Result<Type> {
         for (i, (sym, t)) in symbols.iter().enumerate() {
             // make id large to avoid collision during test
             let sym_id: SymbolId = (i + 99999).try_into().unwrap();
-            state
-                .save_entity_or_else(sym_id, sym, t.clone(), || unreachable!())
-                .unwrap();
+            state.save_entity(sym_id, sym, t.clone());
         }
         expression::analyze(&state, &body[0])
     } else {

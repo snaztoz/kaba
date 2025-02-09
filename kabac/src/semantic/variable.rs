@@ -61,10 +61,16 @@ fn save_symbol(state: &AnalyzerState, node: &AstNode, t: Type) -> Result<()> {
     let sym_id = node.sym_id();
     let (sym, sym_span) = node.sym().unwrap_symbol();
 
-    state.save_entity_or_else(sym_id, &sym, t, || SemanticError {
-        variant: SemanticErrorVariant::SymbolAlreadyExist(sym.clone()),
-        span: sym_span,
-    })
+    if !state.can_save_sym(&sym) {
+        return Err(SemanticError {
+            variant: SemanticErrorVariant::SymbolAlreadyExist(sym),
+            span: sym_span,
+        });
+    }
+
+    state.save_entity(sym_id, &sym, t);
+
+    Ok(())
 }
 
 fn unwrap_tn(node: &AstNode) -> Option<&AstNode> {

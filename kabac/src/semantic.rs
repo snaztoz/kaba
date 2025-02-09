@@ -4,7 +4,7 @@
 use self::error::{Result, SemanticError};
 use crate::ast::AstNode;
 use error::SemanticErrorVariant;
-use state::{AnalyzerState, SymbolTableData};
+use state::{symbol::SymbolTableData, AnalyzerState};
 
 mod assignment;
 mod body;

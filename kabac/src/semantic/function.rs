@@ -1,7 +1,7 @@
 use super::{
     body,
     error::{Result, SemanticError, SemanticErrorVariant},
-    state::{AnalyzerState, ScopeVariant},
+    state::AnalyzerState,
     tn,
     types::Type,
 };
@@ -18,21 +18,22 @@ pub fn analyze_definition(state: &AnalyzerState, node: &AstNode) -> Result<Type>
     let scope_id = node.scope_id();
 
     let (params_t, return_t) = get_function_t(state, node).unwrap_callable();
-    let scope_variant = ScopeVariant::Function {
-        return_t: return_t.clone(),
-    };
 
-    state.with_scope(scope_id, scope_variant, || {
+    state.with_function_scope(scope_id, return_t.clone(), || {
         let params = node.params().iter().zip(params_t);
 
         for (param, t) in params {
             let sym_id = param.sym_id;
             let (sym, sym_span) = &param.sym.unwrap_symbol();
 
-            state.save_entity_or_else(sym_id, sym, t.clone(), || SemanticError {
-                variant: SemanticErrorVariant::SymbolAlreadyExist(String::from(sym)),
-                span: sym_span.clone(),
-            })?;
+            if !state.can_save_sym(sym) {
+                return Err(SemanticError {
+                    variant: SemanticErrorVariant::SymbolAlreadyExist(sym.to_string()),
+                    span: sym_span.clone(),
+                });
+            }
+
+            state.save_entity(sym_id, sym, t);
         }
 
         // Analyze function body
@@ -79,10 +80,16 @@ fn save_function_t(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     let return_t = Box::new(node.return_tn().map_or(Type::Void, Type::from));
     let function_t = Type::Callable { params_t, return_t };
 
-    state.save_entity_or_else(node.sym_id(), &sym, function_t, || SemanticError {
-        variant: SemanticErrorVariant::SymbolAlreadyExist(sym.clone()),
-        span: sym_span,
-    })
+    if !state.can_save_sym(&sym) {
+        return Err(SemanticError {
+            variant: SemanticErrorVariant::SymbolAlreadyExist(sym),
+            span: sym_span,
+        });
+    }
+
+    state.save_entity(node.sym_id(), &sym, function_t);
+
+    Ok(())
 }
 
 fn get_function_t(state: &AnalyzerState, node: &AstNode) -> Type {

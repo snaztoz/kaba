@@ -3,7 +3,7 @@
 pub use ast::{AstNode, FunctionParam, Literal};
 pub use error::{Error, Result};
 pub use logos::Span;
-pub use semantic::state::SymbolTableData;
+pub use semantic::state::symbol::SymbolTableData;
 
 mod ast;
 mod error;
