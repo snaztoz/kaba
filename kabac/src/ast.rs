@@ -1,6 +1,6 @@
 //! This module contains representation of the AST of Kaba program.
 //!
-//! Root of the tree will always be the [`AstNode::Program`] that may contains
+//! Root of the tree will always be the [`AstNode<'src>::Program`] that may contains
 //! `>= 0` statements.
 
 use logos::Span;
@@ -12,48 +12,48 @@ pub type ScopeId = Id;
 
 /// The representation of each node that make up a whole Kaba AST.
 #[derive(Debug, PartialEq)]
-pub enum AstNode {
-    // The root of all other AstNode variants
+pub enum AstNode<'src> {
+    // The root of all other AstNode<'src> variants
     Program {
-        body: Vec<AstNode>,
+        body: Vec<AstNode<'src>>,
         scope_id: ScopeId,
         span: Span,
     },
 
     VariableDeclaration {
-        sym: Box<AstNode>,
+        sym: Box<AstNode<'src>>,
         sym_id: SymbolId,
-        tn: Option<Box<AstNode>>,
-        val: Box<AstNode>,
+        tn: Option<Box<AstNode<'src>>>,
+        val: Box<AstNode<'src>>,
         span: Span,
     },
 
     If {
-        cond: Box<AstNode>,
-        body: Vec<AstNode>,
+        cond: Box<AstNode<'src>>,
+        body: Vec<AstNode<'src>>,
         scope_id: ScopeId,
-        or_else: Option<Box<AstNode>>,
+        or_else: Option<Box<AstNode<'src>>>,
         span: Span,
     },
 
     Else {
-        body: Vec<AstNode>,
+        body: Vec<AstNode<'src>>,
         scope_id: ScopeId,
         span: Span,
     },
 
     While {
-        cond: Box<AstNode>,
-        body: Vec<AstNode>,
+        cond: Box<AstNode<'src>>,
+        body: Vec<AstNode<'src>>,
         scope_id: ScopeId,
         span: Span,
     },
 
     Each {
-        elem_sym: Box<AstNode>,
+        elem_sym: Box<AstNode<'src>>,
         elem_sym_id: SymbolId,
-        iterable: Box<AstNode>,
-        body: Vec<AstNode>,
+        iterable: Box<AstNode<'src>>,
+        body: Vec<AstNode<'src>>,
         scope_id: ScopeId,
         span: Span,
     },
@@ -67,192 +67,192 @@ pub enum AstNode {
     },
 
     FunctionDefinition {
-        sym: Box<AstNode>,
+        sym: Box<AstNode<'src>>,
         sym_id: SymbolId,
-        params: Vec<FunctionParam>,
-        return_tn: Option<Box<AstNode>>,
-        body: Vec<AstNode>,
+        params: Vec<FunctionParam<'src>>,
+        return_tn: Option<Box<AstNode<'src>>>,
+        body: Vec<AstNode<'src>>,
         scope_id: ScopeId,
         span: Span,
     },
 
     Return {
-        expr: Option<Box<AstNode>>,
+        expr: Option<Box<AstNode<'src>>>,
         span: Span,
     },
 
     Debug {
-        expr: Box<AstNode>,
+        expr: Box<AstNode<'src>>,
         span: Span,
     },
 
     RecordDefinition {
-        sym: Box<AstNode>,
+        sym: Box<AstNode<'src>>,
         sym_id: SymbolId,
-        fields: Vec<RecordField>,
+        fields: Vec<RecordField<'src>>,
         span: Span,
     },
 
     Assign {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     AddAssign {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     SubAssign {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     MulAssign {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     DivAssign {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     ModAssign {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     Or {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     And {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     Eq {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     Neq {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     Gt {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     Gte {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     Lt {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     Lte {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     Add {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     Sub {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     Mul {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     Div {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     Mod {
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
+        lhs: Box<AstNode<'src>>,
+        rhs: Box<AstNode<'src>>,
         span: Span,
     },
 
     Not {
-        expr: Box<AstNode>,
+        expr: Box<AstNode<'src>>,
         span: Span,
     },
 
     Neg {
-        expr: Box<AstNode>,
+        expr: Box<AstNode<'src>>,
         span: Span,
     },
 
     FunctionCall {
-        callee: Box<AstNode>,
-        args: Vec<AstNode>,
+        callee: Box<AstNode<'src>>,
+        args: Vec<AstNode<'src>>,
         span: Span,
     },
 
     IndexAccess {
-        object: Box<AstNode>,
-        index: Box<AstNode>,
+        object: Box<AstNode<'src>>,
+        index: Box<AstNode<'src>>,
         span: Span,
     },
 
     // This variant is only used as the span information holder and then will be
     // removed. It won't be present in the final resulting ASTs.
     Group {
-        expr: Box<AstNode>,
+        expr: Box<AstNode<'src>>,
         span: Span,
     },
 
     Symbol {
-        name: String,
+        name: &'src str,
         span: Span,
     },
 
     TypeNotation {
-        tn: TypeNotation,
+        tn: TypeNotation<'src>,
         span: Span,
     },
 
     Literal {
-        lit: Literal,
+        lit: Literal<'src>,
         span: Span,
     },
 }
 
-impl AstNode {
+impl AstNode<'_> {
     pub fn span(&self) -> &Span {
         match self {
             Self::Program { span, .. }
@@ -357,15 +357,17 @@ impl AstNode {
         }
     }
 
-    pub fn unwrap_symbol(&self) -> (String, Span) {
+    pub fn unwrap_symbol(&self) -> (&str, Span) {
         if let AstNode::Symbol { name, span } = self {
-            (name.clone(), span.clone())
+            (name, span.clone())
         } else {
             unreachable!()
         }
     }
+}
 
-    pub fn unwrap_group(self) -> AstNode {
+impl<'src> AstNode<'src> {
+    pub fn unwrap_group(self) -> AstNode<'src> {
         if let AstNode::Group { expr, .. } = self {
             // unwrap recursively
             expr.unwrap_group()
@@ -375,7 +377,7 @@ impl AstNode {
     }
 }
 
-impl Display for AstNode {
+impl Display for AstNode<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::VariableDeclaration { .. } => {
@@ -496,34 +498,34 @@ impl Display for AstNode {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct FunctionParam {
-    pub sym: AstNode,
+pub struct FunctionParam<'src> {
+    pub sym: AstNode<'src>,
     pub sym_id: SymbolId,
-    pub tn: AstNode,
+    pub tn: AstNode<'src>,
 }
 
 #[derive(Debug, PartialEq)]
-pub struct RecordField {
-    pub sym: AstNode,
+pub struct RecordField<'src> {
+    pub sym: AstNode<'src>,
     pub sym_id: SymbolId,
-    pub tn: AstNode,
+    pub tn: AstNode<'src>,
 }
 
 #[derive(Debug, PartialEq)]
-pub enum TypeNotation {
-    Symbol(String),
+pub enum TypeNotation<'src> {
+    Symbol(&'src str),
 
     Array {
-        elem_tn: Box<AstNode>,
+        elem_tn: Box<AstNode<'src>>,
     },
 
     Callable {
-        params_tn: Vec<AstNode>,
-        return_tn: Box<AstNode>,
+        params_tn: Vec<AstNode<'src>>,
+        return_tn: Box<AstNode<'src>>,
     },
 }
 
-impl Display for TypeNotation {
+impl Display for TypeNotation<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Symbol(sym) => write!(f, "{sym}"),
@@ -550,7 +552,7 @@ impl Display for TypeNotation {
 /// The representation of each value that may exists in a Kaba source code,
 /// such as integer or string.
 #[derive(Debug, PartialEq)]
-pub enum Literal {
+pub enum Literal<'src> {
     // A temporary value while the runtime is still using a tree-walk
     // interpreter mode
     Void,
@@ -562,12 +564,12 @@ pub enum Literal {
     String(String),
 
     Array {
-        elem_tn: Box<AstNode>,
-        elems: Vec<AstNode>,
+        elem_tn: Box<AstNode<'src>>,
+        elems: Vec<AstNode<'src>>,
     },
 }
 
-impl Display for Literal {
+impl Display for Literal<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Void => write!(f, "void"),

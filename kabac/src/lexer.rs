@@ -64,25 +64,25 @@ mod tests {
     #[test]
     fn normal_symbol() {
         let input = "abc";
-        assert_token_kind(input, TokenKind::Symbol(String::from(input)));
+        assert_token_kind(input, TokenKind::Symbol(input));
     }
 
     #[test]
     fn symbol_with_mixed_characters() {
         let input = "_d768a7ABC_adsf";
-        assert_token_kind(input, TokenKind::Symbol(String::from(input)));
+        assert_token_kind(input, TokenKind::Symbol(input));
     }
 
     #[test]
     fn symbol_that_consists_of_single_underline() {
         let input = "_";
-        assert_token_kind(input, TokenKind::Symbol(String::from(input)));
+        assert_token_kind(input, TokenKind::Symbol(input));
     }
 
     #[test]
     fn symbol_without_alphabets() {
         let input = "_123";
-        assert_token_kind(input, TokenKind::Symbol(String::from(input)));
+        assert_token_kind(input, TokenKind::Symbol(input));
     }
 
     #[test]
@@ -191,7 +191,7 @@ mod tests {
     #[test]
     fn string_with_hex_character_escape() {
         let input = r#""\x41""#;
-        assert_token_kind(input, TokenKind::String(String::from("A")));
+        assert_token_kind(input, TokenKind::String(String::from("\x41")));
     }
 
     //

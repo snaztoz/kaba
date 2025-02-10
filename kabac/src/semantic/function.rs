@@ -80,14 +80,14 @@ fn save_function_t(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     let return_t = Box::new(node.return_tn().map_or(Type::Void, Type::from));
     let function_t = Type::Callable { params_t, return_t };
 
-    if !state.can_save_sym(&sym) {
+    if !state.can_save_sym(sym) {
         return Err(SemanticError {
-            variant: SemanticErrorVariant::SymbolAlreadyExist(sym),
+            variant: SemanticErrorVariant::SymbolAlreadyExist(String::from(sym)),
             span: sym_span,
         });
     }
 
-    state.save_entity(node.sym_id(), &sym, function_t);
+    state.save_entity(node.sym_id(), sym, function_t);
 
     Ok(())
 }

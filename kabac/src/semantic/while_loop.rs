@@ -52,7 +52,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     Ok(Type::Void)
 }
 
-fn unwrap_cond(node: &AstNode) -> &AstNode {
+fn unwrap_cond<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
     if let AstNode::While { cond, .. } = node {
         cond
     } else {

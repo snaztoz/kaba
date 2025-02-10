@@ -112,7 +112,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     }
 }
 
-fn unwrap_cond(node: &AstNode) -> &AstNode {
+fn unwrap_cond<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
     if let AstNode::If { cond, .. } = node {
         cond
     } else {
@@ -120,7 +120,7 @@ fn unwrap_cond(node: &AstNode) -> &AstNode {
     }
 }
 
-fn unwrap_or_else_branch(node: &AstNode) -> Option<&AstNode> {
+fn unwrap_or_else_branch<'src, 'a>(node: &'a AstNode<'src>) -> Option<&'a AstNode<'src>> {
     if let AstNode::If { or_else, .. } = node {
         or_else.as_deref()
     } else {

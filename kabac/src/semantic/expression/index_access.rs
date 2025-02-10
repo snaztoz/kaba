@@ -25,7 +25,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     }
 }
 
-fn unwrap_obj(node: &AstNode) -> &AstNode {
+fn unwrap_obj<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
     if let AstNode::IndexAccess { object, .. } = node {
         object
     } else {
@@ -33,7 +33,7 @@ fn unwrap_obj(node: &AstNode) -> &AstNode {
     }
 }
 
-fn unwrap_index(node: &AstNode) -> &AstNode {
+fn unwrap_index<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
     if let AstNode::IndexAccess { index, .. } = node {
         index
     } else {

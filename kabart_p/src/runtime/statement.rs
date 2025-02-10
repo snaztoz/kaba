@@ -5,15 +5,19 @@ use super::{
 use kabac::AstNode;
 use std::collections::HashMap;
 
-pub struct StatementRunner<'a> {
-    ast: &'a AstNode,
-    root: &'a AstNode,
+pub struct StatementRunner<'src, 'a> {
+    ast: &'a AstNode<'src>,
+    root: &'a AstNode<'src>,
 
     state: &'a RuntimeState<'a>,
 }
 
-impl<'a> StatementRunner<'a> {
-    pub fn new(ast: &'a AstNode, root: &'a AstNode, state: &'a RuntimeState<'a>) -> Self {
+impl<'src, 'a> StatementRunner<'src, 'a> {
+    pub fn new(
+        ast: &'a AstNode<'src>,
+        root: &'a AstNode<'src>,
+        state: &'a RuntimeState<'a>,
+    ) -> Self {
         Self { ast, root, state }
     }
 
@@ -24,13 +28,13 @@ impl<'a> StatementRunner<'a> {
     }
 }
 
-impl StatementRunner<'_> {
+impl StatementRunner<'_, '_> {
     pub fn run(&self) -> Result<()> {
         match self.ast {
             AstNode::VariableDeclaration { sym, val, .. } => {
                 let name = sym.unwrap_symbol().0;
                 let val = ExpressionRunner::new(val, self.root, self.state).run()?;
-                self.state.store_value(&name, val);
+                self.state.store_value(name, val);
             }
 
             AstNode::If { .. } => self.run_conditional_branch()?,
@@ -158,7 +162,7 @@ impl StatementRunner<'_> {
             let sym = elem_sym.unwrap_symbol().0;
 
             for item in iterable {
-                let scope = HashMap::from([(sym.clone(), item.clone())]);
+                let scope = HashMap::from([(String::from(sym), item.clone())]);
 
                 self.state.ss.borrow_mut().push(scope);
                 BodyRunner::new(self.ast, self.root, self.state).run()?;

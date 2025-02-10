@@ -40,7 +40,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
         AstNode::Symbol { name, span } => state
             .get_sym_t(name)
             .ok_or_else(|| SemanticError {
-                variant: SemanticErrorVariant::SymbolDoesNotExist(String::from(name)),
+                variant: SemanticErrorVariant::SymbolDoesNotExist(String::from(*name)),
                 span: span.clone(),
             })
             .map(|st| st.unwrap_entity()),
@@ -188,7 +188,7 @@ fn compute_unbounded_float_t(node: &AstNode, lhs_t: &Type, rhs_t: &Type) -> Type
     Type::Float(FloatType::Unbounded(n))
 }
 
-fn unwrap_lhs(node: &AstNode) -> &AstNode {
+fn unwrap_lhs<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
     match node {
         AstNode::Eq { lhs, .. }
         | AstNode::Neq { lhs, .. }
@@ -208,7 +208,7 @@ fn unwrap_lhs(node: &AstNode) -> &AstNode {
     }
 }
 
-fn unwrap_rhs(node: &AstNode) -> &AstNode {
+fn unwrap_rhs<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
     match node {
         AstNode::Eq { rhs, .. }
         | AstNode::Neq { rhs, .. }
@@ -228,7 +228,7 @@ fn unwrap_rhs(node: &AstNode) -> &AstNode {
     }
 }
 
-fn unwrap_expr(node: &AstNode) -> &AstNode {
+fn unwrap_expr<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
     match node {
         AstNode::Not { expr, .. } | AstNode::Neg { expr, .. } => expr,
         _ => unreachable!(),

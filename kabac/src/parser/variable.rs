@@ -1,7 +1,7 @@
 use super::{error::Result, expression, state::ParserState, sym, tn};
 use crate::{ast::AstNode, lexer::token::TokenKind};
 
-pub fn parse(state: &ParserState) -> Result<AstNode> {
+pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
     // Expecting "var" keyword
@@ -34,7 +34,7 @@ pub fn parse(state: &ParserState) -> Result<AstNode> {
     })
 }
 
-fn parse_tn(state: &ParserState) -> Result<Option<AstNode>> {
+fn parse_tn<'src>(state: &ParserState<'src, '_>) -> Result<'src, Option<AstNode<'src>>> {
     let tn = if state.tokens.current_is(&TokenKind::Colon) {
         state.tokens.skip(&TokenKind::Colon)?;
         Some(tn::parse(state)?)
@@ -58,7 +58,7 @@ mod tests {
             "var abc = 123 * x;",
             AstNode::VariableDeclaration {
                 sym: Box::from(AstNode::Symbol {
-                    name: String::from("abc"),
+                    name: "abc",
                     span: 4..7,
                 }),
                 sym_id: 1,
@@ -69,7 +69,7 @@ mod tests {
                         span: 10..13,
                     }),
                     rhs: Box::new(AstNode::Symbol {
-                        name: String::from("x"),
+                        name: "x",
                         span: 16..17,
                     }),
                     span: 10..17,
@@ -85,7 +85,7 @@ mod tests {
             "var x = (123 + 50);",
             AstNode::VariableDeclaration {
                 sym: Box::from(AstNode::Symbol {
-                    name: String::from("x"),
+                    name: "x",
                     span: 4..5,
                 }),
                 sym_id: 1,
@@ -112,13 +112,13 @@ mod tests {
             "var x = ((((foo))));",
             AstNode::VariableDeclaration {
                 sym: Box::from(AstNode::Symbol {
-                    name: String::from("x"),
+                    name: "x",
                     span: 4..5,
                 }),
                 sym_id: 1,
                 tn: None,
                 val: Box::new(AstNode::Symbol {
-                    name: String::from("foo"),
+                    name: "foo",
                     span: 12..15,
                 }),
                 span: 0..19,
@@ -137,12 +137,12 @@ mod tests {
             "var x: int = 5;",
             AstNode::VariableDeclaration {
                 sym: Box::from(AstNode::Symbol {
-                    name: String::from("x"),
+                    name: "x",
                     span: 4..5,
                 }),
                 sym_id: 1,
                 tn: Some(Box::from(AstNode::TypeNotation {
-                    tn: TypeNotation::Symbol(String::from("int")),
+                    tn: TypeNotation::Symbol("int"),
                     span: 7..10,
                 })),
                 val: Box::new(AstNode::Literal {
@@ -160,25 +160,25 @@ mod tests {
             "var x: (int) -> void = foo;",
             AstNode::VariableDeclaration {
                 sym: Box::from(AstNode::Symbol {
-                    name: String::from("x"),
+                    name: "x",
                     span: 4..5,
                 }),
                 sym_id: 1,
                 tn: Some(Box::from(AstNode::TypeNotation {
                     tn: TypeNotation::Callable {
                         params_tn: vec![AstNode::TypeNotation {
-                            tn: TypeNotation::Symbol(String::from("int")),
+                            tn: TypeNotation::Symbol("int"),
                             span: 8..11,
                         }],
                         return_tn: Box::new(AstNode::TypeNotation {
-                            tn: TypeNotation::Symbol(String::from("void")),
+                            tn: TypeNotation::Symbol("void"),
                             span: 16..20,
                         }),
                     },
                     span: 7..20,
                 })),
                 val: Box::new(AstNode::Symbol {
-                    name: String::from("foo"),
+                    name: "foo",
                     span: 23..26,
                 }),
                 span: 0..26,
@@ -192,7 +192,7 @@ mod tests {
             "var x: (int, bool) -> (int,) -> void = foo;",
             AstNode::VariableDeclaration {
                 sym: Box::from(AstNode::Symbol {
-                    name: String::from("x"),
+                    name: "x",
                     span: 4..5,
                 }),
                 sym_id: 1,
@@ -200,22 +200,22 @@ mod tests {
                     tn: TypeNotation::Callable {
                         params_tn: vec![
                             AstNode::TypeNotation {
-                                tn: TypeNotation::Symbol(String::from("int")),
+                                tn: TypeNotation::Symbol("int"),
                                 span: 8..11,
                             },
                             AstNode::TypeNotation {
-                                tn: TypeNotation::Symbol(String::from("bool")),
+                                tn: TypeNotation::Symbol("bool"),
                                 span: 13..17,
                             },
                         ],
                         return_tn: Box::new(AstNode::TypeNotation {
                             tn: TypeNotation::Callable {
                                 params_tn: vec![AstNode::TypeNotation {
-                                    tn: TypeNotation::Symbol(String::from("int")),
+                                    tn: TypeNotation::Symbol("int"),
                                     span: 23..26,
                                 }],
                                 return_tn: Box::new(AstNode::TypeNotation {
-                                    tn: TypeNotation::Symbol(String::from("void")),
+                                    tn: TypeNotation::Symbol("void"),
                                     span: 32..36,
                                 }),
                             },
@@ -225,7 +225,7 @@ mod tests {
                     span: 7..36,
                 })),
                 val: Box::new(AstNode::Symbol {
-                    name: String::from("foo"),
+                    name: "foo",
                     span: 39..42,
                 }),
                 span: 0..42,
@@ -239,7 +239,7 @@ mod tests {
             "var x: [][]int = foo;",
             AstNode::VariableDeclaration {
                 sym: Box::from(AstNode::Symbol {
-                    name: String::from("x"),
+                    name: "x",
                     span: 4..5,
                 }),
                 sym_id: 1,
@@ -248,7 +248,7 @@ mod tests {
                         elem_tn: Box::new(AstNode::TypeNotation {
                             tn: TypeNotation::Array {
                                 elem_tn: Box::new(AstNode::TypeNotation {
-                                    tn: TypeNotation::Symbol(String::from("int")),
+                                    tn: TypeNotation::Symbol("int"),
                                     span: 11..14,
                                 }),
                             },
@@ -258,7 +258,7 @@ mod tests {
                     span: 7..14,
                 })),
                 val: Box::new(AstNode::Symbol {
-                    name: String::from("foo"),
+                    name: "foo",
                     span: 17..20,
                 }),
                 span: 0..20,

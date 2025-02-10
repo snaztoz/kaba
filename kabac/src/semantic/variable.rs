@@ -61,19 +61,19 @@ fn save_symbol(state: &AnalyzerState, node: &AstNode, t: Type) -> Result<()> {
     let sym_id = node.sym_id();
     let (sym, sym_span) = node.sym().unwrap_symbol();
 
-    if !state.can_save_sym(&sym) {
+    if !state.can_save_sym(sym) {
         return Err(SemanticError {
-            variant: SemanticErrorVariant::SymbolAlreadyExist(sym),
+            variant: SemanticErrorVariant::SymbolAlreadyExist(String::from(sym)),
             span: sym_span,
         });
     }
 
-    state.save_entity(sym_id, &sym, t);
+    state.save_entity(sym_id, sym, t);
 
     Ok(())
 }
 
-fn unwrap_tn(node: &AstNode) -> Option<&AstNode> {
+fn unwrap_tn<'src, 'a>(node: &'a AstNode<'src>) -> Option<&'a AstNode<'src>> {
     if let AstNode::VariableDeclaration { tn, .. } = node {
         tn.as_deref()
     } else {
@@ -81,7 +81,7 @@ fn unwrap_tn(node: &AstNode) -> Option<&AstNode> {
     }
 }
 
-fn unwrap_val(node: &AstNode) -> &AstNode {
+fn unwrap_val<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
     if let AstNode::VariableDeclaration { val, .. } = node {
         val
     } else {

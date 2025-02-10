@@ -4,7 +4,7 @@ use super::{
 };
 use logos::Lexer;
 
-pub fn lex_symbol(lex: &mut Lexer<TokenKind>) -> Result<String> {
+pub fn lex_symbol<'src>(lex: &mut Lexer<'src, TokenKind<'src>>) -> Result<&'src str> {
     let value = lex.slice();
 
     if value.chars().next().unwrap().is_numeric() {
@@ -14,18 +14,18 @@ pub fn lex_symbol(lex: &mut Lexer<TokenKind>) -> Result<String> {
         });
     }
 
-    Ok(String::from(value))
+    Ok(value)
 }
 
-pub fn lex_integer(lex: &mut Lexer<TokenKind>) -> u32 {
+pub fn lex_integer<'src>(lex: &mut Lexer<'src, TokenKind<'src>>) -> u32 {
     lex.slice().parse().unwrap()
 }
 
-pub fn lex_float(lex: &mut Lexer<TokenKind>) -> f32 {
+pub fn lex_float<'src>(lex: &mut Lexer<'src, TokenKind<'src>>) -> f32 {
     lex.slice().parse().unwrap()
 }
 
-pub fn lex_bool(lex: &mut Lexer<TokenKind>) -> bool {
+pub fn lex_bool<'src>(lex: &mut Lexer<'src, TokenKind<'src>>) -> bool {
     match lex.slice() {
         "true" => true,
         "false" => false,
@@ -33,7 +33,7 @@ pub fn lex_bool(lex: &mut Lexer<TokenKind>) -> bool {
     }
 }
 
-pub fn lex_char(lex: &mut Lexer<TokenKind>) -> Result<char> {
+pub fn lex_char<'src>(lex: &mut Lexer<'src, TokenKind<'src>>) -> Result<char> {
     let c = match lex.remainder().chars().next() {
         Some(c) => c,
         None => {
@@ -78,7 +78,7 @@ pub fn lex_char(lex: &mut Lexer<TokenKind>) -> Result<char> {
     Ok(c)
 }
 
-pub fn lex_string(lex: &mut Lexer<TokenKind>) -> Result<String> {
+pub fn lex_string<'src>(lex: &mut Lexer<'src, TokenKind<'src>>) -> Result<String> {
     let mut buff = String::new();
 
     while let Some(c) = lex.remainder().chars().next() {
@@ -101,7 +101,7 @@ pub fn lex_string(lex: &mut Lexer<TokenKind>) -> Result<String> {
     })
 }
 
-pub fn lex_escape_character(lex: &mut Lexer<TokenKind>) -> Result<char> {
+pub fn lex_escape_character<'src>(lex: &mut Lexer<'src, TokenKind<'src>>) -> Result<char> {
     let c = match lex.remainder().chars().next() {
         Some(c) => c,
         None => {
@@ -133,7 +133,7 @@ pub fn lex_escape_character(lex: &mut Lexer<TokenKind>) -> Result<char> {
     Ok(c)
 }
 
-pub fn lex_hex(lex: &mut Lexer<TokenKind>) -> Result<char> {
+pub fn lex_hex<'src>(lex: &mut Lexer<'src, TokenKind<'src>>) -> Result<char> {
     let mut buff = String::new();
 
     for _ in 0..2 {
@@ -159,13 +159,13 @@ pub fn lex_hex(lex: &mut Lexer<TokenKind>) -> Result<char> {
         })
 }
 
-pub fn lex_comment(lex: &mut Lexer<TokenKind>) -> String {
+pub fn lex_comment<'src>(lex: &mut Lexer<'src, TokenKind<'src>>) -> &'src str {
     let remainder = lex.remainder();
     if let Some(newline_index) = remainder.find('\n') {
         lex.bump(newline_index + 1);
-        String::from(&remainder[..newline_index])
+        &remainder[..newline_index]
     } else {
         lex.bump(remainder.bytes().len());
-        String::from(remainder)
+        remainder
     }
 }

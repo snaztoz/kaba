@@ -1,7 +1,7 @@
 use super::{block, expression, state::ParserState, Result};
 use crate::{ast::AstNode, lexer::token::TokenKind};
 
-pub fn parse(state: &ParserState) -> Result<AstNode> {
+pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
     // Expecting "while" keyword

@@ -44,7 +44,7 @@ fn analyze_array(state: &AnalyzerState, lit: &Literal) -> Result<Type> {
     })
 }
 
-fn unwrap_literal(node: &AstNode) -> &Literal {
+fn unwrap_literal<'src, 'a>(node: &'a AstNode<'src>) -> &'a Literal<'src> {
     match node {
         AstNode::Literal { lit, .. } => lit,
         _ => unreachable!(),

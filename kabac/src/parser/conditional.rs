@@ -7,7 +7,7 @@ use super::{
 };
 use crate::{ast::AstNode, lexer::token::TokenKind};
 
-pub fn parse(state: &ParserState) -> Result<AstNode> {
+pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
     let mut end;
 
@@ -35,7 +35,10 @@ pub fn parse(state: &ParserState) -> Result<AstNode> {
     })
 }
 
-fn parse_alt_branch(state: &ParserState, end_pos: &mut usize) -> Result<Option<AstNode>> {
+fn parse_alt_branch<'src>(
+    state: &ParserState<'src, '_>,
+    end_pos: &mut usize,
+) -> Result<'src, Option<AstNode<'src>>> {
     if !state.tokens.current_is(&TokenKind::Else) {
         return Ok(None);
     }
@@ -72,7 +75,7 @@ fn parse_alt_branch(state: &ParserState, end_pos: &mut usize) -> Result<Option<A
         kind => Err(ParsingError {
             variant: ParsingErrorVariant::UnexpectedToken {
                 expect: TokenKind::Else,
-                found: kind.clone(),
+                found: kind,
             },
             span: state.tokens.current().span,
         }),
@@ -104,7 +107,7 @@ mod tests {
                 }),
                 body: vec![AstNode::FunctionCall {
                     callee: Box::new(AstNode::Symbol {
-                        name: String::from("print"),
+                        name: "print",
                         span: 13..18,
                     }),
                     args: vec![AstNode::Literal {

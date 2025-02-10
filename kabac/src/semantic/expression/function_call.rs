@@ -48,7 +48,7 @@ fn get_args_t(state: &AnalyzerState, node: &AstNode) -> Result<Vec<Type>> {
     Ok(args_t)
 }
 
-fn unwrap_callee(node: &AstNode) -> &AstNode {
+fn unwrap_callee<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
     if let AstNode::FunctionCall { callee, .. } = node {
         callee
     } else {
@@ -56,7 +56,7 @@ fn unwrap_callee(node: &AstNode) -> &AstNode {
     }
 }
 
-fn unwrap_args(node: &AstNode) -> &[AstNode] {
+fn unwrap_args<'src, 'a>(node: &'a AstNode<'src>) -> &'a [AstNode<'src>] {
     if let AstNode::FunctionCall { args, .. } = node {
         args
     } else {

@@ -5,8 +5,8 @@ use std::fmt::Display;
 /// A wrapper around raw [`TokenKind`] that also store the metadata information
 /// of a token, such as its actual position inside the source code.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Token {
-    pub kind: TokenKind,
+pub struct Token<'src> {
+    pub kind: TokenKind<'src>,
     pub span: Span,
 }
 
@@ -14,9 +14,9 @@ pub struct Token {
 #[derive(Logos, Clone, Debug, PartialEq)]
 #[logos(skip r"[ \t\r\n\f]+", error = LexingError)]
 #[rustfmt::skip]
-pub enum TokenKind {
+pub enum TokenKind<'src> {
     #[regex("[a-zA-Z0-9_]+", rule::lex_symbol)]
-    Symbol(String),
+    Symbol(&'src str),
 
     //
     // Literals
@@ -97,19 +97,19 @@ pub enum TokenKind {
     // Comments
 
     #[token("//", callback = rule::lex_comment)]
-    Comment(String),
+    Comment(&'src str),
 
     // This will always be appended as the last token inside token list
     Eof,
 }
 
-impl TokenKind {
+impl TokenKind<'_> {
     pub const fn is_comment(&self) -> bool {
         matches!(self, Self::Comment(_))
     }
 }
 
-impl Display for TokenKind {
+impl Display for TokenKind<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Symbol(s) => write!(f, "{s}"),

@@ -4,7 +4,8 @@ use kabac::{AstNode, Literal, Result, SymbolTableData};
 pub mod wasm;
 
 pub fn compile(src: &str) -> Result<String> {
-    let (ast, sym_table) = kabac::compile(src)?;
+    let src = kabac::normalize_newlines(src);
+    let (ast, sym_table) = kabac::compile(&src)?;
 
     let mut buff = String::new();
     if let AstNode::Program { body, .. } = ast {

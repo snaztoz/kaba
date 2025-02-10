@@ -7,7 +7,7 @@ use crate::{
     lexer::token::{Token, TokenKind},
 };
 
-pub fn parse(state: &ParserState) -> Result<AstNode> {
+pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     // Check if statement starts with a keyword
     match state.tokens.current_kind() {
         TokenKind::Var => return variable::parse(state),
@@ -31,7 +31,7 @@ pub fn parse(state: &ParserState) -> Result<AstNode> {
     Ok(expr.unwrap_group())
 }
 
-fn parse_loop_control(state: &ParserState) -> Result<AstNode> {
+fn parse_loop_control<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let Token { kind, span, .. } = state.tokens.current();
 
     // Expecting either "break" or "continue" keyword
@@ -49,7 +49,7 @@ fn parse_loop_control(state: &ParserState) -> Result<AstNode> {
     Ok(control)
 }
 
-fn parse_return_statement(state: &ParserState) -> Result<AstNode> {
+fn parse_return_statement<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
     let mut end = state.tokens.current().span.end;
 
@@ -74,7 +74,7 @@ fn parse_return_statement(state: &ParserState) -> Result<AstNode> {
     })
 }
 
-fn parse_debug_statement(state: &ParserState) -> Result<AstNode> {
+fn parse_debug_statement<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
     // Expecting "debug" keyword

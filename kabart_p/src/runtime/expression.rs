@@ -5,15 +5,19 @@ use crate::runtime::body::BodyRunner;
 use kabac::{AstNode, FunctionParam, Literal};
 use std::collections::HashMap;
 
-pub struct ExpressionRunner<'a> {
-    ast: &'a AstNode,
-    root: &'a AstNode,
+pub struct ExpressionRunner<'src, 'a> {
+    ast: &'a AstNode<'src>,
+    root: &'a AstNode<'src>,
 
     state: &'a RuntimeState<'a>,
 }
 
-impl<'a> ExpressionRunner<'a> {
-    pub fn new(ast: &'a AstNode, root: &'a AstNode, state: &'a RuntimeState<'a>) -> Self {
+impl<'src, 'a> ExpressionRunner<'src, 'a> {
+    pub fn new(
+        ast: &'a AstNode<'src>,
+        root: &'a AstNode<'src>,
+        state: &'a RuntimeState<'a>,
+    ) -> Self {
         Self { ast, root, state }
     }
 
@@ -84,7 +88,7 @@ impl<'a> ExpressionRunner<'a> {
     }
 }
 
-impl ExpressionRunner<'_> {
+impl ExpressionRunner<'_, '_> {
     pub fn run(&self) -> Result<RuntimeValue> {
         match self.ast {
             AstNode::Assign { .. }
@@ -275,7 +279,7 @@ impl ExpressionRunner<'_> {
                 for (i, FunctionParam { sym, .. }) in params.iter().enumerate() {
                     let (sym, _) = sym.unwrap_symbol();
                     let val = &args[i];
-                    self.state.store_value(&sym, val.clone());
+                    self.state.store_value(sym, val.clone());
                 }
 
                 BodyRunner::new(f, self.root, self.state).run()?;

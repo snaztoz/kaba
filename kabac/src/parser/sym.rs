@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{ast::AstNode, lexer::token::TokenKind};
 
-pub fn parse(state: &ParserState, label: &str) -> Result<AstNode> {
+pub fn parse<'src>(state: &ParserState<'src, '_>, label: &'src str) -> Result<'src, AstNode<'src>> {
     let token = state.tokens.current();
 
     if let TokenKind::Symbol(name) = token.kind {
@@ -17,7 +17,7 @@ pub fn parse(state: &ParserState, label: &str) -> Result<AstNode> {
 
     Err(ParsingError {
         variant: ParsingErrorVariant::UnexpectedToken {
-            expect: TokenKind::Symbol(String::from(label)),
+            expect: TokenKind::Symbol(label),
             found: token.kind,
         },
         span: token.span,

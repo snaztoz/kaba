@@ -155,21 +155,21 @@ impl Type {
     }
 }
 
-impl<'a> From<&'a AstNode> for Type {
+impl<'a> From<&'a AstNode<'_>> for Type {
     fn from(value: &'a AstNode) -> Self {
         if let AstNode::TypeNotation { tn, .. } = value {
             match tn {
-                TypeNotation::Symbol(sym) if sym == "void" => Self::Void,
-                TypeNotation::Symbol(sym) if sym == "bool" => Self::Bool,
-                TypeNotation::Symbol(sym) if sym == "sbyte" => Self::Int(IntType::SByte),
-                TypeNotation::Symbol(sym) if sym == "short" => Self::Int(IntType::Short),
-                TypeNotation::Symbol(sym) if sym == "int" => Self::Int(IntType::Int),
-                TypeNotation::Symbol(sym) if sym == "long" => Self::Int(IntType::Long),
-                TypeNotation::Symbol(sym) if sym == "float" => Self::Float(FloatType::Float),
-                TypeNotation::Symbol(sym) if sym == "double" => Self::Float(FloatType::Double),
-                TypeNotation::Symbol(sym) if sym == "char" => Self::Char,
-                TypeNotation::Symbol(sym) if sym == "string" => Self::String,
-                TypeNotation::Symbol(sym) => Self::Symbol(sym.clone()),
+                TypeNotation::Symbol(sym) if *sym == "void" => Self::Void,
+                TypeNotation::Symbol(sym) if *sym == "bool" => Self::Bool,
+                TypeNotation::Symbol(sym) if *sym == "sbyte" => Self::Int(IntType::SByte),
+                TypeNotation::Symbol(sym) if *sym == "short" => Self::Int(IntType::Short),
+                TypeNotation::Symbol(sym) if *sym == "int" => Self::Int(IntType::Int),
+                TypeNotation::Symbol(sym) if *sym == "long" => Self::Int(IntType::Long),
+                TypeNotation::Symbol(sym) if *sym == "float" => Self::Float(FloatType::Float),
+                TypeNotation::Symbol(sym) if *sym == "double" => Self::Float(FloatType::Double),
+                TypeNotation::Symbol(sym) if *sym == "char" => Self::Char,
+                TypeNotation::Symbol(sym) if *sym == "string" => Self::String,
+                TypeNotation::Symbol(sym) => Self::Symbol(String::from(*sym)),
 
                 TypeNotation::Array { elem_tn } => Self::Array {
                     elem_t: Box::new(Self::from(elem_tn.as_ref())),

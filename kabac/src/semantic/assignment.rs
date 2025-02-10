@@ -111,7 +111,7 @@ fn analyze_lhs(node: &AstNode) -> Result<()> {
     Ok(())
 }
 
-fn unwrap_lhs(node: &AstNode) -> &AstNode {
+fn unwrap_lhs<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
     match node {
         AstNode::Assign { lhs, .. }
         | AstNode::AddAssign { lhs, .. }

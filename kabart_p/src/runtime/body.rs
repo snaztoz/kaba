@@ -1,15 +1,19 @@
 use super::{error::Result, state::RuntimeState, statement::StatementRunner};
 use kabac::AstNode;
 
-pub struct BodyRunner<'a> {
-    ast: &'a AstNode,
-    root: &'a AstNode,
+pub struct BodyRunner<'src, 'a> {
+    ast: &'a AstNode<'src>,
+    root: &'a AstNode<'src>,
 
     state: &'a RuntimeState<'a>,
 }
 
-impl<'a> BodyRunner<'a> {
-    pub fn new(ast: &'a AstNode, root: &'a AstNode, state: &'a RuntimeState<'a>) -> Self {
+impl<'src, 'a> BodyRunner<'src, 'a> {
+    pub fn new(
+        ast: &'a AstNode<'src>,
+        root: &'a AstNode<'src>,
+        state: &'a RuntimeState<'a>,
+    ) -> Self {
         Self { ast, root, state }
     }
 
@@ -26,7 +30,7 @@ impl<'a> BodyRunner<'a> {
         Ok(())
     }
 
-    fn body(&self) -> &'a [AstNode] {
+    fn body(&self) -> &'a [AstNode<'src>] {
         match self.ast {
             AstNode::Program { body, .. }
             | AstNode::If { body, .. }

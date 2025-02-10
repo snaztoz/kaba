@@ -8,7 +8,7 @@ use crate::{
     lexer::token::TokenKind,
 };
 
-pub fn parse(state: &ParserState) -> Result<AstNode> {
+pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
     // Expecting "record" keyword
@@ -32,7 +32,7 @@ pub fn parse(state: &ParserState) -> Result<AstNode> {
     })
 }
 
-fn parse_fields(state: &ParserState) -> Result<Vec<RecordField>> {
+fn parse_fields<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<RecordField<'src>>> {
     let mut fields = vec![];
 
     while !state.tokens.current_is(&TokenKind::RBrace) {
@@ -84,7 +84,7 @@ mod tests {
             "record Rec {}",
             AstNode::RecordDefinition {
                 sym: Box::new(AstNode::Symbol {
-                    name: String::from("Rec"),
+                    name: "Rec",
                     span: 7..10,
                 }),
                 sym_id: 1,
@@ -100,18 +100,18 @@ mod tests {
             "record User { name: string, }",
             AstNode::RecordDefinition {
                 sym: Box::new(AstNode::Symbol {
-                    name: String::from("User"),
+                    name: "User",
                     span: 7..11,
                 }),
                 sym_id: 1,
                 fields: vec![RecordField {
                     sym: AstNode::Symbol {
-                        name: String::from("name"),
+                        name: "name",
                         span: 14..18,
                     },
                     sym_id: 2,
                     tn: AstNode::TypeNotation {
-                        tn: TypeNotation::Symbol(String::from("string")),
+                        tn: TypeNotation::Symbol("string"),
                         span: 20..26,
                     },
                 }],

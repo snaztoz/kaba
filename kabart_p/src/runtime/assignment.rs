@@ -3,15 +3,19 @@ use super::{
 };
 use kabac::AstNode;
 
-pub struct AssignmentRunner<'a> {
-    ast: &'a AstNode,
-    root: &'a AstNode,
+pub struct AssignmentRunner<'src, 'a> {
+    ast: &'a AstNode<'src>,
+    root: &'a AstNode<'src>,
 
     state: &'a RuntimeState<'a>,
 }
 
-impl<'a> AssignmentRunner<'a> {
-    pub fn new(ast: &'a AstNode, root: &'a AstNode, state: &'a RuntimeState<'a>) -> Self {
+impl<'src, 'a> AssignmentRunner<'src, 'a> {
+    pub fn new(
+        ast: &'a AstNode<'src>,
+        root: &'a AstNode<'src>,
+        state: &'a RuntimeState<'a>,
+    ) -> Self {
         Self { ast, root, state }
     }
 
@@ -160,7 +164,7 @@ impl<'a> AssignmentRunner<'a> {
     }
 }
 
-impl AssignmentRunner<'_> {
+impl AssignmentRunner<'_, '_> {
     pub fn run(&self) -> Result<RuntimeValue> {
         let lhs_node = match self.ast {
             AstNode::Assign { lhs, .. }

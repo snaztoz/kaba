@@ -16,13 +16,13 @@ mod statement;
 pub mod stream;
 mod value;
 
-pub struct Runtime<'a> {
-    ast: Option<AstNode>,
+pub struct Runtime<'src, 'a> {
+    ast: Option<AstNode<'src>>,
     state: RuntimeState<'a>,
 }
 
-impl<'a> Runtime<'a> {
-    pub fn new(ast: AstNode, streams: RuntimeStream<'a>) -> Self {
+impl<'src, 'a> Runtime<'src, 'a> {
+    pub fn new(ast: AstNode<'src>, streams: RuntimeStream<'a>) -> Self {
         Self {
             ast: Some(ast),
             state: RuntimeState::new(streams),
@@ -46,7 +46,7 @@ impl<'a> Runtime<'a> {
         for (i, stmt) in stmts.iter().enumerate() {
             if let AstNode::FunctionDefinition { sym, .. } = stmt {
                 let (sym, _) = sym.unwrap_symbol();
-                self.state.store_value(&sym, RuntimeValue::Function(i));
+                self.state.store_value(sym, RuntimeValue::Function(i));
             } else {
                 unreachable!()
             }

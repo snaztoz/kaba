@@ -1,7 +1,7 @@
 use super::{block, expression, state::ParserState, sym, Result};
 use crate::{ast::AstNode, lexer::token::TokenKind};
 
-pub fn parse(state: &ParserState) -> Result<AstNode> {
+pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
     // Expecting "each" keyword
@@ -43,12 +43,12 @@ mod tests {
             "each elem in arr {}",
             AstNode::Each {
                 elem_sym: Box::new(AstNode::Symbol {
-                    name: String::from("elem"),
+                    name: "elem",
                     span: 5..9,
                 }),
                 elem_sym_id: 1,
                 iterable: Box::new(AstNode::Symbol {
-                    name: String::from("arr"),
+                    name: "arr",
                     span: 13..16,
                 }),
                 body: vec![],

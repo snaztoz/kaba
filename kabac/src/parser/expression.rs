@@ -8,11 +8,11 @@ use crate::{
     lexer::token::TokenKind,
 };
 
-pub fn parse(state: &ParserState) -> Result<AstNode> {
+pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     parse_assignment(state)
 }
 
-fn parse_assignment(state: &ParserState) -> Result<AstNode> {
+fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     // Parse first term
     let lhs = parse_logical_and_or_expression(state)?;
 
@@ -94,7 +94,9 @@ fn parse_assignment(state: &ParserState) -> Result<AstNode> {
     }
 }
 
-fn parse_logical_and_or_expression(state: &ParserState) -> Result<AstNode> {
+fn parse_logical_and_or_expression<'src>(
+    state: &ParserState<'src, '_>,
+) -> Result<'src, AstNode<'src>> {
     // Parse first term
     let mut lhs = parse_equality_expression(state)?;
 
@@ -130,7 +132,7 @@ fn parse_logical_and_or_expression(state: &ParserState) -> Result<AstNode> {
     }
 }
 
-fn parse_equality_expression(state: &ParserState) -> Result<AstNode> {
+fn parse_equality_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     // Parse first term
     let mut lhs = parse_comparison_expression(state)?;
 
@@ -166,7 +168,7 @@ fn parse_equality_expression(state: &ParserState) -> Result<AstNode> {
     }
 }
 
-fn parse_comparison_expression(state: &ParserState) -> Result<AstNode> {
+fn parse_comparison_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     // Parse first term
     let lhs = parse_additive_expression(state)?;
 
@@ -224,7 +226,7 @@ fn parse_comparison_expression(state: &ParserState) -> Result<AstNode> {
     }
 }
 
-fn parse_additive_expression(state: &ParserState) -> Result<AstNode> {
+fn parse_additive_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     // Parse first term
     let mut lhs = parse_multiplicative_expression(state)?;
 
@@ -260,7 +262,9 @@ fn parse_additive_expression(state: &ParserState) -> Result<AstNode> {
     }
 }
 
-fn parse_multiplicative_expression(state: &ParserState) -> Result<AstNode> {
+fn parse_multiplicative_expression<'src>(
+    state: &ParserState<'src, '_>,
+) -> Result<'src, AstNode<'src>> {
     // Parse first term
     let mut lhs = parse_unary_expression(state, false)?;
 
@@ -308,7 +312,10 @@ fn parse_multiplicative_expression(state: &ParserState) -> Result<AstNode> {
     }
 }
 
-fn parse_unary_expression(state: &ParserState, is_negated: bool) -> Result<AstNode> {
+fn parse_unary_expression<'src>(
+    state: &ParserState<'src, '_>,
+    is_negated: bool,
+) -> Result<'src, AstNode<'src>> {
     //  Prefixed by >= 0 "negation" or "not" expression
     if state.tokens.current_is(&TokenKind::Sub) {
         return parse_prefix_expression(state, &TokenKind::Sub);
@@ -366,7 +373,10 @@ fn parse_unary_expression(state: &ParserState, is_negated: bool) -> Result<AstNo
     Ok(expr)
 }
 
-fn parse_prefix_expression(state: &ParserState, token: &TokenKind) -> Result<AstNode> {
+fn parse_prefix_expression<'src>(
+    state: &ParserState<'src, '_>,
+    token: &TokenKind<'src>,
+) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
     state.tokens.skip(token)?;
 
@@ -402,7 +412,10 @@ fn parse_prefix_expression(state: &ParserState, token: &TokenKind) -> Result<Ast
     }
 }
 
-fn parse_primary_expression(state: &ParserState, is_negated: bool) -> Result<AstNode> {
+fn parse_primary_expression<'src>(
+    state: &ParserState<'src, '_>,
+    is_negated: bool,
+) -> Result<'src, AstNode<'src>> {
     let token = state.tokens.current();
 
     match token.kind {
@@ -490,7 +503,7 @@ fn parse_primary_expression(state: &ParserState, is_negated: bool) -> Result<Ast
 
         kind => Err(ParsingError {
             variant: ParsingErrorVariant::UnexpectedToken {
-                expect: TokenKind::Symbol(String::from("foo")),
+                expect: TokenKind::Symbol("foo"),
                 found: kind.clone(),
             },
             span: token.span,
@@ -498,7 +511,7 @@ fn parse_primary_expression(state: &ParserState, is_negated: bool) -> Result<Ast
     }
 }
 
-fn parse_function_call(state: &ParserState) -> Result<Vec<AstNode>> {
+fn parse_function_call<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<AstNode<'src>>> {
     // Can have >= 0 arguments
     let mut args = vec![];
 
@@ -534,7 +547,7 @@ fn parse_function_call(state: &ParserState) -> Result<Vec<AstNode>> {
     }
 }
 
-fn parse_array_literal(state: &ParserState) -> Result<AstNode> {
+fn parse_array_literal<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
     // Expecting "["
@@ -633,7 +646,7 @@ mod tests {
             AstNode::Sub {
                 lhs: Box::new(AstNode::Add {
                     lhs: Box::new(AstNode::Symbol {
-                        name: String::from("abc"),
+                        name: "abc",
                         span: 0..3,
                     }),
                     rhs: Box::new(AstNode::Mul {
@@ -651,7 +664,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Div {
                     lhs: Box::new(AstNode::Symbol {
-                        name: String::from("abc"),
+                        name: "abc",
                         span: 18..21,
                     }),
                     rhs: Box::new(AstNode::Literal {
@@ -671,7 +684,7 @@ mod tests {
             "abc = 123 * x;",
             AstNode::Assign {
                 lhs: Box::new(AstNode::Symbol {
-                    name: String::from("abc"),
+                    name: "abc",
                     span: 0..3,
                 }),
                 rhs: Box::new(AstNode::Mul {
@@ -680,7 +693,7 @@ mod tests {
                         span: 6..9,
                     }),
                     rhs: Box::new(AstNode::Symbol {
-                        name: String::from("x"),
+                        name: "x",
                         span: 12..13,
                     }),
                     span: 6..13,
@@ -696,7 +709,7 @@ mod tests {
             "x = (-5);",
             AstNode::Assign {
                 lhs: Box::new(AstNode::Symbol {
-                    name: String::from("x"),
+                    name: "x",
                     span: 0..1,
                 }),
                 rhs: Box::new(AstNode::Literal {
@@ -714,7 +727,7 @@ mod tests {
             "x += (-5);",
             AstNode::AddAssign {
                 lhs: Box::new(AstNode::Symbol {
-                    name: String::from("x"),
+                    name: "x",
                     span: 0..1,
                 }),
                 rhs: Box::new(AstNode::Literal {
@@ -732,7 +745,7 @@ mod tests {
             "x -= (-5);",
             AstNode::SubAssign {
                 lhs: Box::new(AstNode::Symbol {
-                    name: String::from("x"),
+                    name: "x",
                     span: 0..1,
                 }),
                 rhs: Box::new(AstNode::Literal {
@@ -750,7 +763,7 @@ mod tests {
             "x *= (-5);",
             AstNode::MulAssign {
                 lhs: Box::new(AstNode::Symbol {
-                    name: String::from("x"),
+                    name: "x",
                     span: 0..1,
                 }),
                 rhs: Box::new(AstNode::Literal {
@@ -768,7 +781,7 @@ mod tests {
             "x /= (-5);",
             AstNode::DivAssign {
                 lhs: Box::new(AstNode::Symbol {
-                    name: String::from("x"),
+                    name: "x",
                     span: 0..1,
                 }),
                 rhs: Box::new(AstNode::Literal {
@@ -786,7 +799,7 @@ mod tests {
             "x %= (-5);",
             AstNode::ModAssign {
                 lhs: Box::new(AstNode::Symbol {
-                    name: String::from("x"),
+                    name: "x",
                     span: 0..1,
                 }),
                 rhs: Box::new(AstNode::Literal {
@@ -852,7 +865,7 @@ mod tests {
                 }),
                 rhs: Box::new(AstNode::Sub {
                     lhs: Box::new(AstNode::Symbol {
-                        name: String::from("foo"),
+                        name: "foo",
                         span: 7..10,
                     }),
                     rhs: Box::new(AstNode::Literal {
@@ -884,7 +897,7 @@ mod tests {
             AstNode::Mul {
                 lhs: Box::new(AstNode::FunctionCall {
                     callee: Box::new(AstNode::Symbol {
-                        name: String::from("abc"),
+                        name: "abc",
                         span: 0..3,
                     }),
                     args: vec![
@@ -921,12 +934,12 @@ mod tests {
             "abc(xyz(123, 456),);",
             AstNode::FunctionCall {
                 callee: Box::new(AstNode::Symbol {
-                    name: String::from("abc"),
+                    name: "abc",
                     span: 0..3,
                 }),
                 args: vec![AstNode::FunctionCall {
                     callee: Box::new(AstNode::Symbol {
-                        name: String::from("xyz"),
+                        name: "xyz",
                         span: 4..7,
                     }),
                     args: vec![
@@ -953,7 +966,7 @@ mod tests {
             AstNode::Add {
                 lhs: Box::new(AstNode::Neg {
                     expr: Box::new(AstNode::Symbol {
-                        name: String::from("abc"),
+                        name: "abc",
                         span: 1..4,
                     }),
                     span: 0..4,
@@ -988,12 +1001,12 @@ mod tests {
                 expr: Box::new(AstNode::Neg {
                     expr: Box::new(AstNode::FunctionCall {
                         callee: Box::new(AstNode::Symbol {
-                            name: String::from("abc"),
+                            name: "abc",
                             span: 4..7,
                         }),
                         args: vec![AstNode::Neg {
                             expr: Box::new(AstNode::Symbol {
-                                name: String::from("foo"),
+                                name: "foo",
                                 span: 10..13,
                             }),
                             span: 9..13,
@@ -1013,7 +1026,7 @@ mod tests {
             "foo[3];",
             AstNode::IndexAccess {
                 object: Box::new(AstNode::Symbol {
-                    name: String::from("foo"),
+                    name: "foo",
                     span: 0..3,
                 }),
                 index: Box::new(AstNode::Literal {
@@ -1032,7 +1045,7 @@ mod tests {
             AstNode::IndexAccess {
                 object: Box::new(AstNode::IndexAccess {
                     object: Box::new(AstNode::Symbol {
-                        name: String::from("foo"),
+                        name: "foo",
                         span: 0..3,
                     }),
                     index: Box::new(AstNode::Literal {
@@ -1143,7 +1156,7 @@ mod tests {
             AstNode::Literal {
                 lit: Literal::Array {
                     elem_tn: Box::new(AstNode::TypeNotation {
-                        tn: TypeNotation::Symbol(String::from("int")),
+                        tn: TypeNotation::Symbol("int"),
                         span: 1..4,
                     }),
                     elems: vec![],
@@ -1160,7 +1173,7 @@ mod tests {
             AstNode::Literal {
                 lit: Literal::Array {
                     elem_tn: Box::new(AstNode::TypeNotation {
-                        tn: TypeNotation::Symbol(String::from("int")),
+                        tn: TypeNotation::Symbol("int"),
                         span: 1..4,
                     }),
                     elems: vec![AstNode::Literal {
@@ -1182,7 +1195,7 @@ mod tests {
                     elem_tn: Box::new(AstNode::TypeNotation {
                         tn: TypeNotation::Array {
                             elem_tn: Box::new(AstNode::TypeNotation {
-                                tn: TypeNotation::Symbol(String::from("int")),
+                                tn: TypeNotation::Symbol("int"),
                                 span: 3..6,
                             }),
                         },
@@ -1204,7 +1217,7 @@ mod tests {
                     elem_tn: Box::new(AstNode::TypeNotation {
                         tn: TypeNotation::Array {
                             elem_tn: Box::new(AstNode::TypeNotation {
-                                tn: TypeNotation::Symbol(String::from("int")),
+                                tn: TypeNotation::Symbol("int"),
                                 span: 3..6,
                             }),
                         },
@@ -1213,7 +1226,7 @@ mod tests {
                     elems: vec![AstNode::Literal {
                         lit: Literal::Array {
                             elem_tn: Box::new(AstNode::TypeNotation {
-                                tn: TypeNotation::Symbol(String::from("int")),
+                                tn: TypeNotation::Symbol("int"),
                                 span: 8..11,
                             }),
                             elems: vec![],

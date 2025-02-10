@@ -11,10 +11,15 @@ mod lexer;
 mod parser;
 mod semantic;
 
-pub fn compile(src: &str) -> Result<(AstNode, SymbolTableData)> {
-    let src = normalize_newlines(src);
-
-    let tokens = lexer::lex(&src).map_err(|e| Error {
+/// Compile Kaba source code.
+///
+/// It is assumed that all newlines are already normalized to line feed
+/// character (LF).
+///
+/// If it is not yet normalized, use the [`normalize_newlines`] function to
+/// achieve this.
+pub fn compile(src: &str) -> Result<(AstNode<'_>, SymbolTableData)> {
+    let tokens = lexer::lex(src).map_err(|e| Error {
         message: e.to_string(),
         span: Some(e.span),
     })?;
@@ -32,7 +37,7 @@ pub fn compile(src: &str) -> Result<(AstNode, SymbolTableData)> {
     Ok((ast, sym_table))
 }
 
-// Normalize all newline characters to LF
-fn normalize_newlines(src: &str) -> String {
+// Normalize all newline characters to line feed (LF).
+pub fn normalize_newlines(src: &str) -> String {
     src.replace("\r\n", "\n").replace('\r', "\n")
 }

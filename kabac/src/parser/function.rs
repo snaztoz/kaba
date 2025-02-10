@@ -9,7 +9,7 @@ use crate::{
     lexer::token::TokenKind,
 };
 
-pub fn parse(state: &ParserState) -> Result<AstNode> {
+pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
     // Expecting "fn" keyword
@@ -49,7 +49,7 @@ pub fn parse(state: &ParserState) -> Result<AstNode> {
     })
 }
 
-fn parse_params(state: &ParserState) -> Result<Vec<FunctionParam>> {
+fn parse_params<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<FunctionParam<'src>>> {
     let mut params = vec![];
     while !state.tokens.current_is(&TokenKind::RParen) {
         // Expecting symbol
@@ -89,7 +89,7 @@ fn parse_params(state: &ParserState) -> Result<Vec<FunctionParam>> {
     Ok(params)
 }
 
-fn parse_return_tn(state: &ParserState) -> Result<Option<AstNode>> {
+fn parse_return_tn<'src>(state: &ParserState<'src, '_>) -> Result<'src, Option<AstNode<'src>>> {
     if !state.tokens.current_is(&TokenKind::Colon) {
         return Ok(None);
     }
@@ -112,7 +112,7 @@ mod tests {
             "def foo {}",
             AstNode::FunctionDefinition {
                 sym: Box::new(AstNode::Symbol {
-                    name: String::from("foo"),
+                    name: "foo",
                     span: 4..7,
                 }),
                 sym_id: 1,
@@ -131,7 +131,7 @@ mod tests {
             "def foo() {}",
             AstNode::FunctionDefinition {
                 sym: Box::new(AstNode::Symbol {
-                    name: String::from("foo"),
+                    name: "foo",
                     span: 4..7,
                 }),
                 sym_id: 1,
@@ -150,30 +150,30 @@ mod tests {
             "def foo(x: int, y: bool,) {}",
             AstNode::FunctionDefinition {
                 sym: Box::new(AstNode::Symbol {
-                    name: String::from("foo"),
+                    name: "foo",
                     span: 4..7,
                 }),
                 sym_id: 1,
                 params: vec![
                     FunctionParam {
                         sym: AstNode::Symbol {
-                            name: String::from("x"),
+                            name: "x",
                             span: 8..9,
                         },
                         sym_id: 2,
                         tn: AstNode::TypeNotation {
-                            tn: TypeNotation::Symbol(String::from("int")),
+                            tn: TypeNotation::Symbol("int"),
                             span: 11..14,
                         },
                     },
                     FunctionParam {
                         sym: AstNode::Symbol {
-                            name: String::from("y"),
+                            name: "y",
                             span: 16..17,
                         },
                         sym_id: 3,
                         tn: AstNode::TypeNotation {
-                            tn: TypeNotation::Symbol(String::from("bool")),
+                            tn: TypeNotation::Symbol("bool"),
                             span: 19..23,
                         },
                     },
@@ -192,29 +192,29 @@ mod tests {
             "def write(x: int) { print(x); }",
             AstNode::FunctionDefinition {
                 sym: Box::new(AstNode::Symbol {
-                    name: String::from("write"),
+                    name: "write",
                     span: 4..9,
                 }),
                 sym_id: 1,
                 params: vec![FunctionParam {
                     sym: AstNode::Symbol {
-                        name: String::from("x"),
+                        name: "x",
                         span: 10..11,
                     },
                     sym_id: 2,
                     tn: AstNode::TypeNotation {
-                        tn: TypeNotation::Symbol(String::from("int")),
+                        tn: TypeNotation::Symbol("int"),
                         span: 13..16,
                     },
                 }],
                 return_tn: None,
                 body: vec![AstNode::FunctionCall {
                     callee: Box::new(AstNode::Symbol {
-                        name: String::from("print"),
+                        name: "print",
                         span: 20..25,
                     }),
                     args: vec![AstNode::Symbol {
-                        name: String::from("x"),
+                        name: "x",
                         span: 26..27,
                     }],
                     span: 20..28,
@@ -231,13 +231,13 @@ mod tests {
             "def foo: int { return 5; }",
             AstNode::FunctionDefinition {
                 sym: Box::new(AstNode::Symbol {
-                    name: String::from("foo"),
+                    name: "foo",
                     span: 4..7,
                 }),
                 sym_id: 1,
                 params: vec![],
                 return_tn: Some(Box::new(AstNode::TypeNotation {
-                    tn: TypeNotation::Symbol(String::from("int")),
+                    tn: TypeNotation::Symbol("int"),
                     span: 9..12,
                 })),
                 body: vec![AstNode::Return {

@@ -2,14 +2,14 @@ use super::stream::TokenStream;
 use crate::ast::SymbolId;
 use std::cell::RefCell;
 
-pub struct ParserState<'a> {
-    pub tokens: &'a TokenStream,
+pub struct ParserState<'src, 'a> {
+    pub tokens: &'a TokenStream<'src>,
     symbol_id_gen: RefCell<IdGenerator>,
     scope_id_gen: RefCell<IdGenerator>,
 }
 
-impl<'a> ParserState<'a> {
-    pub fn new(tokens: &'a TokenStream) -> Self {
+impl<'src, 'a> ParserState<'src, 'a> {
+    pub fn new(tokens: &'a TokenStream<'src>) -> Self {
         Self {
             tokens,
             symbol_id_gen: RefCell::new(IdGenerator::new()),
@@ -18,7 +18,7 @@ impl<'a> ParserState<'a> {
     }
 }
 
-impl ParserState<'_> {
+impl ParserState<'_, '_> {
     pub fn next_symbol_id(&self) -> SymbolId {
         self.symbol_id_gen.borrow_mut().next().unwrap()
     }

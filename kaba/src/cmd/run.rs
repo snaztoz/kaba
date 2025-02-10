@@ -15,7 +15,7 @@ macro_rules! exit_on_error {
 }
 
 pub fn handle(file_path: &Path) {
-    let src = exit_on_error!(read_content(file_path));
+    let src = kabac::normalize_newlines(&exit_on_error!(read_content(file_path)));
 
     let compilation = kabac::compile(&src).map_err(|e| Error::CompilationError {
         path: Some(file_path),

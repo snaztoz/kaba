@@ -48,14 +48,14 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     // Check all statements inside the body with a new scope
 
     state.with_loop_scope(node.scope_id(), || {
-        state.save_entity(unwrap_elem_sym_id(node), &elem_sym, elem_t);
+        state.save_entity(unwrap_elem_sym_id(node), elem_sym, elem_t);
         body::analyze(state, node)
     })?;
 
     Ok(Type::Void)
 }
 
-fn unwrap_iterable(node: &AstNode) -> &AstNode {
+fn unwrap_iterable<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
     if let AstNode::Each { iterable, .. } = node {
         iterable
     } else {
@@ -63,7 +63,7 @@ fn unwrap_iterable(node: &AstNode) -> &AstNode {
     }
 }
 
-fn unwrap_elem_sym(node: &AstNode) -> &AstNode {
+fn unwrap_elem_sym<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
     if let AstNode::Each { elem_sym, .. } = node {
         elem_sym
     } else {

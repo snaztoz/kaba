@@ -7,7 +7,7 @@ use crate::{
     lexer::token::TokenKind,
 };
 
-pub fn parse(state: &ParserState) -> Result<AstNode> {
+pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     match state.tokens.current_kind() {
         TokenKind::Symbol(name) => {
             let tn = AstNode::TypeNotation {
@@ -25,7 +25,7 @@ pub fn parse(state: &ParserState) -> Result<AstNode> {
 
         _ => Err(ParsingError {
             variant: ParsingErrorVariant::UnexpectedToken {
-                expect: TokenKind::Symbol(String::from("foo")),
+                expect: TokenKind::Symbol("foo"),
                 found: state.tokens.current().kind.clone(),
             },
             span: state.tokens.current().span,
@@ -33,7 +33,7 @@ pub fn parse(state: &ParserState) -> Result<AstNode> {
     }
 }
 
-fn parse_array_tn(state: &ParserState) -> Result<AstNode> {
+fn parse_array_tn<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
     // Expecting "["
@@ -55,7 +55,7 @@ fn parse_array_tn(state: &ParserState) -> Result<AstNode> {
     })
 }
 
-fn parse_function_tn(state: &ParserState) -> Result<AstNode> {
+fn parse_function_tn<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
     // Expecting "("

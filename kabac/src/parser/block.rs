@@ -6,12 +6,12 @@ use super::{
 use crate::{ast::AstNode, lexer::token::TokenKind};
 use logos::Span;
 
-pub struct Block {
-    pub body: Vec<AstNode>,
+pub struct Block<'src> {
+    pub body: Vec<AstNode<'src>>,
     pub span: Span,
 }
 
-pub fn parse(state: &ParserState) -> Result<Block> {
+pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, Block<'src>> {
     let start = state.tokens.current().span.start;
 
     // Expecting "{"
@@ -31,7 +31,7 @@ pub fn parse(state: &ParserState) -> Result<Block> {
     })
 }
 
-fn parse_stmts(state: &ParserState) -> Result<Vec<AstNode>> {
+fn parse_stmts<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<AstNode<'src>>> {
     let mut stmts = vec![];
     loop {
         if state.tokens.current_is(&TokenKind::RBrace) {
