@@ -2,7 +2,7 @@ use super::{
     body::BodyRunner, error::Result, expression::ExpressionRunner, state::RuntimeState,
     value::RuntimeValue,
 };
-use kabac::AstNode;
+use kaba_compiler::AstNode;
 use std::collections::HashMap;
 
 pub struct StatementRunner<'src, 'a> {

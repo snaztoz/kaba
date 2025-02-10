@@ -1,11 +1,11 @@
-use kabac::{AstNode, Literal, Result, SymbolTableData};
+use kaba_compiler::{AstNode, Literal, Result, SymbolTableData};
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
 
 pub fn compile(src: &str) -> Result<String> {
-    let src = kabac::normalize_newlines(src);
-    let (ast, sym_table) = kabac::compile(&src)?;
+    let src = kaba_compiler::normalize_newlines(src);
+    let (ast, sym_table) = kaba_compiler::compile(&src)?;
 
     let mut buff = String::new();
     if let AstNode::Program { body, .. } = ast {

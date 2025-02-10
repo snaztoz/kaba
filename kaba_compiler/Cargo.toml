@@ -1,5 +1,5 @@
 [package]
-name = "kabac"
+name = "kaba_compiler"
 description = "The compiler of Kaba programming language"
 version.workspace = true
 edition.workspace = true

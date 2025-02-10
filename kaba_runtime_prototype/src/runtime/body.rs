@@ -1,5 +1,5 @@
 use super::{error::Result, state::RuntimeState, statement::StatementRunner};
-use kabac::AstNode;
+use kaba_compiler::AstNode;
 
 pub struct BodyRunner<'src, 'a> {
     ast: &'a AstNode<'src>,

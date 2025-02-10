@@ -1,5 +1,5 @@
 [workspace]
-members = ["kaba", "kaba2js", "kabac", "kabart_p"]
+members = ["kaba", "kaba_2js", "kaba_compiler", "kaba_runtime_prototype"]
 resolver = "2"
 
 [workspace.package]

@@ -5,7 +5,7 @@
 
 use self::{error::Result, state::RuntimeState, stream::RuntimeStream, value::RuntimeValue};
 use expression::ExpressionRunner;
-use kabac::AstNode;
+use kaba_compiler::AstNode;
 
 mod assignment;
 mod body;
@@ -64,13 +64,13 @@ impl<'src, 'a> Runtime<'src, 'a> {
 mod tests {
     use super::*;
     use indoc::indoc;
-    use kabac;
+    use kaba_compiler;
 
     fn assert_output_equal(input: &str, expect: &[u8]) {
         let mut out_stream = vec![];
         let mut err_stream = vec![];
 
-        let (ast, _) = kabac::compile(input).unwrap();
+        let (ast, _) = kaba_compiler::compile(input).unwrap();
 
         let streams = RuntimeStream::new(&mut out_stream, &mut err_stream);
         let runtime = Runtime::new(ast, streams);

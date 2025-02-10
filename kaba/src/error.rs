@@ -1,6 +1,6 @@
 use colored::Colorize;
 use indoc::writedoc;
-use kabac::Span;
+use kaba_compiler::Span;
 use std::{fmt::Display, path::Path};
 
 pub type Result<'a, T> = std::result::Result<T, Error<'a>>;

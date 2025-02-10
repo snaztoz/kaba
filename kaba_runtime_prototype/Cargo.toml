@@ -1,17 +1,13 @@
 [package]
-name = "kaba2js"
+name = "kaba_runtime_prototype"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 rust-version.workspace = true
 
-[lib]
-crate-type = ["rlib", "cdylib"]
-
 [dependencies]
-kabac = { path = "../kabac" }
-wasm-bindgen = "0.2"
+kaba_compiler = { path = "../kaba_compiler" }
 
 [dev-dependencies]
 indoc = "2.0.4"

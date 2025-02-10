@@ -11,5 +11,5 @@ rust-version.workspace = true
 clap = { version = "4.4.10", features = ["derive"] }
 colored = "2.1.0"
 indoc = "2.0.4"
-kabac = { path = "../kabac" }
-kabart = { package = "kabart_p", path = "../kabart_p" }
+kaba_compiler = { path = "../kaba_compiler" }
+kaba_runtime = { package = "kaba_runtime_prototype", path = "../kaba_runtime_prototype" }
