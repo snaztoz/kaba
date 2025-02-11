@@ -2,7 +2,7 @@ use super::{
     body::BodyRunner, error::Result, expression::ExpressionRunner, state::RuntimeState,
     value::RuntimeValue,
 };
-use kaba_compiler::AstNode;
+use kaba_compiler::{AstNode, AstNodeVariant};
 use std::collections::HashMap;
 
 pub struct StatementRunner<'src, 'a> {
@@ -30,28 +30,28 @@ impl<'src, 'a> StatementRunner<'src, 'a> {
 
 impl StatementRunner<'_, '_> {
     pub fn run(&self) -> Result<()> {
-        match self.ast {
-            AstNode::VariableDeclaration { sym, val, .. } => {
-                let name = sym.unwrap_symbol().0;
+        match &self.ast.variant {
+            AstNodeVariant::VariableDeclaration { sym, val, .. } => {
+                let name = sym.variant.unwrap_symbol();
                 let val = ExpressionRunner::new(val, self.root, self.state).run()?;
                 self.state.store_value(name, val);
             }
 
-            AstNode::If { .. } => self.run_conditional_branch()?,
+            AstNodeVariant::If { .. } => self.run_conditional_branch()?,
 
-            AstNode::While { .. } => self.run_while()?,
-            AstNode::Each { .. } => self.run_each()?,
+            AstNodeVariant::While { .. } => self.run_while()?,
+            AstNodeVariant::Each { .. } => self.run_each()?,
 
-            AstNode::Break { .. } => {
+            AstNodeVariant::Break => {
                 self.state.stop_execution();
                 self.state.exit_loop();
             }
 
-            AstNode::Continue { .. } => {
+            AstNodeVariant::Continue => {
                 self.state.stop_execution();
             }
 
-            AstNode::Return { expr, .. } => {
+            AstNodeVariant::Return { expr, .. } => {
                 if let Some(expr) = expr {
                     let val = ExpressionRunner::new(expr, self.root, self.state).run()?;
                     self.state.set_return_value(val);
@@ -59,10 +59,10 @@ impl StatementRunner<'_, '_> {
                 self.state.stop_execution();
             }
 
-            AstNode::Debug { expr, .. } => self.run_debug_statement(expr)?,
+            AstNodeVariant::Debug { expr, .. } => self.run_debug_statement(expr)?,
 
-            node => {
-                ExpressionRunner::new(node, self.root, self.state).run()?;
+            _ => {
+                ExpressionRunner::new(self.ast, self.root, self.state).run()?;
             }
         };
 
@@ -70,7 +70,7 @@ impl StatementRunner<'_, '_> {
     }
 
     fn run_conditional_branch(&self) -> Result<()> {
-        let cond_val = if let AstNode::If { cond, .. } = self.ast {
+        let cond_val = if let AstNodeVariant::If { cond, .. } = &self.ast.variant {
             ExpressionRunner::new(cond, self.root, self.state).run()?
         } else {
             unreachable!()
@@ -89,18 +89,18 @@ impl StatementRunner<'_, '_> {
             return Ok(());
         }
 
-        if let AstNode::If { or_else, .. } = self.ast {
+        if let AstNodeVariant::If { or_else, .. } = &self.ast.variant {
             if or_else.is_none() {
                 return Ok(());
             }
 
             let alt = or_else.as_ref().unwrap();
-            match alt.as_ref() {
-                AstNode::If { .. } => {
+            match &alt.as_ref().variant {
+                AstNodeVariant::If { .. } => {
                     StatementRunner::new(alt, self.root, self.state).run()?;
                 }
 
-                AstNode::Else { .. } => {
+                AstNodeVariant::Else { .. } => {
                     self.state.ss.borrow_mut().push(HashMap::new());
                     BodyRunner::new(alt, self.root, self.state).run()?;
                     self.state.ss.borrow_mut().pop();
@@ -115,7 +115,7 @@ impl StatementRunner<'_, '_> {
 
     fn run_while(&self) -> Result<()> {
         loop {
-            let cond_val = if let AstNode::While { cond, .. } = self.ast {
+            let cond_val = if let AstNodeVariant::While { cond, .. } = &self.ast.variant {
                 ExpressionRunner::new(cond, self.root, self.state).run()?
             } else {
                 unreachable!()
@@ -148,9 +148,9 @@ impl StatementRunner<'_, '_> {
     }
 
     fn run_each(&self) -> Result<()> {
-        if let AstNode::Each {
+        if let AstNodeVariant::Each {
             iterable, elem_sym, ..
-        } = self.ast
+        } = &self.ast.variant
         {
             let val = ExpressionRunner::new(iterable, self.root, self.state).run()?;
             let iterable = if let RuntimeValue::Array(ptr) = val {
@@ -159,7 +159,7 @@ impl StatementRunner<'_, '_> {
                 unreachable!()
             };
 
-            let sym = elem_sym.unwrap_symbol().0;
+            let sym = elem_sym.variant.unwrap_symbol();
 
             for item in iterable {
                 let scope = HashMap::from([(String::from(sym), item.clone())]);

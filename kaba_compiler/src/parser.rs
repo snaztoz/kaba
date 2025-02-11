@@ -2,7 +2,7 @@
 //! of a Kaba tokens.
 
 use crate::{
-    ast::AstNode,
+    ast::{AstNode, AstNodeVariant},
     lexer::token::{Token, TokenKind},
 };
 use error::Result;
@@ -41,9 +41,11 @@ pub fn parse(tokens: Vec<Token>) -> Result<AstNode> {
         body.push(stmt)
     }
 
-    Ok(AstNode::Program {
-        body,
-        scope_id: global_scope_id,
+    Ok(AstNode {
+        variant: AstNodeVariant::Program {
+            body,
+            scope_id: global_scope_id,
+        },
         span: 0..tokens.current().span.end,
     })
 }

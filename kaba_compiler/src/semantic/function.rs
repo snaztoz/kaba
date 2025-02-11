@@ -5,7 +5,10 @@ use super::{
     tn,
     types::Type,
 };
-use crate::ast::{AstNode, FunctionParam};
+use crate::{
+    ast::{AstNode, FunctionParam},
+    AstNodeVariant,
+};
 
 pub fn analyze_declaration(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     analyze_params_tn(state, node)?;
@@ -15,25 +18,26 @@ pub fn analyze_declaration(state: &AnalyzerState, node: &AstNode) -> Result<()> 
 }
 
 pub fn analyze_definition(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
-    let scope_id = node.scope_id();
+    let scope_id = node.variant.scope_id();
 
     let (params_t, return_t) = get_function_t(state, node).unwrap_callable();
 
     state.with_function_scope(scope_id, return_t.clone(), || {
-        let params = node.params().iter().zip(params_t);
+        let params = node.variant.params().iter().zip(params_t);
 
         for (param, t) in params {
             let sym_id = param.sym_id;
-            let (sym, sym_span) = &param.sym.unwrap_symbol();
+            let sym = &param.sym;
+            let sym_str = sym.variant.unwrap_symbol();
 
-            if !state.can_save_sym(sym) {
+            if !state.can_save_sym(sym_str) {
                 return Err(SemanticError {
-                    variant: SemanticErrorVariant::SymbolAlreadyExist(sym.to_string()),
-                    span: sym_span.clone(),
+                    variant: SemanticErrorVariant::SymbolAlreadyExist(sym_str.to_string()),
+                    span: sym.span.clone(),
                 });
             }
 
-            state.save_entity(sym_id, sym, t);
+            state.save_entity(sym_id, sym_str, t);
         }
 
         // Analyze function body
@@ -49,7 +53,7 @@ pub fn analyze_definition(state: &AnalyzerState, node: &AstNode) -> Result<Type>
                     expected: return_t,
                     get: Type::Void,
                 },
-                span: node.sym().span().clone(),
+                span: node.variant.sym().span.clone(),
             });
         }
 
@@ -60,41 +64,47 @@ pub fn analyze_definition(state: &AnalyzerState, node: &AstNode) -> Result<Type>
 }
 
 fn analyze_params_tn(state: &AnalyzerState, node: &AstNode) -> Result<()> {
-    for FunctionParam { tn: param_tn, .. } in node.params() {
+    for FunctionParam { tn: param_tn, .. } in node.variant.params() {
         tn::analyze(state, param_tn, false)?;
     }
     Ok(())
 }
 
 fn analyze_return_tn(state: &AnalyzerState, node: &AstNode) -> Result<()> {
-    if let Some(return_tn) = node.return_tn() {
+    if let Some(return_tn) = node.variant.return_tn() {
         tn::analyze(state, return_tn, true)?;
     }
     Ok(())
 }
 
 fn save_function_t(state: &AnalyzerState, node: &AstNode) -> Result<()> {
-    let (sym, sym_span) = node.sym().unwrap_symbol();
+    let sym = node.variant.sym();
+    let sym_str = sym.variant.unwrap_symbol();
 
-    let params_t = node.params().iter().map(|p| Type::from(&p.tn)).collect();
-    let return_t = Box::new(node.return_tn().map_or(Type::Void, Type::from));
+    let params_t = node
+        .variant
+        .params()
+        .iter()
+        .map(|p| Type::from(&p.tn))
+        .collect();
+    let return_t = Box::new(node.variant.return_tn().map_or(Type::Void, Type::from));
     let function_t = Type::Callable { params_t, return_t };
 
-    if !state.can_save_sym(sym) {
+    if !state.can_save_sym(sym_str) {
         return Err(SemanticError {
-            variant: SemanticErrorVariant::SymbolAlreadyExist(String::from(sym)),
-            span: sym_span,
+            variant: SemanticErrorVariant::SymbolAlreadyExist(String::from(sym_str)),
+            span: sym.span.clone(),
         });
     }
 
-    state.save_entity(node.sym_id(), sym, function_t);
+    state.save_entity(node.variant.sym_id(), sym_str, function_t);
 
     Ok(())
 }
 
 fn get_function_t(state: &AnalyzerState, node: &AstNode) -> Type {
-    if let AstNode::FunctionDefinition { sym, .. } = node {
-        let sym_string = &sym.unwrap_symbol().0;
+    if let AstNodeVariant::FunctionDefinition { sym, .. } = &node.variant {
+        let sym_string = &sym.variant.unwrap_symbol();
         state.get_sym_t(sym_string).unwrap().unwrap_entity()
     } else {
         unreachable!()

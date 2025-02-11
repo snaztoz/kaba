@@ -1,4 +1,4 @@
-use kaba_compiler::{AstNode, Literal, Result, SymbolTableData};
+use kaba_compiler::{AstNode, AstNodeVariant, Literal, Result, SymbolTableData};
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
@@ -8,8 +8,8 @@ pub fn compile(src: &str) -> Result<String> {
     let (ast, sym_table) = kaba_compiler::compile(&src)?;
 
     let mut buff = String::new();
-    if let AstNode::Program { body, .. } = ast {
-        compile_body(&body, &sym_table, &mut buff);
+    if let AstNodeVariant::Program { body, .. } = &ast.variant {
+        compile_body(body, &sym_table, &mut buff);
         buff.push_str("main();");
     }
 
@@ -23,19 +23,23 @@ fn compile_body(body: &[AstNode], sym_table: &SymbolTableData, buff: &mut String
 }
 
 fn compile_statement(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
-    match stmt {
-        AstNode::FunctionDefinition { .. } => compile_function_definition(stmt, sym_table, buff),
-        AstNode::VariableDeclaration { .. } => compile_variable_declaration(stmt, sym_table, buff),
-        AstNode::If { .. } => compile_conditional_branches(stmt, sym_table, buff),
-        AstNode::While { .. } => compile_while_loop(stmt, sym_table, buff),
-        AstNode::Each { .. } => compile_each_loop(stmt, sym_table, buff),
-        AstNode::Continue { .. } => {
+    match &stmt.variant {
+        AstNodeVariant::FunctionDefinition { .. } => {
+            compile_function_definition(stmt, sym_table, buff)
+        }
+        AstNodeVariant::VariableDeclaration { .. } => {
+            compile_variable_declaration(stmt, sym_table, buff)
+        }
+        AstNodeVariant::If { .. } => compile_conditional_branches(stmt, sym_table, buff),
+        AstNodeVariant::While { .. } => compile_while_loop(stmt, sym_table, buff),
+        AstNodeVariant::Each { .. } => compile_each_loop(stmt, sym_table, buff),
+        AstNodeVariant::Continue => {
             buff.push_str("continue;");
         }
-        AstNode::Break { .. } => {
+        AstNodeVariant::Break => {
             buff.push_str("break;");
         }
-        AstNode::Return { expr, .. } => {
+        AstNodeVariant::Return { expr, .. } => {
             buff.push_str("return");
             if let Some(expr) = expr {
                 buff.push(' ');
@@ -43,25 +47,25 @@ fn compile_statement(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut Str
             }
             buff.push(';');
         }
-        AstNode::Debug { expr, .. } => {
+        AstNodeVariant::Debug { expr, .. } => {
             buff.push_str("$print(");
             compile_expression(expr, sym_table, buff);
             buff.push_str(");");
         }
-        expr => {
-            compile_expression(expr, sym_table, buff);
+        _ => {
+            compile_expression(stmt, sym_table, buff);
             buff.push(';');
         }
     }
 }
 
 fn compile_function_definition(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
-    if let AstNode::FunctionDefinition {
+    if let AstNodeVariant::FunctionDefinition {
         sym_id,
         params,
         body,
         ..
-    } = stmt
+    } = &stmt.variant
     {
         let entry = &sym_table[sym_id];
         buff.push_str(&format!("function {}(", entry.name));
@@ -79,7 +83,7 @@ fn compile_function_definition(stmt: &AstNode, sym_table: &SymbolTableData, buff
 }
 
 fn compile_variable_declaration(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
-    if let AstNode::VariableDeclaration { sym_id, val, .. } = stmt {
+    if let AstNodeVariant::VariableDeclaration { sym_id, val, .. } = &stmt.variant {
         let entry = &sym_table[sym_id];
 
         buff.push_str(&format!("let {}=", entry.name));
@@ -90,12 +94,12 @@ fn compile_variable_declaration(stmt: &AstNode, sym_table: &SymbolTableData, buf
 }
 
 fn compile_conditional_branches(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
-    if let AstNode::If {
+    if let AstNodeVariant::If {
         cond,
         body,
         or_else,
         ..
-    } = stmt
+    } = &stmt.variant
     {
         buff.push_str("if(");
         compile_expression(cond, sym_table, buff);
@@ -103,23 +107,25 @@ fn compile_conditional_branches(stmt: &AstNode, sym_table: &SymbolTableData, buf
         compile_body(body, sym_table, buff);
         buff.push('}');
 
-        match or_else.as_deref() {
-            Some(AstNode::If { .. }) => {
-                buff.push_str("else ");
-                compile_conditional_branches(or_else.as_ref().unwrap(), sym_table, buff)
+        if let Some(or_else) = or_else {
+            match &or_else.variant {
+                AstNodeVariant::If { .. } => {
+                    buff.push_str("else ");
+                    compile_conditional_branches(or_else, sym_table, buff)
+                }
+                AstNodeVariant::Else { body, .. } => {
+                    buff.push_str("else{");
+                    compile_body(body, sym_table, buff);
+                    buff.push('}');
+                }
+                _ => (),
             }
-            Some(AstNode::Else { body, .. }) => {
-                buff.push_str("else{");
-                compile_body(body, sym_table, buff);
-                buff.push('}');
-            }
-            _ => (),
         }
     }
 }
 
 fn compile_while_loop(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
-    if let AstNode::While { cond, body, .. } = stmt {
+    if let AstNodeVariant::While { cond, body, .. } = &stmt.variant {
         buff.push_str("while(");
         compile_expression(cond, sym_table, buff);
         buff.push_str("){");
@@ -129,12 +135,12 @@ fn compile_while_loop(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut St
 }
 
 fn compile_each_loop(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
-    if let AstNode::Each {
+    if let AstNodeVariant::Each {
         elem_sym_id,
         iterable,
         body,
         ..
-    } = stmt
+    } = &stmt.variant
     {
         buff.push_str(&format!("for(let {} of ", sym_table[elem_sym_id].name));
         compile_expression(iterable, sym_table, buff);
@@ -145,37 +151,37 @@ fn compile_each_loop(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut Str
 }
 
 fn compile_expression(expr: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
-    match expr {
-        AstNode::Assign { .. }
-        | AstNode::AddAssign { .. }
-        | AstNode::SubAssign { .. }
-        | AstNode::MulAssign { .. }
-        | AstNode::DivAssign { .. }
-        | AstNode::ModAssign { .. }
-        | AstNode::Eq { .. }
-        | AstNode::Neq { .. }
-        | AstNode::Or { .. }
-        | AstNode::And { .. }
-        | AstNode::Gt { .. }
-        | AstNode::Gte { .. }
-        | AstNode::Lt { .. }
-        | AstNode::Lte { .. }
-        | AstNode::Add { .. }
-        | AstNode::Sub { .. }
-        | AstNode::Mul { .. }
-        | AstNode::Div { .. }
-        | AstNode::Mod { .. } => compile_binary_expression(expr, sym_table, buff),
+    match &expr.variant {
+        AstNodeVariant::Assign { .. }
+        | AstNodeVariant::AddAssign { .. }
+        | AstNodeVariant::SubAssign { .. }
+        | AstNodeVariant::MulAssign { .. }
+        | AstNodeVariant::DivAssign { .. }
+        | AstNodeVariant::ModAssign { .. }
+        | AstNodeVariant::Eq { .. }
+        | AstNodeVariant::Neq { .. }
+        | AstNodeVariant::Or { .. }
+        | AstNodeVariant::And { .. }
+        | AstNodeVariant::Gt { .. }
+        | AstNodeVariant::Gte { .. }
+        | AstNodeVariant::Lt { .. }
+        | AstNodeVariant::Lte { .. }
+        | AstNodeVariant::Add { .. }
+        | AstNodeVariant::Sub { .. }
+        | AstNodeVariant::Mul { .. }
+        | AstNodeVariant::Div { .. }
+        | AstNodeVariant::Mod { .. } => compile_binary_expression(expr, sym_table, buff),
 
-        AstNode::Not { expr, .. } => {
+        AstNodeVariant::Not { expr, .. } => {
             buff.push('!');
             compile_expression(expr, sym_table, buff);
         }
-        AstNode::Neg { expr, .. } => {
+        AstNodeVariant::Neg { expr, .. } => {
             buff.push('-');
             compile_expression(expr, sym_table, buff);
         }
 
-        AstNode::FunctionCall { callee, args, .. } => {
+        AstNodeVariant::FunctionCall { callee, args, .. } => {
             compile_expression(callee, sym_table, buff);
             buff.push('(');
             for (i, el) in args.iter().enumerate() {
@@ -186,64 +192,64 @@ fn compile_expression(expr: &AstNode, sym_table: &SymbolTableData, buff: &mut St
             }
             buff.push(')');
         }
-        AstNode::IndexAccess { object, index, .. } => {
+        AstNodeVariant::IndexAccess { object, index, .. } => {
             compile_expression(object, sym_table, buff);
             buff.push('[');
             compile_expression(index, sym_table, buff);
             buff.push(']');
         }
 
-        AstNode::Symbol { name, .. } => buff.push_str(name),
-        AstNode::Literal { lit, .. } => compile_literal(lit, sym_table, buff),
+        AstNodeVariant::Symbol { name, .. } => buff.push_str(name),
+        AstNodeVariant::Literal { lit, .. } => compile_literal(lit, sym_table, buff),
 
         _ => unreachable!(),
     }
 }
 
 fn compile_binary_expression(expr: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
-    let op = match expr {
-        AstNode::Assign { .. } => "=",
-        AstNode::AddAssign { .. } => "+=",
-        AstNode::SubAssign { .. } => "-=",
-        AstNode::MulAssign { .. } => "*=",
-        AstNode::DivAssign { .. } => "/=",
-        AstNode::ModAssign { .. } => "%=",
-        AstNode::Eq { .. } => "==",
-        AstNode::Neq { .. } => "!=",
-        AstNode::Or { .. } => "||",
-        AstNode::And { .. } => "&&",
-        AstNode::Gt { .. } => ">",
-        AstNode::Gte { .. } => ">=",
-        AstNode::Lt { .. } => "<",
-        AstNode::Lte { .. } => "<=",
-        AstNode::Add { .. } => "+",
-        AstNode::Sub { .. } => "-",
-        AstNode::Mul { .. } => "*",
-        AstNode::Div { .. } => "/",
-        AstNode::Mod { .. } => "%",
+    let op = match &expr.variant {
+        AstNodeVariant::Assign { .. } => "=",
+        AstNodeVariant::AddAssign { .. } => "+=",
+        AstNodeVariant::SubAssign { .. } => "-=",
+        AstNodeVariant::MulAssign { .. } => "*=",
+        AstNodeVariant::DivAssign { .. } => "/=",
+        AstNodeVariant::ModAssign { .. } => "%=",
+        AstNodeVariant::Eq { .. } => "==",
+        AstNodeVariant::Neq { .. } => "!=",
+        AstNodeVariant::Or { .. } => "||",
+        AstNodeVariant::And { .. } => "&&",
+        AstNodeVariant::Gt { .. } => ">",
+        AstNodeVariant::Gte { .. } => ">=",
+        AstNodeVariant::Lt { .. } => "<",
+        AstNodeVariant::Lte { .. } => "<=",
+        AstNodeVariant::Add { .. } => "+",
+        AstNodeVariant::Sub { .. } => "-",
+        AstNodeVariant::Mul { .. } => "*",
+        AstNodeVariant::Div { .. } => "/",
+        AstNodeVariant::Mod { .. } => "%",
         _ => unreachable!(),
     };
 
-    let (lhs, rhs) = match expr {
-        AstNode::Assign { lhs, rhs, .. }
-        | AstNode::AddAssign { lhs, rhs, .. }
-        | AstNode::SubAssign { lhs, rhs, .. }
-        | AstNode::MulAssign { lhs, rhs, .. }
-        | AstNode::DivAssign { lhs, rhs, .. }
-        | AstNode::ModAssign { lhs, rhs, .. }
-        | AstNode::Eq { lhs, rhs, .. }
-        | AstNode::Neq { lhs, rhs, .. }
-        | AstNode::Or { lhs, rhs, .. }
-        | AstNode::And { lhs, rhs, .. }
-        | AstNode::Gt { lhs, rhs, .. }
-        | AstNode::Gte { lhs, rhs, .. }
-        | AstNode::Lt { lhs, rhs, .. }
-        | AstNode::Lte { lhs, rhs, .. }
-        | AstNode::Add { lhs, rhs, .. }
-        | AstNode::Sub { lhs, rhs, .. }
-        | AstNode::Mul { lhs, rhs, .. }
-        | AstNode::Div { lhs, rhs, .. }
-        | AstNode::Mod { lhs, rhs, .. } => (lhs, rhs),
+    let (lhs, rhs) = match &expr.variant {
+        AstNodeVariant::Assign { lhs, rhs, .. }
+        | AstNodeVariant::AddAssign { lhs, rhs, .. }
+        | AstNodeVariant::SubAssign { lhs, rhs, .. }
+        | AstNodeVariant::MulAssign { lhs, rhs, .. }
+        | AstNodeVariant::DivAssign { lhs, rhs, .. }
+        | AstNodeVariant::ModAssign { lhs, rhs, .. }
+        | AstNodeVariant::Eq { lhs, rhs, .. }
+        | AstNodeVariant::Neq { lhs, rhs, .. }
+        | AstNodeVariant::Or { lhs, rhs, .. }
+        | AstNodeVariant::And { lhs, rhs, .. }
+        | AstNodeVariant::Gt { lhs, rhs, .. }
+        | AstNodeVariant::Gte { lhs, rhs, .. }
+        | AstNodeVariant::Lt { lhs, rhs, .. }
+        | AstNodeVariant::Lte { lhs, rhs, .. }
+        | AstNodeVariant::Add { lhs, rhs, .. }
+        | AstNodeVariant::Sub { lhs, rhs, .. }
+        | AstNodeVariant::Mul { lhs, rhs, .. }
+        | AstNodeVariant::Div { lhs, rhs, .. }
+        | AstNodeVariant::Mod { lhs, rhs, .. } => (lhs, rhs),
 
         _ => unreachable!(),
     };

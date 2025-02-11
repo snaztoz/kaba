@@ -6,17 +6,18 @@ use crate::{
         state::AnalyzerState,
         types::{assert, Type},
     },
+    AstNodeVariant,
 };
 
 /// Analyze index access expression.
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     let obj = unwrap_obj(node);
     let obj_t = expression::analyze(state, obj)?;
-    assert::is_indexable(&obj_t, || obj.span().clone())?;
+    assert::is_indexable(&obj_t, || obj.span.clone())?;
 
     let index = unwrap_index(node);
     let index_t = expression::analyze(state, index)?;
-    assert::is_number(&index_t, || index.span().clone())?;
+    assert::is_number(&index_t, || index.span.clone())?;
 
     match obj_t {
         Type::Array { elem_t } => Ok(*elem_t),
@@ -26,7 +27,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
 }
 
 fn unwrap_obj<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    if let AstNode::IndexAccess { object, .. } = node {
+    if let AstNodeVariant::IndexAccess { object, .. } = &node.variant {
         object
     } else {
         unreachable!()
@@ -34,7 +35,7 @@ fn unwrap_obj<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
 }
 
 fn unwrap_index<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    if let AstNode::IndexAccess { index, .. } = node {
+    if let AstNodeVariant::IndexAccess { index, .. } = &node.variant {
         index
     } else {
         unreachable!()

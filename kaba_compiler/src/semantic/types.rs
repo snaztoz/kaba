@@ -1,4 +1,4 @@
-use crate::ast::{AstNode, TypeNotation};
+use crate::ast::{AstNode, AstNodeVariant, TypeNotation};
 use std::{cmp::Ordering, fmt::Display, hash::Hash};
 
 pub mod assert;
@@ -157,7 +157,7 @@ impl Type {
 
 impl<'a> From<&'a AstNode<'_>> for Type {
     fn from(value: &'a AstNode) -> Self {
-        if let AstNode::TypeNotation { tn, .. } = value {
+        if let AstNodeVariant::TypeNotation { tn, .. } = &value.variant {
             match tn {
                 TypeNotation::Symbol(sym) if *sym == "void" => Self::Void,
                 TypeNotation::Symbol(sym) if *sym == "bool" => Self::Bool,

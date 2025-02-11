@@ -1,5 +1,8 @@
 use super::{block, expression, state::ParserState, Result};
-use crate::{ast::AstNode, lexer::token::TokenKind};
+use crate::{
+    ast::{AstNode, AstNodeVariant},
+    lexer::token::TokenKind,
+};
 
 pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
@@ -16,10 +19,12 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
 
     let end = block.span.end;
 
-    Ok(AstNode::While {
-        cond: Box::new(cond),
-        body: block.body,
-        scope_id,
+    Ok(AstNode {
+        variant: AstNodeVariant::While {
+            cond: Box::new(cond),
+            body: block.body,
+            scope_id,
+        },
         span: start..end,
     })
 }
@@ -27,7 +32,7 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
 #[cfg(test)]
 mod tests {
     use crate::{
-        ast::{AstNode, Literal},
+        ast::{AstNode, AstNodeVariant, Literal},
         parser::test_util::assert_ast,
     };
 
@@ -35,13 +40,17 @@ mod tests {
     fn while_statement() {
         assert_ast(
             "while true {}",
-            AstNode::While {
-                cond: Box::new(AstNode::Literal {
-                    lit: Literal::Bool(true),
-                    span: 6..10,
-                }),
-                body: vec![],
-                scope_id: 2,
+            AstNode {
+                variant: AstNodeVariant::While {
+                    cond: Box::new(AstNode {
+                        variant: AstNodeVariant::Literal {
+                            lit: Literal::Bool(true),
+                        },
+                        span: 6..10,
+                    }),
+                    body: vec![],
+                    scope_id: 2,
+                },
                 span: 0..13,
             },
         );
@@ -51,16 +60,26 @@ mod tests {
     fn while_statement_with_loop_control_statements() {
         assert_ast(
             "while true { continue; break; }",
-            AstNode::While {
-                cond: Box::new(AstNode::Literal {
-                    lit: Literal::Bool(true),
-                    span: 6..10,
-                }),
-                body: vec![
-                    AstNode::Continue { span: 13..21 },
-                    AstNode::Break { span: 23..28 },
-                ],
-                scope_id: 2,
+            AstNode {
+                variant: AstNodeVariant::While {
+                    cond: Box::new(AstNode {
+                        variant: AstNodeVariant::Literal {
+                            lit: Literal::Bool(true),
+                        },
+                        span: 6..10,
+                    }),
+                    body: vec![
+                        AstNode {
+                            variant: AstNodeVariant::Continue,
+                            span: 13..21,
+                        },
+                        AstNode {
+                            variant: AstNodeVariant::Break,
+                            span: 23..28,
+                        },
+                    ],
+                    scope_id: 2,
+                },
                 span: 0..31,
             },
         );

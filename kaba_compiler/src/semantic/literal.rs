@@ -5,7 +5,7 @@ use super::{
     tn,
     types::{assert, FloatType, IntType, Type},
 };
-use crate::{ast::Literal, AstNode};
+use crate::{ast::Literal, AstNode, AstNodeVariant};
 
 /// Analyze literal expressions, such as numbers or arrays.
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
@@ -36,7 +36,7 @@ fn analyze_array(state: &AnalyzerState, lit: &Literal) -> Result<Type> {
 
     for elem in elems {
         let t = expression::analyze(state, elem)?;
-        assert::is_compatible(&elem_t, &t, || elem.span().clone())?;
+        assert::is_compatible(&elem_t, &t, || elem.span.clone())?;
     }
 
     Ok(Type::Array {
@@ -45,8 +45,8 @@ fn analyze_array(state: &AnalyzerState, lit: &Literal) -> Result<Type> {
 }
 
 fn unwrap_literal<'src, 'a>(node: &'a AstNode<'src>) -> &'a Literal<'src> {
-    match node {
-        AstNode::Literal { lit, .. } => lit,
+    match &node.variant {
+        AstNodeVariant::Literal { lit, .. } => lit,
         _ => unreachable!(),
     }
 }

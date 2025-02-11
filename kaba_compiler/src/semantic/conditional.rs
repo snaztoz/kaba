@@ -5,7 +5,7 @@ use super::{
     state::AnalyzerState,
     types::{assert, Type},
 };
-use crate::ast::AstNode;
+use crate::{ast::AstNode, AstNodeVariant};
 
 /// Analyze conditional branch statement.
 ///
@@ -69,11 +69,12 @@ use crate::ast::AstNode;
 /// ```
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     let cond_t = expression::analyze(state, unwrap_cond(node))?;
-    assert::is_boolean(&cond_t, || unwrap_cond(node).span().clone())?;
+    assert::is_boolean(&cond_t, || unwrap_cond(node).span.clone())?;
 
     // Check all statements inside the body with a new scope
 
-    let return_t = state.with_conditional_scope(node.scope_id(), || body::analyze(state, node))?;
+    let return_t =
+        state.with_conditional_scope(node.variant.scope_id(), || body::analyze(state, node))?;
 
     if unwrap_or_else_branch(node).is_none() {
         // Non-exhaustive branches, set to "Void"
@@ -81,8 +82,8 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     }
 
     let or_else_branch = unwrap_or_else_branch(node).unwrap();
-    match or_else_branch {
-        AstNode::If { .. } => {
+    match &or_else_branch.variant {
+        AstNodeVariant::If { .. } => {
             // All conditional branches must returning a value (exhaustive)
             // for this statement to be considered as returning value
 
@@ -95,7 +96,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
             }
         }
 
-        AstNode::Else { scope_id, .. } => {
+        AstNodeVariant::Else { scope_id, .. } => {
             // Check all statements inside the body with a new scope
 
             let branch_return_t =
@@ -113,7 +114,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
 }
 
 fn unwrap_cond<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    if let AstNode::If { cond, .. } = node {
+    if let AstNodeVariant::If { cond, .. } = &node.variant {
         cond
     } else {
         unreachable!()
@@ -121,7 +122,7 @@ fn unwrap_cond<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
 }
 
 fn unwrap_or_else_branch<'src, 'a>(node: &'a AstNode<'src>) -> Option<&'a AstNode<'src>> {
-    if let AstNode::If { or_else, .. } = node {
+    if let AstNodeVariant::If { or_else, .. } = &node.variant {
         or_else.as_deref()
     } else {
         unreachable!()

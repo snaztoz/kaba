@@ -10,14 +10,35 @@ pub type Id = u32;
 pub type SymbolId = Id;
 pub type ScopeId = Id;
 
+#[derive(Debug, PartialEq)]
+pub struct AstNode<'src> {
+    pub variant: AstNodeVariant<'src>,
+    pub span: Span,
+}
+
+impl AstNode<'_> {
+    pub fn unwrap_group(self) -> Self {
+        if let AstNodeVariant::Group { expr } = self.variant {
+            expr.unwrap_group()
+        } else {
+            self
+        }
+    }
+}
+
+impl Display for AstNode<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.variant.fmt(f)
+    }
+}
+
 /// The representation of each node that make up a whole Kaba AST.
 #[derive(Debug, PartialEq)]
-pub enum AstNode<'src> {
+pub enum AstNodeVariant<'src> {
     // The root of all other AstNode<'src> variants
     Program {
         body: Vec<AstNode<'src>>,
         scope_id: ScopeId,
-        span: Span,
     },
 
     VariableDeclaration {
@@ -25,7 +46,6 @@ pub enum AstNode<'src> {
         sym_id: SymbolId,
         tn: Option<Box<AstNode<'src>>>,
         val: Box<AstNode<'src>>,
-        span: Span,
     },
 
     If {
@@ -33,20 +53,17 @@ pub enum AstNode<'src> {
         body: Vec<AstNode<'src>>,
         scope_id: ScopeId,
         or_else: Option<Box<AstNode<'src>>>,
-        span: Span,
     },
 
     Else {
         body: Vec<AstNode<'src>>,
         scope_id: ScopeId,
-        span: Span,
     },
 
     While {
         cond: Box<AstNode<'src>>,
         body: Vec<AstNode<'src>>,
         scope_id: ScopeId,
-        span: Span,
     },
 
     Each {
@@ -55,16 +72,11 @@ pub enum AstNode<'src> {
         iterable: Box<AstNode<'src>>,
         body: Vec<AstNode<'src>>,
         scope_id: ScopeId,
-        span: Span,
     },
 
-    Break {
-        span: Span,
-    },
+    Break,
 
-    Continue {
-        span: Span,
-    },
+    Continue,
 
     FunctionDefinition {
         sym: Box<AstNode<'src>>,
@@ -73,230 +85,155 @@ pub enum AstNode<'src> {
         return_tn: Option<Box<AstNode<'src>>>,
         body: Vec<AstNode<'src>>,
         scope_id: ScopeId,
-        span: Span,
     },
 
     Return {
         expr: Option<Box<AstNode<'src>>>,
-        span: Span,
     },
 
     Debug {
         expr: Box<AstNode<'src>>,
-        span: Span,
     },
 
     RecordDefinition {
         sym: Box<AstNode<'src>>,
         sym_id: SymbolId,
         fields: Vec<RecordField<'src>>,
-        span: Span,
     },
 
     Assign {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     AddAssign {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     SubAssign {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     MulAssign {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     DivAssign {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     ModAssign {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     Or {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     And {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     Eq {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     Neq {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     Gt {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     Gte {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     Lt {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     Lte {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     Add {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     Sub {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     Mul {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     Div {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     Mod {
         lhs: Box<AstNode<'src>>,
         rhs: Box<AstNode<'src>>,
-        span: Span,
     },
 
     Not {
         expr: Box<AstNode<'src>>,
-        span: Span,
     },
 
     Neg {
         expr: Box<AstNode<'src>>,
-        span: Span,
     },
 
     FunctionCall {
         callee: Box<AstNode<'src>>,
         args: Vec<AstNode<'src>>,
-        span: Span,
     },
 
     IndexAccess {
         object: Box<AstNode<'src>>,
         index: Box<AstNode<'src>>,
-        span: Span,
     },
 
     // This variant is only used as the span information holder and then will be
     // removed. It won't be present in the final resulting ASTs.
     Group {
         expr: Box<AstNode<'src>>,
-        span: Span,
     },
 
     Symbol {
         name: &'src str,
-        span: Span,
     },
 
     TypeNotation {
         tn: TypeNotation<'src>,
-        span: Span,
     },
 
     Literal {
         lit: Literal<'src>,
-        span: Span,
     },
 }
 
-impl AstNode<'_> {
-    pub fn span(&self) -> &Span {
-        match self {
-            Self::Program { span, .. }
-            | Self::VariableDeclaration { span, .. }
-            | Self::If { span, .. }
-            | Self::Else { span, .. }
-            | Self::While { span, .. }
-            | Self::Each { span, .. }
-            | Self::Break { span }
-            | Self::Continue { span }
-            | Self::FunctionDefinition { span, .. }
-            | Self::Return { span, .. }
-            | Self::Debug { span, .. }
-            | Self::RecordDefinition { span, .. }
-            | Self::Assign { span, .. }
-            | Self::AddAssign { span, .. }
-            | Self::SubAssign { span, .. }
-            | Self::MulAssign { span, .. }
-            | Self::DivAssign { span, .. }
-            | Self::ModAssign { span, .. }
-            | Self::Or { span, .. }
-            | Self::And { span, .. }
-            | Self::Eq { span, .. }
-            | Self::Neq { span, .. }
-            | Self::Gt { span, .. }
-            | Self::Gte { span, .. }
-            | Self::Lt { span, .. }
-            | Self::Lte { span, .. }
-            | Self::Add { span, .. }
-            | Self::Sub { span, .. }
-            | Self::Mul { span, .. }
-            | Self::Div { span, .. }
-            | Self::Mod { span, .. }
-            | Self::Not { span, .. }
-            | Self::Neg { span, .. }
-            | Self::FunctionCall { span, .. }
-            | Self::IndexAccess { span, .. }
-            | Self::Group { span, .. }
-            | Self::Symbol { span, .. }
-            | Self::TypeNotation { span, .. }
-            | Self::Literal { span, .. } => span,
-        }
-    }
-
+impl AstNodeVariant<'_> {
     pub const fn is_lval(&self) -> bool {
         matches!(self, Self::Symbol { .. }) || matches!(self, Self::IndexAccess { .. })
     }
@@ -320,11 +257,11 @@ impl AstNode<'_> {
     pub fn body(&self) -> &[AstNode] {
         match self {
             Self::Program { body, .. }
-            | AstNode::FunctionDefinition { body, .. }
-            | AstNode::If { body, .. }
-            | AstNode::Else { body, .. }
-            | AstNode::While { body, .. }
-            | AstNode::Each { body, .. } => body,
+            | AstNodeVariant::FunctionDefinition { body, .. }
+            | AstNodeVariant::If { body, .. }
+            | AstNodeVariant::Else { body, .. }
+            | AstNodeVariant::While { body, .. }
+            | AstNodeVariant::Each { body, .. } => body,
             _ => unreachable!(),
         }
     }
@@ -342,7 +279,7 @@ impl AstNode<'_> {
     }
 
     pub fn params(&self) -> &[FunctionParam] {
-        if let AstNode::FunctionDefinition { params, .. } = self {
+        if let AstNodeVariant::FunctionDefinition { params, .. } = self {
             params
         } else {
             unreachable!()
@@ -350,34 +287,32 @@ impl AstNode<'_> {
     }
 
     pub fn return_tn(&self) -> Option<&AstNode> {
-        if let AstNode::FunctionDefinition { return_tn, .. } = self {
+        if let AstNodeVariant::FunctionDefinition { return_tn, .. } = self {
             return_tn.as_deref()
         } else {
             unreachable!()
         }
     }
 
-    pub fn unwrap_symbol(&self) -> (&str, Span) {
-        if let AstNode::Symbol { name, span } = self {
-            (name, span.clone())
+    pub fn unwrap_symbol(&self) -> &str {
+        if let AstNodeVariant::Symbol { name } = self {
+            name
         } else {
             unreachable!()
         }
     }
 }
 
-impl<'src> AstNode<'src> {
-    pub fn unwrap_group(self) -> AstNode<'src> {
-        if let AstNode::Group { expr, .. } = self {
-            // unwrap recursively
-            expr.unwrap_group()
-        } else {
-            self
-        }
-    }
-}
+// impl<'src> AstNodeVariant<'src> {
+//     pub fn unwrap_group(self) -> AstNode<'src> {
+//         match self {
+//             Self::Group { expr, .. } => expr.unwrap_group(),
+//             other => if let
+//         }
+//     }
+// }
 
-impl Display for AstNode<'_> {
+impl Display for AstNodeVariant<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::VariableDeclaration { .. } => {

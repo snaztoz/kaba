@@ -4,7 +4,7 @@ use super::{
     state::AnalyzerState,
     types::{assert, Type},
 };
-use crate::ast::AstNode;
+use crate::{ast::AstNode, AstNodeVariant};
 
 /// Analyze assignment statements.
 ///
@@ -49,22 +49,22 @@ use crate::ast::AstNode;
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     analyze_lhs(node)?;
 
-    match node {
-        AstNode::Assign { .. } => analyze_assignment(state, node),
+    match &node.variant {
+        AstNodeVariant::Assign { .. } => analyze_assignment(state, node),
 
-        AstNode::AddAssign { .. }
-        | AstNode::SubAssign { .. }
-        | AstNode::MulAssign { .. }
-        | AstNode::DivAssign { .. }
-        | AstNode::ModAssign { .. } => analyze_shorthand_assignment(state, node),
+        AstNodeVariant::AddAssign { .. }
+        | AstNodeVariant::SubAssign { .. }
+        | AstNodeVariant::MulAssign { .. }
+        | AstNodeVariant::DivAssign { .. }
+        | AstNodeVariant::ModAssign { .. } => analyze_shorthand_assignment(state, node),
 
         _ => unreachable!(),
     }
 }
 
 fn analyze_assignment(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
-    let (lhs, rhs, span) = if let AstNode::Assign { lhs, rhs, span } = node {
-        (lhs, rhs, span)
+    let (lhs, rhs) = if let AstNodeVariant::Assign { lhs, rhs } = &node.variant {
+        (lhs, rhs)
     } else {
         unreachable!()
     };
@@ -72,18 +72,18 @@ fn analyze_assignment(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     let lhs_t = expression::analyze(state, lhs)?;
     let rhs_t = expression::analyze(state, rhs)?;
 
-    assert::is_assignable(&rhs_t, &lhs_t, || span.clone())?;
+    assert::is_assignable(&rhs_t, &lhs_t, || node.span.clone())?;
 
     Ok(Type::Void)
 }
 
 fn analyze_shorthand_assignment(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
-    let (lhs, rhs, span) = match node {
-        AstNode::AddAssign { lhs, rhs, span }
-        | AstNode::SubAssign { lhs, rhs, span }
-        | AstNode::MulAssign { lhs, rhs, span }
-        | AstNode::DivAssign { lhs, rhs, span }
-        | AstNode::ModAssign { lhs, rhs, span } => (lhs, rhs, span),
+    let (lhs, rhs) = match &node.variant {
+        AstNodeVariant::AddAssign { lhs, rhs }
+        | AstNodeVariant::SubAssign { lhs, rhs }
+        | AstNodeVariant::MulAssign { lhs, rhs }
+        | AstNodeVariant::DivAssign { lhs, rhs }
+        | AstNodeVariant::ModAssign { lhs, rhs } => (lhs, rhs),
 
         _ => unreachable!(),
     };
@@ -91,9 +91,9 @@ fn analyze_shorthand_assignment(state: &AnalyzerState, node: &AstNode) -> Result
     let lhs_t = expression::analyze(state, lhs)?;
     let rhs_t = expression::analyze(state, rhs)?;
 
-    assert::is_number(&lhs_t, || lhs.span().clone())?;
-    assert::is_number(&rhs_t, || rhs.span().clone())?;
-    assert::is_assignable(&rhs_t, &lhs_t, || span.clone())?;
+    assert::is_number(&lhs_t, || lhs.span.clone())?;
+    assert::is_number(&rhs_t, || rhs.span.clone())?;
+    assert::is_assignable(&rhs_t, &lhs_t, || node.span.clone())?;
 
     Ok(Type::Void)
 }
@@ -101,10 +101,10 @@ fn analyze_shorthand_assignment(state: &AnalyzerState, node: &AstNode) -> Result
 fn analyze_lhs(node: &AstNode) -> Result<()> {
     let lhs = unwrap_lhs(node);
 
-    if !lhs.is_lval() {
+    if !lhs.variant.is_lval() {
         return Err(SemanticError {
             variant: SemanticErrorVariant::InvalidLValue,
-            span: lhs.span().clone(),
+            span: lhs.span.clone(),
         });
     }
 
@@ -112,13 +112,13 @@ fn analyze_lhs(node: &AstNode) -> Result<()> {
 }
 
 fn unwrap_lhs<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    match node {
-        AstNode::Assign { lhs, .. }
-        | AstNode::AddAssign { lhs, .. }
-        | AstNode::SubAssign { lhs, .. }
-        | AstNode::MulAssign { lhs, .. }
-        | AstNode::DivAssign { lhs, .. }
-        | AstNode::ModAssign { lhs, .. } => lhs,
+    match &node.variant {
+        AstNodeVariant::Assign { lhs, .. }
+        | AstNodeVariant::AddAssign { lhs, .. }
+        | AstNodeVariant::SubAssign { lhs, .. }
+        | AstNodeVariant::MulAssign { lhs, .. }
+        | AstNodeVariant::DivAssign { lhs, .. }
+        | AstNodeVariant::ModAssign { lhs, .. } => lhs,
 
         _ => unreachable!(),
     }

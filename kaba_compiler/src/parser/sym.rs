@@ -2,15 +2,18 @@ use super::{
     error::{ParsingError, ParsingErrorVariant, Result},
     state::ParserState,
 };
-use crate::{ast::AstNode, lexer::token::TokenKind};
+use crate::{
+    ast::{AstNode, AstNodeVariant},
+    lexer::token::TokenKind,
+};
 
 pub fn parse<'src>(state: &ParserState<'src, '_>, label: &'src str) -> Result<'src, AstNode<'src>> {
     let token = state.tokens.current();
 
     if let TokenKind::Symbol(name) = token.kind {
         state.tokens.advance();
-        return Ok(AstNode::Symbol {
-            name,
+        return Ok(AstNode {
+            variant: AstNodeVariant::Symbol { name },
             span: token.span,
         });
     }

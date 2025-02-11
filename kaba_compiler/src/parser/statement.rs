@@ -3,7 +3,7 @@ use super::{
     Result,
 };
 use crate::{
-    ast::AstNode,
+    ast::{AstNode, AstNodeVariant},
     lexer::token::{Token, TokenKind},
 };
 
@@ -36,8 +36,14 @@ fn parse_loop_control<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNo
 
     // Expecting either "break" or "continue" keyword
     let control = match kind {
-        TokenKind::Break => AstNode::Break { span },
-        TokenKind::Continue => AstNode::Continue { span },
+        TokenKind::Break => AstNode {
+            variant: AstNodeVariant::Break,
+            span,
+        },
+        TokenKind::Continue => AstNode {
+            variant: AstNodeVariant::Continue,
+            span,
+        },
         _ => unreachable!(),
     };
 
@@ -61,15 +67,17 @@ fn parse_return_statement<'src>(state: &ParserState<'src, '_>) -> Result<'src, A
         None
     } else {
         let expr = expression::parse(state)?;
-        end = expr.span().end;
+        end = expr.span.end;
         Some(expr)
     };
 
     // Expecting ";"
     state.tokens.skip(&TokenKind::Semicolon)?;
 
-    Ok(AstNode::Return {
-        expr: expr.map(Box::new),
+    Ok(AstNode {
+        variant: AstNodeVariant::Return {
+            expr: expr.map(Box::new),
+        },
         span: start..end,
     })
 }
@@ -83,13 +91,13 @@ fn parse_debug_statement<'src>(state: &ParserState<'src, '_>) -> Result<'src, As
     // Expecting expression
     let expr = Box::new(expression::parse(state)?);
 
-    let end = expr.span().end;
+    let end = expr.span.end;
 
     // Expecting ";"
     state.tokens.skip(&TokenKind::Semicolon)?;
 
-    Ok(AstNode::Debug {
-        expr,
+    Ok(AstNode {
+        variant: AstNodeVariant::Debug { expr },
         span: start..end,
     })
 }
@@ -97,7 +105,7 @@ fn parse_debug_statement<'src>(state: &ParserState<'src, '_>) -> Result<'src, As
 #[cfg(test)]
 mod tests {
     use crate::{
-        ast::{AstNode, Literal},
+        ast::{AstNode, AstNodeVariant, Literal},
         parser::test_util::assert_ast,
     };
 
@@ -105,25 +113,37 @@ mod tests {
     fn debug_statement() {
         assert_ast(
             "debug 5 + 5 * 7;",
-            AstNode::Debug {
-                expr: Box::new(AstNode::Add {
-                    lhs: Box::new(AstNode::Literal {
-                        lit: Literal::Int(5),
-                        span: 6..7,
+            AstNode {
+                variant: AstNodeVariant::Debug {
+                    expr: Box::new(AstNode {
+                        variant: AstNodeVariant::Add {
+                            lhs: Box::new(AstNode {
+                                variant: AstNodeVariant::Literal {
+                                    lit: Literal::Int(5),
+                                },
+                                span: 6..7,
+                            }),
+                            rhs: Box::new(AstNode {
+                                variant: AstNodeVariant::Mul {
+                                    lhs: Box::new(AstNode {
+                                        variant: AstNodeVariant::Literal {
+                                            lit: Literal::Int(5),
+                                        },
+                                        span: 10..11,
+                                    }),
+                                    rhs: Box::new(AstNode {
+                                        variant: AstNodeVariant::Literal {
+                                            lit: Literal::Int(7),
+                                        },
+                                        span: 14..15,
+                                    }),
+                                },
+                                span: 10..15,
+                            }),
+                        },
+                        span: 6..15,
                     }),
-                    rhs: Box::new(AstNode::Mul {
-                        lhs: Box::new(AstNode::Literal {
-                            lit: Literal::Int(5),
-                            span: 10..11,
-                        }),
-                        rhs: Box::new(AstNode::Literal {
-                            lit: Literal::Int(7),
-                            span: 14..15,
-                        }),
-                        span: 10..15,
-                    }),
-                    span: 6..15,
-                }),
+                },
                 span: 0..15,
             },
         )

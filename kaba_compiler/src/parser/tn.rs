@@ -3,15 +3,17 @@ use super::{
     state::ParserState,
 };
 use crate::{
-    ast::{AstNode, TypeNotation},
+    ast::{AstNode, AstNodeVariant, TypeNotation},
     lexer::token::TokenKind,
 };
 
 pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     match state.tokens.current_kind() {
         TokenKind::Symbol(name) => {
-            let tn = AstNode::TypeNotation {
-                tn: TypeNotation::Symbol(name),
+            let tn = AstNode {
+                variant: AstNodeVariant::TypeNotation {
+                    tn: TypeNotation::Symbol(name),
+                },
                 span: state.tokens.current().span.clone(),
             };
 
@@ -45,11 +47,13 @@ fn parse_array_tn<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'
     // Parse array element type
     let elem_tn = parse(state)?;
 
-    let end = elem_tn.span().end;
+    let end = elem_tn.span.end;
 
-    Ok(AstNode::TypeNotation {
-        tn: TypeNotation::Array {
-            elem_tn: Box::new(elem_tn),
+    Ok(AstNode {
+        variant: AstNodeVariant::TypeNotation {
+            tn: TypeNotation::Array {
+                elem_tn: Box::new(elem_tn),
+            },
         },
         span: start..end,
     })
@@ -98,12 +102,14 @@ fn parse_function_tn<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNod
     // Expecting return type notation
     let return_tn = Box::new(parse(state)?);
 
-    let end = return_tn.span().end;
+    let end = return_tn.span.end;
 
-    Ok(AstNode::TypeNotation {
-        tn: TypeNotation::Callable {
-            params_tn,
-            return_tn,
+    Ok(AstNode {
+        variant: AstNodeVariant::TypeNotation {
+            tn: TypeNotation::Callable {
+                params_tn,
+                return_tn,
+            },
         },
         span: start..end,
     })

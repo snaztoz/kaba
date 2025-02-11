@@ -1,6 +1,6 @@
 #![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/README.md"))]
 
-pub use ast::{AstNode, FunctionParam, Literal};
+pub use ast::{AstNode, AstNodeVariant, FunctionParam, Literal};
 pub use error::{Error, Result};
 pub use logos::Span;
 pub use semantic::state::symbol::SymbolTableData;

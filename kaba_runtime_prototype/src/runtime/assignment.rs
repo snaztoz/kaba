@@ -1,7 +1,7 @@
 use super::{
     error::Result, expression::ExpressionRunner, state::RuntimeState, value::RuntimeValue,
 };
-use kaba_compiler::AstNode;
+use kaba_compiler::{AstNode, AstNodeVariant};
 
 pub struct AssignmentRunner<'src, 'a> {
     ast: &'a AstNode<'src>,
@@ -166,21 +166,21 @@ impl<'src, 'a> AssignmentRunner<'src, 'a> {
 
 impl AssignmentRunner<'_, '_> {
     pub fn run(&self) -> Result<RuntimeValue> {
-        let lhs_node = match self.ast {
-            AstNode::Assign { lhs, .. }
-            | AstNode::AddAssign { lhs, .. }
-            | AstNode::SubAssign { lhs, .. }
-            | AstNode::MulAssign { lhs, .. }
-            | AstNode::DivAssign { lhs, .. }
-            | AstNode::ModAssign { lhs, .. } => lhs,
+        let lhs_node = match &self.ast.variant {
+            AstNodeVariant::Assign { lhs, .. }
+            | AstNodeVariant::AddAssign { lhs, .. }
+            | AstNodeVariant::SubAssign { lhs, .. }
+            | AstNodeVariant::MulAssign { lhs, .. }
+            | AstNodeVariant::DivAssign { lhs, .. }
+            | AstNodeVariant::ModAssign { lhs, .. } => lhs,
 
             _ => unreachable!(),
         };
 
-        let lhs = match lhs_node.as_ref() {
-            AstNode::Symbol { name, .. } => Lhs::Identifier(name.to_string()),
+        let lhs = match &lhs_node.as_ref().variant {
+            AstNodeVariant::Symbol { name, .. } => Lhs::Identifier(name.to_string()),
 
-            AstNode::IndexAccess { object, index, .. } => {
+            AstNodeVariant::IndexAccess { object, index, .. } => {
                 let arr = ExpressionRunner::new(object, self.root, self.state).run()?;
                 let idx = ExpressionRunner::new(index, self.root, self.state).run()?;
 
@@ -193,26 +193,26 @@ impl AssignmentRunner<'_, '_> {
             _ => unreachable!(),
         };
 
-        let val = match self.ast {
-            AstNode::Assign { rhs, .. }
-            | AstNode::AddAssign { rhs, .. }
-            | AstNode::SubAssign { rhs, .. }
-            | AstNode::MulAssign { rhs, .. }
-            | AstNode::DivAssign { rhs, .. }
-            | AstNode::ModAssign { rhs, .. } => {
+        let val = match &self.ast.variant {
+            AstNodeVariant::Assign { rhs, .. }
+            | AstNodeVariant::AddAssign { rhs, .. }
+            | AstNodeVariant::SubAssign { rhs, .. }
+            | AstNodeVariant::MulAssign { rhs, .. }
+            | AstNodeVariant::DivAssign { rhs, .. }
+            | AstNodeVariant::ModAssign { rhs, .. } => {
                 ExpressionRunner::new(rhs, self.root, self.state).run()?
             }
 
             _ => unreachable!(),
         };
 
-        match self.ast {
-            AstNode::Assign { .. } => self.assign(&lhs, val),
-            AstNode::AddAssign { .. } => self.add_assign(&lhs, val),
-            AstNode::SubAssign { .. } => self.sub_assign(&lhs, val),
-            AstNode::MulAssign { .. } => self.mul_assign(&lhs, val),
-            AstNode::DivAssign { .. } => self.div_assign(&lhs, val),
-            AstNode::ModAssign { .. } => self.mod_assign(&lhs, val),
+        match &self.ast.variant {
+            AstNodeVariant::Assign { .. } => self.assign(&lhs, val),
+            AstNodeVariant::AddAssign { .. } => self.add_assign(&lhs, val),
+            AstNodeVariant::SubAssign { .. } => self.sub_assign(&lhs, val),
+            AstNodeVariant::MulAssign { .. } => self.mul_assign(&lhs, val),
+            AstNodeVariant::DivAssign { .. } => self.div_assign(&lhs, val),
+            AstNodeVariant::ModAssign { .. } => self.mod_assign(&lhs, val),
 
             _ => unreachable!(),
         }

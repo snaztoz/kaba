@@ -5,7 +5,7 @@ use super::{
     tn,
     types::{assert, FloatType, IntType, Type},
 };
-use crate::ast::AstNode;
+use crate::{ast::AstNode, AstNodeVariant};
 
 /// Analyze variable declaration statement.
 ///
@@ -43,7 +43,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     let var_t = match unwrap_tn(node) {
         Some(var_tn) => {
             let t = tn::analyze(state, var_tn, false)?;
-            assert::is_assignable(&val_t, &t, || node.span().clone())?;
+            assert::is_assignable(&val_t, &t, || node.span.clone())?;
             t
         }
 
@@ -58,8 +58,9 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
 }
 
 fn save_symbol(state: &AnalyzerState, node: &AstNode, t: Type) -> Result<()> {
-    let sym_id = node.sym_id();
-    let (sym, sym_span) = node.sym().unwrap_symbol();
+    let sym_id = node.variant.sym_id();
+    let sym = node.variant.sym().variant.unwrap_symbol();
+    let sym_span = node.span.clone();
 
     if !state.can_save_sym(sym) {
         return Err(SemanticError {
@@ -74,7 +75,7 @@ fn save_symbol(state: &AnalyzerState, node: &AstNode, t: Type) -> Result<()> {
 }
 
 fn unwrap_tn<'src, 'a>(node: &'a AstNode<'src>) -> Option<&'a AstNode<'src>> {
-    if let AstNode::VariableDeclaration { tn, .. } = node {
+    if let AstNodeVariant::VariableDeclaration { tn, .. } = &node.variant {
         tn.as_deref()
     } else {
         unreachable!()
@@ -82,7 +83,7 @@ fn unwrap_tn<'src, 'a>(node: &'a AstNode<'src>) -> Option<&'a AstNode<'src>> {
 }
 
 fn unwrap_val<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    if let AstNode::VariableDeclaration { val, .. } = node {
+    if let AstNodeVariant::VariableDeclaration { val, .. } = &node.variant {
         val
     } else {
         unreachable!()

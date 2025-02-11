@@ -5,7 +5,10 @@ use super::{
     state::AnalyzerState,
     types::{assert, Type},
 };
-use crate::ast::{AstNode, SymbolId};
+use crate::{
+    ast::{AstNode, SymbolId},
+    AstNodeVariant,
+};
 
 /// Analyze `each` loop statement.
 ///
@@ -40,14 +43,14 @@ use crate::ast::{AstNode, SymbolId};
 /// ```
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     let expr_t = expression::analyze(state, unwrap_iterable(node))?;
-    assert::is_iterable(&expr_t, || unwrap_iterable(node).span().clone())?;
+    assert::is_iterable(&expr_t, || unwrap_iterable(node).span.clone())?;
 
-    let elem_sym = unwrap_elem_sym(node).unwrap_symbol().0;
+    let elem_sym = unwrap_elem_sym(node).variant.unwrap_symbol();
     let elem_t = expr_t.unwrap_array();
 
     // Check all statements inside the body with a new scope
 
-    state.with_loop_scope(node.scope_id(), || {
+    state.with_loop_scope(node.variant.scope_id(), || {
         state.save_entity(unwrap_elem_sym_id(node), elem_sym, elem_t);
         body::analyze(state, node)
     })?;
@@ -56,7 +59,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
 }
 
 fn unwrap_iterable<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    if let AstNode::Each { iterable, .. } = node {
+    if let AstNodeVariant::Each { iterable, .. } = &node.variant {
         iterable
     } else {
         unreachable!()
@@ -64,7 +67,7 @@ fn unwrap_iterable<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
 }
 
 fn unwrap_elem_sym<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    if let AstNode::Each { elem_sym, .. } = node {
+    if let AstNodeVariant::Each { elem_sym, .. } = &node.variant {
         elem_sym
     } else {
         unreachable!()
@@ -72,7 +75,7 @@ fn unwrap_elem_sym<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
 }
 
 fn unwrap_elem_sym_id(node: &AstNode) -> SymbolId {
-    if let AstNode::Each { elem_sym_id, .. } = node {
+    if let AstNodeVariant::Each { elem_sym_id, .. } = &node.variant {
         *elem_sym_id
     } else {
         unreachable!()

@@ -2,7 +2,7 @@ use super::{
     assignment::AssignmentRunner, error::Result, state::RuntimeState, value::RuntimeValue,
 };
 use crate::runtime::body::BodyRunner;
-use kaba_compiler::{AstNode, FunctionParam, Literal};
+use kaba_compiler::{AstNode, AstNodeVariant, FunctionParam, Literal};
 use std::collections::HashMap;
 
 pub struct ExpressionRunner<'src, 'a> {
@@ -22,11 +22,15 @@ impl<'src, 'a> ExpressionRunner<'src, 'a> {
     }
 
     fn run_function_call(&self, callee: &'a AstNode, args: &'a [AstNode]) -> Result<RuntimeValue> {
-        let f_ptr = match callee {
-            AstNode::Symbol { name, .. } => self.state.get_value(name).unwrap(),
+        let f_ptr = match &callee.variant {
+            AstNodeVariant::Symbol { name, .. } => self.state.get_value(name).unwrap(),
 
-            AstNode::FunctionCall { callee, args, .. } => self.run_function_call(callee, args)?,
-            AstNode::IndexAccess { object, index, .. } => self.run_index_access(object, index)?,
+            AstNodeVariant::FunctionCall { callee, args, .. } => {
+                self.run_function_call(callee, args)?
+            }
+            AstNodeVariant::IndexAccess { object, index, .. } => {
+                self.run_index_access(object, index)?
+            }
 
             c => todo!("{c}"),
         };
@@ -90,75 +94,79 @@ impl<'src, 'a> ExpressionRunner<'src, 'a> {
 
 impl ExpressionRunner<'_, '_> {
     pub fn run(&self) -> Result<RuntimeValue> {
-        match self.ast {
-            AstNode::Assign { .. }
-            | AstNode::AddAssign { .. }
-            | AstNode::SubAssign { .. }
-            | AstNode::MulAssign { .. }
-            | AstNode::DivAssign { .. }
-            | AstNode::ModAssign { .. } => {
+        match &self.ast.variant {
+            AstNodeVariant::Assign { .. }
+            | AstNodeVariant::AddAssign { .. }
+            | AstNodeVariant::SubAssign { .. }
+            | AstNodeVariant::MulAssign { .. }
+            | AstNodeVariant::DivAssign { .. }
+            | AstNodeVariant::ModAssign { .. } => {
                 AssignmentRunner::new(self.ast, self.root, self.state).run()
             }
 
-            AstNode::Or { lhs, rhs, .. }
-            | AstNode::And { lhs, rhs, .. }
-            | AstNode::Eq { lhs, rhs, .. }
-            | AstNode::Neq { lhs, rhs, .. }
-            | AstNode::Gt { lhs, rhs, .. }
-            | AstNode::Gte { lhs, rhs, .. }
-            | AstNode::Lt { lhs, rhs, .. }
-            | AstNode::Lte { lhs, rhs, .. }
-            | AstNode::Add { lhs, rhs, .. }
-            | AstNode::Sub { lhs, rhs, .. }
-            | AstNode::Mul { lhs, rhs, .. }
-            | AstNode::Div { lhs, rhs, .. }
-            | AstNode::Mod { lhs, rhs, .. } => {
+            AstNodeVariant::Or { lhs, rhs, .. }
+            | AstNodeVariant::And { lhs, rhs, .. }
+            | AstNodeVariant::Eq { lhs, rhs, .. }
+            | AstNodeVariant::Neq { lhs, rhs, .. }
+            | AstNodeVariant::Gt { lhs, rhs, .. }
+            | AstNodeVariant::Gte { lhs, rhs, .. }
+            | AstNodeVariant::Lt { lhs, rhs, .. }
+            | AstNodeVariant::Lte { lhs, rhs, .. }
+            | AstNodeVariant::Add { lhs, rhs, .. }
+            | AstNodeVariant::Sub { lhs, rhs, .. }
+            | AstNodeVariant::Mul { lhs, rhs, .. }
+            | AstNodeVariant::Div { lhs, rhs, .. }
+            | AstNodeVariant::Mod { lhs, rhs, .. } => {
                 let lhs_val = ExpressionRunner::new(lhs, self.root, self.state).run()?;
                 let rhs_val = ExpressionRunner::new(rhs, self.root, self.state).run()?;
 
                 Ok(self.run_binary_op(&lhs_val, &rhs_val))
             }
 
-            AstNode::Not { expr, .. } | AstNode::Neg { expr, .. } => {
+            AstNodeVariant::Not { expr, .. } | AstNodeVariant::Neg { expr, .. } => {
                 let val = ExpressionRunner::new(expr, self.root, self.state).run()?;
 
                 Ok(self.run_unary_op(&val))
             }
 
-            AstNode::FunctionCall { callee, args, .. } => self.run_function_call(callee, args),
-            AstNode::IndexAccess { object, index, .. } => self.run_index_access(object, index),
+            AstNodeVariant::FunctionCall { callee, args, .. } => {
+                self.run_function_call(callee, args)
+            }
+            AstNodeVariant::IndexAccess { object, index, .. } => {
+                self.run_index_access(object, index)
+            }
 
-            AstNode::Symbol { name, .. } => self.state.get_value(name),
-            AstNode::Literal { lit, .. } => self.literal_to_value(lit),
+            AstNodeVariant::Symbol { name, .. } => self.state.get_value(name),
+            AstNodeVariant::Literal { lit, .. } => self.literal_to_value(lit),
 
             _ => unreachable!(),
         }
     }
 
     fn run_binary_op(&self, lhs_val: &RuntimeValue, rhs_val: &RuntimeValue) -> RuntimeValue {
-        match self.ast {
-            AstNode::Or { .. } => self.run_or(lhs_val, rhs_val),
-            AstNode::And { .. } => self.run_and(lhs_val, rhs_val),
-            AstNode::Eq { .. } => self.run_eq(lhs_val, rhs_val),
-            AstNode::Neq { .. } => self.run_neq(lhs_val, rhs_val),
-            AstNode::Gt { .. } => self.run_gt(lhs_val, rhs_val),
-            AstNode::Gte { .. } => self.run_gte(lhs_val, rhs_val),
-            AstNode::Lt { .. } => self.run_lt(lhs_val, rhs_val),
-            AstNode::Lte { .. } => self.run_lte(lhs_val, rhs_val),
-            AstNode::Add { .. } => self.math_add(lhs_val, rhs_val),
-            AstNode::Sub { .. } => self.math_sub(lhs_val, rhs_val),
-            AstNode::Mul { .. } => self.math_mul(lhs_val, rhs_val),
-            AstNode::Div { .. } => self.math_div(lhs_val, rhs_val),
-            AstNode::Mod { .. } => self.math_mod(lhs_val, rhs_val),
+        match &self.ast.variant {
+            AstNodeVariant::Or { .. } => self.run_or(lhs_val, rhs_val),
+            AstNodeVariant::And { .. } => self.run_and(lhs_val, rhs_val),
+            AstNodeVariant::Eq { .. } => self.run_eq(lhs_val, rhs_val),
+            AstNodeVariant::Neq { .. } => self.run_neq(lhs_val, rhs_val),
+            AstNodeVariant::Gt { .. } => self.run_gt(lhs_val, rhs_val),
+            AstNodeVariant::Gte { .. } => self.run_gte(lhs_val, rhs_val),
+            AstNodeVariant::Lt { .. } => self.run_lt(lhs_val, rhs_val),
+            AstNodeVariant::Lte { .. } => self.run_lte(lhs_val, rhs_val),
+            AstNodeVariant::Add { .. } => self.math_add(lhs_val, rhs_val),
+            AstNodeVariant::Sub { .. } => self.math_sub(lhs_val, rhs_val),
+            AstNodeVariant::Mul { .. } => self.math_mul(lhs_val, rhs_val),
+            AstNodeVariant::Div { .. } => self.math_div(lhs_val, rhs_val),
+            AstNodeVariant::Mod { .. } => self.math_mod(lhs_val, rhs_val),
 
             _ => unreachable!(),
         }
     }
 
     fn run_unary_op(&self, val: &RuntimeValue) -> RuntimeValue {
-        match self.ast {
-            AstNode::Not { .. } => self.run_not(val),
-            AstNode::Neg { .. } => self.math_neg(val),
+        match &self.ast.variant {
+            AstNodeVariant::Not { .. } => self.run_not(val),
+            AstNodeVariant::Neg { .. } => self.math_neg(val),
 
             _ => unreachable!(),
         }
@@ -265,7 +273,7 @@ impl ExpressionRunner<'_, '_> {
         args: &[RuntimeValue],
     ) -> Result<RuntimeValue> {
         if let RuntimeValue::Function(ptr) = f_ptr {
-            let top_level_body = if let AstNode::Program { body, .. } = &self.root {
+            let top_level_body = if let AstNodeVariant::Program { body, .. } = &self.root.variant {
                 body
             } else {
                 unreachable!()
@@ -273,11 +281,11 @@ impl ExpressionRunner<'_, '_> {
 
             let f = top_level_body.get(ptr).unwrap();
 
-            if let AstNode::FunctionDefinition { params, .. } = f {
+            if let AstNodeVariant::FunctionDefinition { params, .. } = &f.variant {
                 self.state.ss.borrow_mut().push(HashMap::new());
 
                 for (i, FunctionParam { sym, .. }) in params.iter().enumerate() {
-                    let (sym, _) = sym.unwrap_symbol();
+                    let sym = sym.variant.unwrap_symbol();
                     let val = &args[i];
                     self.state.store_value(sym, val.clone());
                 }

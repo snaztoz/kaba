@@ -4,7 +4,7 @@ use super::{
     sym, tn,
 };
 use crate::{
-    ast::{AstNode, RecordField},
+    ast::{AstNode, AstNodeVariant, RecordField},
     lexer::token::TokenKind,
 };
 
@@ -24,10 +24,12 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
     let end = state.tokens.current().span.end;
     state.tokens.skip(&TokenKind::RBrace)?;
 
-    Ok(AstNode::RecordDefinition {
-        sym: Box::new(sym),
-        sym_id,
-        fields,
+    Ok(AstNode {
+        variant: AstNodeVariant::RecordDefinition {
+            sym: Box::new(sym),
+            sym_id,
+            fields,
+        },
         span: start..end,
     })
 }
@@ -82,13 +84,15 @@ mod tests {
     fn empty_record() {
         assert_ast(
             "record Rec {}",
-            AstNode::RecordDefinition {
-                sym: Box::new(AstNode::Symbol {
-                    name: "Rec",
-                    span: 7..10,
-                }),
-                sym_id: 1,
-                fields: vec![],
+            AstNode {
+                variant: AstNodeVariant::RecordDefinition {
+                    sym: Box::new(AstNode {
+                        variant: AstNodeVariant::Symbol { name: "Rec" },
+                        span: 7..10,
+                    }),
+                    sym_id: 1,
+                    fields: vec![],
+                },
                 span: 0..13,
             },
         );
@@ -98,23 +102,27 @@ mod tests {
     fn record_with_single_field() {
         assert_ast(
             "record User { name: string, }",
-            AstNode::RecordDefinition {
-                sym: Box::new(AstNode::Symbol {
-                    name: "User",
-                    span: 7..11,
-                }),
-                sym_id: 1,
-                fields: vec![RecordField {
-                    sym: AstNode::Symbol {
-                        name: "name",
-                        span: 14..18,
-                    },
-                    sym_id: 2,
-                    tn: AstNode::TypeNotation {
-                        tn: TypeNotation::Symbol("string"),
-                        span: 20..26,
-                    },
-                }],
+            AstNode {
+                variant: AstNodeVariant::RecordDefinition {
+                    sym: Box::new(AstNode {
+                        variant: AstNodeVariant::Symbol { name: "User" },
+                        span: 7..11,
+                    }),
+                    sym_id: 1,
+                    fields: vec![RecordField {
+                        sym: AstNode {
+                            variant: AstNodeVariant::Symbol { name: "name" },
+                            span: 14..18,
+                        },
+                        sym_id: 2,
+                        tn: AstNode {
+                            variant: AstNodeVariant::TypeNotation {
+                                tn: TypeNotation::Symbol("string"),
+                            },
+                            span: 20..26,
+                        },
+                    }],
+                },
                 span: 0..29,
             },
         );

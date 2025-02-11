@@ -2,7 +2,7 @@
 //! compiler.
 
 use self::error::{Result, SemanticError};
-use crate::ast::AstNode;
+use crate::ast::{AstNode, AstNodeVariant};
 use error::SemanticErrorVariant;
 use state::{symbol::SymbolTableData, AnalyzerState};
 
@@ -27,12 +27,12 @@ mod while_loop;
 pub fn analyze(program: &AstNode) -> Result<SymbolTableData> {
     let state = AnalyzerState::new();
 
-    for stmt in program.body() {
+    for stmt in program.variant.body() {
         ensure_permitted_in_global(stmt)?;
         function::analyze_declaration(&state, stmt)?;
     }
 
-    for stmt in program.body() {
+    for stmt in program.variant.body() {
         function::analyze_definition(&state, stmt)?;
     }
 
@@ -46,12 +46,12 @@ fn ensure_permitted_in_global(stmt: &AstNode) -> Result<()> {
     //
     // TODO: review other statements for possibilities to be applied here
 
-    match stmt {
-        AstNode::FunctionDefinition { .. } => Ok(()),
+    match &stmt.variant {
+        AstNodeVariant::FunctionDefinition { .. } => Ok(()),
 
         n => Err(SemanticError {
             variant: SemanticErrorVariant::UnexpectedStatement(n.to_string()),
-            span: stmt.span().clone(),
+            span: stmt.span.clone(),
         }),
     }
 }

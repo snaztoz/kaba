@@ -5,7 +5,10 @@ use super::{
     state::ParserState,
     Result,
 };
-use crate::{ast::AstNode, lexer::token::TokenKind};
+use crate::{
+    ast::{AstNode, AstNodeVariant},
+    lexer::token::TokenKind,
+};
 
 pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
@@ -26,11 +29,13 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
     // Expecting >= 0 "else if" or 1 "else"
     let or_else = parse_alt_branch(state, &mut end)?;
 
-    Ok(AstNode::If {
-        cond: Box::new(cond),
-        body: block.body,
-        scope_id,
-        or_else: or_else.map(Box::new),
+    Ok(AstNode {
+        variant: AstNodeVariant::If {
+            cond: Box::new(cond),
+            body: block.body,
+            scope_id,
+            or_else: or_else.map(Box::new),
+        },
         span: start..end,
     })
 }
@@ -53,7 +58,7 @@ fn parse_alt_branch<'src>(
             // Expecting "else if ..." statement
             let alt = parse(state)?;
 
-            *end_pos = alt.span().end;
+            *end_pos = alt.span.end;
 
             Ok(Some(alt))
         }
@@ -65,9 +70,11 @@ fn parse_alt_branch<'src>(
 
             *end_pos = block.span.end;
 
-            Ok(Some(AstNode::Else {
-                body: block.body,
-                scope_id,
+            Ok(Some(AstNode {
+                variant: AstNodeVariant::Else {
+                    body: block.body,
+                    scope_id,
+                },
                 span: start..block.span.end,
             }))
         }
@@ -85,7 +92,7 @@ fn parse_alt_branch<'src>(
 #[cfg(test)]
 mod tests {
     use crate::{
-        ast::{AstNode, Literal},
+        ast::{AstNode, AstNodeVariant, Literal},
         parser::test_util::assert_ast,
     };
 
@@ -93,31 +100,43 @@ mod tests {
     fn if_statement() {
         assert_ast(
             "if 15 > 10 { print(1); }",
-            AstNode::If {
-                cond: Box::new(AstNode::Gt {
-                    lhs: Box::new(AstNode::Literal {
-                        lit: Literal::Int(15),
-                        span: 3..5,
+            AstNode {
+                variant: AstNodeVariant::If {
+                    cond: Box::new(AstNode {
+                        variant: AstNodeVariant::Gt {
+                            lhs: Box::new(AstNode {
+                                variant: AstNodeVariant::Literal {
+                                    lit: Literal::Int(15),
+                                },
+                                span: 3..5,
+                            }),
+                            rhs: Box::new(AstNode {
+                                variant: AstNodeVariant::Literal {
+                                    lit: Literal::Int(10),
+                                },
+                                span: 8..10,
+                            }),
+                        },
+                        span: 3..10,
                     }),
-                    rhs: Box::new(AstNode::Literal {
-                        lit: Literal::Int(10),
-                        span: 8..10,
-                    }),
-                    span: 3..10,
-                }),
-                body: vec![AstNode::FunctionCall {
-                    callee: Box::new(AstNode::Symbol {
-                        name: "print",
-                        span: 13..18,
-                    }),
-                    args: vec![AstNode::Literal {
-                        lit: Literal::Int(1),
-                        span: 19..20,
+                    body: vec![AstNode {
+                        variant: AstNodeVariant::FunctionCall {
+                            callee: Box::new(AstNode {
+                                variant: AstNodeVariant::Symbol { name: "print" },
+                                span: 13..18,
+                            }),
+                            args: vec![AstNode {
+                                variant: AstNodeVariant::Literal {
+                                    lit: Literal::Int(1),
+                                },
+                                span: 19..20,
+                            }],
+                        },
+                        span: 13..21,
                     }],
-                    span: 13..21,
-                }],
-                scope_id: 2,
-                or_else: None,
+                    scope_id: 2,
+                    or_else: None,
+                },
                 span: 0..24,
             },
         );
@@ -127,27 +146,37 @@ mod tests {
     fn if_else_branches() {
         assert_ast(
             "if false {} else if false {} else {}",
-            AstNode::If {
-                cond: Box::new(AstNode::Literal {
-                    lit: Literal::Bool(false),
-                    span: 3..8,
-                }),
-                body: vec![],
-                scope_id: 2,
-                or_else: Some(Box::new(AstNode::If {
-                    cond: Box::new(AstNode::Literal {
-                        lit: Literal::Bool(false),
-                        span: 20..25,
+            AstNode {
+                variant: AstNodeVariant::If {
+                    cond: Box::new(AstNode {
+                        variant: AstNodeVariant::Literal {
+                            lit: Literal::Bool(false),
+                        },
+                        span: 3..8,
                     }),
                     body: vec![],
-                    scope_id: 3,
-                    or_else: Some(Box::new(AstNode::Else {
-                        body: vec![],
-                        scope_id: 4,
-                        span: 29..36,
+                    scope_id: 2,
+                    or_else: Some(Box::new(AstNode {
+                        variant: AstNodeVariant::If {
+                            cond: Box::new(AstNode {
+                                variant: AstNodeVariant::Literal {
+                                    lit: Literal::Bool(false),
+                                },
+                                span: 20..25,
+                            }),
+                            body: vec![],
+                            scope_id: 3,
+                            or_else: Some(Box::new(AstNode {
+                                variant: AstNodeVariant::Else {
+                                    body: vec![],
+                                    scope_id: 4,
+                                },
+                                span: 29..36,
+                            })),
+                        },
+                        span: 17..36,
                     })),
-                    span: 17..36,
-                })),
+                },
                 span: 0..36,
             },
         );

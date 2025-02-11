@@ -1,5 +1,5 @@
 use super::{error::Result, state::RuntimeState, statement::StatementRunner};
-use kaba_compiler::AstNode;
+use kaba_compiler::{AstNode, AstNodeVariant};
 
 pub struct BodyRunner<'src, 'a> {
     ast: &'a AstNode<'src>,
@@ -31,13 +31,13 @@ impl<'src, 'a> BodyRunner<'src, 'a> {
     }
 
     fn body(&self) -> &'a [AstNode<'src>] {
-        match self.ast {
-            AstNode::Program { body, .. }
-            | AstNode::If { body, .. }
-            | AstNode::Else { body, .. }
-            | AstNode::While { body, .. }
-            | AstNode::Each { body, .. }
-            | AstNode::FunctionDefinition { body, .. } => body,
+        match &self.ast.variant {
+            AstNodeVariant::Program { body, .. }
+            | AstNodeVariant::If { body, .. }
+            | AstNodeVariant::Else { body, .. }
+            | AstNodeVariant::While { body, .. }
+            | AstNodeVariant::Each { body, .. }
+            | AstNodeVariant::FunctionDefinition { body, .. } => body,
 
             _ => unreachable!(),
         }

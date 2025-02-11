@@ -5,7 +5,7 @@
 
 use self::{error::Result, state::RuntimeState, stream::RuntimeStream, value::RuntimeValue};
 use expression::ExpressionRunner;
-use kaba_compiler::AstNode;
+use kaba_compiler::{AstNode, AstNodeVariant};
 
 mod assignment;
 mod body;
@@ -30,7 +30,8 @@ impl<'src, 'a> Runtime<'src, 'a> {
     }
 
     pub fn run(&'a self) -> Result<()> {
-        let body = if let AstNode::Program { body, .. } = &self.ast.as_ref().unwrap() {
+        let body = if let AstNodeVariant::Program { body, .. } = &self.ast.as_ref().unwrap().variant
+        {
             body
         } else {
             unreachable!()
@@ -44,8 +45,8 @@ impl<'src, 'a> Runtime<'src, 'a> {
 
     fn register_globals(&self, stmts: &[AstNode]) {
         for (i, stmt) in stmts.iter().enumerate() {
-            if let AstNode::FunctionDefinition { sym, .. } = stmt {
-                let (sym, _) = sym.unwrap_symbol();
+            if let AstNodeVariant::FunctionDefinition { sym, .. } = &stmt.variant {
+                let sym = sym.variant.unwrap_symbol();
                 self.state.store_value(sym, RuntimeValue::Function(i));
             } else {
                 unreachable!()

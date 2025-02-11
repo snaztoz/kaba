@@ -6,12 +6,13 @@ use crate::{
         state::AnalyzerState,
         types::{assert, Type},
     },
+    AstNodeVariant,
 };
 
 /// Analyze function call expression.
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     let fn_t = expression::analyze(state, unwrap_callee(node))?;
-    assert::is_callable(&fn_t, || unwrap_callee(node).span().clone())?;
+    assert::is_callable(&fn_t, || unwrap_callee(node).span.clone())?;
 
     let args_t = get_args_t(state, node)?;
     let (params_t, return_t) = fn_t.unwrap_callable();
@@ -22,7 +23,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
                 expected: params_t.len(),
                 get: args_t.len(),
             },
-            span: node.span().clone(),
+            span: node.span.clone(),
         });
     }
 
@@ -30,7 +31,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
         if !arg_t.is_assignable_to(param_t) {
             return Err(SemanticError {
                 variant: SemanticErrorVariant::InvalidArguments { args_t },
-                span: node.span().clone(),
+                span: node.span.clone(),
             });
         }
     }
@@ -49,7 +50,7 @@ fn get_args_t(state: &AnalyzerState, node: &AstNode) -> Result<Vec<Type>> {
 }
 
 fn unwrap_callee<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    if let AstNode::FunctionCall { callee, .. } = node {
+    if let AstNodeVariant::FunctionCall { callee, .. } = &node.variant {
         callee
     } else {
         unreachable!()
@@ -57,7 +58,7 @@ fn unwrap_callee<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
 }
 
 fn unwrap_args<'src, 'a>(node: &'a AstNode<'src>) -> &'a [AstNode<'src>] {
-    if let AstNode::FunctionCall { args, .. } = node {
+    if let AstNodeVariant::FunctionCall { args, .. } = &node.variant {
         args
     } else {
         unreachable!()

@@ -5,7 +5,7 @@ use super::{
     state::AnalyzerState,
     types::{assert, FloatType, IntType, Type},
 };
-use crate::ast::AstNode;
+use crate::ast::{AstNode, AstNodeVariant};
 use std::cmp;
 
 mod function_call;
@@ -13,41 +13,46 @@ mod index_access;
 
 /// Analyze expressions.
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
-    match node {
-        AstNode::Assign { .. }
-        | AstNode::AddAssign { .. }
-        | AstNode::SubAssign { .. }
-        | AstNode::MulAssign { .. }
-        | AstNode::DivAssign { .. }
-        | AstNode::ModAssign { .. } => assignment::analyze(state, node),
+    match &node.variant {
+        AstNodeVariant::Assign { .. }
+        | AstNodeVariant::AddAssign { .. }
+        | AstNodeVariant::SubAssign { .. }
+        | AstNodeVariant::MulAssign { .. }
+        | AstNodeVariant::DivAssign { .. }
+        | AstNodeVariant::ModAssign { .. } => assignment::analyze(state, node),
 
-        AstNode::Eq { .. } | AstNode::Neq { .. } => analyze_equality_expr(state, node),
-        AstNode::Or { .. } | AstNode::And { .. } => analyze_logical_and_or_expr(state, node),
-
-        AstNode::Gt { .. } | AstNode::Gte { .. } | AstNode::Lt { .. } | AstNode::Lte { .. } => {
-            analyze_comparison_expr(state, node)
+        AstNodeVariant::Eq { .. } | AstNodeVariant::Neq { .. } => {
+            analyze_equality_expr(state, node)
+        }
+        AstNodeVariant::Or { .. } | AstNodeVariant::And { .. } => {
+            analyze_logical_and_or_expr(state, node)
         }
 
-        AstNode::Add { .. }
-        | AstNode::Sub { .. }
-        | AstNode::Mul { .. }
-        | AstNode::Div { .. }
-        | AstNode::Mod { .. } => analyze_binary_math_expr(state, node),
+        AstNodeVariant::Gt { .. }
+        | AstNodeVariant::Gte { .. }
+        | AstNodeVariant::Lt { .. }
+        | AstNodeVariant::Lte { .. } => analyze_comparison_expr(state, node),
 
-        AstNode::Not { .. } => analyze_logical_not_expr(state, node),
-        AstNode::Neg { .. } => analyze_neg_expr(state, node),
+        AstNodeVariant::Add { .. }
+        | AstNodeVariant::Sub { .. }
+        | AstNodeVariant::Mul { .. }
+        | AstNodeVariant::Div { .. }
+        | AstNodeVariant::Mod { .. } => analyze_binary_math_expr(state, node),
 
-        AstNode::Symbol { name, span } => state
+        AstNodeVariant::Not { .. } => analyze_logical_not_expr(state, node),
+        AstNodeVariant::Neg { .. } => analyze_neg_expr(state, node),
+
+        AstNodeVariant::Symbol { name } => state
             .get_sym_t(name)
             .ok_or_else(|| SemanticError {
                 variant: SemanticErrorVariant::SymbolDoesNotExist(String::from(*name)),
-                span: span.clone(),
+                span: node.span.clone(),
             })
             .map(|st| st.unwrap_entity()),
 
-        AstNode::Literal { .. } => literal::analyze(state, node),
-        AstNode::FunctionCall { .. } => function_call::analyze(state, node),
-        AstNode::IndexAccess { .. } => index_access::analyze(state, node),
+        AstNodeVariant::Literal { .. } => literal::analyze(state, node),
+        AstNodeVariant::FunctionCall { .. } => function_call::analyze(state, node),
+        AstNodeVariant::IndexAccess { .. } => index_access::analyze(state, node),
 
         _ => unreachable!(),
     }
@@ -60,8 +65,8 @@ fn analyze_logical_and_or_expr(state: &AnalyzerState, node: &AstNode) -> Result<
     let lhs_t = analyze(state, lhs)?;
     let rhs_t = analyze(state, rhs)?;
 
-    assert::is_boolean(&lhs_t, || lhs.span().clone())?;
-    assert::is_boolean(&rhs_t, || rhs.span().clone())?;
+    assert::is_boolean(&lhs_t, || lhs.span.clone())?;
+    assert::is_boolean(&rhs_t, || rhs.span.clone())?;
 
     Ok(Type::Bool)
 }
@@ -73,7 +78,7 @@ fn analyze_equality_expr(state: &AnalyzerState, node: &AstNode) -> Result<Type> 
     let lhs_t = analyze(state, lhs)?;
     let rhs_t = analyze(state, rhs)?;
 
-    assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
+    assert::is_compatible(&lhs_t, &rhs_t, || lhs.span.start..rhs.span.end)?;
 
     Ok(Type::Bool)
 }
@@ -85,15 +90,15 @@ fn analyze_comparison_expr(state: &AnalyzerState, node: &AstNode) -> Result<Type
     let lhs_t = analyze(state, lhs)?;
     let rhs_t = analyze(state, rhs)?;
 
-    assert::is_number(&lhs_t, || lhs.span().clone())?;
-    assert::is_number(&rhs_t, || rhs.span().clone())?;
+    assert::is_number(&lhs_t, || lhs.span.clone())?;
+    assert::is_number(&rhs_t, || rhs.span.clone())?;
 
     if lhs_t.is_bounded_int()
         || rhs_t.is_bounded_int()
         || lhs_t.is_unbounded_float()
         || rhs_t.is_unbounded_float()
     {
-        assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
+        assert::is_compatible(&lhs_t, &rhs_t, || lhs.span.start..rhs.span.end)?;
     }
 
     Ok(Type::Bool)
@@ -106,8 +111,8 @@ fn analyze_binary_math_expr(state: &AnalyzerState, node: &AstNode) -> Result<Typ
     let lhs_t = analyze(state, lhs)?;
     let rhs_t = analyze(state, rhs)?;
 
-    assert::is_number(&lhs_t, || lhs.span().clone())?;
-    assert::is_number(&rhs_t, || rhs.span().clone())?;
+    assert::is_number(&lhs_t, || lhs.span.clone())?;
+    assert::is_number(&rhs_t, || rhs.span.clone())?;
 
     if lhs_t.is_unbounded_int() && rhs_t.is_unbounded_int() {
         return Ok(compute_unbounded_int_t(node, &lhs_t, &rhs_t));
@@ -115,7 +120,7 @@ fn analyze_binary_math_expr(state: &AnalyzerState, node: &AstNode) -> Result<Typ
         return Ok(compute_unbounded_float_t(node, &lhs_t, &rhs_t));
     }
 
-    assert::is_compatible(&lhs_t, &rhs_t, || lhs.span().start..rhs.span().end)?;
+    assert::is_compatible(&lhs_t, &rhs_t, || lhs.span.start..rhs.span.end)?;
 
     // Handle the possibility of converting unbounded into bounded type.
     match (lhs_t, rhs_t) {
@@ -137,7 +142,7 @@ fn analyze_logical_not_expr(state: &AnalyzerState, node: &AstNode) -> Result<Typ
     let expr = unwrap_expr(node);
 
     let child_t = analyze(state, expr)?;
-    assert::is_boolean(&child_t, || expr.span().clone())?;
+    assert::is_boolean(&child_t, || expr.span.clone())?;
 
     Ok(Type::Bool)
 }
@@ -146,7 +151,7 @@ fn analyze_neg_expr(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     let expr = unwrap_expr(node);
 
     let child_t = analyze(state, expr)?;
-    assert::is_signable(&child_t, || expr.span().clone())?;
+    assert::is_signable(&child_t, || expr.span.clone())?;
 
     let t = match child_t {
         Type::Int(IntType::Unbounded(n)) => Type::Int(IntType::Unbounded(-n)),
@@ -160,12 +165,12 @@ fn compute_unbounded_int_t(node: &AstNode, lhs_t: &Type, rhs_t: &Type) -> Type {
     let lhs_val = lhs_t.unwrap_unbounded_int();
     let rhs_val = rhs_t.unwrap_unbounded_int();
 
-    let n = match node {
-        AstNode::Add { .. } => lhs_val.wrapping_add(rhs_val),
-        AstNode::Sub { .. } => lhs_val.wrapping_sub(rhs_val),
-        AstNode::Mul { .. } => lhs_val.wrapping_mul(rhs_val),
-        AstNode::Div { .. } => lhs_val.wrapping_div(rhs_val),
-        AstNode::Mod { .. } => lhs_val.wrapping_rem(rhs_val),
+    let n = match &node.variant {
+        AstNodeVariant::Add { .. } => lhs_val.wrapping_add(rhs_val),
+        AstNodeVariant::Sub { .. } => lhs_val.wrapping_sub(rhs_val),
+        AstNodeVariant::Mul { .. } => lhs_val.wrapping_mul(rhs_val),
+        AstNodeVariant::Div { .. } => lhs_val.wrapping_div(rhs_val),
+        AstNodeVariant::Mod { .. } => lhs_val.wrapping_rem(rhs_val),
         _ => unreachable!(),
     };
 
@@ -176,12 +181,12 @@ fn compute_unbounded_float_t(node: &AstNode, lhs_t: &Type, rhs_t: &Type) -> Type
     let lhs_val = lhs_t.unwrap_unbounded_float();
     let rhs_val = rhs_t.unwrap_unbounded_float();
 
-    let n = match node {
-        AstNode::Add { .. } => lhs_val + rhs_val,
-        AstNode::Sub { .. } => lhs_val - rhs_val,
-        AstNode::Mul { .. } => lhs_val * rhs_val,
-        AstNode::Div { .. } => lhs_val / rhs_val,
-        AstNode::Mod { .. } => lhs_val % rhs_val,
+    let n = match &node.variant {
+        AstNodeVariant::Add { .. } => lhs_val + rhs_val,
+        AstNodeVariant::Sub { .. } => lhs_val - rhs_val,
+        AstNodeVariant::Mul { .. } => lhs_val * rhs_val,
+        AstNodeVariant::Div { .. } => lhs_val / rhs_val,
+        AstNodeVariant::Mod { .. } => lhs_val % rhs_val,
         _ => unreachable!(),
     };
 
@@ -189,48 +194,48 @@ fn compute_unbounded_float_t(node: &AstNode, lhs_t: &Type, rhs_t: &Type) -> Type
 }
 
 fn unwrap_lhs<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    match node {
-        AstNode::Eq { lhs, .. }
-        | AstNode::Neq { lhs, .. }
-        | AstNode::Or { lhs, .. }
-        | AstNode::And { lhs, .. }
-        | AstNode::Gt { lhs, .. }
-        | AstNode::Gte { lhs, .. }
-        | AstNode::Lt { lhs, .. }
-        | AstNode::Lte { lhs, .. }
-        | AstNode::Add { lhs, .. }
-        | AstNode::Sub { lhs, .. }
-        | AstNode::Mul { lhs, .. }
-        | AstNode::Div { lhs, .. }
-        | AstNode::Mod { lhs, .. } => lhs,
+    match &node.variant {
+        AstNodeVariant::Eq { lhs, .. }
+        | AstNodeVariant::Neq { lhs, .. }
+        | AstNodeVariant::Or { lhs, .. }
+        | AstNodeVariant::And { lhs, .. }
+        | AstNodeVariant::Gt { lhs, .. }
+        | AstNodeVariant::Gte { lhs, .. }
+        | AstNodeVariant::Lt { lhs, .. }
+        | AstNodeVariant::Lte { lhs, .. }
+        | AstNodeVariant::Add { lhs, .. }
+        | AstNodeVariant::Sub { lhs, .. }
+        | AstNodeVariant::Mul { lhs, .. }
+        | AstNodeVariant::Div { lhs, .. }
+        | AstNodeVariant::Mod { lhs, .. } => lhs,
 
         _ => unreachable!(),
     }
 }
 
 fn unwrap_rhs<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    match node {
-        AstNode::Eq { rhs, .. }
-        | AstNode::Neq { rhs, .. }
-        | AstNode::Or { rhs, .. }
-        | AstNode::And { rhs, .. }
-        | AstNode::Gt { rhs, .. }
-        | AstNode::Gte { rhs, .. }
-        | AstNode::Lt { rhs, .. }
-        | AstNode::Lte { rhs, .. }
-        | AstNode::Add { rhs, .. }
-        | AstNode::Sub { rhs, .. }
-        | AstNode::Mul { rhs, .. }
-        | AstNode::Div { rhs, .. }
-        | AstNode::Mod { rhs, .. } => rhs,
+    match &node.variant {
+        AstNodeVariant::Eq { rhs, .. }
+        | AstNodeVariant::Neq { rhs, .. }
+        | AstNodeVariant::Or { rhs, .. }
+        | AstNodeVariant::And { rhs, .. }
+        | AstNodeVariant::Gt { rhs, .. }
+        | AstNodeVariant::Gte { rhs, .. }
+        | AstNodeVariant::Lt { rhs, .. }
+        | AstNodeVariant::Lte { rhs, .. }
+        | AstNodeVariant::Add { rhs, .. }
+        | AstNodeVariant::Sub { rhs, .. }
+        | AstNodeVariant::Mul { rhs, .. }
+        | AstNodeVariant::Div { rhs, .. }
+        | AstNodeVariant::Mod { rhs, .. } => rhs,
 
         _ => unreachable!(),
     }
 }
 
 fn unwrap_expr<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    match node {
-        AstNode::Not { expr, .. } | AstNode::Neg { expr, .. } => expr,
+    match &node.variant {
+        AstNodeVariant::Not { expr } | AstNodeVariant::Neg { expr } => expr,
         _ => unreachable!(),
     }
 }

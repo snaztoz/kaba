@@ -6,7 +6,7 @@ use super::{
     types::{assert, Type},
     variable, while_loop,
 };
-use crate::ast::AstNode;
+use crate::ast::{AstNode, AstNodeVariant};
 
 /// Analyze a statement.
 ///
@@ -14,35 +14,32 @@ use crate::ast::AstNode;
 /// acts as an aggregate for another (more specific) statement analyzers, such
 /// as the AssignmentAnalyzer.
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
-    match node {
-        AstNode::VariableDeclaration { .. } => variable::analyze(state, node),
-        AstNode::If { .. } => conditional::analyze(state, node),
-        AstNode::While { .. } => while_loop::analyze(state, node),
-        AstNode::Each { .. } => each_loop::analyze(state, node),
-        AstNode::Break { .. } | AstNode::Continue { .. } => analyze_loop_control(state, node),
+    match &node.variant {
+        AstNodeVariant::VariableDeclaration { .. } => variable::analyze(state, node),
+        AstNodeVariant::If { .. } => conditional::analyze(state, node),
+        AstNodeVariant::While { .. } => while_loop::analyze(state, node),
+        AstNodeVariant::Each { .. } => each_loop::analyze(state, node),
+        AstNodeVariant::Break { .. } | AstNodeVariant::Continue { .. } => {
+            analyze_loop_control(state, node)
+        }
 
-        AstNode::FunctionDefinition { sym, .. } => Err(SemanticError {
+        AstNodeVariant::FunctionDefinition { sym, .. } => Err(SemanticError {
             variant: SemanticErrorVariant::UnexpectedStatement(node.to_string()),
-            span: sym.span().clone(),
+            span: sym.span.clone(),
         }),
 
-        AstNode::Return { .. } => analyze_return(state, node),
-        AstNode::Debug { .. } => analyze_debug(state, node),
+        AstNodeVariant::Return { .. } => analyze_return(state, node),
+        AstNodeVariant::Debug { .. } => analyze_debug(state, node),
 
-        expr => expression::analyze(state, expr),
+        _ => expression::analyze(state, node),
     }
 }
 
 fn analyze_loop_control(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
-    let span = match node {
-        AstNode::Break { span, .. } | AstNode::Continue { span, .. } => span,
-        _ => unreachable!(),
-    };
-
     if !state.is_inside_loop() {
         return Err(SemanticError {
             variant: SemanticErrorVariant::UnexpectedStatement(node.to_string()),
-            span: span.clone(),
+            span: node.span.clone(),
         });
     }
 
@@ -50,8 +47,8 @@ fn analyze_loop_control(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
 }
 
 fn analyze_return(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
-    let (expr, span) = if let AstNode::Return { expr, span } = node {
-        (expr, span)
+    let expr = if let AstNodeVariant::Return { expr } = &node.variant {
+        expr
     } else {
         unreachable!()
     };
@@ -63,12 +60,12 @@ fn analyze_return(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
 
     let return_t = state.nearest_return_t().ok_or_else(|| SemanticError {
         variant: SemanticErrorVariant::UnexpectedStatement(node.to_string()),
-        span: span.clone(),
+        span: node.span.clone(),
     })?;
 
     assert::is_assignable(&expr_t, &return_t, || match expr {
-        Some(expr) => expr.span().clone(),
-        None => span.clone(),
+        Some(expr) => expr.span.clone(),
+        None => node.span.clone(),
     })
     .map_err(|err| SemanticError {
         variant: SemanticErrorVariant::ReturnTypeMismatch {
@@ -82,7 +79,7 @@ fn analyze_return(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
 }
 
 fn analyze_debug(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
-    let expr = if let AstNode::Debug { expr, .. } = node {
+    let expr = if let AstNodeVariant::Debug { expr, .. } = &node.variant {
         expr
     } else {
         unreachable!()
@@ -92,7 +89,7 @@ fn analyze_debug(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     if expr_t == Type::Void {
         return Err(SemanticError {
             variant: SemanticErrorVariant::UnexpectedVoidTypeExpression,
-            span: expr.span().clone(),
+            span: expr.span.clone(),
         });
     }
 

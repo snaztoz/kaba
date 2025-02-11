@@ -1,6 +1,6 @@
 use super::{error::Result, types::Type};
 use crate::{
-    ast::{AstNode, SymbolId},
+    ast::{AstNodeVariant, SymbolId},
     lexer, parser,
     semantic::{self, expression, state::AnalyzerState},
 };
@@ -40,7 +40,7 @@ pub fn eval_expr(input: &str, symbols: &[(&str, Type)]) -> Result<Type> {
     let tokens = lexer::lex(input).unwrap();
     let ast = parser::parse(tokens).unwrap();
 
-    if let AstNode::Program { body, .. } = &ast {
+    if let AstNodeVariant::Program { body, .. } = &ast.variant {
         let state = AnalyzerState::new();
         for (i, (sym, t)) in symbols.iter().enumerate() {
             // make id large to avoid collision during test

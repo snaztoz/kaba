@@ -1,4 +1,8 @@
-use crate::{ast::AstNode, lexer, parser::parse};
+use crate::{
+    ast::{AstNode, AstNodeVariant},
+    lexer,
+    parser::parse,
+};
 
 pub fn assert_ast(input: &str, expect: AstNode) {
     let tokens = lexer::lex(input).unwrap();
@@ -7,9 +11,11 @@ pub fn assert_ast(input: &str, expect: AstNode) {
     assert!(result.is_ok());
     assert_eq!(
         result.unwrap(),
-        AstNode::Program {
-            body: vec![expect],
-            scope_id: 1,
+        AstNode {
+            variant: AstNodeVariant::Program {
+                body: vec![expect],
+                scope_id: 1
+            },
             span: 0..input.len(),
         }
     );
