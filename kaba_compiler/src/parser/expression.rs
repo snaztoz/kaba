@@ -25,6 +25,7 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
             let span = lhs.span.start..rhs.span.end;
 
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::Assign {
                     lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
@@ -40,6 +41,7 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
             let span = lhs.span.start..rhs.span.end;
 
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::AddAssign {
                     lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
@@ -54,6 +56,7 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
             let span = lhs.span.start..rhs.span.end;
 
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::SubAssign {
                     lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
@@ -68,6 +71,7 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
             let span = lhs.span.start..rhs.span.end;
 
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::MulAssign {
                     lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
@@ -82,6 +86,7 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
             let span = lhs.span.start..rhs.span.end;
 
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::DivAssign {
                     lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
@@ -96,6 +101,7 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
             let span = lhs.span.start..rhs.span.end;
 
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::ModAssign {
                     lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
@@ -123,6 +129,7 @@ fn parse_logical_and_or_expression<'src>(
                 let span = lhs.span.start..rhs.span.end;
 
                 lhs = AstNode {
+                    id: state.next_id(),
                     variant: AstNodeVariant::Or {
                         lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
@@ -137,6 +144,7 @@ fn parse_logical_and_or_expression<'src>(
                 let span = lhs.span.start..rhs.span.end;
 
                 lhs = AstNode {
+                    id: state.next_id(),
                     variant: AstNodeVariant::And {
                         lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
@@ -163,6 +171,7 @@ fn parse_equality_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src
                 let span = lhs.span.start..rhs.span.end;
 
                 lhs = AstNode {
+                    id: state.next_id(),
                     variant: AstNodeVariant::Eq {
                         lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
@@ -177,6 +186,7 @@ fn parse_equality_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src
                 let span = lhs.span.start..rhs.span.end;
 
                 lhs = AstNode {
+                    id: state.next_id(),
                     variant: AstNodeVariant::Neq {
                         lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
@@ -202,6 +212,7 @@ fn parse_comparison_expression<'src>(state: &ParserState<'src, '_>) -> Result<'s
             let span = lhs.span.start..rhs.span.end;
 
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::Gt {
                     lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
@@ -216,6 +227,7 @@ fn parse_comparison_expression<'src>(state: &ParserState<'src, '_>) -> Result<'s
             let span = lhs.span.start..rhs.span.end;
 
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::Gte {
                     lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
@@ -230,6 +242,7 @@ fn parse_comparison_expression<'src>(state: &ParserState<'src, '_>) -> Result<'s
             let span = lhs.span.start..rhs.span.end;
 
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::Lt {
                     lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
@@ -244,6 +257,7 @@ fn parse_comparison_expression<'src>(state: &ParserState<'src, '_>) -> Result<'s
             let span = lhs.span.start..rhs.span.end;
 
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::Lte {
                     lhs: Box::new(lhs.unwrap_group()),
                     rhs: Box::new(rhs.unwrap_group()),
@@ -269,6 +283,7 @@ fn parse_additive_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src
                 let span = lhs.span.start..rhs.span.end;
 
                 lhs = AstNode {
+                    id: state.next_id(),
                     variant: AstNodeVariant::Add {
                         lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
@@ -283,6 +298,7 @@ fn parse_additive_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src
                 let span = lhs.span.start..rhs.span.end;
 
                 lhs = AstNode {
+                    id: state.next_id(),
                     variant: AstNodeVariant::Sub {
                         lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
@@ -311,6 +327,7 @@ fn parse_multiplicative_expression<'src>(
                 let span = lhs.span.start..rhs.span.end;
 
                 lhs = AstNode {
+                    id: state.next_id(),
                     variant: AstNodeVariant::Mul {
                         lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
@@ -325,6 +342,7 @@ fn parse_multiplicative_expression<'src>(
                 let span = lhs.span.start..rhs.span.end;
 
                 lhs = AstNode {
+                    id: state.next_id(),
                     variant: AstNodeVariant::Div {
                         lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
@@ -339,6 +357,7 @@ fn parse_multiplicative_expression<'src>(
                 let span = lhs.span.start..rhs.span.end;
 
                 lhs = AstNode {
+                    id: state.next_id(),
                     variant: AstNodeVariant::Mod {
                         lhs: Box::new(lhs.unwrap_group()),
                         rhs: Box::new(rhs.unwrap_group()),
@@ -381,6 +400,7 @@ fn parse_unary_expression<'src>(
                 state.tokens.skip(&TokenKind::RParen)?;
 
                 expr = AstNode {
+                    id: state.next_id(),
                     variant: AstNodeVariant::FunctionCall {
                         callee: Box::new(expr.unwrap_group()),
                         args,
@@ -401,6 +421,7 @@ fn parse_unary_expression<'src>(
                 state.tokens.skip(&TokenKind::RBrack)?;
 
                 expr = AstNode {
+                    id: state.next_id(),
                     variant: AstNodeVariant::IndexAccess {
                         object: Box::new(expr.unwrap_group()),
                         index: Box::new(index),
@@ -436,6 +457,7 @@ fn parse_prefix_expression<'src>(
             } = expr.variant
             {
                 return Ok(AstNode {
+                    id: state.next_id(),
                     variant: AstNodeVariant::Literal {
                         lit: Literal::Int(n),
                     },
@@ -444,6 +466,7 @@ fn parse_prefix_expression<'src>(
             }
 
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::Neg {
                     expr: Box::new(expr.unwrap_group()),
                 },
@@ -451,6 +474,7 @@ fn parse_prefix_expression<'src>(
             })
         }
         TokenKind::Not => Ok(AstNode {
+            id: state.next_id(),
             variant: AstNodeVariant::Not {
                 expr: Box::new(expr.unwrap_group()),
             },
@@ -480,6 +504,7 @@ fn parse_primary_expression<'src>(
             state.tokens.skip(&TokenKind::RParen)?;
 
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::Group {
                     expr: Box::new(expr),
                 },
@@ -491,6 +516,7 @@ fn parse_primary_expression<'src>(
         TokenKind::Symbol(name) => {
             state.tokens.advance();
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::Symbol { name },
                 span: token.span,
             })
@@ -517,6 +543,7 @@ fn parse_primary_expression<'src>(
             };
 
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::Literal {
                     lit: Literal::Int(lit),
                 },
@@ -526,6 +553,7 @@ fn parse_primary_expression<'src>(
         TokenKind::Float(n) => {
             state.tokens.advance();
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::Literal {
                     lit: Literal::Float(n),
                 },
@@ -535,6 +563,7 @@ fn parse_primary_expression<'src>(
         TokenKind::Bool(b) => {
             state.tokens.advance();
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::Literal {
                     lit: Literal::Bool(b),
                 },
@@ -544,6 +573,7 @@ fn parse_primary_expression<'src>(
         TokenKind::Char(c) => {
             state.tokens.advance();
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::Literal {
                     lit: Literal::Char(c),
                 },
@@ -553,6 +583,7 @@ fn parse_primary_expression<'src>(
         TokenKind::String(s) => {
             state.tokens.advance();
             Ok(AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::Literal {
                     lit: Literal::String(s),
                 },
@@ -656,6 +687,7 @@ fn parse_array_literal<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstN
     state.tokens.skip(&TokenKind::RBrack)?;
 
     Ok(AstNode {
+        id: state.next_id(),
         variant: AstNodeVariant::Literal {
             lit: Literal::Array {
                 elem_tn: Box::new(elem_tn),
@@ -683,14 +715,17 @@ mod tests {
         assert_ast(
             "2147483647 + -2147483648;",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Add {
                     lhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Int(2147483647),
                         },
                         span: 0..10,
                     }),
                     rhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Int(-2147483648),
                         },
@@ -713,22 +748,28 @@ mod tests {
         assert_ast(
             "abc + 512 * 200 - abc / 3;",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Sub {
                     lhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Add {
                             lhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Symbol { name: "abc" },
                                 span: 0..3,
                             }),
                             rhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Mul {
                                     lhs: Box::new(AstNode {
+                                        id: 0,
                                         variant: AstNodeVariant::Literal {
                                             lit: Literal::Int(512),
                                         },
                                         span: 6..9,
                                     }),
                                     rhs: Box::new(AstNode {
+                                        id: 0,
                                         variant: AstNodeVariant::Literal {
                                             lit: Literal::Int(200),
                                         },
@@ -741,12 +782,15 @@ mod tests {
                         span: 0..15,
                     }),
                     rhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Div {
                             lhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Symbol { name: "abc" },
                                 span: 18..21,
                             }),
                             rhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Literal {
                                     lit: Literal::Int(3),
                                 },
@@ -766,20 +810,25 @@ mod tests {
         assert_ast(
             "abc = 123 * x;",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Assign {
                     lhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "abc" },
                         span: 0..3,
                     }),
                     rhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Mul {
                             lhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Literal {
                                     lit: Literal::Int(123),
                                 },
                                 span: 6..9,
                             }),
                             rhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Symbol { name: "x" },
                                 span: 12..13,
                             }),
@@ -797,12 +846,15 @@ mod tests {
         assert_ast(
             "x = (-5);",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Assign {
                     lhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "x" },
                         span: 0..1,
                     }),
                     rhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Int(-5),
                         },
@@ -819,12 +871,15 @@ mod tests {
         assert_ast(
             "x += (-5);",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::AddAssign {
                     lhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "x" },
                         span: 0..1,
                     }),
                     rhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Int(-5),
                         },
@@ -841,12 +896,15 @@ mod tests {
         assert_ast(
             "x -= (-5);",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::SubAssign {
                     lhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "x" },
                         span: 0..1,
                     }),
                     rhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Int(-5),
                         },
@@ -863,12 +921,15 @@ mod tests {
         assert_ast(
             "x *= (-5);",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::MulAssign {
                     lhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "x" },
                         span: 0..1,
                     }),
                     rhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Int(-5),
                         },
@@ -885,12 +946,15 @@ mod tests {
         assert_ast(
             "x /= (-5);",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::DivAssign {
                     lhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "x" },
                         span: 0..1,
                     }),
                     rhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Int(-5),
                         },
@@ -907,12 +971,15 @@ mod tests {
         assert_ast(
             "x %= (-5);",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::ModAssign {
                     lhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "x" },
                         span: 0..1,
                     }),
                     rhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Int(-5),
                         },
@@ -929,14 +996,17 @@ mod tests {
         assert_ast(
             "50.0 % 2.0;",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Mod {
                     lhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Float(50.0),
                         },
                         span: 0..4,
                     }),
                     rhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Float(2.0),
                         },
@@ -953,16 +1023,20 @@ mod tests {
         assert_ast(
             "(123 - 53) * 7;",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Mul {
                     lhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Sub {
                             lhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Literal {
                                     lit: Literal::Int(123),
                                 },
                                 span: 1..4,
                             }),
                             rhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Literal {
                                     lit: Literal::Int(53),
                                 },
@@ -972,6 +1046,7 @@ mod tests {
                         span: 1..9,
                     }),
                     rhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Int(7),
                         },
@@ -988,20 +1063,25 @@ mod tests {
         assert_ast(
             "123 + (foo - 50);",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Add {
                     lhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Int(123),
                         },
                         span: 0..3,
                     }),
                     rhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Sub {
                             lhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Symbol { name: "foo" },
                                 span: 7..10,
                             }),
                             rhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Literal {
                                     lit: Literal::Int(50),
                                 },
@@ -1021,6 +1101,7 @@ mod tests {
         assert_ast(
             "(((75)));",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Literal {
                     lit: Literal::Int(75),
                 },
@@ -1034,29 +1115,36 @@ mod tests {
         assert_ast(
             "abc(123, 50 + 2) * 7;",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Mul {
                     lhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::FunctionCall {
                             callee: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Symbol { name: "abc" },
                                 span: 0..3,
                             }),
                             args: vec![
                                 AstNode {
+                                    id: 0,
                                     variant: AstNodeVariant::Literal {
                                         lit: Literal::Int(123),
                                     },
                                     span: 4..7,
                                 },
                                 AstNode {
+                                    id: 0,
                                     variant: AstNodeVariant::Add {
                                         lhs: Box::new(AstNode {
+                                            id: 0,
                                             variant: AstNodeVariant::Literal {
                                                 lit: Literal::Int(50),
                                             },
                                             span: 9..11,
                                         }),
                                         rhs: Box::new(AstNode {
+                                            id: 0,
                                             variant: AstNodeVariant::Literal {
                                                 lit: Literal::Int(2),
                                             },
@@ -1070,6 +1158,7 @@ mod tests {
                         span: 0..16,
                     }),
                     rhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Int(7),
                         },
@@ -1086,25 +1175,31 @@ mod tests {
         assert_ast(
             "abc(xyz(123, 456),);",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::FunctionCall {
                     callee: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "abc" },
                         span: 0..3,
                     }),
                     args: vec![AstNode {
+                        id: 0,
                         variant: AstNodeVariant::FunctionCall {
                             callee: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Symbol { name: "xyz" },
                                 span: 4..7,
                             }),
                             args: vec![
                                 AstNode {
+                                    id: 0,
                                     variant: AstNodeVariant::Literal {
                                         lit: Literal::Int(123),
                                     },
                                     span: 8..11,
                                 },
                                 AstNode {
+                                    id: 0,
                                     variant: AstNodeVariant::Literal {
                                         lit: Literal::Int(456),
                                     },
@@ -1125,10 +1220,13 @@ mod tests {
         assert_ast(
             "-abc + (-(5)) * -(-7);",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Add {
                     lhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Neg {
                             expr: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Symbol { name: "abc" },
                                 span: 1..4,
                             }),
@@ -1136,10 +1234,13 @@ mod tests {
                         span: 0..4,
                     }),
                     rhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Mul {
                             lhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Neg {
                                     expr: Box::new(AstNode {
+                                        id: 0,
                                         variant: AstNodeVariant::Literal {
                                             lit: Literal::Int(5),
                                         },
@@ -1149,8 +1250,10 @@ mod tests {
                                 span: 8..12,
                             }),
                             rhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Neg {
                                     expr: Box::new(AstNode {
+                                        id: 0,
                                         variant: AstNodeVariant::Literal {
                                             lit: Literal::Int(-7),
                                         },
@@ -1173,18 +1276,24 @@ mod tests {
         assert_ast(
             "-(-(abc)(-foo));",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Neg {
                     expr: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Neg {
                             expr: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::FunctionCall {
                                     callee: Box::new(AstNode {
+                                        id: 0,
                                         variant: AstNodeVariant::Symbol { name: "abc" },
                                         span: 4..7,
                                     }),
                                     args: vec![AstNode {
+                                        id: 0,
                                         variant: AstNodeVariant::Neg {
                                             expr: Box::new(AstNode {
+                                                id: 0,
                                                 variant: AstNodeVariant::Symbol { name: "foo" },
                                                 span: 10..13,
                                             }),
@@ -1208,12 +1317,15 @@ mod tests {
         assert_ast(
             "foo[3];",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::IndexAccess {
                     object: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "foo" },
                         span: 0..3,
                     }),
                     index: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Int(3),
                         },
@@ -1230,14 +1342,18 @@ mod tests {
         assert_ast(
             "foo[3][10];",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::IndexAccess {
                     object: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::IndexAccess {
                             object: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Symbol { name: "foo" },
                                 span: 0..3,
                             }),
                             index: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Literal {
                                     lit: Literal::Int(3),
                                 },
@@ -1247,6 +1363,7 @@ mod tests {
                         span: 0..6,
                     }),
                     index: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Int(10),
                         },
@@ -1263,6 +1380,7 @@ mod tests {
         assert_ast(
             "true;",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Literal {
                     lit: Literal::Bool(true),
                 },
@@ -1276,6 +1394,7 @@ mod tests {
         assert_ast(
             "'a';",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Literal {
                     lit: Literal::Char('a'),
                 },
@@ -1289,6 +1408,7 @@ mod tests {
         assert_ast(
             r#""abc def 012";"#,
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Literal {
                     lit: Literal::String(String::from("abc def 012")),
                 },
@@ -1302,16 +1422,20 @@ mod tests {
         assert_ast(
             "1 >= 5 == true;",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Eq {
                     lhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Gte {
                             lhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Literal {
                                     lit: Literal::Int(1),
                                 },
                                 span: 0..1,
                             }),
                             rhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Literal {
                                     lit: Literal::Int(5),
                                 },
@@ -1321,6 +1445,7 @@ mod tests {
                         span: 0..6,
                     }),
                     rhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Bool(true),
                         },
@@ -1337,18 +1462,23 @@ mod tests {
         assert_ast(
             "false || !false && true;",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::And {
                     lhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Or {
                             lhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Literal {
                                     lit: Literal::Bool(false),
                                 },
                                 span: 0..5,
                             }),
                             rhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Not {
                                     expr: Box::new(AstNode {
+                                        id: 0,
                                         variant: AstNodeVariant::Literal {
                                             lit: Literal::Bool(false),
                                         },
@@ -1361,6 +1491,7 @@ mod tests {
                         span: 0..15,
                     }),
                     rhs: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Bool(true),
                         },
@@ -1377,9 +1508,11 @@ mod tests {
         assert_ast(
             "[int];",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Literal {
                     lit: Literal::Array {
                         elem_tn: Box::new(AstNode {
+                            id: 0,
                             variant: AstNodeVariant::TypeNotation {
                                 tn: TypeNotation::Symbol("int"),
                             },
@@ -1398,15 +1531,18 @@ mod tests {
         assert_ast(
             "[int 5];",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Literal {
                     lit: Literal::Array {
                         elem_tn: Box::new(AstNode {
+                            id: 0,
                             variant: AstNodeVariant::TypeNotation {
                                 tn: TypeNotation::Symbol("int"),
                             },
                             span: 1..4,
                         }),
                         elems: vec![AstNode {
+                            id: 0,
                             variant: AstNodeVariant::Literal {
                                 lit: Literal::Int(5),
                             },
@@ -1424,12 +1560,15 @@ mod tests {
         assert_ast(
             "[[]int];",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Literal {
                     lit: Literal::Array {
                         elem_tn: Box::new(AstNode {
+                            id: 0,
                             variant: AstNodeVariant::TypeNotation {
                                 tn: TypeNotation::Array {
                                     elem_tn: Box::new(AstNode {
+                                        id: 0,
                                         variant: AstNodeVariant::TypeNotation {
                                             tn: TypeNotation::Symbol("int"),
                                         },
@@ -1452,12 +1591,15 @@ mod tests {
         assert_ast(
             "[[]int [int]];",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Literal {
                     lit: Literal::Array {
                         elem_tn: Box::new(AstNode {
+                            id: 0,
                             variant: AstNodeVariant::TypeNotation {
                                 tn: TypeNotation::Array {
                                     elem_tn: Box::new(AstNode {
+                                        id: 0,
                                         variant: AstNodeVariant::TypeNotation {
                                             tn: TypeNotation::Symbol("int"),
                                         },
@@ -1468,9 +1610,11 @@ mod tests {
                             span: 1..6,
                         }),
                         elems: vec![AstNode {
+                            id: 0,
                             variant: AstNodeVariant::Literal {
                                 lit: Literal::Array {
                                     elem_tn: Box::new(AstNode {
+                                        id: 0,
                                         variant: AstNodeVariant::TypeNotation {
                                             tn: TypeNotation::Symbol("int"),
                                         },

@@ -1,5 +1,5 @@
 use super::types::{Type, BASIC_T};
-use crate::ast::{ScopeId, SymbolId};
+use crate::ast::NodeId;
 use scope::{ScopeTable, ScopeVariant, GLOBAL_SCOPE_ID};
 use std::cell::RefCell;
 use symbol::{SymbolTable, SymbolTableData, SymbolType};
@@ -10,7 +10,7 @@ pub mod symbol;
 pub struct AnalyzerState {
     symbols: SymbolTable,
     scopes: ScopeTable,
-    _current_scope_id: RefCell<ScopeId>,
+    _current_scope_id: RefCell<NodeId>,
 }
 
 impl AnalyzerState {
@@ -118,7 +118,7 @@ impl AnalyzerState {
     }
 
     /// Save symbol and its associated type to current active scope.
-    pub fn save_entity(&self, sym_id: SymbolId, sym: &str, t: Type) {
+    pub fn save_entity(&self, sym_id: NodeId, sym: &str, t: Type) {
         // Save to scope table
         self.scopes.add_sym(sym_id, sym, self.current_scope_id());
 
@@ -127,7 +127,7 @@ impl AnalyzerState {
     }
 
     /// Execute `action` within a new function scope.
-    pub fn with_function_scope<U, F>(&self, scope_id: ScopeId, return_t: Type, action: F) -> U
+    pub fn with_function_scope<U, F>(&self, scope_id: NodeId, return_t: Type, action: F) -> U
     where
         F: FnOnce() -> U,
     {
@@ -135,7 +135,7 @@ impl AnalyzerState {
     }
 
     /// Execute `action` within a new conditional scope.
-    pub fn with_conditional_scope<U, F>(&self, scope_id: ScopeId, action: F) -> U
+    pub fn with_conditional_scope<U, F>(&self, scope_id: NodeId, action: F) -> U
     where
         F: FnOnce() -> U,
     {
@@ -143,7 +143,7 @@ impl AnalyzerState {
     }
 
     /// Execute `action` within a new loop scope.
-    pub fn with_loop_scope<U, F>(&self, scope_id: ScopeId, action: F) -> U
+    pub fn with_loop_scope<U, F>(&self, scope_id: NodeId, action: F) -> U
     where
         F: FnOnce() -> U,
     {
@@ -153,7 +153,7 @@ impl AnalyzerState {
     /// Execute `action` within a scope of `variant` variant.
     ///
     /// It automatically handles the creating and exiting of the new scope.
-    fn with_scope<U, F>(&self, scope_id: ScopeId, scope_variant: ScopeVariant, action: F) -> U
+    fn with_scope<U, F>(&self, scope_id: NodeId, scope_variant: ScopeVariant, action: F) -> U
     where
         F: FnOnce() -> U,
     {
@@ -168,11 +168,11 @@ impl AnalyzerState {
         result
     }
 
-    fn current_scope_id(&self) -> ScopeId {
+    fn current_scope_id(&self) -> NodeId {
         *self._current_scope_id.borrow()
     }
 
-    fn enter_scope(&self, scope_id: ScopeId) {
+    fn enter_scope(&self, scope_id: NodeId) {
         *self._current_scope_id.borrow_mut() = scope_id;
     }
 }

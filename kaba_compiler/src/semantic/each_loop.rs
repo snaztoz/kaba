@@ -5,10 +5,7 @@ use super::{
     state::AnalyzerState,
     types::{assert, Type},
 };
-use crate::{
-    ast::{AstNode, SymbolId},
-    AstNodeVariant,
-};
+use crate::{ast::AstNode, AstNodeVariant};
 
 /// Analyze `each` loop statement.
 ///
@@ -45,13 +42,14 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     let expr_t = expression::analyze(state, unwrap_iterable(node))?;
     assert::is_iterable(&expr_t, || unwrap_iterable(node).span.clone())?;
 
-    let elem_sym = unwrap_elem_sym(node).variant.unwrap_symbol();
+    let elem_sym = unwrap_elem_sym(node);
+    let elem_sym_str = elem_sym.variant.unwrap_symbol();
     let elem_t = expr_t.unwrap_array();
 
     // Check all statements inside the body with a new scope
 
-    state.with_loop_scope(node.variant.scope_id(), || {
-        state.save_entity(unwrap_elem_sym_id(node), elem_sym, elem_t);
+    state.with_loop_scope(node.id, || {
+        state.save_entity(elem_sym.id, elem_sym_str, elem_t);
         body::analyze(state, node)
     })?;
 
@@ -69,14 +67,6 @@ fn unwrap_iterable<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
 fn unwrap_elem_sym<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
     if let AstNodeVariant::Each { elem_sym, .. } = &node.variant {
         elem_sym
-    } else {
-        unreachable!()
-    }
-}
-
-fn unwrap_elem_sym_id(node: &AstNode) -> SymbolId {
-    if let AstNodeVariant::Each { elem_sym_id, .. } = &node.variant {
-        *elem_sym_id
     } else {
         unreachable!()
     }

@@ -1,36 +1,30 @@
 use super::stream::TokenStream;
-use crate::ast::SymbolId;
+use crate::ast::NodeId;
 use std::cell::RefCell;
 
 pub struct ParserState<'src, 'a> {
     pub tokens: &'a TokenStream<'src>,
-    symbol_id_gen: RefCell<IdGenerator>,
-    scope_id_gen: RefCell<IdGenerator>,
+    id_gen: RefCell<IdGenerator>,
 }
 
 impl<'src, 'a> ParserState<'src, 'a> {
     pub fn new(tokens: &'a TokenStream<'src>) -> Self {
         Self {
             tokens,
-            symbol_id_gen: RefCell::new(IdGenerator::new()),
-            scope_id_gen: RefCell::new(IdGenerator::new()),
+            id_gen: RefCell::new(IdGenerator::new()),
         }
     }
 }
 
 impl ParserState<'_, '_> {
-    pub fn next_symbol_id(&self) -> SymbolId {
-        self.symbol_id_gen.borrow_mut().next().unwrap()
-    }
-
-    pub fn next_scope_id(&self) -> SymbolId {
-        self.scope_id_gen.borrow_mut().next().unwrap()
+    pub fn next_id(&self) -> NodeId {
+        self.id_gen.borrow_mut().next().unwrap()
     }
 }
 
 /// Implements the [`Iterator`] trait to generate a new ID.
 pub struct IdGenerator {
-    current: SymbolId,
+    current: NodeId,
 }
 
 impl IdGenerator {
@@ -40,7 +34,7 @@ impl IdGenerator {
 }
 
 impl Iterator for IdGenerator {
-    type Item = SymbolId;
+    type Item = NodeId;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.current += 1;

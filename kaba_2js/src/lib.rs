@@ -61,18 +61,15 @@ fn compile_statement(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut Str
 
 fn compile_function_definition(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
     if let AstNodeVariant::FunctionDefinition {
-        sym_id,
-        params,
-        body,
-        ..
+        sym, params, body, ..
     } = &stmt.variant
     {
-        let entry = &sym_table[sym_id];
+        let entry = &sym_table[&sym.id];
         buff.push_str(&format!("function {}(", entry.name));
 
         let params_str = params
             .iter()
-            .map(|p| String::from(&sym_table[&p.sym_id].name))
+            .map(|p| String::from(&sym_table[&p.sym.id].name))
             .collect::<Vec<_>>()
             .join(",");
         buff.push_str(&format!("{params_str}){{"));
@@ -83,8 +80,8 @@ fn compile_function_definition(stmt: &AstNode, sym_table: &SymbolTableData, buff
 }
 
 fn compile_variable_declaration(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
-    if let AstNodeVariant::VariableDeclaration { sym_id, val, .. } = &stmt.variant {
-        let entry = &sym_table[sym_id];
+    if let AstNodeVariant::VariableDeclaration { sym, val, .. } = &stmt.variant {
+        let entry = &sym_table[&sym.id];
 
         buff.push_str(&format!("let {}=", entry.name));
         compile_expression(val, sym_table, buff);
@@ -136,13 +133,13 @@ fn compile_while_loop(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut St
 
 fn compile_each_loop(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
     if let AstNodeVariant::Each {
-        elem_sym_id,
+        elem_sym,
         iterable,
         body,
         ..
     } = &stmt.variant
     {
-        buff.push_str(&format!("for(let {} of ", sym_table[elem_sym_id].name));
+        buff.push_str(&format!("for(let {} of ", sym_table[&elem_sym.id].name));
         compile_expression(iterable, sym_table, buff);
         buff.push_str("){");
         compile_body(body, sym_table, buff);

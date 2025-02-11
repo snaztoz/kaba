@@ -14,16 +14,15 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
     let cond = expression::parse(state)?;
 
     // Expecting block
-    let scope_id = state.next_scope_id();
     let block = block::parse(state)?;
 
     let end = block.span.end;
 
     Ok(AstNode {
+        id: state.next_id(),
         variant: AstNodeVariant::While {
             cond: Box::new(cond),
             body: block.body,
-            scope_id,
         },
         span: start..end,
     })
@@ -41,15 +40,16 @@ mod tests {
         assert_ast(
             "while true {}",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::While {
                     cond: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Bool(true),
                         },
                         span: 6..10,
                     }),
                     body: vec![],
-                    scope_id: 2,
                 },
                 span: 0..13,
             },
@@ -61,8 +61,10 @@ mod tests {
         assert_ast(
             "while true { continue; break; }",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::While {
                     cond: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Bool(true),
                         },
@@ -70,15 +72,16 @@ mod tests {
                     }),
                     body: vec![
                         AstNode {
+                            id: 0,
                             variant: AstNodeVariant::Continue,
                             span: 13..21,
                         },
                         AstNode {
+                            id: 0,
                             variant: AstNodeVariant::Break,
                             span: 23..28,
                         },
                     ],
-                    scope_id: 2,
                 },
                 span: 0..31,
             },

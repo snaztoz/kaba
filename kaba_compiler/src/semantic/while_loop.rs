@@ -47,7 +47,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
 
     // Check all statements inside the body with a new scope
 
-    state.with_loop_scope(node.variant.scope_id(), || body::analyze(state, node))?;
+    state.with_loop_scope(node.id, || body::analyze(state, node))?;
 
     Ok(Type::Void)
 }

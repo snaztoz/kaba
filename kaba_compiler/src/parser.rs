@@ -34,7 +34,6 @@ pub fn parse(tokens: Vec<Token>) -> Result<AstNode> {
     let parser_state = ParserState::new(&tokens);
 
     let mut body = vec![];
-    let global_scope_id = parser_state.next_scope_id();
 
     while !tokens.current_is(&TokenKind::Eof) {
         let stmt = statement::parse(&parser_state)?;
@@ -42,10 +41,8 @@ pub fn parse(tokens: Vec<Token>) -> Result<AstNode> {
     }
 
     Ok(AstNode {
-        variant: AstNodeVariant::Program {
-            body,
-            scope_id: global_scope_id,
-        },
+        id: parser_state.next_id(),
+        variant: AstNodeVariant::Program { body },
         span: 0..tokens.current().span.end,
     })
 }

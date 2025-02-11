@@ -18,15 +18,12 @@ pub fn analyze_declaration(state: &AnalyzerState, node: &AstNode) -> Result<()> 
 }
 
 pub fn analyze_definition(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
-    let scope_id = node.variant.scope_id();
-
     let (params_t, return_t) = get_function_t(state, node).unwrap_callable();
 
-    state.with_function_scope(scope_id, return_t.clone(), || {
+    state.with_function_scope(node.id, return_t.clone(), || {
         let params = node.variant.params().iter().zip(params_t);
 
         for (param, t) in params {
-            let sym_id = param.sym_id;
             let sym = &param.sym;
             let sym_str = sym.variant.unwrap_symbol();
 
@@ -37,7 +34,7 @@ pub fn analyze_definition(state: &AnalyzerState, node: &AstNode) -> Result<Type>
                 });
             }
 
-            state.save_entity(sym_id, sym_str, t);
+            state.save_entity(sym.id, sym_str, t);
         }
 
         // Analyze function body
@@ -97,7 +94,7 @@ fn save_function_t(state: &AnalyzerState, node: &AstNode) -> Result<()> {
         });
     }
 
-    state.save_entity(node.variant.sym_id(), sym_str, function_t);
+    state.save_entity(sym.id, sym_str, function_t);
 
     Ok(())
 }

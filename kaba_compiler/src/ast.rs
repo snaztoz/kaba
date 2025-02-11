@@ -6,12 +6,11 @@
 use logos::Span;
 use std::fmt::Display;
 
-pub type Id = u32;
-pub type SymbolId = Id;
-pub type ScopeId = Id;
+pub type NodeId = u32;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct AstNode<'src> {
+    pub id: NodeId,
     pub variant: AstNodeVariant<'src>,
     pub span: Span,
 }
@@ -32,18 +31,24 @@ impl Display for AstNode<'_> {
     }
 }
 
+impl PartialEq for AstNode<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.variant.eq(&other.variant)
+            && self.span.start == other.span.start
+            && self.span.end == other.span.end
+    }
+}
+
 /// The representation of each node that make up a whole Kaba AST.
 #[derive(Debug, PartialEq)]
 pub enum AstNodeVariant<'src> {
     // The root of all other AstNode<'src> variants
     Program {
         body: Vec<AstNode<'src>>,
-        scope_id: ScopeId,
     },
 
     VariableDeclaration {
         sym: Box<AstNode<'src>>,
-        sym_id: SymbolId,
         tn: Option<Box<AstNode<'src>>>,
         val: Box<AstNode<'src>>,
     },
@@ -51,27 +56,22 @@ pub enum AstNodeVariant<'src> {
     If {
         cond: Box<AstNode<'src>>,
         body: Vec<AstNode<'src>>,
-        scope_id: ScopeId,
         or_else: Option<Box<AstNode<'src>>>,
     },
 
     Else {
         body: Vec<AstNode<'src>>,
-        scope_id: ScopeId,
     },
 
     While {
         cond: Box<AstNode<'src>>,
         body: Vec<AstNode<'src>>,
-        scope_id: ScopeId,
     },
 
     Each {
         elem_sym: Box<AstNode<'src>>,
-        elem_sym_id: SymbolId,
         iterable: Box<AstNode<'src>>,
         body: Vec<AstNode<'src>>,
-        scope_id: ScopeId,
     },
 
     Break,
@@ -80,11 +80,9 @@ pub enum AstNodeVariant<'src> {
 
     FunctionDefinition {
         sym: Box<AstNode<'src>>,
-        sym_id: SymbolId,
         params: Vec<FunctionParam<'src>>,
         return_tn: Option<Box<AstNode<'src>>>,
         body: Vec<AstNode<'src>>,
-        scope_id: ScopeId,
     },
 
     Return {
@@ -97,7 +95,6 @@ pub enum AstNodeVariant<'src> {
 
     RecordDefinition {
         sym: Box<AstNode<'src>>,
-        sym_id: SymbolId,
         fields: Vec<RecordField<'src>>,
     },
 
@@ -245,15 +242,6 @@ impl AstNodeVariant<'_> {
         }
     }
 
-    pub fn sym_id(&self) -> SymbolId {
-        match self {
-            Self::FunctionDefinition { sym_id, .. } | Self::VariableDeclaration { sym_id, .. } => {
-                *sym_id
-            }
-            _ => unreachable!(),
-        }
-    }
-
     pub fn body(&self) -> &[AstNode] {
         match self {
             Self::Program { body, .. }
@@ -262,18 +250,6 @@ impl AstNodeVariant<'_> {
             | AstNodeVariant::Else { body, .. }
             | AstNodeVariant::While { body, .. }
             | AstNodeVariant::Each { body, .. } => body,
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn scope_id(&self) -> ScopeId {
-        match self {
-            Self::Program { scope_id, .. }
-            | Self::FunctionDefinition { scope_id, .. }
-            | Self::If { scope_id, .. }
-            | Self::Else { scope_id, .. }
-            | Self::While { scope_id, .. }
-            | Self::Each { scope_id, .. } => *scope_id,
             _ => unreachable!(),
         }
     }
@@ -435,14 +411,12 @@ impl Display for AstNodeVariant<'_> {
 #[derive(Debug, PartialEq)]
 pub struct FunctionParam<'src> {
     pub sym: AstNode<'src>,
-    pub sym_id: SymbolId,
     pub tn: AstNode<'src>,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct RecordField<'src> {
     pub sym: AstNode<'src>,
-    pub sym_id: SymbolId,
     pub tn: AstNode<'src>,
 }
 

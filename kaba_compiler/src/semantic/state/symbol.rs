@@ -1,7 +1,7 @@
-use crate::{ast::SymbolId, semantic::types::Type};
+use crate::{ast::NodeId, semantic::types::Type};
 use std::{cell::RefCell, collections::HashMap};
 
-pub type SymbolTableData = HashMap<SymbolId, SymbolEntry>;
+pub type SymbolTableData = HashMap<NodeId, SymbolEntry>;
 
 pub struct SymbolTable {
     table: RefCell<SymbolTableData>,
@@ -18,14 +18,14 @@ impl SymbolTable {
         self.table.take()
     }
 
-    pub fn get_t(&self, id: SymbolId) -> Option<SymbolType> {
+    pub fn get_t(&self, id: NodeId) -> Option<SymbolType> {
         self.table
             .borrow()
             .get(&id)
             .map(|symbol_entry| symbol_entry.t.clone())
     }
 
-    pub fn add_entity(&self, id: SymbolId, sym: &str, t: Type) {
+    pub fn add_entity(&self, id: NodeId, sym: &str, t: Type) {
         self.table.borrow_mut().insert(
             id,
             SymbolEntry {

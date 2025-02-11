@@ -12,10 +12,8 @@ pub fn assert_ast(input: &str, expect: AstNode) {
     assert_eq!(
         result.unwrap(),
         AstNode {
-            variant: AstNodeVariant::Program {
-                body: vec![expect],
-                scope_id: 1
-            },
+            id: 0,
+            variant: AstNodeVariant::Program { body: vec![expect] },
             span: 0..input.len(),
         }
     );

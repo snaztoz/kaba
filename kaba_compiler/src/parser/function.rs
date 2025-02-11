@@ -16,7 +16,6 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
     state.tokens.skip(&TokenKind::Def)?;
 
     // Expecting symbol
-    let sym_id = state.next_symbol_id();
     let sym = sym::parse(state, "function name")?;
 
     // Expecting parameters (optional)
@@ -35,17 +34,16 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
     let return_tn = parse_return_tn(state)?;
 
     // Expecting function body
-    let scope_id = state.next_scope_id();
     let block = block::parse(state)?;
 
     Ok(AstNode {
+        id: state.next_id(),
         variant: AstNodeVariant::FunctionDefinition {
             params,
             sym: Box::new(sym),
-            sym_id,
+
             return_tn: return_tn.map(Box::new),
             body: block.body,
-            scope_id,
         },
         span: start..block.span.end,
     })
@@ -55,7 +53,6 @@ fn parse_params<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<Functio
     let mut params = vec![];
     while !state.tokens.current_is(&TokenKind::RParen) {
         // Expecting symbol
-        let sym_id = state.next_symbol_id();
         let sym = sym::parse(state, "parameter name")?;
 
         // Expecting ":"
@@ -64,7 +61,7 @@ fn parse_params<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<Functio
         // Expecting type notation
         let tn = tn::parse(state)?;
 
-        params.push(FunctionParam { sym, sym_id, tn });
+        params.push(FunctionParam { sym, tn });
 
         // Expecting either "," or ")"
 
@@ -113,16 +110,17 @@ mod tests {
         assert_ast(
             "def foo {}",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::FunctionDefinition {
                     sym: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "foo" },
                         span: 4..7,
                     }),
-                    sym_id: 1,
+
                     params: vec![],
                     return_tn: None,
                     body: vec![],
-                    scope_id: 2,
                 },
                 span: 0..10,
             },
@@ -134,16 +132,17 @@ mod tests {
         assert_ast(
             "def foo() {}",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::FunctionDefinition {
                     sym: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "foo" },
                         span: 4..7,
                     }),
-                    sym_id: 1,
+
                     params: vec![],
                     return_tn: None,
                     body: vec![],
-                    scope_id: 2,
                 },
                 span: 0..12,
             },
@@ -155,20 +154,24 @@ mod tests {
         assert_ast(
             "def foo(x: int, y: bool,) {}",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::FunctionDefinition {
                     sym: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "foo" },
                         span: 4..7,
                     }),
-                    sym_id: 1,
+
                     params: vec![
                         FunctionParam {
                             sym: AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Symbol { name: "x" },
                                 span: 8..9,
                             },
-                            sym_id: 2,
+
                             tn: AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::TypeNotation {
                                     tn: TypeNotation::Symbol("int"),
                                 },
@@ -177,11 +180,13 @@ mod tests {
                         },
                         FunctionParam {
                             sym: AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Symbol { name: "y" },
                                 span: 16..17,
                             },
-                            sym_id: 3,
+
                             tn: AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::TypeNotation {
                                     tn: TypeNotation::Symbol("bool"),
                                 },
@@ -191,7 +196,6 @@ mod tests {
                     ],
                     return_tn: None,
                     body: vec![],
-                    scope_id: 2,
                 },
                 span: 0..28,
             },
@@ -203,19 +207,23 @@ mod tests {
         assert_ast(
             "def write(x: int) { print(x); }",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::FunctionDefinition {
                     sym: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "write" },
                         span: 4..9,
                     }),
-                    sym_id: 1,
+
                     params: vec![FunctionParam {
                         sym: AstNode {
+                            id: 0,
                             variant: AstNodeVariant::Symbol { name: "x" },
                             span: 10..11,
                         },
-                        sym_id: 2,
+
                         tn: AstNode {
+                            id: 0,
                             variant: AstNodeVariant::TypeNotation {
                                 tn: TypeNotation::Symbol("int"),
                             },
@@ -224,19 +232,21 @@ mod tests {
                     }],
                     return_tn: None,
                     body: vec![AstNode {
+                        id: 0,
                         variant: AstNodeVariant::FunctionCall {
                             callee: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Symbol { name: "print" },
                                 span: 20..25,
                             }),
                             args: vec![AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Symbol { name: "x" },
                                 span: 26..27,
                             }],
                         },
                         span: 20..28,
                     }],
-                    scope_id: 2,
                 },
                 span: 0..31,
             },
@@ -248,22 +258,27 @@ mod tests {
         assert_ast(
             "def foo: int { return 5; }",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::FunctionDefinition {
                     sym: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "foo" },
                         span: 4..7,
                     }),
-                    sym_id: 1,
+
                     params: vec![],
                     return_tn: Some(Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::TypeNotation {
                             tn: TypeNotation::Symbol("int"),
                         },
                         span: 9..12,
                     })),
                     body: vec![AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Return {
                             expr: Some(Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Literal {
                                     lit: Literal::Int(5),
                                 },
@@ -272,7 +287,6 @@ mod tests {
                         },
                         span: 15..23,
                     }],
-                    scope_id: 2,
                 },
                 span: 0..26,
             },

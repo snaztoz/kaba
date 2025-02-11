@@ -13,6 +13,7 @@ pub fn parse<'src>(state: &ParserState<'src, '_>, label: &'src str) -> Result<'s
     if let TokenKind::Symbol(name) = token.kind {
         state.tokens.advance();
         return Ok(AstNode {
+            id: state.next_id(),
             variant: AstNodeVariant::Symbol { name },
             span: token.span,
         });

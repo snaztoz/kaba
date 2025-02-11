@@ -11,7 +11,6 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
     state.tokens.skip(&TokenKind::Each)?;
 
     // Expecting element symbol
-    let elem_sym_id = state.next_symbol_id();
     let elem_sym = sym::parse(state, "item name")?;
 
     // Expecting "in" keyword
@@ -21,18 +20,16 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
     let arr = expression::parse(state)?;
 
     // Expecting block
-    let scope_id = state.next_scope_id();
     let block = block::parse(state)?;
 
     let end = block.span.end;
 
     Ok(AstNode {
+        id: state.next_id(),
         variant: AstNodeVariant::Each {
             iterable: Box::new(arr),
             elem_sym: Box::new(elem_sym),
-            elem_sym_id,
             body: block.body,
-            scope_id,
         },
         span: start..end,
     })
@@ -50,18 +47,20 @@ mod tests {
         assert_ast(
             "each elem in arr {}",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Each {
                     elem_sym: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "elem" },
                         span: 5..9,
                     }),
-                    elem_sym_id: 1,
+
                     iterable: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "arr" },
                         span: 13..16,
                     }),
                     body: vec![],
-                    scope_id: 2,
                 },
                 span: 0..19,
             },

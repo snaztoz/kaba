@@ -15,7 +15,6 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
     state.tokens.skip(&TokenKind::Record)?;
 
     // Parse symbol
-    let sym_id = state.next_symbol_id();
     let sym = sym::parse(state, "record name")?;
 
     state.tokens.skip(&TokenKind::LBrace)?;
@@ -25,9 +24,9 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
     state.tokens.skip(&TokenKind::RBrace)?;
 
     Ok(AstNode {
+        id: state.next_id(),
         variant: AstNodeVariant::RecordDefinition {
             sym: Box::new(sym),
-            sym_id,
             fields,
         },
         span: start..end,
@@ -39,7 +38,6 @@ fn parse_fields<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<RecordF
 
     while !state.tokens.current_is(&TokenKind::RBrace) {
         // Expecting symbol
-        let sym_id = state.next_symbol_id();
         let sym = sym::parse(state, "field name")?;
 
         // Expecting ":"
@@ -48,7 +46,7 @@ fn parse_fields<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<RecordF
         // Expecting type notation
         let tn = tn::parse(state)?;
 
-        fields.push(RecordField { sym, sym_id, tn });
+        fields.push(RecordField { sym, tn });
 
         // Expecting either "," or "}"
 
@@ -85,12 +83,14 @@ mod tests {
         assert_ast(
             "record Rec {}",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::RecordDefinition {
                     sym: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "Rec" },
                         span: 7..10,
                     }),
-                    sym_id: 1,
+
                     fields: vec![],
                 },
                 span: 0..13,
@@ -103,19 +103,23 @@ mod tests {
         assert_ast(
             "record User { name: string, }",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::RecordDefinition {
                     sym: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Symbol { name: "User" },
                         span: 7..11,
                     }),
-                    sym_id: 1,
+
                     fields: vec![RecordField {
                         sym: AstNode {
+                            id: 0,
                             variant: AstNodeVariant::Symbol { name: "name" },
                             span: 14..18,
                         },
-                        sym_id: 2,
+
                         tn: AstNode {
+                            id: 0,
                             variant: AstNodeVariant::TypeNotation {
                                 tn: TypeNotation::Symbol("string"),
                             },

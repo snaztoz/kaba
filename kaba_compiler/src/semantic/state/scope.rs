@@ -1,12 +1,9 @@
-use crate::{
-    ast::{ScopeId, SymbolId},
-    semantic::types::Type,
-};
+use crate::{ast::NodeId, semantic::types::Type};
 use std::{cell::RefCell, collections::HashMap};
 
-pub type ScopeTableData = HashMap<ScopeId, ScopeEntry>;
+pub type ScopeTableData = HashMap<NodeId, ScopeEntry>;
 
-pub const GLOBAL_SCOPE_ID: ScopeId = 1;
+pub const GLOBAL_SCOPE_ID: NodeId = 1;
 
 #[derive(Debug)]
 pub struct ScopeTable {
@@ -22,11 +19,11 @@ impl ScopeTable {
         }
     }
 
-    pub fn get(&self, id: ScopeId) -> ScopeEntry {
+    pub fn get(&self, id: NodeId) -> ScopeEntry {
         self.table.borrow().get(&id).unwrap().clone()
     }
 
-    pub fn add(&self, id: ScopeId, variant: ScopeVariant, parent_id: ScopeId) {
+    pub fn add(&self, id: NodeId, variant: ScopeVariant, parent_id: NodeId) {
         let mut table = self.table.borrow_mut();
 
         // Insert the new child data
@@ -36,12 +33,12 @@ impl ScopeTable {
         table.get_mut(&parent_id).unwrap().children_id.push(id);
     }
 
-    pub fn has_sym(&self, id: ScopeId, sym: &str) -> bool {
+    pub fn has_sym(&self, id: NodeId, sym: &str) -> bool {
         let scope = self.get(id);
         scope.symbols.contains_key(sym)
     }
 
-    pub fn add_sym(&self, id: SymbolId, sym: &str, scope_id: ScopeId) {
+    pub fn add_sym(&self, id: NodeId, sym: &str, scope_id: NodeId) {
         let mut table = self.table.borrow_mut();
         let scope = table.get_mut(&scope_id).unwrap();
         scope.symbols.insert(String::from(sym), id);
@@ -51,13 +48,13 @@ impl ScopeTable {
 #[derive(Clone, Debug)]
 pub struct ScopeEntry {
     pub variant: ScopeVariant,
-    pub symbols: HashMap<String, SymbolId>,
-    pub parent_id: Option<ScopeId>,
-    children_id: Vec<ScopeId>,
+    pub symbols: HashMap<String, NodeId>,
+    pub parent_id: Option<NodeId>,
+    children_id: Vec<NodeId>,
 }
 
 impl ScopeEntry {
-    fn new(variant: ScopeVariant, parent_id: ScopeId) -> Self {
+    fn new(variant: ScopeVariant, parent_id: NodeId) -> Self {
         Self {
             variant,
             symbols: HashMap::new(),

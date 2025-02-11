@@ -11,6 +11,7 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
     match state.tokens.current_kind() {
         TokenKind::Symbol(name) => {
             let tn = AstNode {
+                id: state.next_id(),
                 variant: AstNodeVariant::TypeNotation {
                     tn: TypeNotation::Symbol(name),
                 },
@@ -50,6 +51,7 @@ fn parse_array_tn<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'
     let end = elem_tn.span.end;
 
     Ok(AstNode {
+        id: state.next_id(),
         variant: AstNodeVariant::TypeNotation {
             tn: TypeNotation::Array {
                 elem_tn: Box::new(elem_tn),
@@ -105,6 +107,7 @@ fn parse_function_tn<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNod
     let end = return_tn.span.end;
 
     Ok(AstNode {
+        id: state.next_id(),
         variant: AstNodeVariant::TypeNotation {
             tn: TypeNotation::Callable {
                 params_tn,

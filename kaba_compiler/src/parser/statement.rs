@@ -37,10 +37,12 @@ fn parse_loop_control<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNo
     // Expecting either "break" or "continue" keyword
     let control = match kind {
         TokenKind::Break => AstNode {
+            id: state.next_id(),
             variant: AstNodeVariant::Break,
             span,
         },
         TokenKind::Continue => AstNode {
+            id: state.next_id(),
             variant: AstNodeVariant::Continue,
             span,
         },
@@ -75,6 +77,7 @@ fn parse_return_statement<'src>(state: &ParserState<'src, '_>) -> Result<'src, A
     state.tokens.skip(&TokenKind::Semicolon)?;
 
     Ok(AstNode {
+        id: state.next_id(),
         variant: AstNodeVariant::Return {
             expr: expr.map(Box::new),
         },
@@ -97,6 +100,7 @@ fn parse_debug_statement<'src>(state: &ParserState<'src, '_>) -> Result<'src, As
     state.tokens.skip(&TokenKind::Semicolon)?;
 
     Ok(AstNode {
+        id: state.next_id(),
         variant: AstNodeVariant::Debug { expr },
         span: start..end,
     })
@@ -114,24 +118,30 @@ mod tests {
         assert_ast(
             "debug 5 + 5 * 7;",
             AstNode {
+                id: 0,
                 variant: AstNodeVariant::Debug {
                     expr: Box::new(AstNode {
+                        id: 0,
                         variant: AstNodeVariant::Add {
                             lhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Literal {
                                     lit: Literal::Int(5),
                                 },
                                 span: 6..7,
                             }),
                             rhs: Box::new(AstNode {
+                                id: 0,
                                 variant: AstNodeVariant::Mul {
                                     lhs: Box::new(AstNode {
+                                        id: 0,
                                         variant: AstNodeVariant::Literal {
                                             lit: Literal::Int(5),
                                         },
                                         span: 10..11,
                                     }),
                                     rhs: Box::new(AstNode {
+                                        id: 0,
                                         variant: AstNodeVariant::Literal {
                                             lit: Literal::Int(7),
                                         },

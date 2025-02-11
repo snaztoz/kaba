@@ -1,6 +1,6 @@
 use super::{error::Result, types::Type};
 use crate::{
-    ast::{AstNodeVariant, SymbolId},
+    ast::{AstNodeVariant, NodeId},
     lexer, parser,
     semantic::{self, expression, state::AnalyzerState},
 };
@@ -44,7 +44,7 @@ pub fn eval_expr(input: &str, symbols: &[(&str, Type)]) -> Result<Type> {
         let state = AnalyzerState::new();
         for (i, (sym, t)) in symbols.iter().enumerate() {
             // make id large to avoid collision during test
-            let sym_id: SymbolId = (i + 99999).try_into().unwrap();
+            let sym_id: NodeId = (i + 99999).try_into().unwrap();
             state.save_entity(sym_id, sym, t.clone());
         }
         expression::analyze(&state, &body[0])
