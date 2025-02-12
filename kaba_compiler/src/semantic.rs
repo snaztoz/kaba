@@ -29,11 +29,11 @@ pub fn analyze(program: &AstNode) -> Result<SymbolTableData> {
 
     for stmt in program.variant.body() {
         ensure_permitted_in_global(stmt)?;
-        function::analyze_declaration(&state, stmt)?;
+        function::declaration::analyze(&state, stmt)?;
     }
 
     for stmt in program.variant.body() {
-        function::analyze_definition(&state, stmt)?;
+        function::definition::analyze(&state, stmt)?;
     }
 
     Ok(state.take_symbols())
