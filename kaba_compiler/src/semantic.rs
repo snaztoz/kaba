@@ -4,7 +4,7 @@
 use self::error::{Result, SemanticError};
 use crate::ast::{AstNode, AstNodeVariant};
 use error::SemanticErrorVariant;
-use state::{symbol::SymbolTableData, AnalyzerState};
+use state::{AnalyzerState, SymbolTable};
 
 mod assignment;
 mod body;
@@ -24,8 +24,8 @@ mod variable;
 mod while_loop;
 
 /// Provides a quick way to run semantic analysis on a Kaba AST.
-pub fn analyze(program: &AstNode) -> Result<SymbolTableData> {
-    let state = AnalyzerState::new();
+pub fn analyze(program: &AstNode) -> Result<SymbolTable> {
+    let state = AnalyzerState::new(program.id);
 
     for stmt in program.variant.body() {
         ensure_permitted_in_global(stmt)?;
@@ -36,7 +36,7 @@ pub fn analyze(program: &AstNode) -> Result<SymbolTableData> {
         function::definition::analyze(&state, stmt)?;
     }
 
-    Ok(state.take_symbols())
+    Ok(state.take_symbol_table())
 }
 
 fn ensure_permitted_in_global(stmt: &AstNode) -> Result<()> {

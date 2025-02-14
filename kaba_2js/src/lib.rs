@@ -1,4 +1,4 @@
-use kaba_compiler::{AstNode, AstNodeVariant, Literal, Result, SymbolTableData};
+use kaba_compiler::{AstNode, AstNodeVariant, Literal, Result, SymbolTable};
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
@@ -16,13 +16,13 @@ pub fn compile(src: &str) -> Result<String> {
     Ok(buff)
 }
 
-fn compile_body(body: &[AstNode], sym_table: &SymbolTableData, buff: &mut String) {
+fn compile_body(body: &[AstNode], sym_table: &SymbolTable, buff: &mut String) {
     for stmt in body {
         compile_statement(stmt, sym_table, buff);
     }
 }
 
-fn compile_statement(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
+fn compile_statement(stmt: &AstNode, sym_table: &SymbolTable, buff: &mut String) {
     match &stmt.variant {
         AstNodeVariant::FunctionDefinition { .. } => {
             compile_function_definition(stmt, sym_table, buff)
@@ -59,7 +59,7 @@ fn compile_statement(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut Str
     }
 }
 
-fn compile_function_definition(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
+fn compile_function_definition(stmt: &AstNode, sym_table: &SymbolTable, buff: &mut String) {
     if let AstNodeVariant::FunctionDefinition {
         sym, params, body, ..
     } = &stmt.variant
@@ -79,7 +79,7 @@ fn compile_function_definition(stmt: &AstNode, sym_table: &SymbolTableData, buff
     }
 }
 
-fn compile_variable_declaration(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
+fn compile_variable_declaration(stmt: &AstNode, sym_table: &SymbolTable, buff: &mut String) {
     if let AstNodeVariant::VariableDeclaration { sym, val, .. } = &stmt.variant {
         let entry = &sym_table[&sym.id];
 
@@ -90,7 +90,7 @@ fn compile_variable_declaration(stmt: &AstNode, sym_table: &SymbolTableData, buf
     }
 }
 
-fn compile_conditional_branches(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
+fn compile_conditional_branches(stmt: &AstNode, sym_table: &SymbolTable, buff: &mut String) {
     if let AstNodeVariant::If {
         cond,
         body,
@@ -121,7 +121,7 @@ fn compile_conditional_branches(stmt: &AstNode, sym_table: &SymbolTableData, buf
     }
 }
 
-fn compile_while_loop(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
+fn compile_while_loop(stmt: &AstNode, sym_table: &SymbolTable, buff: &mut String) {
     if let AstNodeVariant::While { cond, body, .. } = &stmt.variant {
         buff.push_str("while(");
         compile_expression(cond, sym_table, buff);
@@ -131,7 +131,7 @@ fn compile_while_loop(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut St
     }
 }
 
-fn compile_each_loop(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
+fn compile_each_loop(stmt: &AstNode, sym_table: &SymbolTable, buff: &mut String) {
     if let AstNodeVariant::Each {
         elem_sym,
         iterable,
@@ -147,7 +147,7 @@ fn compile_each_loop(stmt: &AstNode, sym_table: &SymbolTableData, buff: &mut Str
     }
 }
 
-fn compile_expression(expr: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
+fn compile_expression(expr: &AstNode, sym_table: &SymbolTable, buff: &mut String) {
     match &expr.variant {
         AstNodeVariant::Assign { .. }
         | AstNodeVariant::AddAssign { .. }
@@ -203,7 +203,7 @@ fn compile_expression(expr: &AstNode, sym_table: &SymbolTableData, buff: &mut St
     }
 }
 
-fn compile_binary_expression(expr: &AstNode, sym_table: &SymbolTableData, buff: &mut String) {
+fn compile_binary_expression(expr: &AstNode, sym_table: &SymbolTable, buff: &mut String) {
     let op = match &expr.variant {
         AstNodeVariant::Assign { .. } => "=",
         AstNodeVariant::AddAssign { .. } => "+=",
@@ -256,7 +256,7 @@ fn compile_binary_expression(expr: &AstNode, sym_table: &SymbolTableData, buff: 
     compile_expression(rhs, sym_table, buff);
 }
 
-fn compile_literal(lit: &Literal, sym_table: &SymbolTableData, buff: &mut String) {
+fn compile_literal(lit: &Literal, sym_table: &SymbolTable, buff: &mut String) {
     match lit {
         Literal::Int(n) => buff.push_str(&n.to_string()),
         Literal::Float(n) => buff.push_str(&n.to_string()),
