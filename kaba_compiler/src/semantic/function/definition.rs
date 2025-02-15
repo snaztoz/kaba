@@ -1,21 +1,31 @@
+use crate::ast::AstNode;
 use crate::semantic::{
     body,
     error::{Result, SemanticError, SemanticErrorVariant},
     state::AnalyzerState,
     types::Type,
 };
-use crate::{ast::AstNode, AstNodeVariant};
 
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
-    let (_, return_t) = get_function_t(state, node).unwrap_callable();
+    let function_name = node.sym().sym_name();
+    let return_t = if let Type::Callable { return_t, .. } = state
+        .get_sym_t(function_name)
+        .unwrap()
+        .clone()
+        .into_entity_t()
+    {
+        return_t
+    } else {
+        unreachable!()
+    };
 
-    state.with_function_scope(node.id, return_t.clone(), || {
+    state.with_function_scope(node.id, *return_t.clone(), || {
         let body_t = body::analyze(state, node)?;
 
         if !return_t.is_void() && body_t.is_void() {
             return Err(SemanticError {
                 variant: SemanticErrorVariant::ReturnTypeMismatch {
-                    expected: return_t,
+                    expected: *return_t,
                     get: Type::Void,
                 },
                 span: node.sym().span.clone(),
@@ -26,13 +36,4 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     })?;
 
     Ok(Type::Void)
-}
-
-fn get_function_t(state: &AnalyzerState, node: &AstNode) -> Type {
-    if let AstNodeVariant::FunctionDefinition { sym, .. } = &node.variant {
-        let sym_name = &sym.sym_name();
-        state.get_sym_t(sym_name).unwrap().clone().unwrap_entity()
-    } else {
-        unreachable!()
-    }
 }

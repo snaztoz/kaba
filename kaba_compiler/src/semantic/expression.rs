@@ -48,7 +48,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
                 variant: SemanticErrorVariant::SymbolDoesNotExist(String::from(*name)),
                 span: node.span.clone(),
             })
-            .map(|st| st.clone().unwrap_entity()),
+            .map(|st| st.clone().into_entity_t()),
 
         AstNodeVariant::Literal { .. } => literal::analyze(state, node),
         AstNodeVariant::FunctionCall { .. } => function_call::analyze(state, node),

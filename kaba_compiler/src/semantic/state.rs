@@ -243,7 +243,7 @@ pub enum SymbolType {
 }
 
 impl SymbolType {
-    pub fn unwrap_entity(self) -> Type {
+    pub fn into_entity_t(self) -> Type {
         if let Self::Entity(ent) = self {
             ent
         } else {
