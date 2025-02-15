@@ -32,7 +32,7 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
         variant: AstNodeVariant::VariableDeclaration {
             sym: Box::new(sym),
             tn: tn.map(Box::new),
-            val: Box::new(expr.unwrap_group()),
+            val: Box::new(expr.into_group_inner()),
         },
         span: start..end,
     })

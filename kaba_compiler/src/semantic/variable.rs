@@ -58,8 +58,8 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
 }
 
 fn save_symbol(state: &AnalyzerState, node: &AstNode, t: Type) -> Result<()> {
-    let sym = node.variant.sym();
-    let sym_str = sym.variant.unwrap_symbol();
+    let sym = node.sym();
+    let sym_str = sym.sym_name();
     let sym_span = node.span.clone();
 
     if !state.can_save_sym(sym_str) {

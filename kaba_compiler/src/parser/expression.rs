@@ -27,8 +27,8 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
             Ok(AstNode {
                 id: state.next_id(),
                 variant: AstNodeVariant::Assign {
-                    lhs: Box::new(lhs.unwrap_group()),
-                    rhs: Box::new(rhs.unwrap_group()),
+                    lhs: Box::new(lhs.into_group_inner()),
+                    rhs: Box::new(rhs.into_group_inner()),
                 },
                 span,
             })
@@ -43,8 +43,8 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
             Ok(AstNode {
                 id: state.next_id(),
                 variant: AstNodeVariant::AddAssign {
-                    lhs: Box::new(lhs.unwrap_group()),
-                    rhs: Box::new(rhs.unwrap_group()),
+                    lhs: Box::new(lhs.into_group_inner()),
+                    rhs: Box::new(rhs.into_group_inner()),
                 },
                 span,
             })
@@ -58,8 +58,8 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
             Ok(AstNode {
                 id: state.next_id(),
                 variant: AstNodeVariant::SubAssign {
-                    lhs: Box::new(lhs.unwrap_group()),
-                    rhs: Box::new(rhs.unwrap_group()),
+                    lhs: Box::new(lhs.into_group_inner()),
+                    rhs: Box::new(rhs.into_group_inner()),
                 },
                 span,
             })
@@ -73,8 +73,8 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
             Ok(AstNode {
                 id: state.next_id(),
                 variant: AstNodeVariant::MulAssign {
-                    lhs: Box::new(lhs.unwrap_group()),
-                    rhs: Box::new(rhs.unwrap_group()),
+                    lhs: Box::new(lhs.into_group_inner()),
+                    rhs: Box::new(rhs.into_group_inner()),
                 },
                 span,
             })
@@ -88,8 +88,8 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
             Ok(AstNode {
                 id: state.next_id(),
                 variant: AstNodeVariant::DivAssign {
-                    lhs: Box::new(lhs.unwrap_group()),
-                    rhs: Box::new(rhs.unwrap_group()),
+                    lhs: Box::new(lhs.into_group_inner()),
+                    rhs: Box::new(rhs.into_group_inner()),
                 },
                 span,
             })
@@ -103,8 +103,8 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
             Ok(AstNode {
                 id: state.next_id(),
                 variant: AstNodeVariant::ModAssign {
-                    lhs: Box::new(lhs.unwrap_group()),
-                    rhs: Box::new(rhs.unwrap_group()),
+                    lhs: Box::new(lhs.into_group_inner()),
+                    rhs: Box::new(rhs.into_group_inner()),
                 },
                 span,
             })
@@ -131,8 +131,8 @@ fn parse_logical_and_or_expression<'src>(
                 lhs = AstNode {
                     id: state.next_id(),
                     variant: AstNodeVariant::Or {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
+                        lhs: Box::new(lhs.into_group_inner()),
+                        rhs: Box::new(rhs.into_group_inner()),
                     },
                     span,
                 };
@@ -146,8 +146,8 @@ fn parse_logical_and_or_expression<'src>(
                 lhs = AstNode {
                     id: state.next_id(),
                     variant: AstNodeVariant::And {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
+                        lhs: Box::new(lhs.into_group_inner()),
+                        rhs: Box::new(rhs.into_group_inner()),
                     },
                     span,
                 };
@@ -173,8 +173,8 @@ fn parse_equality_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src
                 lhs = AstNode {
                     id: state.next_id(),
                     variant: AstNodeVariant::Eq {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
+                        lhs: Box::new(lhs.into_group_inner()),
+                        rhs: Box::new(rhs.into_group_inner()),
                     },
                     span,
                 };
@@ -188,8 +188,8 @@ fn parse_equality_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src
                 lhs = AstNode {
                     id: state.next_id(),
                     variant: AstNodeVariant::Neq {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
+                        lhs: Box::new(lhs.into_group_inner()),
+                        rhs: Box::new(rhs.into_group_inner()),
                     },
                     span,
                 };
@@ -214,8 +214,8 @@ fn parse_comparison_expression<'src>(state: &ParserState<'src, '_>) -> Result<'s
             Ok(AstNode {
                 id: state.next_id(),
                 variant: AstNodeVariant::Gt {
-                    lhs: Box::new(lhs.unwrap_group()),
-                    rhs: Box::new(rhs.unwrap_group()),
+                    lhs: Box::new(lhs.into_group_inner()),
+                    rhs: Box::new(rhs.into_group_inner()),
                 },
                 span,
             })
@@ -229,8 +229,8 @@ fn parse_comparison_expression<'src>(state: &ParserState<'src, '_>) -> Result<'s
             Ok(AstNode {
                 id: state.next_id(),
                 variant: AstNodeVariant::Gte {
-                    lhs: Box::new(lhs.unwrap_group()),
-                    rhs: Box::new(rhs.unwrap_group()),
+                    lhs: Box::new(lhs.into_group_inner()),
+                    rhs: Box::new(rhs.into_group_inner()),
                 },
                 span,
             })
@@ -244,8 +244,8 @@ fn parse_comparison_expression<'src>(state: &ParserState<'src, '_>) -> Result<'s
             Ok(AstNode {
                 id: state.next_id(),
                 variant: AstNodeVariant::Lt {
-                    lhs: Box::new(lhs.unwrap_group()),
-                    rhs: Box::new(rhs.unwrap_group()),
+                    lhs: Box::new(lhs.into_group_inner()),
+                    rhs: Box::new(rhs.into_group_inner()),
                 },
                 span,
             })
@@ -259,8 +259,8 @@ fn parse_comparison_expression<'src>(state: &ParserState<'src, '_>) -> Result<'s
             Ok(AstNode {
                 id: state.next_id(),
                 variant: AstNodeVariant::Lte {
-                    lhs: Box::new(lhs.unwrap_group()),
-                    rhs: Box::new(rhs.unwrap_group()),
+                    lhs: Box::new(lhs.into_group_inner()),
+                    rhs: Box::new(rhs.into_group_inner()),
                 },
                 span,
             })
@@ -285,8 +285,8 @@ fn parse_additive_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src
                 lhs = AstNode {
                     id: state.next_id(),
                     variant: AstNodeVariant::Add {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
+                        lhs: Box::new(lhs.into_group_inner()),
+                        rhs: Box::new(rhs.into_group_inner()),
                     },
                     span,
                 };
@@ -300,8 +300,8 @@ fn parse_additive_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src
                 lhs = AstNode {
                     id: state.next_id(),
                     variant: AstNodeVariant::Sub {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
+                        lhs: Box::new(lhs.into_group_inner()),
+                        rhs: Box::new(rhs.into_group_inner()),
                     },
                     span,
                 };
@@ -329,8 +329,8 @@ fn parse_multiplicative_expression<'src>(
                 lhs = AstNode {
                     id: state.next_id(),
                     variant: AstNodeVariant::Mul {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
+                        lhs: Box::new(lhs.into_group_inner()),
+                        rhs: Box::new(rhs.into_group_inner()),
                     },
                     span,
                 };
@@ -344,8 +344,8 @@ fn parse_multiplicative_expression<'src>(
                 lhs = AstNode {
                     id: state.next_id(),
                     variant: AstNodeVariant::Div {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
+                        lhs: Box::new(lhs.into_group_inner()),
+                        rhs: Box::new(rhs.into_group_inner()),
                     },
                     span,
                 };
@@ -359,8 +359,8 @@ fn parse_multiplicative_expression<'src>(
                 lhs = AstNode {
                     id: state.next_id(),
                     variant: AstNodeVariant::Mod {
-                        lhs: Box::new(lhs.unwrap_group()),
-                        rhs: Box::new(rhs.unwrap_group()),
+                        lhs: Box::new(lhs.into_group_inner()),
+                        rhs: Box::new(rhs.into_group_inner()),
                     },
                     span,
                 };
@@ -402,7 +402,7 @@ fn parse_unary_expression<'src>(
                 expr = AstNode {
                     id: state.next_id(),
                     variant: AstNodeVariant::FunctionCall {
-                        callee: Box::new(expr.unwrap_group()),
+                        callee: Box::new(expr.into_group_inner()),
                         args,
                     },
                     span,
@@ -423,7 +423,7 @@ fn parse_unary_expression<'src>(
                 expr = AstNode {
                     id: state.next_id(),
                     variant: AstNodeVariant::IndexAccess {
-                        object: Box::new(expr.unwrap_group()),
+                        object: Box::new(expr.into_group_inner()),
                         index: Box::new(index),
                     },
                     span,
@@ -468,7 +468,7 @@ fn parse_prefix_expression<'src>(
             Ok(AstNode {
                 id: state.next_id(),
                 variant: AstNodeVariant::Neg {
-                    expr: Box::new(expr.unwrap_group()),
+                    expr: Box::new(expr.into_group_inner()),
                 },
                 span,
             })
@@ -476,7 +476,7 @@ fn parse_prefix_expression<'src>(
         TokenKind::Not => Ok(AstNode {
             id: state.next_id(),
             variant: AstNodeVariant::Not {
-                expr: Box::new(expr.unwrap_group()),
+                expr: Box::new(expr.into_group_inner()),
             },
             span,
         }),

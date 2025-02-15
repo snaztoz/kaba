@@ -46,7 +46,7 @@ impl<'src, 'a> Runtime<'src, 'a> {
     fn register_globals(&self, stmts: &[AstNode]) {
         for (i, stmt) in stmts.iter().enumerate() {
             if let AstNodeVariant::FunctionDefinition { sym, .. } = &stmt.variant {
-                let sym = sym.variant.unwrap_symbol();
+                let sym = sym.sym_name();
                 self.state.store_value(sym, RuntimeValue::Function(i));
             } else {
                 unreachable!()

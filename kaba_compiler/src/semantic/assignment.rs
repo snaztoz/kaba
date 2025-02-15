@@ -101,7 +101,7 @@ fn analyze_shorthand_assignment(state: &AnalyzerState, node: &AstNode) -> Result
 fn analyze_lhs(node: &AstNode) -> Result<()> {
     let lhs = unwrap_lhs(node);
 
-    if !lhs.variant.is_lval() {
+    if !lhs.is_lval() {
         return Err(SemanticError {
             variant: SemanticErrorVariant::InvalidLValue,
             span: lhs.span.clone(),

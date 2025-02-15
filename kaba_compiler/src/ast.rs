@@ -16,9 +16,60 @@ pub struct AstNode<'src> {
 }
 
 impl AstNode<'_> {
-    pub fn unwrap_group(self) -> Self {
+    pub const fn is_lval(&self) -> bool {
+        matches!(
+            self.variant,
+            AstNodeVariant::Symbol { .. } | AstNodeVariant::IndexAccess { .. },
+        )
+    }
+
+    pub fn sym(&self) -> &AstNode {
+        match &self.variant {
+            AstNodeVariant::FunctionDefinition { sym, .. }
+            | AstNodeVariant::VariableDeclaration { sym, .. } => sym,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn body(&self) -> &[AstNode] {
+        match &self.variant {
+            AstNodeVariant::Program { body, .. }
+            | AstNodeVariant::FunctionDefinition { body, .. }
+            | AstNodeVariant::If { body, .. }
+            | AstNodeVariant::Else { body, .. }
+            | AstNodeVariant::While { body, .. }
+            | AstNodeVariant::Each { body, .. } => body,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn params(&self) -> &[FunctionParam] {
+        if let AstNodeVariant::FunctionDefinition { params, .. } = &self.variant {
+            params
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn return_tn(&self) -> Option<&AstNode> {
+        if let AstNodeVariant::FunctionDefinition { return_tn, .. } = &self.variant {
+            return_tn.as_deref()
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn sym_name(&self) -> &str {
+        if let AstNodeVariant::Symbol { name } = &self.variant {
+            name
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn into_group_inner(self) -> Self {
         if let AstNodeVariant::Group { expr } = self.variant {
-            expr.unwrap_group()
+            expr.into_group_inner()
         } else {
             self
         }
@@ -229,64 +280,6 @@ pub enum AstNodeVariant<'src> {
         lit: Literal<'src>,
     },
 }
-
-impl AstNodeVariant<'_> {
-    pub const fn is_lval(&self) -> bool {
-        matches!(self, Self::Symbol { .. }) || matches!(self, Self::IndexAccess { .. })
-    }
-
-    pub fn sym(&self) -> &AstNode {
-        match self {
-            Self::FunctionDefinition { sym, .. } | Self::VariableDeclaration { sym, .. } => sym,
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn body(&self) -> &[AstNode] {
-        match self {
-            Self::Program { body, .. }
-            | AstNodeVariant::FunctionDefinition { body, .. }
-            | AstNodeVariant::If { body, .. }
-            | AstNodeVariant::Else { body, .. }
-            | AstNodeVariant::While { body, .. }
-            | AstNodeVariant::Each { body, .. } => body,
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn params(&self) -> &[FunctionParam] {
-        if let AstNodeVariant::FunctionDefinition { params, .. } = self {
-            params
-        } else {
-            unreachable!()
-        }
-    }
-
-    pub fn return_tn(&self) -> Option<&AstNode> {
-        if let AstNodeVariant::FunctionDefinition { return_tn, .. } = self {
-            return_tn.as_deref()
-        } else {
-            unreachable!()
-        }
-    }
-
-    pub fn unwrap_symbol(&self) -> &str {
-        if let AstNodeVariant::Symbol { name } = self {
-            name
-        } else {
-            unreachable!()
-        }
-    }
-}
-
-// impl<'src> AstNodeVariant<'src> {
-//     pub fn unwrap_group(self) -> AstNode<'src> {
-//         match self {
-//             Self::Group { expr, .. } => expr.unwrap_group(),
-//             other => if let
-//         }
-//     }
-// }
 
 impl Display for AstNodeVariant<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -27,12 +27,12 @@ mod while_loop;
 pub fn analyze(program: &AstNode) -> Result<SymbolTable> {
     let state = AnalyzerState::new(program.id);
 
-    for stmt in program.variant.body() {
+    for stmt in program.body() {
         ensure_permitted_in_global(stmt)?;
         function::declaration::analyze(&state, stmt)?;
     }
 
-    for stmt in program.variant.body() {
+    for stmt in program.body() {
         function::definition::analyze(&state, stmt)?;
     }
 

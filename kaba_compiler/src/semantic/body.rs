@@ -8,7 +8,7 @@ use crate::ast::AstNode;
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     let mut body_t = Type::Void;
 
-    for stmt in node.variant.body() {
+    for stmt in node.body() {
         let t = statement::analyze(state, stmt)?;
         if body_t == Type::Void {
             body_t = t;

@@ -28,7 +28,7 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
     // Expecting ";"
     state.tokens.skip(&TokenKind::Semicolon)?;
 
-    Ok(expr.unwrap_group())
+    Ok(expr.into_group_inner())
 }
 
 fn parse_loop_control<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {

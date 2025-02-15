@@ -43,7 +43,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     assert::is_iterable(&expr_t, || unwrap_iterable(node).span.clone())?;
 
     let elem_sym = unwrap_elem_sym(node);
-    let elem_sym_str = elem_sym.variant.unwrap_symbol();
+    let elem_sym_str = elem_sym.sym_name();
     let elem_t = expr_t.unwrap_array();
 
     // Check all statements inside the body with a new scope
