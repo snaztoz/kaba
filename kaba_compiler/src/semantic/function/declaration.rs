@@ -1,7 +1,10 @@
+use std::collections::HashSet;
+
 use crate::{
+    ast::NodeId,
     semantic::{
         error::{Result, SemanticError, SemanticErrorVariant},
-        state::AnalyzerState,
+        state::{AnalyzerState, ScopeVariant},
         tn,
         types::Type,
     },
@@ -9,38 +12,8 @@ use crate::{
 };
 
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
-    analyze_params_tn(state, node)?;
-    analyze_return_tn(state, node)?;
-
-    save_function_t(state, node)
-}
-
-fn analyze_params_tn(state: &AnalyzerState, node: &AstNode) -> Result<()> {
-    for FunctionParam { tn: param_tn, .. } in node.variant.params() {
-        tn::analyze(state, param_tn, false)?;
-    }
-    Ok(())
-}
-
-fn analyze_return_tn(state: &AnalyzerState, node: &AstNode) -> Result<()> {
-    if let Some(return_tn) = node.variant.return_tn() {
-        tn::analyze(state, return_tn, true)?;
-    }
-    Ok(())
-}
-
-fn save_function_t(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     let sym = node.variant.sym();
     let sym_str = sym.variant.unwrap_symbol();
-
-    let params_t = node
-        .variant
-        .params()
-        .iter()
-        .map(|p| Type::from(&p.tn))
-        .collect();
-    let return_t = Box::new(node.variant.return_tn().map_or(Type::Void, Type::from));
-    let function_t = Type::Callable { params_t, return_t };
 
     if !state.can_save_sym(sym_str) {
         return Err(SemanticError {
@@ -49,7 +22,60 @@ fn save_function_t(state: &AnalyzerState, node: &AstNode) -> Result<()> {
         });
     }
 
+    let params = analyze_params(state, node)?;
+    let return_t = analyze_return_tn(state, node)?;
+    let function_t = Type::Callable {
+        params_t: params.iter().map(|p| p.2.clone()).collect(),
+        return_t: Box::new(return_t.clone()),
+    };
+
     state.save_entity(sym.id, sym_str, function_t);
 
+    state.create_scope(
+        node.id,
+        ScopeVariant::Function { return_t },
+        state.current_scope_id(),
+    );
+
+    for (param_id, param_str, param_t) in params {
+        state.save_entity_to(node.id, param_id, param_str, param_t);
+    }
+
     Ok(())
+}
+
+fn analyze_params<'a>(
+    state: &AnalyzerState,
+    node: &'a AstNode,
+) -> Result<Vec<(NodeId, &'a str, Type)>> {
+    let mut params_sym = HashSet::new();
+    let mut params = vec![];
+
+    for FunctionParam {
+        sym: param_sym,
+        tn: param_tn,
+    } in node.variant.params()
+    {
+        let param_str = param_sym.variant.unwrap_symbol();
+        if params_sym.contains(&param_str) {
+            return Err(SemanticError {
+                variant: SemanticErrorVariant::SymbolAlreadyExist(param_str.to_string()),
+                span: param_sym.span.clone(),
+            });
+        }
+
+        let t = tn::analyze(state, param_tn, false)?;
+        params.push((param_sym.id, param_str, t));
+
+        params_sym.insert(param_str);
+    }
+
+    Ok(params)
+}
+
+fn analyze_return_tn(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+    match node.variant.return_tn() {
+        Some(return_tn) => tn::analyze(state, return_tn, true),
+        None => Ok(Type::Void),
+    }
 }

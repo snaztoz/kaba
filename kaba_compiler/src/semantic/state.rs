@@ -130,9 +130,14 @@ impl AnalyzerState {
 
     /// Save symbol and its associated type to current active scope.
     pub fn save_entity(&self, sym_id: NodeId, sym: &str, t: Type) {
+        self.save_entity_to(self.current_scope_id(), sym_id, sym, t);
+    }
+
+    /// Save entity to a specific scope without have to entering it first.
+    pub fn save_entity_to(&self, scope_id: NodeId, sym_id: NodeId, sym: &str, t: Type) {
         // Save to scope table
-        let mut current_scope = self.get_scope_mut(self.current_scope_id());
-        current_scope.symbols.insert(String::from(sym), sym_id);
+        let mut scope = self.get_scope_mut(scope_id);
+        scope.symbols.insert(String::from(sym), sym_id);
 
         // Save to symbol table
         self.symbol_table.borrow_mut().insert(
@@ -177,7 +182,9 @@ impl AnalyzerState {
     {
         let current_id = self.current_scope_id();
 
-        self.add_scope(scope_id, scope_variant, current_id);
+        if !self.has_scope(scope_id) {
+            self.create_scope(scope_id, scope_variant, current_id);
+        }
 
         self.enter_scope(scope_id);
         let result = action();
@@ -186,12 +193,22 @@ impl AnalyzerState {
         result
     }
 
-    fn get_sym(&self, id: NodeId) -> Ref<'_, SymbolEntry> {
-        Ref::map(self.symbol_table.borrow(), |st| st.get(&id).unwrap())
+    pub fn create_scope(&self, id: NodeId, variant: ScopeVariant, parent_id: NodeId) {
+        let mut table = self.scope_table.borrow_mut();
+
+        // Insert the new child data
+        table.insert(id, ScopeEntry::new(variant, parent_id));
+
+        // Update parent scope data
+        table.get_mut(&parent_id).unwrap().children_id.push(id);
     }
 
-    fn current_scope_id(&self) -> NodeId {
+    pub fn current_scope_id(&self) -> NodeId {
         *self._current_scope_id.borrow()
+    }
+
+    fn get_sym(&self, id: NodeId) -> Ref<'_, SymbolEntry> {
+        Ref::map(self.symbol_table.borrow(), |st| st.get(&id).unwrap())
     }
 
     fn enter_scope(&self, scope_id: NodeId) {
@@ -208,14 +225,8 @@ impl AnalyzerState {
         })
     }
 
-    fn add_scope(&self, id: NodeId, variant: ScopeVariant, parent_id: NodeId) {
-        let mut table = self.scope_table.borrow_mut();
-
-        // Insert the new child data
-        table.insert(id, ScopeEntry::new(variant, parent_id));
-
-        // Update parent scope data
-        table.get_mut(&parent_id).unwrap().children_id.push(id);
+    fn has_scope(&self, scope_id: NodeId) -> bool {
+        self.scope_table.borrow().contains_key(&scope_id)
     }
 }
 
@@ -270,7 +281,7 @@ impl ScopeEntry {
 }
 
 #[derive(Clone, Debug)]
-enum ScopeVariant {
+pub enum ScopeVariant {
     Global,
     Function { return_t: Type },
     Conditional,
