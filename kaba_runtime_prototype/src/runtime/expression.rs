@@ -285,9 +285,9 @@ impl ExpressionRunner<'_, '_> {
                 self.state.ss.borrow_mut().push(HashMap::new());
 
                 for (i, FunctionParam { sym, .. }) in params.iter().enumerate() {
-                    let sym = sym.sym_name();
+                    let sym_name = sym.sym_name();
                     let val = &args[i];
-                    self.state.store_value(sym, val.clone());
+                    self.state.store_value(sym_name, val.clone());
                 }
 
                 BodyRunner::new(f, self.root, self.state).run()?;

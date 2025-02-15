@@ -51,13 +51,13 @@ impl AnalyzerState {
 
     /// Get the type associated with a `sym` in the current active scope or its
     /// ancestors.
-    pub fn get_sym_t(&self, sym: &str) -> Option<Ref<'_, SymbolType>> {
+    pub fn get_sym_t(&self, sym_name: &str) -> Option<Ref<'_, SymbolType>> {
         let mut scope_id = self.current_scope_id();
 
         loop {
             let scope_entry = self.get_scope(scope_id);
 
-            if let Some(symbol_id) = scope_entry.symbols.get(sym) {
+            if let Some(symbol_id) = scope_entry.symbols.get(sym_name) {
                 return Some(Ref::map(self.get_sym(*symbol_id), |s| &s.t));
             }
 
@@ -117,33 +117,33 @@ impl AnalyzerState {
     ///
     ///  1. It is a builtin (reserved) name,
     ///  2. or it's already exist in the current scope.
-    pub fn can_save_sym(&self, sym: &str) -> bool {
-        if BASIC_T.contains(&sym) {
+    pub fn can_save_sym(&self, sym_name: &str) -> bool {
+        if BASIC_T.contains(&sym_name) {
             return false;
         }
 
         let current_scope_id = self.current_scope_id();
         let current_scope = self.get_scope(current_scope_id);
 
-        !current_scope.symbols.contains_key(sym)
+        !current_scope.symbols.contains_key(sym_name)
     }
 
     /// Save symbol and its associated type to current active scope.
-    pub fn save_entity(&self, sym_id: NodeId, sym: &str, t: Type) {
-        self.save_entity_to(self.current_scope_id(), sym_id, sym, t);
+    pub fn save_entity(&self, sym_id: NodeId, sym_name: &str, t: Type) {
+        self.save_entity_to(self.current_scope_id(), sym_id, sym_name, t);
     }
 
     /// Save entity to a specific scope without have to entering it first.
-    pub fn save_entity_to(&self, scope_id: NodeId, sym_id: NodeId, sym: &str, t: Type) {
+    pub fn save_entity_to(&self, scope_id: NodeId, sym_id: NodeId, sym_name: &str, t: Type) {
         // Save to scope table
         let mut scope = self.get_scope_mut(scope_id);
-        scope.symbols.insert(String::from(sym), sym_id);
+        scope.symbols.insert(String::from(sym_name), sym_id);
 
         // Save to symbol table
         self.symbol_table.borrow_mut().insert(
             sym_id,
             SymbolEntry {
-                name: String::from(sym),
+                name: String::from(sym_name),
                 t: SymbolType::Entity(t),
             },
         );
@@ -207,8 +207,8 @@ impl AnalyzerState {
         *self._current_scope_id.borrow()
     }
 
-    fn get_sym(&self, id: NodeId) -> Ref<'_, SymbolEntry> {
-        Ref::map(self.symbol_table.borrow(), |st| st.get(&id).unwrap())
+    fn get_sym(&self, sym_id: NodeId) -> Ref<'_, SymbolEntry> {
+        Ref::map(self.symbol_table.borrow(), |st| st.get(&sym_id).unwrap())
     }
 
     fn enter_scope(&self, scope_id: NodeId) {

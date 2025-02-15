@@ -13,11 +13,11 @@ use crate::{
 
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     let sym = node.sym();
-    let sym_str = sym.sym_name();
+    let sym_name = sym.sym_name();
 
-    if !state.can_save_sym(sym_str) {
+    if !state.can_save_sym(sym_name) {
         return Err(SemanticError {
-            variant: SemanticErrorVariant::SymbolAlreadyExist(String::from(sym_str)),
+            variant: SemanticErrorVariant::SymbolAlreadyExist(String::from(sym_name)),
             span: sym.span.clone(),
         });
     }
@@ -29,7 +29,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
         return_t: Box::new(return_t.clone()),
     };
 
-    state.save_entity(sym.id, sym_str, function_t);
+    state.save_entity(sym.id, sym_name, function_t);
 
     state.create_scope(
         node.id,
@@ -37,8 +37,8 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
         state.current_scope_id(),
     );
 
-    for (param_id, param_str, param_t) in params {
-        state.save_entity_to(node.id, param_id, param_str, param_t);
+    for (param_id, param_name, param_t) in params {
+        state.save_entity_to(node.id, param_id, param_name, param_t);
     }
 
     Ok(())
@@ -56,18 +56,18 @@ fn analyze_params<'a>(
         tn: param_tn,
     } in node.params()
     {
-        let param_str = param_sym.sym_name();
-        if params_sym.contains(&param_str) {
+        let param_name = param_sym.sym_name();
+        if params_sym.contains(&param_name) {
             return Err(SemanticError {
-                variant: SemanticErrorVariant::SymbolAlreadyExist(param_str.to_string()),
+                variant: SemanticErrorVariant::SymbolAlreadyExist(String::from(param_name)),
                 span: param_sym.span.clone(),
             });
         }
 
         let t = tn::analyze(state, param_tn, false)?;
-        params.push((param_sym.id, param_str, t));
+        params.push((param_sym.id, param_name, t));
 
-        params_sym.insert(param_str);
+        params_sym.insert(param_name);
     }
 
     Ok(params)

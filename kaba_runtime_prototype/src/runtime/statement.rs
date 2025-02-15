@@ -159,10 +159,10 @@ impl StatementRunner<'_, '_> {
                 unreachable!()
             };
 
-            let sym = elem_sym.sym_name();
+            let sym_name = elem_sym.sym_name();
 
             for item in iterable {
-                let scope = HashMap::from([(String::from(sym), item.clone())]);
+                let scope = HashMap::from([(String::from(sym_name), item.clone())]);
 
                 self.state.ss.borrow_mut().push(scope);
                 BodyRunner::new(self.ast, self.root, self.state).run()?;

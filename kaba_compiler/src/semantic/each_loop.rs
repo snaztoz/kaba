@@ -43,13 +43,13 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     assert::is_iterable(&expr_t, || unwrap_iterable(node).span.clone())?;
 
     let elem_sym = unwrap_elem_sym(node);
-    let elem_sym_str = elem_sym.sym_name();
+    let elem_sym_name = elem_sym.sym_name();
     let elem_t = expr_t.unwrap_array();
 
     // Check all statements inside the body with a new scope
 
     state.with_loop_scope(node.id, || {
-        state.save_entity(elem_sym.id, elem_sym_str, elem_t);
+        state.save_entity(elem_sym.id, elem_sym_name, elem_t);
         body::analyze(state, node)
     })?;
 

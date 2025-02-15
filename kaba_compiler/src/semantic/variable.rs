@@ -59,17 +59,17 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
 
 fn save_symbol(state: &AnalyzerState, node: &AstNode, t: Type) -> Result<()> {
     let sym = node.sym();
-    let sym_str = sym.sym_name();
+    let sym_name = sym.sym_name();
     let sym_span = node.span.clone();
 
-    if !state.can_save_sym(sym_str) {
+    if !state.can_save_sym(sym_name) {
         return Err(SemanticError {
-            variant: SemanticErrorVariant::SymbolAlreadyExist(String::from(sym_str)),
+            variant: SemanticErrorVariant::SymbolAlreadyExist(String::from(sym_name)),
             span: sym_span,
         });
     }
 
-    state.save_entity(sym.id, sym_str, t);
+    state.save_entity(sym.id, sym_name, t);
 
     Ok(())
 }

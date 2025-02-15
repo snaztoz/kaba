@@ -30,8 +30,8 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
 
 fn get_function_t(state: &AnalyzerState, node: &AstNode) -> Type {
     if let AstNodeVariant::FunctionDefinition { sym, .. } = &node.variant {
-        let sym_string = &sym.sym_name();
-        state.get_sym_t(sym_string).unwrap().clone().unwrap_entity()
+        let sym_name = &sym.sym_name();
+        state.get_sym_t(sym_name).unwrap().clone().unwrap_entity()
     } else {
         unreachable!()
     }
