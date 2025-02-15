@@ -278,13 +278,7 @@ impl Display for IntType {
 
 #[derive(Clone, Debug)]
 pub enum FloatType {
-    // An integer type that can be promoted into other integer types. For
-    // example:
-    //
-    //  var x: int = 5;
-    //
-    // Here the type of `5` is unbounded int, which can be assigned into `x`
-    // directly as `int` type.
+    // Similar to unbounded integer, but this is for float numbers instead.
     Unbounded(f32),
 
     Float,
