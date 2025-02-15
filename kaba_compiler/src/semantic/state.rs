@@ -5,8 +5,8 @@ use std::{
     collections::HashMap,
 };
 
-pub type SymbolTable = HashMap<NodeId, SymbolEntry>;
-type ScopeTable = HashMap<NodeId, ScopeEntry>;
+pub type SymbolTable = HashMap<NodeId, SymbolTableEntry>;
+type ScopeTable = HashMap<NodeId, ScopeTableEntry>;
 
 pub struct AnalyzerState {
     symbol_table: RefCell<SymbolTable>,
@@ -18,7 +18,7 @@ impl AnalyzerState {
     pub fn new(global_id: NodeId) -> Self {
         Self {
             symbol_table: RefCell::new(HashMap::new()),
-            scope_table: RefCell::new(HashMap::from([(global_id, ScopeEntry::new_global())])),
+            scope_table: RefCell::new(HashMap::from([(global_id, ScopeTableEntry::new_global())])),
             _current_scope_id: RefCell::new(global_id),
         }
     }
@@ -142,7 +142,7 @@ impl AnalyzerState {
         // Save to symbol table
         self.symbol_table.borrow_mut().insert(
             sym_id,
-            SymbolEntry {
+            SymbolTableEntry {
                 name: String::from(sym_name),
                 t: SymbolType::Entity(t),
             },
@@ -197,7 +197,7 @@ impl AnalyzerState {
         let mut table = self.scope_table.borrow_mut();
 
         // Insert the new child data
-        table.insert(id, ScopeEntry::new(variant, parent_id));
+        table.insert(id, ScopeTableEntry::new(variant, parent_id));
 
         // Update parent scope data
         table.get_mut(&parent_id).unwrap().children_id.push(id);
@@ -207,7 +207,7 @@ impl AnalyzerState {
         *self._current_scope_id.borrow()
     }
 
-    fn get_sym(&self, sym_id: NodeId) -> Ref<'_, SymbolEntry> {
+    fn get_sym(&self, sym_id: NodeId) -> Ref<'_, SymbolTableEntry> {
         Ref::map(self.symbol_table.borrow(), |st| st.get(&sym_id).unwrap())
     }
 
@@ -215,11 +215,11 @@ impl AnalyzerState {
         *self._current_scope_id.borrow_mut() = scope_id;
     }
 
-    fn get_scope(&self, scope_id: NodeId) -> Ref<'_, ScopeEntry> {
+    fn get_scope(&self, scope_id: NodeId) -> Ref<'_, ScopeTableEntry> {
         Ref::map(self.scope_table.borrow(), |st| st.get(&scope_id).unwrap())
     }
 
-    fn get_scope_mut(&self, scope_id: NodeId) -> RefMut<'_, ScopeEntry> {
+    fn get_scope_mut(&self, scope_id: NodeId) -> RefMut<'_, ScopeTableEntry> {
         RefMut::map(self.scope_table.borrow_mut(), |st| {
             st.get_mut(&scope_id).unwrap()
         })
@@ -231,7 +231,7 @@ impl AnalyzerState {
 }
 
 #[derive(Clone, Debug)]
-pub struct SymbolEntry {
+pub struct SymbolTableEntry {
     pub name: String,
     pub t: SymbolType,
 }
@@ -253,14 +253,14 @@ impl SymbolType {
 }
 
 #[derive(Clone, Debug)]
-struct ScopeEntry {
+struct ScopeTableEntry {
     variant: ScopeVariant,
     symbols: HashMap<String, NodeId>,
     parent_id: Option<NodeId>,
     children_id: Vec<NodeId>,
 }
 
-impl ScopeEntry {
+impl ScopeTableEntry {
     fn new(variant: ScopeVariant, parent_id: NodeId) -> Self {
         Self {
             variant,
