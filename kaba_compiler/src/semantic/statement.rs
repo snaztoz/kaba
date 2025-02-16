@@ -23,7 +23,9 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
             analyze_loop_control(state, node)
         }
 
-        AstNodeVariant::FunctionDefinition { sym, .. } => Err(SemanticError {
+        // Don't allow function and record definitions in non-global scope.
+        AstNodeVariant::FunctionDefinition { sym, .. }
+        | AstNodeVariant::RecordDefinition { sym, .. } => Err(SemanticError {
             variant: SemanticErrorVariant::UnexpectedStatement(node.to_string()),
             span: sym.span.clone(),
         }),

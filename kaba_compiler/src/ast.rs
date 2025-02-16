@@ -23,9 +23,18 @@ impl AstNode<'_> {
         )
     }
 
+    pub const fn is_function_definition(&self) -> bool {
+        matches!(self.variant, AstNodeVariant::FunctionDefinition { .. })
+    }
+
+    pub const fn is_record_definition(&self) -> bool {
+        matches!(self.variant, AstNodeVariant::RecordDefinition { .. })
+    }
+
     pub fn sym(&self) -> &AstNode {
         match &self.variant {
             AstNodeVariant::FunctionDefinition { sym, .. }
+            | AstNodeVariant::RecordDefinition { sym, .. }
             | AstNodeVariant::VariableDeclaration { sym, .. } => sym,
             _ => unreachable!(),
         }

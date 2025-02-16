@@ -25,6 +25,9 @@ pub enum Type {
         params_t: Vec<Self>,
         return_t: Box<Self>,
     },
+    Record {
+        fields: Vec<(String, Self)>,
+    },
 
     // Other types (e.g. class)
     Symbol(String),
@@ -209,12 +212,21 @@ impl Display for Type {
             Self::Array { elem_t, .. } => write!(f, "[]{elem_t}"),
 
             Self::Callable { params_t, return_t } => {
-                let params_t = params_t
+                let params_str = params_t
                     .iter()
                     .map(|t| t.to_string())
                     .collect::<Vec<_>>()
                     .join(",");
-                write!(f, "({params_t}) -> {return_t}")
+                write!(f, "({params_str}) -> {return_t}")
+            }
+
+            Self::Record { fields } => {
+                let fields_str = fields
+                    .iter()
+                    .map(|(name, t)| format!("{name}: {t}"))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "{{ {fields_str} }}")
             }
         }
     }

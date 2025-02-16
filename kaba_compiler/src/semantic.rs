@@ -14,6 +14,7 @@ mod error;
 mod expression;
 mod function;
 mod literal;
+mod record;
 pub mod state;
 mod statement;
 #[cfg(test)]
@@ -27,31 +28,65 @@ mod while_loop;
 pub fn analyze(program: &AstNode) -> Result<SymbolTable> {
     let state = AnalyzerState::new(program.id);
 
-    for stmt in program.body() {
-        ensure_permitted_in_global(stmt)?;
-        function::declaration::analyze(&state, stmt)?;
-    }
-
-    for stmt in program.body() {
-        function::definition::analyze(&state, stmt)?;
-    }
+    ensure_all_permitted_in_global(program.body())?;
+    analyze_declarations(&state, program.body())?;
+    analyze_definitions(&state, program.body())?;
 
     Ok(state.take_symbol_table())
 }
 
-fn ensure_permitted_in_global(stmt: &AstNode) -> Result<()> {
+fn analyze_declarations(state: &AnalyzerState, stmts: &[AstNode]) -> Result<()> {
+    for stmt in stmts {
+        if stmt.is_record_definition() {
+            record::declaration::analyze(state, stmt)?;
+        }
+    }
+
+    for stmt in stmts {
+        if stmt.is_function_definition() {
+            function::declaration::analyze(state, stmt)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn analyze_definitions(state: &AnalyzerState, stmts: &[AstNode]) -> Result<()> {
+    for stmt in stmts {
+        if stmt.is_record_definition() {
+            record::definition::analyze(state, stmt)?;
+        }
+    }
+
+    for stmt in stmts {
+        if stmt.is_function_definition() {
+            function::definition::analyze(state, stmt)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn ensure_all_permitted_in_global(stmts: &[AstNode]) -> Result<()> {
     // We are expecting that in global scope, statements (currently) are
     // only consisted of function definitions, while other statements are
     // rejected in this scope.
     //
     // TODO: review other statements for possibilities to be applied here
 
-    match &stmt.variant {
-        AstNodeVariant::FunctionDefinition { .. } => Ok(()),
+    for stmt in stmts {
+        match &stmt.variant {
+            AstNodeVariant::FunctionDefinition { .. } | AstNodeVariant::RecordDefinition { .. } => {
+            }
 
-        n => Err(SemanticError {
-            variant: SemanticErrorVariant::UnexpectedStatement(n.to_string()),
-            span: stmt.span.clone(),
-        }),
+            variant => {
+                return Err(SemanticError {
+                    variant: SemanticErrorVariant::UnexpectedStatement(variant.to_string()),
+                    span: stmt.span.clone(),
+                })
+            }
+        }
     }
+
+    Ok(())
 }

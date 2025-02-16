@@ -56,7 +56,7 @@ impl AnalyzerState {
             Type::Symbol(name) => {
                 matches!(
                     self.get_sym_variant(name).as_deref(),
-                    Some(SymbolVariant::TypeDefinition(_))
+                    Some(SymbolVariant::UndefinedType) | Some(SymbolVariant::Type(_))
                 )
             }
 
@@ -143,6 +143,31 @@ impl AnalyzerState {
         let current_scope = self.get_scope(current_scope_id);
 
         !current_scope.symbols.contains_key(sym_name)
+    }
+
+    /// Save type declaration to current active scope without providing type.
+    pub fn save_type_declaration(&self, sym_id: NodeId, sym_name: &str) {
+        // Save to scope table
+        let mut scope = self.get_scope_mut(self.current_scope_id());
+        scope.symbols.insert(String::from(sym_name), sym_id);
+
+        // Save to symbol table
+        self.symbol_table.borrow_mut().insert(
+            sym_id,
+            SymbolTableEntry {
+                name: String::from(sym_name),
+                variant: SymbolVariant::UndefinedType,
+            },
+        );
+    }
+
+    /// Set the definition of a type.
+    pub fn set_type_definition(&self, sym_id: NodeId, t: Type) {
+        self.symbol_table
+            .borrow_mut()
+            .get_mut(&sym_id)
+            .unwrap()
+            .variant = SymbolVariant::Type(t);
     }
 
     /// Save symbol and its associated type to current active scope.
@@ -270,7 +295,22 @@ pub struct SymbolTableEntry {
 
 #[derive(Clone, Debug)]
 pub enum SymbolVariant {
-    TypeDefinition(Type),
+    // The compiler run through the program multiple times, to analyze the
+    // declaration of symbols, and then to analyze their definitions.
+    //
+    // Because type declarations (such as record) are read first, there is a
+    // state where the definition of a type is not yet known to the compiler.
+    //
+    // This enum variant act as the placeholder for the mentioned state.
+    UndefinedType,
+
+    Type(Type),
+
+    // Entity represents any symbols that actually reside in the final memory
+    // space.
+    //
+    // For example, variable and functions are entities, while record
+    // definition is not.
     Entity(Type),
 }
 
