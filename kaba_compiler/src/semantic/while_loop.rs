@@ -1,10 +1,4 @@
-use super::{
-    body,
-    error::Result,
-    expression,
-    state::AnalyzerState,
-    types::{assert, Type},
-};
+use super::{body, error::Result, expression, state::AnalyzerState, types::assert};
 use crate::ast::{AstNode, AstNodeVariant};
 
 /// Analyze `while` loop statement.
@@ -39,17 +33,22 @@ use crate::ast::{AstNode, AstNodeVariant};
 ///     # Invalid
 /// }
 /// ```
-pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     // Expecting boolean type for the condition
 
     let cond_t = expression::analyze(state, unwrap_cond(node))?;
     assert::is_boolean(&cond_t, || unwrap_cond(node).span.clone())?;
 
-    // Check all statements inside the body with a new scope
+    // Function return type can't be taken from a `while-loop` body, so we must
+    // reset the type after the loop body is evaluated.
+    let returned_t_before_this = state.take_returned_type();
 
+    // Check all statements inside the body with a new scope
     state.with_loop_scope(node.id, || body::analyze(state, node))?;
 
-    Ok(Type::Void)
+    state.set_returned_type(returned_t_before_this);
+
+    Ok(())
 }
 
 fn unwrap_cond<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {

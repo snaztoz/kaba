@@ -37,7 +37,7 @@ use crate::{ast::AstNode, AstNodeVariant};
 /// ```text
 /// var x: int = 5.0;
 /// ```
-pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     let val_t = expression::analyze(state, unwrap_val(node))?;
 
     let var_t = match unwrap_tn(node) {
@@ -52,9 +52,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
         None => val_t,
     };
 
-    save_symbol(state, node, var_t)?;
-
-    Ok(Type::Void)
+    save_symbol(state, node, var_t)
 }
 
 fn save_symbol(state: &AnalyzerState, node: &AstNode, t: Type) -> Result<()> {

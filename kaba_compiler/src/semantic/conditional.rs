@@ -34,7 +34,7 @@ use crate::{ast::AstNode, AstNodeVariant};
 /// * It can be the last statement of a function:
 ///
 /// ```text
-/// fn foo(): int {
+/// def foo(): int {
 ///     if false {
 ///         return 5;
 ///     } else {
@@ -59,7 +59,7 @@ use crate::{ast::AstNode, AstNodeVariant};
 ///   (exhaustive). Else, the compiler will throw an error.
 ///
 /// ```text
-/// fn foo(): int {
+/// def foo(): int {
 ///     if !true {
 ///         return 1;
 ///     } else {
@@ -67,17 +67,42 @@ use crate::{ast::AstNode, AstNodeVariant};
 ///     }
 /// }
 /// ```
-pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     let cond_t = expression::analyze(state, unwrap_cond(node))?;
     assert::is_boolean(&cond_t, || unwrap_cond(node).span.clone())?;
 
-    // Check all statements inside the body with a new scope
+    let returned_t_before_this = state.take_returned_type();
 
-    let return_t = state.with_conditional_scope(node.id, || body::analyze(state, node))?;
+    // Check all statements inside the body with a new scope
+    state.with_conditional_scope(node.id, || body::analyze(state, node))?;
+
+    let return_t = state.take_returned_type();
 
     if unwrap_or_else_branch(node).is_none() {
-        // Non-exhaustive branches, set to "Void"
-        return Ok(Type::Void);
+        // Non-exhaustive branch(es).
+        //
+        // We must set body's returned type back to the type before we
+        // encountered this statement.
+        //
+        // For example:
+        //
+        // ```
+        // def foo: int {
+        //     return 1;  // The returned type is "int" here
+        //
+        //     if !true {
+        //         return 5;
+        //     }
+        //
+        //     // Because the above if-else statement is not exhaustive, we
+        //     // can't take the returned type (the `5`).
+        //     //
+        //     // Instead, we must set it back to the previous returned type,
+        //     // that is, the one where `1` was returned.
+        // }
+        // ```
+        state.set_returned_type(returned_t_before_this);
+        return Ok(());
     }
 
     let or_else_branch = unwrap_or_else_branch(node).unwrap();
@@ -86,31 +111,37 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
             // All conditional branches must returning a value (exhaustive)
             // for this statement to be considered as returning value
 
-            let branch_return_t = analyze(state, or_else_branch)?;
+            analyze(state, or_else_branch)?;
+
+            let branch_return_t = state.take_returned_type();
 
             if return_t != Type::Void && branch_return_t != Type::Void {
-                Ok(return_t)
+                state.set_returned_type(return_t);
             } else {
-                Ok(Type::Void)
+                state.set_returned_type(returned_t_before_this);
             }
         }
 
         AstNodeVariant::Else { .. } => {
             // Check all statements inside the body with a new scope
 
-            let branch_return_t = state.with_conditional_scope(or_else_branch.id, || {
+            state.with_conditional_scope(or_else_branch.id, || {
                 body::analyze(state, or_else_branch)
             })?;
 
+            let branch_return_t = state.take_returned_type();
+
             if return_t != Type::Void && branch_return_t != Type::Void {
-                Ok(return_t)
+                state.set_returned_type(return_t);
             } else {
-                Ok(Type::Void)
+                state.set_returned_type(returned_t_before_this);
             }
         }
 
         _ => unreachable!(),
     }
+
+    Ok(())
 }
 
 fn unwrap_cond<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {

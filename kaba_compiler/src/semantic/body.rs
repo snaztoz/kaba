@@ -1,19 +1,14 @@
-use super::{error::Result, state::AnalyzerState, statement, types::Type};
+use super::{error::Result, state::AnalyzerState, statement};
 use crate::ast::AstNode;
 
 /// Analyze a statement body.
 ///
 /// Statement bodies are consist of `>= 0` statements, so this analyzer will
 /// call the [`StatementAnalyzer`] on each statement found in current body.
-pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
-    let mut body_t = Type::Void;
-
+pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     for stmt in node.body() {
-        let t = statement::analyze(state, stmt)?;
-        if body_t == Type::Void {
-            body_t = t;
-        }
+        statement::analyze(state, stmt)?;
     }
 
-    Ok(body_t)
+    Ok(())
 }

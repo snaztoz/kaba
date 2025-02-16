@@ -1,10 +1,4 @@
-use super::{
-    body,
-    error::Result,
-    expression,
-    state::AnalyzerState,
-    types::{assert, Type},
-};
+use super::{body, error::Result, expression, state::AnalyzerState, types::assert};
 use crate::{ast::AstNode, AstNodeVariant};
 
 /// Analyze `each` loop statement.
@@ -38,7 +32,7 @@ use crate::{ast::AstNode, AstNodeVariant};
 ///     // Invalid
 /// }
 /// ```
-pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     let expr_t = expression::analyze(state, unwrap_iterable(node))?;
     assert::is_iterable(&expr_t, || unwrap_iterable(node).span.clone())?;
 
@@ -46,14 +40,19 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     let elem_sym_name = elem_sym.sym_name();
     let elem_t = expr_t.unwrap_array();
 
-    // Check all statements inside the body with a new scope
+    // Function return type can't be taken from an `each-loop` body, so we must
+    // reset the type after the loop body is evaluated.
+    let returned_t_before_this = state.take_returned_type();
 
+    // Check all statements inside the body with a new scope
     state.with_loop_scope(node.id, || {
         state.save_entity(elem_sym.id, elem_sym_name, elem_t);
         body::analyze(state, node)
     })?;
 
-    Ok(Type::Void)
+    state.set_returned_type(returned_t_before_this);
+
+    Ok(())
 }
 
 fn unwrap_iterable<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {

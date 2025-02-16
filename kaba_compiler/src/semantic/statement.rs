@@ -13,7 +13,7 @@ use crate::ast::{AstNode, AstNodeVariant};
 /// It analyzes simple statements, such as loop control analyzeing, and also
 /// acts as an aggregate for another (more specific) statement analyzers, such
 /// as the AssignmentAnalyzer.
-pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     match &node.variant {
         AstNodeVariant::VariableDeclaration { .. } => variable::analyze(state, node),
         AstNodeVariant::If { .. } => conditional::analyze(state, node),
@@ -31,11 +31,14 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
         AstNodeVariant::Return { .. } => analyze_return(state, node),
         AstNodeVariant::Debug { .. } => analyze_debug(state, node),
 
-        _ => expression::analyze(state, node),
+        _ => {
+            expression::analyze(state, node)?;
+            Ok(())
+        }
     }
 }
 
-fn analyze_loop_control(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+fn analyze_loop_control(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     if !state.is_inside_loop() {
         return Err(SemanticError {
             variant: SemanticErrorVariant::UnexpectedStatement(node.to_string()),
@@ -43,10 +46,10 @@ fn analyze_loop_control(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
         });
     }
 
-    Ok(Type::Void)
+    Ok(())
 }
 
-fn analyze_return(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+fn analyze_return(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     let expr = if let AstNodeVariant::Return { expr } = &node.variant {
         expr
     } else {
@@ -75,10 +78,12 @@ fn analyze_return(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
         ..err
     })?;
 
-    Ok(return_t)
+    state.set_returned_type(return_t);
+
+    Ok(())
 }
 
-fn analyze_debug(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+fn analyze_debug(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     let expr = if let AstNodeVariant::Debug { expr, .. } = &node.variant {
         expr
     } else {
@@ -93,7 +98,7 @@ fn analyze_debug(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
         });
     }
 
-    Ok(Type::Void)
+    Ok(())
 }
 
 #[cfg(test)]

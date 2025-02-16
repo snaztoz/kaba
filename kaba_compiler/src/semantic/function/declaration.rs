@@ -24,6 +24,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
 
     let params = analyze_params(state, node)?;
     let return_t = analyze_return_tn(state, node)?;
+
     let function_t = Type::Callable {
         params_t: params.iter().map(|p| p.2.clone()).collect(),
         return_t: Box::new(return_t.clone()),
@@ -31,11 +32,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
 
     state.save_entity(sym.id, sym_name, function_t);
 
-    state.create_scope(
-        node.id,
-        ScopeVariant::Function { return_t },
-        state.current_scope_id(),
-    );
+    state.create_scope_inside_current_scope(node.id, ScopeVariant::Function { return_t });
 
     for (param_id, param_name, param_t) in params {
         state.save_entity_to(node.id, param_id, param_name, param_t);

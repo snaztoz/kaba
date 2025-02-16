@@ -11,23 +11,38 @@ type ScopeTable = HashMap<NodeId, ScopeTableEntry>;
 pub struct AnalyzerState {
     symbol_table: RefCell<SymbolTable>,
     scope_table: RefCell<ScopeTable>,
+
+    // Maintain the current active scope by storing its ID.
     _current_scope_id: RefCell<NodeId>,
+
+    // The last returned type.
+    //
+    // Used to track the type of `return` statements to facilitate the type
+    // checking with function's return type.
+    _returned_type: RefCell<Type>,
 }
 
 impl AnalyzerState {
-    pub fn new(global_id: NodeId) -> Self {
+    /// Create a new [`AnalyzerState`] instance.
+    ///
+    /// It takes the ID of [`crate::ast::AstNode`] to determines the global
+    /// scope.
+    pub fn new(program_id: NodeId) -> Self {
         Self {
             symbol_table: RefCell::new(HashMap::new()),
-            scope_table: RefCell::new(HashMap::from([(global_id, ScopeTableEntry::new_global())])),
-            _current_scope_id: RefCell::new(global_id),
+            scope_table: RefCell::new(HashMap::from([(program_id, ScopeTableEntry::new_global())])),
+            _current_scope_id: RefCell::new(program_id),
+            _returned_type: RefCell::new(Type::Void),
         }
     }
 
+    /// Consume `self` and return the instance of [`SymbolTable`].
     pub fn take_symbol_table(self) -> SymbolTable {
         self.symbol_table.take()
     }
 
-    /// Check if a type exists in the current active scope or its ancestors.
+    /// Check if a given type `t` exists in the current active scope or its
+    /// ancestors.
     pub fn has_t(&self, t: &Type) -> bool {
         match t {
             t if t.is_basic_t() => true,
@@ -49,8 +64,8 @@ impl AnalyzerState {
         }
     }
 
-    /// Get the variant associated with a `sym` in the current active scope or
-    /// its ancestors.
+    /// Get the variant associated with a `sym_name` in the current active
+    /// scope or its ancestors.
     pub fn get_sym_variant(&self, sym_name: &str) -> Option<Ref<'_, SymbolVariant>> {
         let mut scope_id = self.current_scope_id();
 
@@ -113,7 +128,9 @@ impl AnalyzerState {
         }
     }
 
-    /// Check if the given `sym` can be saved. A symbol can't be saved if:
+    /// Check if the given `sym_name` can be saved.
+    ///
+    /// A symbol is considered to can't be saved if:
     ///
     ///  1. It is a builtin (reserved) name,
     ///  2. or it's already exist in the current scope.
@@ -175,7 +192,8 @@ impl AnalyzerState {
 
     /// Execute `action` within a scope of `variant` variant.
     ///
-    /// It automatically handles the creating and exiting of the new scope.
+    /// It handles the creation (if needed), entering and also exiting the
+    /// scope.
     fn with_scope<U, F>(&self, scope_id: NodeId, scope_variant: ScopeVariant, action: F) -> U
     where
         F: FnOnce() -> U,
@@ -193,6 +211,7 @@ impl AnalyzerState {
         result
     }
 
+    /// Create a new scope.
     pub fn create_scope(&self, id: NodeId, variant: ScopeVariant, parent_id: NodeId) {
         let mut table = self.scope_table.borrow_mut();
 
@@ -203,7 +222,20 @@ impl AnalyzerState {
         table.get_mut(&parent_id).unwrap().children_id.push(id);
     }
 
-    pub fn current_scope_id(&self) -> NodeId {
+    /// Create a new scope in the inside of current active scope.
+    pub fn create_scope_inside_current_scope(&self, id: NodeId, variant: ScopeVariant) {
+        self.create_scope(id, variant, self.current_scope_id());
+    }
+
+    pub fn take_returned_type(&self) -> Type {
+        self._returned_type.replace(Type::Void)
+    }
+
+    pub fn set_returned_type(&self, t: Type) {
+        *self._returned_type.borrow_mut() = t;
+    }
+
+    fn current_scope_id(&self) -> NodeId {
         *self._current_scope_id.borrow()
     }
 
