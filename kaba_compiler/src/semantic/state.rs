@@ -40,8 +40,8 @@ impl AnalyzerState {
 
             Type::Symbol(name) => {
                 matches!(
-                    self.get_sym_t(name).as_deref(),
-                    Some(SymbolType::TypeDefinition(_))
+                    self.get_sym_variant(name).as_deref(),
+                    Some(SymbolVariant::TypeDefinition(_))
                 )
             }
 
@@ -49,16 +49,16 @@ impl AnalyzerState {
         }
     }
 
-    /// Get the type associated with a `sym` in the current active scope or its
-    /// ancestors.
-    pub fn get_sym_t(&self, sym_name: &str) -> Option<Ref<'_, SymbolType>> {
+    /// Get the variant associated with a `sym` in the current active scope or
+    /// its ancestors.
+    pub fn get_sym_variant(&self, sym_name: &str) -> Option<Ref<'_, SymbolVariant>> {
         let mut scope_id = self.current_scope_id();
 
         loop {
             let scope_entry = self.get_scope(scope_id);
 
             if let Some(symbol_id) = scope_entry.symbols.get(sym_name) {
-                return Some(Ref::map(self.get_sym(*symbol_id), |s| &s.t));
+                return Some(Ref::map(self.get_sym(*symbol_id), |s| &s.variant));
             }
 
             // Traverse upward
@@ -144,7 +144,7 @@ impl AnalyzerState {
             sym_id,
             SymbolTableEntry {
                 name: String::from(sym_name),
-                t: SymbolType::Entity(t),
+                variant: SymbolVariant::Entity(t),
             },
         );
     }
@@ -233,16 +233,16 @@ impl AnalyzerState {
 #[derive(Clone, Debug)]
 pub struct SymbolTableEntry {
     pub name: String,
-    pub t: SymbolType,
+    pub variant: SymbolVariant,
 }
 
 #[derive(Clone, Debug)]
-pub enum SymbolType {
+pub enum SymbolVariant {
     TypeDefinition(Type),
     Entity(Type),
 }
 
-impl SymbolType {
+impl SymbolVariant {
     pub fn into_entity_t(self) -> Type {
         if let Self::Entity(ent) = self {
             ent

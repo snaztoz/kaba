@@ -9,7 +9,7 @@ use crate::semantic::{
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     let function_name = node.sym().sym_name();
     let return_t = if let Type::Callable { return_t, .. } = state
-        .get_sym_t(function_name)
+        .get_sym_variant(function_name)
         .unwrap()
         .clone()
         .into_entity_t()

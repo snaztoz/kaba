@@ -43,7 +43,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
         AstNodeVariant::Neg { .. } => analyze_neg_expr(state, node),
 
         AstNodeVariant::Symbol { name } => state
-            .get_sym_t(name)
+            .get_sym_variant(name)
             .ok_or_else(|| SemanticError {
                 variant: SemanticErrorVariant::SymbolDoesNotExist(String::from(*name)),
                 span: node.span.clone(),
