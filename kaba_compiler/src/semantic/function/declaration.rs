@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use crate::{
     ast::NodeId,
     semantic::{
@@ -10,6 +8,7 @@ use crate::{
     },
     AstNode, FunctionParam,
 };
+use std::collections::HashSet;
 
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     let sym = node.sym();
