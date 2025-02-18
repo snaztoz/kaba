@@ -1,7 +1,7 @@
 use super::{
     error::{ParsingError, ParsingErrorVariant},
     state::ParserState,
-    tn, Result,
+    sym, tn, Result,
 };
 use crate::{
     ast::{AstNode, AstNodeVariant, Literal},
@@ -409,6 +409,25 @@ fn parse_unary_expression<'src>(
                 };
             }
 
+            TokenKind::Dot => {
+                let callee_start = expr.span.start;
+
+                state.tokens.skip(&TokenKind::Dot)?;
+
+                // Expecting symbol
+                let field = sym::parse(state, "field name")?;
+                let span = callee_start..field.span.end;
+
+                expr = AstNode {
+                    id: state.next_id(),
+                    variant: AstNodeVariant::FieldAccess {
+                        object: Box::new(expr.into_group_inner()),
+                        field: Box::new(field),
+                    },
+                    span,
+                };
+            }
+
             TokenKind::LBrack => {
                 let callee_start = expr.span.start;
 
@@ -592,6 +611,7 @@ fn parse_primary_expression<'src>(
         }
 
         TokenKind::LBrack => parse_array_literal(state),
+        TokenKind::LBrace => parse_record_literal(state),
 
         kind => Err(ParsingError {
             variant: ParsingErrorVariant::UnexpectedToken {
@@ -693,6 +713,67 @@ fn parse_array_literal<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstN
                 elem_tn: Box::new(elem_tn),
                 elems,
             },
+        },
+        span: start..end,
+    })
+}
+
+fn parse_record_literal<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
+    let start = state.tokens.current().span.start;
+
+    // Expecting "{"
+    state.tokens.skip(&TokenKind::LBrace)?;
+
+    // Can have >= 0 fields
+    let mut fields = vec![];
+    loop {
+        // Stop when encounter a closing bracket
+        if state.tokens.current_is(&TokenKind::RBrace) {
+            break;
+        }
+
+        // Parse field name
+        let field_name = sym::parse(state, "field name")?;
+
+        // Expecting colon
+        state.tokens.skip(&TokenKind::Colon)?;
+
+        // Parse field value
+        let field_value = parse(state)?;
+
+        fields.push((field_name, field_value));
+
+        // Continue if encounter "," or break out of loop if encounter ")"
+        match state.tokens.current_kind() {
+            TokenKind::Comma => {
+                state.tokens.skip(&TokenKind::Comma)?;
+                continue;
+            }
+
+            TokenKind::RBrace => continue,
+
+            kind => {
+                // Error if encountering neither "," or "]"
+                return Err(ParsingError {
+                    variant: ParsingErrorVariant::UnexpectedToken {
+                        expect: TokenKind::RBrack,
+                        found: kind.clone(),
+                    },
+                    span: state.tokens.current().span,
+                });
+            }
+        }
+    }
+
+    let end = state.tokens.current().span.end;
+
+    // Expecting "]"
+    state.tokens.skip(&TokenKind::RBrace)?;
+
+    Ok(AstNode {
+        id: state.next_id(),
+        variant: AstNodeVariant::Literal {
+            lit: Literal::Record { fields },
         },
         span: start..end,
     })
@@ -1313,6 +1394,59 @@ mod tests {
     }
 
     #[test]
+    fn field_access() {
+        assert_ast(
+            "foo.bar;",
+            AstNode {
+                id: 0,
+                variant: AstNodeVariant::FieldAccess {
+                    object: Box::new(AstNode {
+                        id: 0,
+                        variant: AstNodeVariant::Symbol { name: "foo" },
+                        span: 0..3,
+                    }),
+                    field: Box::new(AstNode {
+                        id: 0,
+                        variant: AstNodeVariant::Symbol { name: "bar" },
+                        span: 4..7,
+                    }),
+                },
+                span: 0..7,
+            },
+        );
+    }
+
+    #[test]
+    fn accessing_field_from_function_call_result() {
+        assert_ast(
+            "foo().bar;",
+            AstNode {
+                id: 0,
+                variant: AstNodeVariant::FieldAccess {
+                    object: Box::new(AstNode {
+                        id: 0,
+                        variant: AstNodeVariant::FunctionCall {
+                            callee: Box::new(AstNode {
+                                id: 0,
+                                variant: AstNodeVariant::Symbol { name: "foo" },
+                                span: 0..3,
+                            }),
+                            args: vec![],
+                        },
+                        span: 0..5,
+                    }),
+                    field: Box::new(AstNode {
+                        id: 0,
+                        variant: AstNodeVariant::Symbol { name: "bar" },
+                        span: 6..9,
+                    }),
+                },
+                span: 0..9,
+            },
+        );
+    }
+
+    #[test]
     fn index_access() {
         assert_ast(
             "foo[3];",
@@ -1628,6 +1762,109 @@ mod tests {
                     },
                 },
                 span: 0..13,
+            },
+        )
+    }
+
+    #[test]
+    fn empty_record() {
+        assert_ast(
+            "{};",
+            AstNode {
+                id: 0,
+                variant: AstNodeVariant::Literal {
+                    lit: Literal::Record { fields: vec![] },
+                },
+                span: 0..2,
+            },
+        )
+    }
+
+    #[test]
+    fn record_with_fields() {
+        assert_ast(
+            "{ foo: 5, bar: true };",
+            AstNode {
+                id: 0,
+                variant: AstNodeVariant::Literal {
+                    lit: Literal::Record {
+                        fields: vec![
+                            (
+                                AstNode {
+                                    id: 0,
+                                    variant: AstNodeVariant::Symbol { name: "foo" },
+                                    span: 2..5,
+                                },
+                                AstNode {
+                                    id: 0,
+                                    variant: AstNodeVariant::Literal {
+                                        lit: Literal::Int(5),
+                                    },
+                                    span: 7..8,
+                                },
+                            ),
+                            (
+                                AstNode {
+                                    id: 0,
+                                    variant: AstNodeVariant::Symbol { name: "bar" },
+                                    span: 10..13,
+                                },
+                                AstNode {
+                                    id: 0,
+                                    variant: AstNodeVariant::Literal {
+                                        lit: Literal::Bool(true),
+                                    },
+                                    span: 15..19,
+                                },
+                            ),
+                        ],
+                    },
+                },
+                span: 0..21,
+            },
+        );
+    }
+
+    #[test]
+    fn record_with_nested_values() {
+        assert_ast(
+            "{ foo: { bar: true } };",
+            AstNode {
+                id: 0,
+                variant: AstNodeVariant::Literal {
+                    lit: Literal::Record {
+                        fields: vec![(
+                            AstNode {
+                                id: 0,
+                                variant: AstNodeVariant::Symbol { name: "foo" },
+                                span: 2..5,
+                            },
+                            AstNode {
+                                id: 0,
+                                variant: AstNodeVariant::Literal {
+                                    lit: Literal::Record {
+                                        fields: vec![(
+                                            AstNode {
+                                                id: 0,
+                                                variant: AstNodeVariant::Symbol { name: "bar" },
+                                                span: 9..12,
+                                            },
+                                            AstNode {
+                                                id: 0,
+                                                variant: AstNodeVariant::Literal {
+                                                    lit: Literal::Bool(true),
+                                                },
+                                                span: 14..18,
+                                            },
+                                        )],
+                                    },
+                                },
+                                span: 7..20,
+                            },
+                        )],
+                    },
+                },
+                span: 0..22,
             },
         )
     }

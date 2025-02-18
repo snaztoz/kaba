@@ -266,6 +266,11 @@ pub enum AstNodeVariant<'src> {
         args: Vec<AstNode<'src>>,
     },
 
+    FieldAccess {
+        object: Box<AstNode<'src>>,
+        field: Box<AstNode<'src>>,
+    },
+
     IndexAccess {
         object: Box<AstNode<'src>>,
         index: Box<AstNode<'src>>,
@@ -392,6 +397,9 @@ impl Display for AstNodeVariant<'_> {
             Self::FunctionCall { .. } => {
                 write!(f, "function call expression")
             }
+            Self::FieldAccess { .. } => {
+                write!(f, "field access expression")
+            }
             Self::IndexAccess { .. } => {
                 write!(f, "index access expression")
             }
@@ -478,6 +486,10 @@ pub enum Literal<'src> {
         elem_tn: Box<AstNode<'src>>,
         elems: Vec<AstNode<'src>>,
     },
+
+    Record {
+        fields: Vec<(AstNode<'src>, AstNode<'src>)>,
+    },
 }
 
 impl Display for Literal<'_> {
@@ -497,7 +509,18 @@ impl Display for Literal<'_> {
                     .map(|tn| tn.to_string())
                     .collect::<Vec<_>>()
                     .join(", ");
+
                 write!(f, "[{joined}]")
+            }
+
+            Self::Record { fields } => {
+                let joined = fields
+                    .iter()
+                    .map(|(name, val)| format!("{name}: {val}"))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                write!(f, "{{ {joined} }}")
             }
         }
     }
