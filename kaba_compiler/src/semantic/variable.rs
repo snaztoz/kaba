@@ -42,8 +42,18 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
 
     let var_t = match unwrap_tn(node) {
         Some(var_tn) => {
-            let t = tn::analyze(state, var_tn, false)?;
+            let t = match tn::analyze(state, var_tn, false)? {
+                Type::Symbol(sym_name) => state
+                    .get_sym_variant(&sym_name)
+                    .unwrap()
+                    .clone()
+                    .into_type_t(),
+
+                t => t,
+            };
+
             assert::is_assignable(&val_t, &t, || node.span.clone())?;
+
             t
         }
 

@@ -89,6 +89,20 @@ where
     }
 }
 
+pub fn is_field_accessible<F>(t: &Type, err_span: F) -> Result<()>
+where
+    F: FnOnce() -> Span,
+{
+    if matches!(t, Type::Record { .. }) {
+        Ok(())
+    } else {
+        Err(SemanticError {
+            variant: SemanticErrorVariant::NonFieldAccessibleType,
+            span: err_span(),
+        })
+    }
+}
+
 pub fn is_indexable<F>(t: &Type, err_span: F) -> Result<()>
 where
     F: FnOnce() -> Span,

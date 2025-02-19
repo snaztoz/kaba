@@ -8,6 +8,7 @@ use super::{
 use crate::ast::{AstNode, AstNodeVariant};
 use std::cmp;
 
+mod field_access;
 mod function_call;
 mod index_access;
 
@@ -52,6 +53,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
 
         AstNodeVariant::Literal { .. } => literal::analyze(state, node),
         AstNodeVariant::FunctionCall { .. } => function_call::analyze(state, node),
+        AstNodeVariant::FieldAccess { .. } => field_access::analyze(state, node),
         AstNodeVariant::IndexAccess { .. } => index_access::analyze(state, node),
 
         _ => unreachable!(),

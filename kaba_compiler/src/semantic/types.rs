@@ -1,5 +1,5 @@
 use crate::ast::{AstNode, AstNodeVariant, TypeNotation};
-use std::{cmp::Ordering, fmt::Display, hash::Hash};
+use std::{cmp::Ordering, collections::HashMap, fmt::Display, hash::Hash};
 
 pub mod assert;
 
@@ -7,7 +7,7 @@ pub static BASIC_T: &[&str] = &[
     "void", "bool", "sbyte", "short", "int", "long", "float", "double", "char", "string",
 ];
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Type {
     // Basic types
     Void,
@@ -26,7 +26,7 @@ pub enum Type {
         return_t: Box<Self>,
     },
     Record {
-        fields: Vec<(String, Self)>,
+        fields: HashMap<String, Self>,
     },
 
     // Other types (e.g. class)
@@ -43,6 +43,10 @@ impl Type {
 
     pub const fn is_void(&self) -> bool {
         matches!(self, Type::Void)
+    }
+
+    pub const fn is_record(&self) -> bool {
+        matches!(self, Type::Record { .. })
     }
 
     pub fn is_compatible_with(&self, other: &Type) -> bool {
@@ -70,6 +74,25 @@ impl Type {
             return true;
         }
 
+        if self.is_record() && other.is_record() {
+            let self_fields = self.unwrap_record();
+            let other_fields = other.unwrap_record();
+
+            if self_fields.len() != other_fields.len() {
+                return false;
+            }
+
+            return self_fields.iter().all(|(field_name, field_t)| {
+                let other_field_t = other_fields.get(field_name);
+
+                if other_field_t.is_none() {
+                    return false;
+                }
+
+                field_t.is_assignable_to(other_field_t.unwrap())
+            });
+        }
+
         if self.is_unbounded_int() {
             return self.is_convertible_to_bounded_int(other);
         } else if self.is_unbounded_float() {
@@ -95,34 +118,8 @@ impl Type {
         matches!(self, Type::Float(t) if !matches!(t, FloatType::Unbounded(_)))
     }
 
-    fn is_convertible_to_bounded_int(&self, other: &Self) -> bool {
-        if let Self::Int(IntType::Unbounded(n)) = self {
-            return match other {
-                // Try narrowing the value
-                Self::Int(IntType::SByte) => i8::try_from(*n).is_ok(),
-                Self::Int(IntType::Short) => i16::try_from(*n).is_ok(),
-
-                // Always fit, does not need any checking
-                Self::Int(IntType::Int) | Self::Int(IntType::Long) => true,
-
-                _ => false,
-            };
-        }
-
-        unreachable!()
-    }
-
-    fn is_convertible_to_bounded_float(&self, other: &Self) -> bool {
-        if let Self::Float(FloatType::Unbounded(_)) = self {
-            return match other {
-                // Always fit, does not need any checking
-                Self::Float(FloatType::Float) | Self::Float(FloatType::Double) => true,
-
-                _ => false,
-            };
-        }
-
-        unreachable!()
+    pub fn get_field(&self, name: &str) -> Option<&Type> {
+        self.unwrap_record().get(name)
     }
 
     pub fn unwrap_unbounded_int(&self) -> i32 {
@@ -155,6 +152,44 @@ impl Type {
         } else {
             panic!("trying to unwrap callable on non-Callable type")
         }
+    }
+
+    fn unwrap_record(&self) -> &HashMap<String, Self> {
+        if let Self::Record { fields } = self {
+            fields
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn is_convertible_to_bounded_int(&self, other: &Self) -> bool {
+        if let Self::Int(IntType::Unbounded(n)) = self {
+            return match other {
+                // Try narrowing the value
+                Self::Int(IntType::SByte) => i8::try_from(*n).is_ok(),
+                Self::Int(IntType::Short) => i16::try_from(*n).is_ok(),
+
+                // Always fit, does not need any checking
+                Self::Int(IntType::Int) | Self::Int(IntType::Long) => true,
+
+                _ => false,
+            };
+        }
+
+        unreachable!()
+    }
+
+    fn is_convertible_to_bounded_float(&self, other: &Self) -> bool {
+        if let Self::Float(FloatType::Unbounded(_)) = self {
+            return match other {
+                // Always fit, does not need any checking
+                Self::Float(FloatType::Float) | Self::Float(FloatType::Double) => true,
+
+                _ => false,
+            };
+        }
+
+        unreachable!()
     }
 }
 

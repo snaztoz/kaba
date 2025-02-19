@@ -1,11 +1,12 @@
 use super::{
-    error::Result,
+    error::{Result, SemanticError, SemanticErrorVariant},
     expression,
     state::AnalyzerState,
     tn,
     types::{assert, FloatType, IntType, Type},
 };
 use crate::{ast::Literal, AstNode, AstNodeVariant};
+use std::collections::HashMap;
 
 /// Analyze literal expressions, such as numbers or arrays.
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
@@ -21,6 +22,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
         Literal::String(_) => Ok(Type::String),
 
         Literal::Array { .. } => analyze_array(state, lit),
+        Literal::Record { .. } => analyze_record(state, lit),
     }
 }
 
@@ -42,6 +44,39 @@ fn analyze_array(state: &AnalyzerState, lit: &Literal) -> Result<Type> {
     Ok(Type::Array {
         elem_t: Box::new(elem_t),
     })
+}
+
+fn analyze_record(state: &AnalyzerState, lit: &Literal) -> Result<Type> {
+    let fields = if let Literal::Record { fields } = lit {
+        fields
+    } else {
+        unreachable!()
+    };
+
+    let mut fields_t = HashMap::new();
+
+    for (name, val) in fields {
+        let field_name = name.sym_name();
+
+        if fields_t.contains_key(field_name) {
+            return Err(SemanticError {
+                variant: SemanticErrorVariant::SymbolAlreadyExist(String::from(field_name)),
+                span: name.span.clone(),
+            });
+        }
+
+        let t = match expression::analyze(state, val)? {
+            // Deduce unbounded types into bounded ones
+            expr_t if expr_t.is_unbounded_int() => Type::Int(IntType::Int),
+            expr_t if expr_t.is_unbounded_float() => Type::Float(FloatType::Double),
+
+            expr_t => expr_t,
+        };
+
+        fields_t.insert(String::from(field_name), t);
+    }
+
+    Ok(Type::Record { fields: fields_t })
 }
 
 fn unwrap_literal<'src, 'a>(node: &'a AstNode<'src>) -> &'a Literal<'src> {

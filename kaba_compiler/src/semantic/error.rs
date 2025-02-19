@@ -30,7 +30,9 @@ pub enum SemanticErrorVariant {
     NonBooleanType,
     NonCallableType,
     NonIterableType,
+    NonFieldAccessibleType,
     NonIndexableType,
+    FieldDoesNotExist { t: Type, field: String },
     ArgumentLengthMismatch { expected: usize, get: usize },
     InvalidArguments { args_t: Vec<Type> },
     ReturnTypeMismatch { expected: Type, get: Type },
@@ -85,8 +87,14 @@ impl Display for SemanticErrorVariant {
             Self::NonIterableType => {
                 write!(f, "not an iterable type")
             }
+            Self::NonFieldAccessibleType => {
+                write!(f, "not a field-accessible type")
+            }
             Self::NonIndexableType => {
                 write!(f, "not an indexable type")
+            }
+            Self::FieldDoesNotExist { t, field } => {
+                write!(f, "field `{field}` does not exist in type `{t}`")
             }
             Self::TypeMismatch { type_a, type_b, .. } => {
                 write!(f, "type mismatch: `{type_a}` and `{type_b}`",)

@@ -3,17 +3,16 @@ use crate::semantic::error::{SemanticError, SemanticErrorVariant};
 use crate::semantic::tn;
 use crate::semantic::{error::Result, state::AnalyzerState, types::Type};
 use crate::AstNodeVariant;
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
-    let mut taken_name = HashSet::new();
-    let mut fields = vec![];
+    let mut fields = HashMap::new();
 
     for field in record_fields(node) {
         let field_sym = &field.sym;
         let field_name = field_sym.sym_name();
 
-        if taken_name.contains(field_name) {
+        if fields.contains_key(field_name) {
             return Err(SemanticError {
                 variant: SemanticErrorVariant::SymbolAlreadyExist(String::from(field_name)),
                 span: field_sym.span.clone(),
@@ -21,9 +20,8 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
         }
 
         let field_t = tn::analyze(state, &field.tn, false)?;
-        fields.push((String::from(field_name), field_t));
 
-        taken_name.insert(field_name);
+        fields.insert(String::from(field_name), field_t);
     }
 
     state.set_type_definition(node.sym().id, Type::Record { fields });
