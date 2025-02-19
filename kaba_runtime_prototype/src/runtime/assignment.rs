@@ -26,12 +26,12 @@ impl<'src, 'a> AssignmentRunner<'src, 'a> {
             }
 
             Lhs::ArrayIndex { arr_ptr, index } => {
-                let arr = &mut self.state.array_arena.borrow_mut()[*arr_ptr];
-                if *index >= arr.len() {
+                let arr = &mut self.state.objects_arena.borrow_mut()[*arr_ptr];
+                if *index >= arr.as_array().len() {
                     todo!("index out of bound")
                 }
 
-                arr[*index] = val;
+                arr.as_array_mut()[*index] = val;
             }
         }
 
@@ -48,15 +48,15 @@ impl<'src, 'a> AssignmentRunner<'src, 'a> {
             }
 
             Lhs::ArrayIndex { arr_ptr, index } => {
-                let arr = &mut self.state.array_arena.borrow_mut()[*arr_ptr];
-                if *index >= arr.len() {
+                let arr = &mut self.state.objects_arena.borrow_mut()[*arr_ptr];
+                if *index >= arr.as_array().len() {
                     todo!("index out of bound")
                 }
 
-                let old_val = &arr[*index];
+                let old_val = &arr.as_array()[*index];
                 let new_val = self.math_add(old_val, &val);
 
-                arr[*index] = new_val;
+                arr.as_array_mut()[*index] = new_val;
             }
         }
 
@@ -73,15 +73,15 @@ impl<'src, 'a> AssignmentRunner<'src, 'a> {
             }
 
             Lhs::ArrayIndex { arr_ptr, index } => {
-                let arr = &mut self.state.array_arena.borrow_mut()[*arr_ptr];
-                if *index >= arr.len() {
+                let arr = &mut self.state.objects_arena.borrow_mut()[*arr_ptr];
+                if *index >= arr.as_array().len() {
                     todo!("index out of bound")
                 }
 
-                let old_val = &arr[*index];
+                let old_val = &arr.as_array()[*index];
                 let new_val = self.math_sub(old_val, &val);
 
-                arr[*index] = new_val;
+                arr.as_array_mut()[*index] = new_val;
             }
         }
 
@@ -98,15 +98,15 @@ impl<'src, 'a> AssignmentRunner<'src, 'a> {
             }
 
             Lhs::ArrayIndex { arr_ptr, index } => {
-                let arr = &mut self.state.array_arena.borrow_mut()[*arr_ptr];
-                if *index >= arr.len() {
+                let arr = &mut self.state.objects_arena.borrow_mut()[*arr_ptr];
+                if *index >= arr.as_array().len() {
                     todo!("index out of bound")
                 }
 
-                let old_val = &arr[*index];
+                let old_val = &arr.as_array()[*index];
                 let new_val = self.math_mul(old_val, &val);
 
-                arr[*index] = new_val;
+                arr.as_array_mut()[*index] = new_val;
             }
         }
 
@@ -123,15 +123,15 @@ impl<'src, 'a> AssignmentRunner<'src, 'a> {
             }
 
             Lhs::ArrayIndex { arr_ptr, index } => {
-                let arr = &mut self.state.array_arena.borrow_mut()[*arr_ptr];
-                if *index >= arr.len() {
+                let arr = &mut self.state.objects_arena.borrow_mut()[*arr_ptr];
+                if *index >= arr.as_array().len() {
                     todo!("index out of bound")
                 }
 
-                let old_val = &arr[*index];
+                let old_val = &arr.as_array()[*index];
                 let new_val = self.math_div(old_val, &val);
 
-                arr[*index] = new_val;
+                arr.as_array_mut()[*index] = new_val;
             }
         }
 
@@ -148,15 +148,15 @@ impl<'src, 'a> AssignmentRunner<'src, 'a> {
             }
 
             Lhs::ArrayIndex { arr_ptr, index } => {
-                let arr = &mut self.state.array_arena.borrow_mut()[*arr_ptr];
-                if *index >= arr.len() {
+                let arr = &mut self.state.objects_arena.borrow_mut()[*arr_ptr];
+                if *index >= arr.as_array().len() {
                     todo!("index out of bound")
                 }
 
-                let old_val = &arr[*index];
+                let old_val = &arr.as_array()[*index];
                 let new_val = self.math_mod(old_val, &val);
 
-                arr[*index] = new_val;
+                arr.as_array_mut()[*index] = new_val;
             }
         }
 

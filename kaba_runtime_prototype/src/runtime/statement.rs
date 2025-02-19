@@ -154,14 +154,14 @@ impl StatementRunner<'_, '_> {
         {
             let val = ExpressionRunner::new(iterable, self.root, self.state).run()?;
             let iterable = if let RuntimeValue::Array(ptr) = val {
-                &self.state.array_arena.borrow()[ptr]
+                &self.state.objects_arena.borrow()[ptr]
             } else {
                 unreachable!()
             };
 
             let sym_name = elem_sym.sym_name();
 
-            for item in iterable {
+            for item in iterable.as_array() {
                 let scope = HashMap::from([(String::from(sym_name), item.clone())]);
 
                 self.state.ss.borrow_mut().push(scope);

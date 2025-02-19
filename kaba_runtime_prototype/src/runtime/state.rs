@@ -11,11 +11,11 @@ pub struct RuntimeState<'a> {
     exit_loop: RefCell<bool>,
     return_val: RefCell<RuntimeValue>,
 
-    // All array allocation will be stored here.
+    // All objects allocation will be stored here.
     //
     // This is temporary solution, so there is no automatic cleanup for arrays
     // that are no longer in use.
-    pub array_arena: RefCell<Vec<Vec<RuntimeValue>>>,
+    pub objects_arena: RefCell<Vec<Object>>,
 
     pub ss: RefCell<Vec<Scope>>,
     pub streams: RefCell<RuntimeStream<'a>>,
@@ -28,7 +28,7 @@ impl<'a> RuntimeState<'a> {
             exit_loop: RefCell::new(false),
             return_val: RefCell::new(RuntimeValue::Void),
 
-            array_arena: RefCell::new(vec![]),
+            objects_arena: RefCell::new(vec![]),
 
             ss: RefCell::new(vec![
                 HashMap::new(), // global scope
@@ -96,5 +96,36 @@ impl RuntimeState<'_> {
             .unwrap();
         *scope.get_mut(id).unwrap() = val;
         Ok(())
+    }
+}
+
+pub enum Object {
+    Array(Vec<RuntimeValue>),
+    Record(HashMap<String, RuntimeValue>),
+}
+
+impl Object {
+    pub fn as_array(&self) -> &[RuntimeValue] {
+        if let Self::Array(arr) = self {
+            arr
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn as_array_mut(&mut self) -> &mut [RuntimeValue] {
+        if let Self::Array(arr) = self {
+            arr
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn as_record(&self) -> &HashMap<String, RuntimeValue> {
+        if let Self::Record(rec) = self {
+            rec
+        } else {
+            unreachable!()
+        }
     }
 }

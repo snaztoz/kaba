@@ -1,5 +1,8 @@
 use super::{
-    assignment::AssignmentRunner, error::Result, state::RuntimeState, value::RuntimeValue,
+    assignment::AssignmentRunner,
+    error::Result,
+    state::{Object, RuntimeState},
+    value::RuntimeValue,
 };
 use crate::runtime::body::BodyRunner;
 use kaba_compiler::{AstNode, AstNodeVariant, FunctionParam, Literal};
@@ -44,20 +47,32 @@ impl<'src, 'a> ExpressionRunner<'src, 'a> {
         self.run_function_ptr_call(f_ptr, &evaluated_args)
     }
 
+    fn run_field_access(&self, object: &'a AstNode, field: &'a AstNode) -> Result<RuntimeValue> {
+        let object = ExpressionRunner::new(object, self.root, self.state).run()?;
+        let field = field.sym_name();
+
+        if let RuntimeValue::Record(ptr) = object {
+            let rec = &self.state.objects_arena.borrow()[ptr];
+            return Ok(rec.as_record()[field].clone());
+        }
+
+        unreachable!()
+    }
+
     fn run_index_access(&self, object: &'a AstNode, index: &'a AstNode) -> Result<RuntimeValue> {
         let object_arr = ExpressionRunner::new(object, self.root, self.state).run()?;
         let index = ExpressionRunner::new(index, self.root, self.state).run()?;
 
         if let RuntimeValue::Array(ptr) = object_arr {
             if let RuntimeValue::Int(i) = index {
-                let arr = &self.state.array_arena.borrow()[ptr];
+                let arr = &self.state.objects_arena.borrow()[ptr];
                 let i = usize::try_from(i).unwrap();
 
-                if i >= arr.len() {
+                if i >= arr.as_array().len() {
                     todo!("index out of bound")
                 }
 
-                return Ok(arr[i].clone());
+                return Ok(arr.as_array()[i].clone());
             }
         }
 
@@ -81,10 +96,30 @@ impl<'src, 'a> ExpressionRunner<'src, 'a> {
                     elems.push(val);
                 }
 
-                self.state.array_arena.borrow_mut().push(elems);
-                let ptr = self.state.array_arena.borrow().len() - 1;
+                self.state
+                    .objects_arena
+                    .borrow_mut()
+                    .push(Object::Array(elems));
+                let ptr = self.state.objects_arena.borrow().len() - 1;
 
                 RuntimeValue::Array(ptr)
+            }
+
+            Literal::Record { fields } => {
+                let mut f = HashMap::new();
+                for (name, val) in fields {
+                    let name = name.sym_name();
+                    let val = ExpressionRunner::new(val, self.root, self.state).run()?;
+                    f.insert(String::from(name), val);
+                }
+
+                self.state
+                    .objects_arena
+                    .borrow_mut()
+                    .push(Object::Record(f));
+                let ptr = self.state.objects_arena.borrow().len() - 1;
+
+                RuntimeValue::Record(ptr)
             }
         };
 
@@ -132,6 +167,7 @@ impl ExpressionRunner<'_, '_> {
             AstNodeVariant::FunctionCall { callee, args, .. } => {
                 self.run_function_call(callee, args)
             }
+            AstNodeVariant::FieldAccess { object, field } => self.run_field_access(object, field),
             AstNodeVariant::IndexAccess { object, index, .. } => {
                 self.run_index_access(object, index)
             }

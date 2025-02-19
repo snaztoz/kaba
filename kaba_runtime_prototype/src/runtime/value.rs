@@ -10,6 +10,7 @@ pub enum RuntimeValue {
     String(String),
     Function(usize),
     Array(usize),
+    Record(usize),
 }
 
 impl RuntimeValue {
@@ -42,6 +43,7 @@ impl Display for RuntimeValue {
 
             Self::Function(p) => write!(f, "<function #{p}>"),
             Self::Array(p) => write!(f, "<array #{p}>"),
+            Self::Record(p) => write!(f, "<record #{p}>"),
         }
     }
 }
