@@ -4,7 +4,7 @@ use crate::{
         error::{Result, SemanticError, SemanticErrorVariant},
         state::{AnalyzerState, ScopeVariant},
         tn,
-        types::Type,
+        typ::Type,
     },
     AstNode, FunctionParam,
 };

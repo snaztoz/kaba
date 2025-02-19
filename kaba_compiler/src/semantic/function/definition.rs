@@ -3,7 +3,7 @@ use crate::semantic::{
     body,
     error::{Result, SemanticError, SemanticErrorVariant},
     state::AnalyzerState,
-    types::Type,
+    typ::Type,
 };
 
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {

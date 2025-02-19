@@ -1,4 +1,4 @@
-use super::{error::Result, types::Type};
+use super::{error::Result, typ::Type};
 use crate::{
     ast::{AstNodeVariant, NodeId},
     lexer, parser,

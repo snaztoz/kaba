@@ -1,4 +1,4 @@
-use super::{body, error::Result, expression, state::AnalyzerState, types::assert};
+use super::{body, error::Result, expression, state::AnalyzerState, typ::assert};
 use crate::{ast::AstNode, AstNodeVariant};
 
 /// Analyze `each` loop statement.

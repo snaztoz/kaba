@@ -2,7 +2,7 @@ use super::{
     error::{Result, SemanticError, SemanticErrorVariant},
     expression,
     state::AnalyzerState,
-    types::{assert, Type},
+    typ::{assert, Type},
 };
 use crate::{ast::AstNode, AstNodeVariant};
 

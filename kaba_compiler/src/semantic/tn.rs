@@ -1,7 +1,7 @@
 use super::{
     error::{Result, SemanticError, SemanticErrorVariant},
     state::AnalyzerState,
-    types::Type,
+    typ::Type,
 };
 use crate::ast::AstNode;
 

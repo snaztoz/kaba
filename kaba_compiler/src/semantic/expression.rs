@@ -3,7 +3,7 @@ use super::{
     error::{Result, SemanticError, SemanticErrorVariant},
     literal,
     state::AnalyzerState,
-    types::{assert, FloatType, IntType, Type},
+    typ::{assert, FloatType, IntType, Type},
 };
 use crate::ast::{AstNode, AstNodeVariant};
 use std::cmp;
@@ -246,7 +246,7 @@ fn unwrap_expr<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
 mod tests {
     use crate::semantic::{
         test_util::{assert_expr_is_err, assert_expr_type, eval_expr},
-        types::{FloatType, IntType, Type},
+        typ::{FloatType, IntType, Type},
     };
 
     #[test]

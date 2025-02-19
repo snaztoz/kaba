@@ -1,4 +1,4 @@
-use super::types::Type;
+use super::typ::Type;
 use logos::Span;
 use std::fmt::Display;
 

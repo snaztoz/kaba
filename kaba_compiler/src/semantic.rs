@@ -20,7 +20,7 @@ mod statement;
 #[cfg(test)]
 mod test_util;
 mod tn;
-mod types;
+mod typ;
 mod variable;
 mod while_loop;
 

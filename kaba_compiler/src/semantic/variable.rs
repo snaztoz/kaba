@@ -3,7 +3,7 @@ use super::{
     expression,
     state::AnalyzerState,
     tn,
-    types::{assert, FloatType, IntType, Type},
+    typ::{assert, FloatType, IntType, Type},
 };
 use crate::{ast::AstNode, AstNodeVariant};
 

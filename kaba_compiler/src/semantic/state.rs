@@ -1,4 +1,4 @@
-use super::types::{Type, BASIC_T};
+use super::typ::{Type, BASIC_T};
 use crate::ast::NodeId;
 use std::{
     cell::{Ref, RefCell, RefMut},

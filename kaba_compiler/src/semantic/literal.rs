@@ -3,7 +3,7 @@ use super::{
     expression,
     state::AnalyzerState,
     tn,
-    types::{assert, FloatType, IntType, Type},
+    typ::{assert, FloatType, IntType, Type},
 };
 use crate::{ast::Literal, AstNode, AstNodeVariant};
 use std::collections::HashMap;
@@ -90,7 +90,7 @@ fn unwrap_literal<'src, 'a>(node: &'a AstNode<'src>) -> &'a Literal<'src> {
 mod tests {
     use crate::semantic::{
         test_util::{assert_expr_is_err, assert_expr_type},
-        types::{IntType, Type},
+        typ::{IntType, Type},
     };
 
     #[test]

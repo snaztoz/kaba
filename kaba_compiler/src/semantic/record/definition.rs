@@ -1,7 +1,7 @@
 use crate::ast::{AstNode, RecordField};
 use crate::semantic::error::{SemanticError, SemanticErrorVariant};
 use crate::semantic::tn;
-use crate::semantic::{error::Result, state::AnalyzerState, types::Type};
+use crate::semantic::{error::Result, state::AnalyzerState, typ::Type};
 use crate::AstNodeVariant;
 use std::collections::HashMap;
 

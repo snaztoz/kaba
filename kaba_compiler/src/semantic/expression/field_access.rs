@@ -4,7 +4,7 @@ use crate::{
         error::{Result, SemanticError, SemanticErrorVariant},
         expression,
         state::AnalyzerState,
-        types::{assert, Type},
+        typ::{assert, Type},
     },
     AstNodeVariant,
 };
@@ -51,7 +51,7 @@ fn unwrap_field<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::semantic::{test_util::assert_expr_type, types::IntType};
+    use crate::semantic::{test_util::assert_expr_type, typ::IntType};
 
     #[test]
     fn index_accessing() {

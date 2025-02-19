@@ -3,7 +3,7 @@ use super::{
     error::{Result, SemanticError, SemanticErrorVariant},
     expression,
     state::AnalyzerState,
-    types::{assert, Type},
+    typ::{assert, Type},
     variable, while_loop,
 };
 use crate::ast::{AstNode, AstNodeVariant};
