@@ -68,8 +68,8 @@ use crate::{ast::AstNode, AstNodeVariant};
 /// }
 /// ```
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
-    let cond_t = expression::analyze(state, unwrap_cond(node))?;
-    assert::is_boolean(&cond_t, || unwrap_cond(node).span.clone())?;
+    let cond_t = expression::analyze(state, node.variant.as_exec_cond())?;
+    assert::is_boolean(&cond_t, || node.variant.as_exec_cond().span.clone())?;
 
     let returned_t_before_this = state.take_returned_type();
 
@@ -78,7 +78,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
 
     let return_t = state.take_returned_type();
 
-    if unwrap_or_else_branch(node).is_none() {
+    if node.variant.as_or_else_branch().is_none() {
         // Non-exhaustive branch(es).
         //
         // We must set body's returned type back to the type before we
@@ -105,7 +105,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
         return Ok(());
     }
 
-    let or_else_branch = unwrap_or_else_branch(node).unwrap();
+    let or_else_branch = node.variant.as_or_else_branch().unwrap();
     match &or_else_branch.variant {
         AstNodeVariant::If { .. } => {
             // All conditional branches must returning a value (exhaustive)
@@ -142,22 +142,6 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     }
 
     Ok(())
-}
-
-fn unwrap_cond<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    if let AstNodeVariant::If { cond, .. } = &node.variant {
-        cond
-    } else {
-        unreachable!()
-    }
-}
-
-fn unwrap_or_else_branch<'src, 'a>(node: &'a AstNode<'src>) -> Option<&'a AstNode<'src>> {
-    if let AstNodeVariant::If { or_else, .. } = &node.variant {
-        or_else.as_deref()
-    } else {
-        unreachable!()
-    }
 }
 
 #[cfg(test)]

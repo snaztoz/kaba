@@ -6,16 +6,15 @@ use crate::{
         state::AnalyzerState,
         typ::{assert, Type},
     },
-    AstNodeVariant,
 };
 
 /// Analyze index access expression.
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
-    let obj = unwrap_obj(node);
+    let obj = node.variant.as_accessed_object();
     let obj_t = expression::analyze(state, obj)?;
     assert::is_indexable(&obj_t, || obj.span.clone())?;
 
-    let index = unwrap_index(node);
+    let index = node.variant.as_accessed_field();
     let index_t = expression::analyze(state, index)?;
     assert::is_number(&index_t, || index.span.clone())?;
 
@@ -23,22 +22,6 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
         Type::Array { elem_t } => Ok(*elem_t),
 
         _ => unreachable!(),
-    }
-}
-
-fn unwrap_obj<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    if let AstNodeVariant::IndexAccess { object, .. } = &node.variant {
-        object
-    } else {
-        unreachable!()
-    }
-}
-
-fn unwrap_index<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    if let AstNodeVariant::IndexAccess { index, .. } = &node.variant {
-        index
-    } else {
-        unreachable!()
     }
 }
 

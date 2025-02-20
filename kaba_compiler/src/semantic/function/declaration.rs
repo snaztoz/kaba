@@ -11,8 +11,8 @@ use crate::{
 use std::collections::HashSet;
 
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
-    let sym = node.sym();
-    let sym_name = sym.sym_name();
+    let sym = node.variant.as_sym();
+    let sym_name = sym.variant.as_sym_name();
 
     if !state.can_save_sym(sym_name) {
         return Err(SemanticError {
@@ -50,9 +50,9 @@ fn analyze_params<'a>(
     for FunctionParam {
         sym: param_sym,
         tn: param_tn,
-    } in node.params()
+    } in node.variant.as_function_params()
     {
-        let param_name = param_sym.sym_name();
+        let param_name = param_sym.variant.as_sym_name();
         if params_sym.contains(&param_name) {
             return Err(SemanticError {
                 variant: SemanticErrorVariant::SymbolAlreadyExist(String::from(param_name)),
@@ -70,7 +70,7 @@ fn analyze_params<'a>(
 }
 
 fn analyze_return_tn(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
-    match node.return_tn() {
+    match node.variant.as_function_return_tn() {
         Some(return_tn) => tn::analyze(state, return_tn, true),
         None => Ok(Type::Void),
     }

@@ -99,7 +99,7 @@ fn analyze_shorthand_assignment(state: &AnalyzerState, node: &AstNode) -> Result
 }
 
 fn analyze_lhs(node: &AstNode) -> Result<()> {
-    let lhs = unwrap_lhs(node);
+    let lhs = node.variant.as_lhs();
 
     if !lhs.is_lval() {
         return Err(SemanticError {
@@ -109,19 +109,6 @@ fn analyze_lhs(node: &AstNode) -> Result<()> {
     }
 
     Ok(())
-}
-
-fn unwrap_lhs<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    match &node.variant {
-        AstNodeVariant::Assign { lhs, .. }
-        | AstNodeVariant::AddAssign { lhs, .. }
-        | AstNodeVariant::SubAssign { lhs, .. }
-        | AstNodeVariant::MulAssign { lhs, .. }
-        | AstNodeVariant::DivAssign { lhs, .. }
-        | AstNodeVariant::ModAssign { lhs, .. } => lhs,
-
-        _ => unreachable!(),
-    }
 }
 
 #[cfg(test)]

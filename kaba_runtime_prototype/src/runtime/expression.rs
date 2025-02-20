@@ -49,7 +49,7 @@ impl<'src, 'a> ExpressionRunner<'src, 'a> {
 
     fn run_field_access(&self, object: &'a AstNode, field: &'a AstNode) -> Result<RuntimeValue> {
         let object = ExpressionRunner::new(object, self.root, self.state).run()?;
-        let field = field.sym_name();
+        let field = field.variant.as_sym_name();
 
         if let RuntimeValue::Record(ptr) = object {
             let rec = &self.state.objects_arena.borrow()[ptr];
@@ -108,7 +108,7 @@ impl<'src, 'a> ExpressionRunner<'src, 'a> {
             Literal::Record { fields } => {
                 let mut f = HashMap::new();
                 for (name, val) in fields {
-                    let name = name.sym_name();
+                    let name = name.variant.as_sym_name();
                     let val = ExpressionRunner::new(val, self.root, self.state).run()?;
                     f.insert(String::from(name), val);
                 }
@@ -321,7 +321,7 @@ impl ExpressionRunner<'_, '_> {
                 self.state.ss.borrow_mut().push(HashMap::new());
 
                 for (i, FunctionParam { sym, .. }) in params.iter().enumerate() {
-                    let sym_name = sym.sym_name();
+                    let sym_name = sym.variant.as_sym_name();
                     let val = &args[i];
                     self.state.store_value(sym_name, val.clone());
                 }

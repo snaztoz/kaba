@@ -2,6 +2,7 @@ use crate::ast::{AstNode, AstNodeVariant, TypeNotation};
 use std::{cmp::Ordering, collections::HashMap, fmt::Display, hash::Hash};
 
 pub mod assert;
+pub mod check;
 
 pub static BASIC_T: &[&str] = &[
     "void", "bool", "sbyte", "short", "int", "long", "float", "double", "char", "string",
@@ -49,59 +50,6 @@ impl Type {
         matches!(self, Type::Record { .. })
     }
 
-    pub fn is_compatible_with(&self, other: &Type) -> bool {
-        if self == other {
-            return true;
-        }
-
-        if self.is_unbounded_int() && other.is_bounded_int() {
-            return self.is_convertible_to_bounded_int(other);
-        } else if other.is_unbounded_int() && self.is_bounded_int() {
-            return other.is_convertible_to_bounded_int(self);
-        }
-
-        if self.is_unbounded_float() && other.is_bounded_float() {
-            return self.is_convertible_to_bounded_float(other);
-        } else if other.is_unbounded_float() && self.is_bounded_float() {
-            return other.is_convertible_to_bounded_float(self);
-        }
-
-        false
-    }
-
-    pub fn is_assignable_to(&self, other: &Self) -> bool {
-        if self == other {
-            return true;
-        }
-
-        if self.is_record() && other.is_record() {
-            let self_fields = self.unwrap_record();
-            let other_fields = other.unwrap_record();
-
-            if self_fields.len() != other_fields.len() {
-                return false;
-            }
-
-            return self_fields.iter().all(|(field_name, field_t)| {
-                let other_field_t = other_fields.get(field_name);
-
-                if other_field_t.is_none() {
-                    return false;
-                }
-
-                field_t.is_assignable_to(other_field_t.unwrap())
-            });
-        }
-
-        if self.is_unbounded_int() {
-            return self.is_convertible_to_bounded_int(other);
-        } else if self.is_unbounded_float() {
-            return self.is_convertible_to_bounded_float(other);
-        }
-
-        false
-    }
-
     pub const fn is_unbounded_int(&self) -> bool {
         matches!(self, &Type::Int(IntType::Unbounded(_)))
     }
@@ -119,10 +67,10 @@ impl Type {
     }
 
     pub fn get_field(&self, name: &str) -> Option<&Type> {
-        self.unwrap_record().get(name)
+        self.as_record_fields().get(name)
     }
 
-    pub fn unwrap_unbounded_int(&self) -> i32 {
+    pub fn as_unbounded_int(&self) -> i32 {
         if let Self::Int(IntType::Unbounded(n)) = self {
             *n
         } else {
@@ -130,7 +78,7 @@ impl Type {
         }
     }
 
-    pub fn unwrap_unbounded_float(&self) -> f32 {
+    pub fn as_unbounded_float(&self) -> f32 {
         if let Self::Float(FloatType::Unbounded(n)) = self {
             *n
         } else {
@@ -138,23 +86,7 @@ impl Type {
         }
     }
 
-    pub fn unwrap_array(self) -> Self {
-        if let Self::Array { elem_t, .. } = self {
-            *elem_t
-        } else {
-            panic!("trying to unwrap array on non-Array type")
-        }
-    }
-
-    pub fn unwrap_callable(self) -> (Vec<Self>, Self) {
-        if let Self::Callable { params_t, return_t } = self {
-            (params_t, *return_t)
-        } else {
-            panic!("trying to unwrap callable on non-Callable type")
-        }
-    }
-
-    fn unwrap_record(&self) -> &HashMap<String, Self> {
+    fn as_record_fields(&self) -> &HashMap<String, Self> {
         if let Self::Record { fields } = self {
             fields
         } else {
@@ -162,34 +94,20 @@ impl Type {
         }
     }
 
-    fn is_convertible_to_bounded_int(&self, other: &Self) -> bool {
-        if let Self::Int(IntType::Unbounded(n)) = self {
-            return match other {
-                // Try narrowing the value
-                Self::Int(IntType::SByte) => i8::try_from(*n).is_ok(),
-                Self::Int(IntType::Short) => i16::try_from(*n).is_ok(),
-
-                // Always fit, does not need any checking
-                Self::Int(IntType::Int) | Self::Int(IntType::Long) => true,
-
-                _ => false,
-            };
+    pub fn into_array_elem_t(self) -> Self {
+        if let Self::Array { elem_t, .. } = self {
+            *elem_t
+        } else {
+            panic!("trying to unwrap array on non-Array type")
         }
-
-        unreachable!()
     }
 
-    fn is_convertible_to_bounded_float(&self, other: &Self) -> bool {
-        if let Self::Float(FloatType::Unbounded(_)) = self {
-            return match other {
-                // Always fit, does not need any checking
-                Self::Float(FloatType::Float) | Self::Float(FloatType::Double) => true,
-
-                _ => false,
-            };
+    pub fn into_callable_signature_t(self) -> (Vec<Self>, Self) {
+        if let Self::Callable { params_t, return_t } = self {
+            (params_t, *return_t)
+        } else {
+            panic!("trying to unwrap callable on non-Callable type")
         }
-
-        unreachable!()
     }
 }
 

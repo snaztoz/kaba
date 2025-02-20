@@ -6,17 +6,16 @@ use crate::{
         state::AnalyzerState,
         typ::{assert, Type},
     },
-    AstNodeVariant,
 };
 
 /// Analyze index access expression.
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
-    let obj = unwrap_obj(node);
+    let obj = node.variant.as_accessed_object();
     let obj_t = expression::analyze(state, obj)?;
     assert::is_field_accessible(&obj_t, || obj.span.clone())?;
 
-    let field = unwrap_field(node);
-    let field_name = field.sym_name();
+    let field = node.variant.as_accessed_field();
+    let field_name = field.variant.as_sym_name();
     let field_t = obj_t.get_field(field_name);
 
     if field_t.is_none() {
@@ -30,22 +29,6 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     }
 
     Ok(field_t.unwrap().clone())
-}
-
-fn unwrap_obj<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    if let AstNodeVariant::FieldAccess { object, .. } = &node.variant {
-        object
-    } else {
-        unreachable!()
-    }
-}
-
-fn unwrap_field<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    if let AstNodeVariant::FieldAccess { field, .. } = &node.variant {
-        field
-    } else {
-        unreachable!()
-    }
 }
 
 #[cfg(test)]

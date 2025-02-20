@@ -1,5 +1,5 @@
 use super::{body, error::Result, expression, state::AnalyzerState, typ::assert};
-use crate::{ast::AstNode, AstNodeVariant};
+use crate::ast::AstNode;
 
 /// Analyze `each` loop statement.
 ///
@@ -33,12 +33,14 @@ use crate::{ast::AstNode, AstNodeVariant};
 /// }
 /// ```
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
-    let expr_t = expression::analyze(state, unwrap_iterable(node))?;
-    assert::is_iterable(&expr_t, || unwrap_iterable(node).span.clone())?;
+    let expr_t = expression::analyze(state, node.variant.as_each_loop_iterable())?;
+    assert::is_iterable(&expr_t, || {
+        node.variant.as_each_loop_iterable().span.clone()
+    })?;
 
-    let elem_sym = unwrap_elem_sym(node);
-    let elem_sym_name = elem_sym.sym_name();
-    let elem_t = expr_t.unwrap_array();
+    let elem_sym = node.variant.as_each_loop_elem_sym();
+    let elem_sym_name = elem_sym.variant.as_sym_name();
+    let elem_t = expr_t.into_array_elem_t();
 
     // Function return type can't be taken from an `each-loop` body, so we must
     // reset the type after the loop body is evaluated.
@@ -53,22 +55,6 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     state.set_returned_type(returned_t_before_this);
 
     Ok(())
-}
-
-fn unwrap_iterable<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    if let AstNodeVariant::Each { iterable, .. } = &node.variant {
-        iterable
-    } else {
-        unreachable!()
-    }
-}
-
-fn unwrap_elem_sym<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    if let AstNodeVariant::Each { elem_sym, .. } = &node.variant {
-        elem_sym
-    } else {
-        unreachable!()
-    }
 }
 
 #[cfg(test)]

@@ -28,9 +28,9 @@ mod while_loop;
 pub fn analyze(program: &AstNode) -> Result<SymbolTable> {
     let state = AnalyzerState::new(program.id);
 
-    ensure_all_permitted_in_global(program.body())?;
-    analyze_declarations(&state, program.body())?;
-    analyze_definitions(&state, program.body())?;
+    ensure_all_permitted_in_global(program.variant.as_body_statements())?;
+    analyze_declarations(&state, program.variant.as_body_statements())?;
+    analyze_definitions(&state, program.variant.as_body_statements())?;
 
     Ok(state.take_symbol_table())
 }

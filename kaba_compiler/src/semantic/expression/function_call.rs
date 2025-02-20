@@ -4,18 +4,17 @@ use crate::{
         error::{Result, SemanticError, SemanticErrorVariant},
         expression,
         state::AnalyzerState,
-        typ::{assert, Type},
+        typ::{assert, check, Type},
     },
-    AstNodeVariant,
 };
 
 /// Analyze function call expression.
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
-    let fn_t = expression::analyze(state, unwrap_callee(node))?;
-    assert::is_callable(&fn_t, || unwrap_callee(node).span.clone())?;
+    let fn_t = expression::analyze(state, node.variant.as_accessed_object())?;
+    assert::is_callable(&fn_t, || node.variant.as_accessed_object().span.clone())?;
 
-    let args_t = get_args_t(state, node)?;
-    let (params_t, return_t) = fn_t.unwrap_callable();
+    let args_t = to_args_t(state, node)?;
+    let (params_t, return_t) = fn_t.into_callable_signature_t();
 
     if params_t.len() != args_t.len() {
         return Err(SemanticError {
@@ -28,7 +27,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     }
 
     for (param_t, arg_t) in params_t.iter().zip(&args_t) {
-        if !arg_t.is_assignable_to(param_t) {
+        if !check::is_type_assignable_to(arg_t, param_t) {
             return Err(SemanticError {
                 variant: SemanticErrorVariant::InvalidArguments { args_t },
                 span: node.span.clone(),
@@ -40,27 +39,11 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
 }
 
 // Transform arguments into their respective type
-fn get_args_t(state: &AnalyzerState, node: &AstNode) -> Result<Vec<Type>> {
+fn to_args_t(state: &AnalyzerState, node: &AstNode) -> Result<Vec<Type>> {
     let mut args_t = vec![];
-    for arg in unwrap_args(node) {
+    for arg in node.variant.as_function_call_args() {
         let t = expression::analyze(state, arg)?;
         args_t.push(t);
     }
     Ok(args_t)
-}
-
-fn unwrap_callee<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    if let AstNodeVariant::FunctionCall { callee, .. } = &node.variant {
-        callee
-    } else {
-        unreachable!()
-    }
-}
-
-fn unwrap_args<'src, 'a>(node: &'a AstNode<'src>) -> &'a [AstNode<'src>] {
-    if let AstNodeVariant::FunctionCall { args, .. } = &node.variant {
-        args
-    } else {
-        unreachable!()
-    }
 }

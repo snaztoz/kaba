@@ -6,7 +6,7 @@ use crate::ast::AstNode;
 /// Statement bodies are consist of `>= 0` statements, so this analyzer will
 /// call the [`StatementAnalyzer`] on each statement found in current body.
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
-    for stmt in node.body() {
+    for stmt in node.variant.as_body_statements() {
         statement::analyze(state, stmt)?;
     }
 

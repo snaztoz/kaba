@@ -32,7 +32,7 @@ impl StatementRunner<'_, '_> {
     pub fn run(&self) -> Result<()> {
         match &self.ast.variant {
             AstNodeVariant::VariableDeclaration { sym, val, .. } => {
-                let name = sym.sym_name();
+                let name = sym.variant.as_sym_name();
                 let val = ExpressionRunner::new(val, self.root, self.state).run()?;
                 self.state.store_value(name, val);
             }
@@ -159,7 +159,7 @@ impl StatementRunner<'_, '_> {
                 unreachable!()
             };
 
-            let sym_name = elem_sym.sym_name();
+            let sym_name = elem_sym.variant.as_sym_name();
 
             for item in iterable.as_array() {
                 let scope = HashMap::from([(String::from(sym_name), item.clone())]);

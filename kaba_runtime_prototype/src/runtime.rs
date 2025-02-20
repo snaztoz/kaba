@@ -47,7 +47,7 @@ impl<'src, 'a> Runtime<'src, 'a> {
         for (i, stmt) in stmts.iter().enumerate() {
             match &stmt.variant {
                 AstNodeVariant::FunctionDefinition { sym, .. } => {
-                    let sym_name = sym.sym_name();
+                    let sym_name = sym.variant.as_sym_name();
                     self.state.store_value(sym_name, RuntimeValue::Function(i));
                 }
 

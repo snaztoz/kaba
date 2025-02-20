@@ -7,7 +7,7 @@ use crate::semantic::{
 };
 
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
-    let function_name = node.sym().sym_name();
+    let function_name = node.variant.as_sym().variant.as_sym_name();
 
     let return_t = if let Type::Callable { return_t, .. } = state
         .get_sym_variant(function_name)
@@ -57,7 +57,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
                     expected: *return_t,
                     get: Type::Void,
                 },
-                span: node.sym().span.clone(),
+                span: node.variant.as_sym().span.clone(),
             });
         }
 

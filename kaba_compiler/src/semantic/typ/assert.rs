@@ -1,4 +1,4 @@
-use super::Type;
+use super::{check, Type};
 use crate::semantic::error::{Result, SemanticError, SemanticErrorVariant};
 use logos::Span;
 
@@ -34,7 +34,7 @@ pub fn is_compatible<F>(a: &Type, b: &Type, err_span: F) -> Result<()>
 where
     F: FnOnce() -> Span,
 {
-    if a.is_compatible_with(b) {
+    if check::are_types_compatible(a, b) {
         return Ok(());
     }
 
@@ -117,17 +117,17 @@ where
     }
 }
 
-pub fn is_assignable<F>(from: &Type, to: &Type, err_span: F) -> Result<()>
+pub fn is_assignable<F>(t: &Type, to: &Type, err_span: F) -> Result<()>
 where
     F: FnOnce() -> Span,
 {
-    if from.is_assignable_to(to) {
+    if check::is_type_assignable_to(t, to) {
         Ok(())
     } else {
         Err(SemanticError {
             variant: SemanticErrorVariant::InvalidAssignmentType {
                 var_t: to.clone(),
-                val_t: from.clone(),
+                val_t: t.clone(),
             },
             span: err_span(),
         })

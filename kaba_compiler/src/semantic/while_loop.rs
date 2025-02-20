@@ -1,5 +1,5 @@
 use super::{body, error::Result, expression, state::AnalyzerState, typ::assert};
-use crate::ast::{AstNode, AstNodeVariant};
+use crate::ast::AstNode;
 
 /// Analyze `while` loop statement.
 ///
@@ -36,8 +36,8 @@ use crate::ast::{AstNode, AstNodeVariant};
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     // Expecting boolean type for the condition
 
-    let cond_t = expression::analyze(state, unwrap_cond(node))?;
-    assert::is_boolean(&cond_t, || unwrap_cond(node).span.clone())?;
+    let cond_t = expression::analyze(state, node.variant.as_exec_cond())?;
+    assert::is_boolean(&cond_t, || node.variant.as_exec_cond().span.clone())?;
 
     // Function return type can't be taken from a `while-loop` body, so we must
     // reset the type after the loop body is evaluated.
@@ -49,14 +49,6 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     state.set_returned_type(returned_t_before_this);
 
     Ok(())
-}
-
-fn unwrap_cond<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    if let AstNodeVariant::While { cond, .. } = &node.variant {
-        cond
-    } else {
-        unreachable!()
-    }
 }
 
 #[cfg(test)]

@@ -31,51 +31,6 @@ impl AstNode<'_> {
         matches!(self.variant, AstNodeVariant::RecordDefinition { .. })
     }
 
-    pub fn sym(&self) -> &AstNode {
-        match &self.variant {
-            AstNodeVariant::FunctionDefinition { sym, .. }
-            | AstNodeVariant::RecordDefinition { sym, .. }
-            | AstNodeVariant::VariableDeclaration { sym, .. } => sym,
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn body(&self) -> &[AstNode] {
-        match &self.variant {
-            AstNodeVariant::Program { body, .. }
-            | AstNodeVariant::FunctionDefinition { body, .. }
-            | AstNodeVariant::If { body, .. }
-            | AstNodeVariant::Else { body, .. }
-            | AstNodeVariant::While { body, .. }
-            | AstNodeVariant::Each { body, .. } => body,
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn params(&self) -> &[FunctionParam] {
-        if let AstNodeVariant::FunctionDefinition { params, .. } = &self.variant {
-            params
-        } else {
-            unreachable!()
-        }
-    }
-
-    pub fn return_tn(&self) -> Option<&AstNode> {
-        if let AstNodeVariant::FunctionDefinition { return_tn, .. } = &self.variant {
-            return_tn.as_deref()
-        } else {
-            unreachable!()
-        }
-    }
-
-    pub fn sym_name(&self) -> &str {
-        if let AstNodeVariant::Symbol { name } = &self.variant {
-            name
-        } else {
-            unreachable!()
-        }
-    }
-
     pub fn into_group_inner(self) -> Self {
         if let AstNodeVariant::Group { expr } = self.variant {
             expr.into_group_inner()
@@ -293,6 +248,176 @@ pub enum AstNodeVariant<'src> {
     Literal {
         lit: Literal<'src>,
     },
+}
+
+impl AstNodeVariant<'_> {
+    pub fn as_sym(&self) -> &AstNode {
+        match self {
+            Self::FunctionDefinition { sym, .. }
+            | Self::RecordDefinition { sym, .. }
+            | Self::VariableDeclaration { sym, .. } => sym,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn as_sym_name(&self) -> &str {
+        if let AstNodeVariant::Symbol { name } = &self {
+            name
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn as_body_statements(&self) -> &[AstNode] {
+        match self {
+            Self::Program { body, .. }
+            | Self::FunctionDefinition { body, .. }
+            | Self::If { body, .. }
+            | Self::Else { body, .. }
+            | Self::While { body, .. }
+            | Self::Each { body, .. } => body,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn as_function_params(&self) -> &[FunctionParam] {
+        if let Self::FunctionDefinition { params, .. } = self {
+            params
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn as_function_return_tn(&self) -> Option<&AstNode> {
+        if let Self::FunctionDefinition { return_tn, .. } = self {
+            return_tn.as_deref()
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn as_function_call_args(&self) -> &[AstNode<'_>] {
+        if let Self::FunctionCall { args, .. } = self {
+            args
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn as_exec_cond(&self) -> &AstNode<'_> {
+        match self {
+            Self::If { cond, .. } | Self::While { cond, .. } => cond,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn as_or_else_branch(&self) -> Option<&AstNode<'_>> {
+        if let Self::If { or_else, .. } = &self {
+            or_else.as_deref()
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn as_each_loop_elem_sym(&self) -> &AstNode<'_> {
+        if let Self::Each { elem_sym, .. } = self {
+            elem_sym
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn as_each_loop_iterable(&self) -> &AstNode<'_> {
+        if let Self::Each { iterable, .. } = self {
+            iterable
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn as_record_fields(&self) -> &[RecordField<'_>] {
+        if let Self::RecordDefinition { fields, .. } = &self {
+            fields
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn as_accessed_object(&self) -> &AstNode<'_> {
+        match self {
+            Self::FieldAccess { object, .. }
+            | Self::IndexAccess { object, .. }
+            | Self::FunctionCall { callee: object, .. } => object,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn as_accessed_field(&self) -> &AstNode<'_> {
+        match self {
+            Self::FieldAccess { field, .. } | Self::IndexAccess { index: field, .. } => field,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn as_lhs(&self) -> &AstNode<'_> {
+        match self {
+            Self::Eq { lhs, .. }
+            | Self::Neq { lhs, .. }
+            | Self::Or { lhs, .. }
+            | Self::And { lhs, .. }
+            | Self::Gt { lhs, .. }
+            | Self::Gte { lhs, .. }
+            | Self::Lt { lhs, .. }
+            | Self::Lte { lhs, .. }
+            | Self::Add { lhs, .. }
+            | Self::Sub { lhs, .. }
+            | Self::Mul { lhs, .. }
+            | Self::Div { lhs, .. }
+            | Self::Mod { lhs, .. }
+            | Self::Assign { lhs, .. }
+            | Self::AddAssign { lhs, .. }
+            | Self::SubAssign { lhs, .. }
+            | Self::MulAssign { lhs, .. }
+            | Self::DivAssign { lhs, .. }
+            | Self::ModAssign { lhs, .. } => lhs,
+
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn as_rhs(&self) -> &AstNode<'_> {
+        match self {
+            Self::Eq { rhs, .. }
+            | Self::Neq { rhs, .. }
+            | Self::Or { rhs, .. }
+            | Self::And { rhs, .. }
+            | Self::Gt { rhs, .. }
+            | Self::Gte { rhs, .. }
+            | Self::Lt { rhs, .. }
+            | Self::Lte { rhs, .. }
+            | Self::Add { rhs, .. }
+            | Self::Sub { rhs, .. }
+            | Self::Mul { rhs, .. }
+            | Self::Div { rhs, .. }
+            | Self::Mod { rhs, .. } => rhs,
+
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn as_literal(&self) -> &Literal<'_> {
+        match self {
+            Self::Literal { lit } => lit,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn as_child_expr(&self) -> &AstNode<'_> {
+        match self {
+            Self::Not { expr } | Self::Neg { expr } => expr,
+            _ => unreachable!(),
+        }
+    }
 }
 
 impl Display for AstNodeVariant<'_> {

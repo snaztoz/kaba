@@ -5,12 +5,12 @@ use super::{
     tn,
     typ::{assert, FloatType, IntType, Type},
 };
-use crate::{ast::Literal, AstNode, AstNodeVariant};
+use crate::{ast::Literal, AstNode};
 use std::collections::HashMap;
 
 /// Analyze literal expressions, such as numbers or arrays.
 pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
-    let lit = unwrap_literal(node);
+    let lit = node.variant.as_literal();
 
     match lit {
         Literal::Void => Ok(Type::Void),
@@ -56,7 +56,7 @@ fn analyze_record(state: &AnalyzerState, lit: &Literal) -> Result<Type> {
     let mut fields_t = HashMap::new();
 
     for (name, val) in fields {
-        let field_name = name.sym_name();
+        let field_name = name.variant.as_sym_name();
 
         if fields_t.contains_key(field_name) {
             return Err(SemanticError {
@@ -77,13 +77,6 @@ fn analyze_record(state: &AnalyzerState, lit: &Literal) -> Result<Type> {
     }
 
     Ok(Type::Record { fields: fields_t })
-}
-
-fn unwrap_literal<'src, 'a>(node: &'a AstNode<'src>) -> &'a Literal<'src> {
-    match &node.variant {
-        AstNodeVariant::Literal { lit, .. } => lit,
-        _ => unreachable!(),
-    }
 }
 
 #[cfg(test)]
