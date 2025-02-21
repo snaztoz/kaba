@@ -1,4 +1,10 @@
-use super::{body, error::Result, expression, state::AnalyzerState, typ::assert};
+use super::{
+    body,
+    error::Result,
+    expression,
+    state::{AnalyzerState, ScopeVariant},
+    typ::assert,
+};
 use crate::ast::AstNode;
 
 /// Analyze `each` loop statement.
@@ -32,7 +38,7 @@ use crate::ast::AstNode;
 ///     // Invalid
 /// }
 /// ```
-pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
+pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
     let expr_t = expression::analyze(state, node.variant.as_each_loop_iterable())?;
     assert::is_iterable(&expr_t, || {
         node.variant.as_each_loop_iterable().span.clone()
@@ -47,10 +53,14 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     let returned_t_before_this = state.take_returned_type();
 
     // Check all statements inside the body with a new scope
-    state.with_loop_scope(node.id, || {
-        state.save_entity(elem_sym.id, elem_sym_name, elem_t);
-        body::analyze(state, node)
-    })?;
+    let exit_scope_id = state.current_scope_id();
+    state.create_scope(node.id, ScopeVariant::Loop, exit_scope_id);
+    state.enter_scope(node.id);
+
+    state.save_entity(elem_sym.id, elem_sym_name, elem_t);
+    body::analyze(state, node)?;
+
+    state.enter_scope(exit_scope_id);
 
     state.set_returned_type(returned_t_before_this);
 

@@ -4,7 +4,7 @@ use crate::semantic::tn;
 use crate::semantic::{error::Result, state::AnalyzerState, typ::Type};
 use std::collections::HashMap;
 
-pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
+pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
     let mut fields = HashMap::new();
 
     for field in node.variant.as_record_fields() {

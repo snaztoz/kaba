@@ -41,7 +41,7 @@ pub fn eval_expr(input: &str, symbols: &[(&str, Type)]) -> Result<Type> {
     let ast = parser::parse(tokens).unwrap();
 
     if let AstNodeVariant::Program { body, .. } = &ast.variant {
-        let state = AnalyzerState::new(ast.id);
+        let mut state = AnalyzerState::new(ast.id);
         for (i, (sym, t)) in symbols.iter().enumerate() {
             // make id large to avoid collision during test
             let sym_id: NodeId = (i + 99999).try_into().unwrap();

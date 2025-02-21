@@ -6,7 +6,7 @@ use crate::{
     AstNode,
 };
 
-pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
+pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
     let sym = node.variant.as_sym();
     let sym_name = sym.variant.as_sym_name();
 

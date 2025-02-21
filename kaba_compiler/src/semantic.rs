@@ -26,16 +26,16 @@ mod while_loop;
 
 /// Provides a quick way to run semantic analysis on a Kaba AST.
 pub fn analyze(program: &AstNode) -> Result<SymbolTable> {
-    let state = AnalyzerState::new(program.id);
+    let mut state = AnalyzerState::new(program.id);
 
     ensure_all_permitted_in_global(program.variant.as_body_statements())?;
-    analyze_declarations(&state, program.variant.as_body_statements())?;
-    analyze_definitions(&state, program.variant.as_body_statements())?;
+    analyze_declarations(&mut state, program.variant.as_body_statements())?;
+    analyze_definitions(&mut state, program.variant.as_body_statements())?;
 
     Ok(state.take_symbol_table())
 }
 
-fn analyze_declarations(state: &AnalyzerState, stmts: &[AstNode]) -> Result<()> {
+fn analyze_declarations(state: &mut AnalyzerState, stmts: &[AstNode]) -> Result<()> {
     for stmt in stmts {
         if stmt.is_record_definition() {
             record::declaration::analyze(state, stmt)?;
@@ -51,7 +51,7 @@ fn analyze_declarations(state: &AnalyzerState, stmts: &[AstNode]) -> Result<()> 
     Ok(())
 }
 
-fn analyze_definitions(state: &AnalyzerState, stmts: &[AstNode]) -> Result<()> {
+fn analyze_definitions(state: &mut AnalyzerState, stmts: &[AstNode]) -> Result<()> {
     for stmt in stmts {
         if stmt.is_record_definition() {
             record::definition::analyze(state, stmt)?;

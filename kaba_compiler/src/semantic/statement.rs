@@ -13,7 +13,7 @@ use crate::ast::{AstNode, AstNodeVariant};
 /// It analyzes simple statements, such as loop control analyzeing, and also
 /// acts as an aggregate for another (more specific) statement analyzers, such
 /// as the AssignmentAnalyzer.
-pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
+pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
     match &node.variant {
         AstNodeVariant::VariableDeclaration { .. } => variable::analyze(state, node),
         AstNodeVariant::If { .. } => conditional::analyze(state, node),
@@ -51,7 +51,7 @@ fn analyze_loop_control(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     Ok(())
 }
 
-fn analyze_return(state: &AnalyzerState, node: &AstNode) -> Result<()> {
+fn analyze_return(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
     let expr = if let AstNodeVariant::Return { expr } = &node.variant {
         expr
     } else {

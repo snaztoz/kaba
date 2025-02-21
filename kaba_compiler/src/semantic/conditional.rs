@@ -2,7 +2,7 @@ use super::{
     body,
     error::Result,
     expression,
-    state::AnalyzerState,
+    state::{AnalyzerState, ScopeVariant},
     typ::{assert, Type},
 };
 use crate::{ast::AstNode, AstNodeVariant};
@@ -67,14 +67,19 @@ use crate::{ast::AstNode, AstNodeVariant};
 ///     }
 /// }
 /// ```
-pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
+pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
     let cond_t = expression::analyze(state, node.variant.as_exec_cond())?;
     assert::is_boolean(&cond_t, || node.variant.as_exec_cond().span.clone())?;
 
     let returned_t_before_this = state.take_returned_type();
 
-    // Check all statements inside the body with a new scope
-    state.with_conditional_scope(node.id, || body::analyze(state, node))?;
+    let exit_scope_id = state.current_scope_id();
+    state.create_scope(node.id, ScopeVariant::Conditional, exit_scope_id);
+    state.enter_scope(node.id);
+
+    body::analyze(state, node)?;
+
+    state.enter_scope(exit_scope_id);
 
     let return_t = state.take_returned_type();
 
@@ -125,9 +130,13 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<()> {
         AstNodeVariant::Else { .. } => {
             // Check all statements inside the body with a new scope
 
-            state.with_conditional_scope(or_else_branch.id, || {
-                body::analyze(state, or_else_branch)
-            })?;
+            let exit_scope_id = state.current_scope_id();
+            state.create_scope(or_else_branch.id, ScopeVariant::Conditional, exit_scope_id);
+            state.enter_scope(or_else_branch.id);
+
+            body::analyze(state, or_else_branch)?;
+
+            state.enter_scope(exit_scope_id);
 
             let branch_return_t = state.take_returned_type();
 

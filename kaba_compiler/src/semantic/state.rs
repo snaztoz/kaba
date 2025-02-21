@@ -1,25 +1,22 @@
 use super::typ::{Type, BASIC_T};
 use crate::ast::NodeId;
-use std::{
-    cell::{Ref, RefCell, RefMut},
-    collections::HashMap,
-};
+use std::{collections::HashMap, mem};
 
 pub type SymbolTable = HashMap<NodeId, SymbolTableEntry>;
 type ScopeTable = HashMap<NodeId, ScopeTableEntry>;
 
 pub struct AnalyzerState {
-    symbol_table: RefCell<SymbolTable>,
-    scope_table: RefCell<ScopeTable>,
+    symbol_table: SymbolTable,
+    scope_table: ScopeTable,
 
     // Maintain the current active scope by storing its ID.
-    _current_scope_id: RefCell<NodeId>,
+    current_scope_id: NodeId,
 
     // The last returned type.
     //
     // Used to track the type of `return` statements to facilitate the type
     // checking with function's return type.
-    _returned_type: RefCell<Type>,
+    returned_type: Box<Type>,
 }
 
 impl AnalyzerState {
@@ -29,16 +26,16 @@ impl AnalyzerState {
     /// scope.
     pub fn new(program_id: NodeId) -> Self {
         Self {
-            symbol_table: RefCell::new(HashMap::new()),
-            scope_table: RefCell::new(HashMap::from([(program_id, ScopeTableEntry::new_global())])),
-            _current_scope_id: RefCell::new(program_id),
-            _returned_type: RefCell::new(Type::Void),
+            symbol_table: HashMap::new(),
+            scope_table: HashMap::from([(program_id, ScopeTableEntry::new_global())]),
+            current_scope_id: program_id,
+            returned_type: Box::new(Type::Void),
         }
     }
 
     /// Consume `self` and return the instance of [`SymbolTable`].
     pub fn take_symbol_table(self) -> SymbolTable {
-        self.symbol_table.take()
+        self.symbol_table
     }
 
     /// Check if a given type `t` exists in the current active scope or its
@@ -55,7 +52,7 @@ impl AnalyzerState {
 
             Type::Symbol(name) => {
                 matches!(
-                    self.get_sym_variant(name).as_deref(),
+                    self.get_sym_variant(name),
                     Some(SymbolVariant::UndefinedType) | Some(SymbolVariant::Type(_))
                 )
             }
@@ -66,14 +63,14 @@ impl AnalyzerState {
 
     /// Get the variant associated with a `sym_name` in the current active
     /// scope or its ancestors.
-    pub fn get_sym_variant(&self, sym_name: &str) -> Option<Ref<'_, SymbolVariant>> {
+    pub fn get_sym_variant(&self, sym_name: &str) -> Option<&SymbolVariant> {
         let mut scope_id = self.current_scope_id();
 
         loop {
             let scope_entry = self.get_scope(scope_id);
 
             if let Some(symbol_id) = scope_entry.symbols.get(sym_name) {
-                return Some(Ref::map(self.get_sym(*symbol_id), |s| &s.variant));
+                return Some(&self.get_sym(*symbol_id).variant);
             }
 
             // Traverse upward
@@ -146,13 +143,13 @@ impl AnalyzerState {
     }
 
     /// Save type declaration to current active scope without providing type.
-    pub fn save_type_declaration(&self, sym_id: NodeId, sym_name: &str) {
+    pub fn save_type_declaration(&mut self, sym_id: NodeId, sym_name: &str) {
         // Save to scope table
-        let mut scope = self.get_scope_mut(self.current_scope_id());
+        let scope = self.get_scope_mut(self.current_scope_id());
         scope.symbols.insert(String::from(sym_name), sym_id);
 
         // Save to symbol table
-        self.symbol_table.borrow_mut().insert(
+        self.symbol_table.insert(
             sym_id,
             SymbolTableEntry {
                 name: String::from(sym_name),
@@ -162,27 +159,23 @@ impl AnalyzerState {
     }
 
     /// Set the definition of a type.
-    pub fn set_type_definition(&self, sym_id: NodeId, t: Type) {
-        self.symbol_table
-            .borrow_mut()
-            .get_mut(&sym_id)
-            .unwrap()
-            .variant = SymbolVariant::Type(t);
+    pub fn set_type_definition(&mut self, sym_id: NodeId, t: Type) {
+        self.symbol_table.get_mut(&sym_id).unwrap().variant = SymbolVariant::Type(t);
     }
 
     /// Save symbol and its associated type to current active scope.
-    pub fn save_entity(&self, sym_id: NodeId, sym_name: &str, t: Type) {
+    pub fn save_entity(&mut self, sym_id: NodeId, sym_name: &str, t: Type) {
         self.save_entity_to(self.current_scope_id(), sym_id, sym_name, t);
     }
 
     /// Save entity to a specific scope without have to entering it first.
-    pub fn save_entity_to(&self, scope_id: NodeId, sym_id: NodeId, sym_name: &str, t: Type) {
+    pub fn save_entity_to(&mut self, scope_id: NodeId, sym_id: NodeId, sym_name: &str, t: Type) {
         // Save to scope table
-        let mut scope = self.get_scope_mut(scope_id);
+        let scope = self.get_scope_mut(scope_id);
         scope.symbols.insert(String::from(sym_name), sym_id);
 
         // Save to symbol table
-        self.symbol_table.borrow_mut().insert(
+        self.symbol_table.insert(
             sym_id,
             SymbolTableEntry {
                 name: String::from(sym_name),
@@ -191,99 +184,51 @@ impl AnalyzerState {
         );
     }
 
-    /// Execute `action` within a new function scope.
-    pub fn with_function_scope<U, F>(&self, scope_id: NodeId, return_t: Type, action: F) -> U
-    where
-        F: FnOnce() -> U,
-    {
-        self.with_scope(scope_id, ScopeVariant::Function { return_t }, action)
-    }
-
-    /// Execute `action` within a new conditional scope.
-    pub fn with_conditional_scope<U, F>(&self, scope_id: NodeId, action: F) -> U
-    where
-        F: FnOnce() -> U,
-    {
-        self.with_scope(scope_id, ScopeVariant::Conditional, action)
-    }
-
-    /// Execute `action` within a new loop scope.
-    pub fn with_loop_scope<U, F>(&self, scope_id: NodeId, action: F) -> U
-    where
-        F: FnOnce() -> U,
-    {
-        self.with_scope(scope_id, ScopeVariant::Loop, action)
-    }
-
-    /// Execute `action` within a scope of `variant` variant.
-    ///
-    /// It handles the creation (if needed), entering and also exiting the
-    /// scope.
-    fn with_scope<U, F>(&self, scope_id: NodeId, scope_variant: ScopeVariant, action: F) -> U
-    where
-        F: FnOnce() -> U,
-    {
-        let current_id = self.current_scope_id();
-
-        if !self.has_scope(scope_id) {
-            self.create_scope(scope_id, scope_variant, current_id);
-        }
-
-        self.enter_scope(scope_id);
-        let result = action();
-        self.enter_scope(current_id);
-
-        result
-    }
-
     /// Create a new scope.
-    pub fn create_scope(&self, id: NodeId, variant: ScopeVariant, parent_id: NodeId) {
-        let mut table = self.scope_table.borrow_mut();
-
+    pub fn create_scope(&mut self, id: NodeId, variant: ScopeVariant, parent_id: NodeId) {
         // Insert the new child data
-        table.insert(id, ScopeTableEntry::new(variant, parent_id));
+        self.scope_table
+            .insert(id, ScopeTableEntry::new(variant, parent_id));
 
         // Update parent scope data
-        table.get_mut(&parent_id).unwrap().children_id.push(id);
+        self.scope_table
+            .get_mut(&parent_id)
+            .unwrap()
+            .children_id
+            .push(id);
     }
 
     /// Create a new scope in the inside of current active scope.
-    pub fn create_scope_inside_current_scope(&self, id: NodeId, variant: ScopeVariant) {
+    pub fn create_scope_inside_current_scope(&mut self, id: NodeId, variant: ScopeVariant) {
         self.create_scope(id, variant, self.current_scope_id());
     }
 
-    pub fn take_returned_type(&self) -> Type {
-        self._returned_type.replace(Type::Void)
+    pub fn take_returned_type(&mut self) -> Type {
+        mem::replace(&mut self.returned_type, Type::Void)
     }
 
-    pub fn set_returned_type(&self, t: Type) {
-        *self._returned_type.borrow_mut() = t;
+    pub fn set_returned_type(&mut self, t: Type) {
+        *self.returned_type = t;
     }
 
-    fn current_scope_id(&self) -> NodeId {
-        *self._current_scope_id.borrow()
+    pub fn current_scope_id(&self) -> NodeId {
+        self.current_scope_id
     }
 
-    fn get_sym(&self, sym_id: NodeId) -> Ref<'_, SymbolTableEntry> {
-        Ref::map(self.symbol_table.borrow(), |st| st.get(&sym_id).unwrap())
+    fn get_sym(&self, sym_id: NodeId) -> &SymbolTableEntry {
+        self.symbol_table.get(&sym_id).unwrap()
     }
 
-    fn enter_scope(&self, scope_id: NodeId) {
-        *self._current_scope_id.borrow_mut() = scope_id;
+    pub fn enter_scope(&mut self, scope_id: NodeId) {
+        self.current_scope_id = scope_id;
     }
 
-    fn get_scope(&self, scope_id: NodeId) -> Ref<'_, ScopeTableEntry> {
-        Ref::map(self.scope_table.borrow(), |st| st.get(&scope_id).unwrap())
+    fn get_scope(&self, scope_id: NodeId) -> &ScopeTableEntry {
+        self.scope_table.get(&scope_id).unwrap()
     }
 
-    fn get_scope_mut(&self, scope_id: NodeId) -> RefMut<'_, ScopeTableEntry> {
-        RefMut::map(self.scope_table.borrow_mut(), |st| {
-            st.get_mut(&scope_id).unwrap()
-        })
-    }
-
-    fn has_scope(&self, scope_id: NodeId) -> bool {
-        self.scope_table.borrow().contains_key(&scope_id)
+    fn get_scope_mut(&mut self, scope_id: NodeId) -> &mut ScopeTableEntry {
+        self.scope_table.get_mut(&scope_id).unwrap()
     }
 }
 
