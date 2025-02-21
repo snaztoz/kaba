@@ -47,7 +47,8 @@ pub fn eval_expr(input: &str, symbols: &[(&str, Type)]) -> Result<Type> {
             let sym_id: NodeId = (i + 99999).try_into().unwrap();
             state.save_entity(sym_id, sym, t.clone());
         }
-        expression::analyze(&state, &body[0])
+
+        expression::analyze(&state, &body[0]).map(|res| res.into_owned())
     } else {
         unreachable!();
     }

@@ -7,6 +7,7 @@ use super::{
     variable, while_loop,
 };
 use crate::ast::{AstNode, AstNodeVariant};
+use std::borrow::Cow;
 
 /// Analyze a statement.
 ///
@@ -61,7 +62,7 @@ fn analyze_return(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
     let expr_t = expr
         .as_ref()
         .map(|expr| expression::analyze(state, expr))
-        .unwrap_or(Ok(Type::Void))?;
+        .unwrap_or(Ok(Cow::Owned(Type::Void)))?;
 
     let return_t = state.nearest_return_t().ok_or_else(|| SemanticError {
         variant: SemanticErrorVariant::UnexpectedStatement(node.to_string()),
@@ -75,7 +76,7 @@ fn analyze_return(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
     .map_err(|err| SemanticError {
         variant: SemanticErrorVariant::ReturnTypeMismatch {
             expected: return_t.clone(),
-            get: expr_t,
+            get: expr_t.into_owned(),
         },
         ..err
     })?;
@@ -93,7 +94,7 @@ fn analyze_debug(state: &AnalyzerState, node: &AstNode) -> Result<()> {
     };
 
     let expr_t = expression::analyze(state, expr)?;
-    if expr_t == Type::Void {
+    if expr_t.is_void() {
         return Err(SemanticError {
             variant: SemanticErrorVariant::UnexpectedVoidTypeExpression,
             span: expr.span.clone(),

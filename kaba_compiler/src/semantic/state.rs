@@ -260,6 +260,22 @@ pub enum SymbolVariant {
 }
 
 impl SymbolVariant {
+    pub fn as_type_t(&self) -> &Type {
+        if let Self::Type(t) = self {
+            t
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn as_entity_t(&self) -> &Type {
+        if let Self::Entity(ent) = self {
+            ent
+        } else {
+            unreachable!()
+        }
+    }
+
     pub fn into_type_t(self) -> Type {
         if let Self::Type(t) = self {
             t

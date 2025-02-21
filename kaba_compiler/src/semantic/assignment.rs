@@ -5,6 +5,7 @@ use super::{
     typ::{assert, Type},
 };
 use crate::{ast::AstNode, AstNodeVariant};
+use std::borrow::Cow;
 
 /// Analyze assignment statements.
 ///
@@ -46,7 +47,7 @@ use crate::{ast::AstNode, AstNodeVariant};
 /// var x = true;
 /// x += false;
 /// ```
-pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+pub fn analyze<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, Type>> {
     analyze_lhs(node)?;
 
     match &node.variant {
@@ -62,7 +63,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     }
 }
 
-fn analyze_assignment(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+fn analyze_assignment<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, Type>> {
     let (lhs, rhs) = if let AstNodeVariant::Assign { lhs, rhs } = &node.variant {
         (lhs, rhs)
     } else {
@@ -74,10 +75,13 @@ fn analyze_assignment(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
 
     assert::is_assignable(&rhs_t, &lhs_t, || node.span.clone())?;
 
-    Ok(Type::Void)
+    Ok(Cow::Owned(Type::Void))
 }
 
-fn analyze_shorthand_assignment(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+fn analyze_shorthand_assignment<'a>(
+    state: &'a AnalyzerState,
+    node: &AstNode,
+) -> Result<Cow<'a, Type>> {
     let (lhs, rhs) = match &node.variant {
         AstNodeVariant::AddAssign { lhs, rhs }
         | AstNodeVariant::SubAssign { lhs, rhs }
@@ -95,7 +99,7 @@ fn analyze_shorthand_assignment(state: &AnalyzerState, node: &AstNode) -> Result
     assert::is_number(&rhs_t, || rhs.span.clone())?;
     assert::is_assignable(&rhs_t, &lhs_t, || node.span.clone())?;
 
-    Ok(Type::Void)
+    Ok(Cow::Owned(Type::Void))
 }
 
 fn analyze_lhs(node: &AstNode) -> Result<()> {

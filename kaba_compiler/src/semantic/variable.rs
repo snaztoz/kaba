@@ -6,6 +6,7 @@ use super::{
     typ::{assert, FloatType, IntType, Type},
 };
 use crate::{ast::AstNode, AstNodeVariant};
+use std::borrow::Cow;
 
 /// Analyze variable declaration statement.
 ///
@@ -43,13 +44,11 @@ pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
     let var_t = match unwrap_tn(node) {
         Some(var_tn) => {
             let t = match tn::analyze(state, var_tn, false)? {
-                Type::Symbol(sym_name) => state
-                    .get_sym_variant(&sym_name)
-                    .unwrap()
-                    .clone()
-                    .into_type_t(),
+                Type::Symbol(sym_name) => {
+                    Cow::Borrowed(state.get_sym_variant(&sym_name).unwrap().as_entity_t())
+                }
 
-                t => t,
+                t => Cow::Owned(t),
             };
 
             assert::is_assignable(&val_t, &t, || node.span.clone())?;
@@ -57,12 +56,12 @@ pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
             t
         }
 
-        None if val_t.is_unbounded_int() => Type::Int(IntType::Int),
-        None if val_t.is_unbounded_float() => Type::Float(FloatType::Double),
+        None if val_t.is_unbounded_int() => Cow::Owned(Type::Int(IntType::Int)),
+        None if val_t.is_unbounded_float() => Cow::Owned(Type::Float(FloatType::Double)),
         None => val_t,
     };
 
-    save_symbol(state, node, var_t)
+    save_symbol(state, node, var_t.into_owned())
 }
 
 fn save_symbol(state: &mut AnalyzerState, node: &AstNode, t: Type) -> Result<()> {

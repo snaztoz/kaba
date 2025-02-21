@@ -6,24 +6,26 @@ use super::{
     typ::{assert, FloatType, IntType, Type},
 };
 use crate::{ast::Literal, AstNode};
-use std::collections::HashMap;
+use std::{borrow::Cow, collections::HashMap};
 
 /// Analyze literal expressions, such as numbers or arrays.
-pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+pub fn analyze<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, Type>> {
     let lit = node.variant.as_literal();
 
-    match lit {
-        Literal::Void => Ok(Type::Void),
+    let t = match lit {
+        Literal::Void => Type::Void,
 
-        Literal::Bool(_) => Ok(Type::Bool),
-        Literal::Int(n) => Ok(Type::Int(IntType::Unbounded(*n))),
-        Literal::Float(n) => Ok(Type::Float(FloatType::Unbounded(*n))),
-        Literal::Char(_) => Ok(Type::Char),
-        Literal::String(_) => Ok(Type::String),
+        Literal::Bool(_) => Type::Bool,
+        Literal::Int(n) => Type::Int(IntType::Unbounded(*n)),
+        Literal::Float(n) => Type::Float(FloatType::Unbounded(*n)),
+        Literal::Char(_) => Type::Char,
+        Literal::String(_) => Type::String,
 
-        Literal::Array { .. } => analyze_array(state, lit),
-        Literal::Record { .. } => analyze_record(state, lit),
-    }
+        Literal::Array { .. } => analyze_array(state, lit)?,
+        Literal::Record { .. } => analyze_record(state, lit)?,
+    };
+
+    Ok(Cow::Owned(t))
 }
 
 fn analyze_array(state: &AnalyzerState, lit: &Literal) -> Result<Type> {
@@ -67,13 +69,13 @@ fn analyze_record(state: &AnalyzerState, lit: &Literal) -> Result<Type> {
 
         let t = match expression::analyze(state, val)? {
             // Deduce unbounded types into bounded ones
-            expr_t if expr_t.is_unbounded_int() => Type::Int(IntType::Int),
-            expr_t if expr_t.is_unbounded_float() => Type::Float(FloatType::Double),
+            expr_t if expr_t.is_unbounded_int() => Cow::Owned(Type::Int(IntType::Int)),
+            expr_t if expr_t.is_unbounded_float() => Cow::Owned(Type::Float(FloatType::Double)),
 
             expr_t => expr_t,
         };
 
-        fields_t.insert(String::from(field_name), t);
+        fields_t.insert(String::from(field_name), t.into_owned());
     }
 
     Ok(Type::Record { fields: fields_t })

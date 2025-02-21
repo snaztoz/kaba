@@ -6,14 +6,14 @@ use super::{
     typ::{assert, FloatType, IntType, Type},
 };
 use crate::ast::{AstNode, AstNodeVariant};
-use std::cmp;
+use std::{borrow::Cow, cmp};
 
 mod field_access;
 mod function_call;
 mod index_access;
 
 /// Analyze expressions.
-pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+pub fn analyze<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, Type>> {
     match &node.variant {
         AstNodeVariant::Assign { .. }
         | AstNodeVariant::AddAssign { .. }
@@ -49,7 +49,7 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
                 variant: SemanticErrorVariant::SymbolDoesNotExist(String::from(*name)),
                 span: node.span.clone(),
             })
-            .map(|st| st.clone().into_entity_t()),
+            .map(|st| Cow::Borrowed(st.as_entity_t())),
 
         AstNodeVariant::Literal { .. } => literal::analyze(state, node),
         AstNodeVariant::FunctionCall { .. } => function_call::analyze(state, node),
@@ -60,7 +60,10 @@ pub fn analyze(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
     }
 }
 
-fn analyze_logical_and_or_expr(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+fn analyze_logical_and_or_expr<'a>(
+    state: &'a AnalyzerState,
+    node: &AstNode,
+) -> Result<Cow<'a, Type>> {
     let lhs = node.variant.as_lhs();
     let rhs = node.variant.as_rhs();
 
@@ -70,10 +73,10 @@ fn analyze_logical_and_or_expr(state: &AnalyzerState, node: &AstNode) -> Result<
     assert::is_boolean(&lhs_t, || lhs.span.clone())?;
     assert::is_boolean(&rhs_t, || rhs.span.clone())?;
 
-    Ok(Type::Bool)
+    Ok(Cow::Owned(Type::Bool))
 }
 
-fn analyze_equality_expr(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+fn analyze_equality_expr<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, Type>> {
     let lhs = node.variant.as_lhs();
     let rhs = node.variant.as_rhs();
 
@@ -82,10 +85,10 @@ fn analyze_equality_expr(state: &AnalyzerState, node: &AstNode) -> Result<Type> 
 
     assert::is_compatible(&lhs_t, &rhs_t, || lhs.span.start..rhs.span.end)?;
 
-    Ok(Type::Bool)
+    Ok(Cow::Owned(Type::Bool))
 }
 
-fn analyze_comparison_expr(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+fn analyze_comparison_expr<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, Type>> {
     let lhs = node.variant.as_lhs();
     let rhs = node.variant.as_rhs();
 
@@ -103,10 +106,10 @@ fn analyze_comparison_expr(state: &AnalyzerState, node: &AstNode) -> Result<Type
         assert::is_compatible(&lhs_t, &rhs_t, || lhs.span.start..rhs.span.end)?;
     }
 
-    Ok(Type::Bool)
+    Ok(Cow::Owned(Type::Bool))
 }
 
-fn analyze_binary_math_expr(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+fn analyze_binary_math_expr<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, Type>> {
     let lhs = node.variant.as_lhs();
     let rhs = node.variant.as_rhs();
 
@@ -117,46 +120,46 @@ fn analyze_binary_math_expr(state: &AnalyzerState, node: &AstNode) -> Result<Typ
     assert::is_number(&rhs_t, || rhs.span.clone())?;
 
     if lhs_t.is_unbounded_int() && rhs_t.is_unbounded_int() {
-        return Ok(compute_unbounded_int_t(node, &lhs_t, &rhs_t));
+        return Ok(Cow::Owned(compute_unbounded_int_t(node, &lhs_t, &rhs_t)));
     } else if lhs_t.is_unbounded_float() && rhs_t.is_unbounded_float() {
-        return Ok(compute_unbounded_float_t(node, &lhs_t, &rhs_t));
+        return Ok(Cow::Owned(compute_unbounded_float_t(node, &lhs_t, &rhs_t)));
     }
 
     assert::is_compatible(&lhs_t, &rhs_t, || lhs.span.start..rhs.span.end)?;
 
     // Handle the possibility of converting unbounded into bounded type.
-    match (lhs_t, rhs_t) {
+    match (lhs_t.as_ref(), rhs_t.as_ref()) {
         (Type::Int(i), Type::Int(j)) => {
             let max = cmp::max(i.clone(), j.clone());
-            Ok(Type::Int(max))
+            Ok(Cow::Owned(Type::Int(max)))
         }
 
         (Type::Float(i), Type::Float(j)) => {
             let max = cmp::max(i.clone(), j.clone());
-            Ok(Type::Float(max))
+            Ok(Cow::Owned(Type::Float(max)))
         }
 
         _ => unreachable!(),
     }
 }
 
-fn analyze_logical_not_expr(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+fn analyze_logical_not_expr<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, Type>> {
     let expr = node.variant.as_child_expr();
 
     let child_t = analyze(state, expr)?;
     assert::is_boolean(&child_t, || expr.span.clone())?;
 
-    Ok(Type::Bool)
+    Ok(Cow::Owned(Type::Bool))
 }
 
-fn analyze_neg_expr(state: &AnalyzerState, node: &AstNode) -> Result<Type> {
+fn analyze_neg_expr<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, Type>> {
     let expr = node.variant.as_child_expr();
 
     let child_t = analyze(state, expr)?;
     assert::is_signable(&child_t, || expr.span.clone())?;
 
-    let t = match child_t {
-        Type::Int(IntType::Unbounded(n)) => Type::Int(IntType::Unbounded(-n)),
+    let t = match child_t.as_ref() {
+        Type::Int(IntType::Unbounded(n)) => Cow::Owned(Type::Int(IntType::Unbounded(-n))),
         _ => child_t,
     };
 

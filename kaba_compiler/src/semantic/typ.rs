@@ -66,10 +66,6 @@ impl Type {
         matches!(self, Type::Float(t) if !matches!(t, FloatType::Unbounded(_)))
     }
 
-    pub fn get_field(&self, name: &str) -> Option<&Type> {
-        self.as_record_fields().get(name)
-    }
-
     pub fn as_unbounded_int(&self) -> i32 {
         if let Self::Int(IntType::Unbounded(n)) = self {
             *n
@@ -86,11 +82,27 @@ impl Type {
         }
     }
 
-    fn as_record_fields(&self) -> &HashMap<String, Self> {
+    pub fn as_array_elem_t(&self) -> &Self {
+        if let Self::Array { elem_t, .. } = self {
+            elem_t
+        } else {
+            panic!("trying to unwrap array on non-Array type")
+        }
+    }
+
+    pub fn as_record_fields(&self) -> &HashMap<String, Self> {
         if let Self::Record { fields } = self {
             fields
         } else {
             unreachable!()
+        }
+    }
+
+    pub fn as_callable_signature_t(&self) -> (&[Self], &Self) {
+        if let Self::Callable { params_t, return_t } = self {
+            (params_t, return_t)
+        } else {
+            panic!("trying to unwrap callable on non-Callable type")
         }
     }
 
@@ -99,6 +111,14 @@ impl Type {
             *elem_t
         } else {
             panic!("trying to unwrap array on non-Array type")
+        }
+    }
+
+    pub fn into_record_fields(self) -> HashMap<String, Self> {
+        if let Self::Record { fields } = self {
+            fields
+        } else {
+            unreachable!()
         }
     }
 

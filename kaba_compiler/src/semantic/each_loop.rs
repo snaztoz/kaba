@@ -46,7 +46,7 @@ pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
 
     let elem_sym = node.variant.as_each_loop_elem_sym();
     let elem_sym_name = elem_sym.variant.as_sym_name();
-    let elem_t = expr_t.into_array_elem_t();
+    let elem_t = expr_t.into_owned().into_array_elem_t();
 
     // Function return type can't be taken from an `each-loop` body, so we must
     // reset the type after the loop body is evaluated.
