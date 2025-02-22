@@ -19,7 +19,9 @@ impl AstNode<'_> {
     pub const fn is_lval(&self) -> bool {
         matches!(
             self.variant,
-            AstNodeVariant::Symbol { .. } | AstNodeVariant::IndexAccess { .. },
+            AstNodeVariant::Symbol { .. }
+                | AstNodeVariant::FieldAccess { .. }
+                | AstNodeVariant::IndexAccess { .. },
         )
     }
 
@@ -415,7 +417,13 @@ impl AstNodeVariant<'_> {
             | Self::Sub { rhs, .. }
             | Self::Mul { rhs, .. }
             | Self::Div { rhs, .. }
-            | Self::Mod { rhs, .. } => rhs,
+            | Self::Mod { rhs, .. }
+            | Self::Assign { rhs, .. }
+            | Self::AddAssign { rhs, .. }
+            | Self::SubAssign { rhs, .. }
+            | Self::MulAssign { rhs, .. }
+            | Self::DivAssign { rhs, .. }
+            | Self::ModAssign { rhs, .. } => rhs,
 
             _ => unreachable!(),
         }

@@ -64,11 +64,8 @@ pub fn analyze<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, T
 }
 
 fn analyze_assignment<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, Type>> {
-    let (lhs, rhs) = if let AstNodeVariant::Assign { lhs, rhs } = &node.variant {
-        (lhs, rhs)
-    } else {
-        unreachable!()
-    };
+    let lhs = node.variant.as_lhs();
+    let rhs = node.variant.as_rhs();
 
     let lhs_t = expression::analyze(state, lhs)?;
     let rhs_t = expression::analyze(state, rhs)?;
@@ -82,15 +79,8 @@ fn analyze_shorthand_assignment<'a>(
     state: &'a AnalyzerState,
     node: &AstNode,
 ) -> Result<Cow<'a, Type>> {
-    let (lhs, rhs) = match &node.variant {
-        AstNodeVariant::AddAssign { lhs, rhs }
-        | AstNodeVariant::SubAssign { lhs, rhs }
-        | AstNodeVariant::MulAssign { lhs, rhs }
-        | AstNodeVariant::DivAssign { lhs, rhs }
-        | AstNodeVariant::ModAssign { lhs, rhs } => (lhs, rhs),
-
-        _ => unreachable!(),
-    };
+    let lhs = node.variant.as_lhs();
+    let rhs = node.variant.as_rhs();
 
     let lhs_t = expression::analyze(state, lhs)?;
     let rhs_t = expression::analyze(state, rhs)?;
@@ -214,6 +204,44 @@ mod tests {
                     true += true;
                 }
             "})
+    }
+
+    //
+    // Records
+    //
+
+    #[test]
+    fn assign_to_record_field() {
+        assert_is_ok(indoc! {"
+                def main {
+                    var d = { is_true: true };
+                    d.is_true = false;
+
+                    var d2: Data = { val: 10 };
+                    d2.val = 99;
+                }
+
+                record Data {
+                    val: int,
+                }
+            "});
+    }
+
+    #[test]
+    fn shorthand_assign_to_record_field() {
+        assert_is_ok(indoc! {"
+                def main {
+                    var d = { val: 10 };
+                    d.val += 5;
+
+                    var d2: Data = { val: 10 };
+                    d2.val += 99;
+                }
+
+                record Data {
+                    val: int,
+                }
+            "});
     }
 
     //
