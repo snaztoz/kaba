@@ -5,7 +5,7 @@ use super::{
     tn,
     typ::{assert, FloatType, IntType, Type},
 };
-use crate::{ast::AstNode, AstNodeVariant};
+use crate::ast::AstNode;
 use std::borrow::Cow;
 
 /// Analyze variable declaration statement.
@@ -39,9 +39,10 @@ use std::borrow::Cow;
 /// var x: int = 5.0;
 /// ```
 pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
-    let val_t = expression::analyze(state, unwrap_val(node))?;
+    let val = node.variant.as_variable_declaration_val();
+    let val_t = expression::analyze(state, val)?;
 
-    let var_t = match unwrap_tn(node) {
+    let var_t = match node.variant.as_variable_declaration_tn() {
         Some(var_tn) => {
             let t = match tn::analyze(state, var_tn, false)? {
                 Type::Symbol(sym_name) => {
@@ -67,34 +68,17 @@ pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
 fn save_symbol(state: &mut AnalyzerState, node: &AstNode, t: Type) -> Result<()> {
     let sym = node.variant.as_sym();
     let sym_name = sym.variant.as_sym_name();
-    let sym_span = node.span.clone();
 
     if !state.can_save_sym(sym_name) {
         return Err(SemanticError {
             variant: SemanticErrorVariant::SymbolAlreadyExist(String::from(sym_name)),
-            span: sym_span,
+            span: node.span.clone(),
         });
     }
 
     state.save_entity(sym.id, sym_name, t);
 
     Ok(())
-}
-
-fn unwrap_tn<'src, 'a>(node: &'a AstNode<'src>) -> Option<&'a AstNode<'src>> {
-    if let AstNodeVariant::VariableDeclaration { tn, .. } = &node.variant {
-        tn.as_deref()
-    } else {
-        unreachable!()
-    }
-}
-
-fn unwrap_val<'src, 'a>(node: &'a AstNode<'src>) -> &'a AstNode<'src> {
-    if let AstNodeVariant::VariableDeclaration { val, .. } = &node.variant {
-        val
-    } else {
-        unreachable!()
-    }
 }
 
 #[cfg(test)]

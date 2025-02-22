@@ -268,6 +268,22 @@ impl AstNodeVariant<'_> {
         }
     }
 
+    pub fn as_variable_declaration_tn(&self) -> Option<&AstNode<'_>> {
+        if let Self::VariableDeclaration { tn, .. } = self {
+            tn.as_deref()
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn as_variable_declaration_val(&self) -> &AstNode<'_> {
+        if let Self::VariableDeclaration { val, .. } = self {
+            val
+        } else {
+            unreachable!()
+        }
+    }
+
     pub fn as_body_statements(&self) -> &[AstNode] {
         match self {
             Self::Program { body, .. }
