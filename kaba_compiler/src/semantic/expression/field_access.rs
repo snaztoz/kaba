@@ -12,7 +12,15 @@ use std::borrow::Cow;
 /// Analyze index access expression.
 pub fn analyze<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, Type>> {
     let obj = node.variant.as_accessed_object();
-    let obj_t = expression::analyze(state, obj)?;
+
+    let obj_t = match expression::analyze(state, obj)? {
+        // Resolve type name
+        Cow::Borrowed(Type::Symbol(name)) => {
+            Cow::Borrowed(state.get_sym_variant(name).unwrap().as_type_t())
+        }
+        t => t,
+    };
+
     assert::is_field_accessible(&obj_t, || obj.span.clone())?;
 
     let field = node.variant.as_accessed_field();
@@ -37,16 +45,10 @@ pub fn analyze<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, T
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::semantic::{test_util::assert_expr_type, typ::IntType};
+    use crate::semantic::test_util::assert_expr_type;
 
     #[test]
-    fn index_accessing() {
-        assert_expr_type(
-            "[[]int [int 1, 2]][0];",
-            &[],
-            Type::Array {
-                elem_t: Box::new(Type::Int(IntType::Int)),
-            },
-        );
+    fn field_accessing() {
+        assert_expr_type("{ name: \"snaztoz\" }.name;", &[], Type::String);
     }
 }

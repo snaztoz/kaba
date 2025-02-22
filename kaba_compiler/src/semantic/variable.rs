@@ -301,6 +301,30 @@ mod tests {
             "});
     }
 
+    #[test]
+    fn accessing_variable_field() {
+        assert_is_ok(indoc! {"
+                record User {
+                    name: string,
+                    occupation: Occupation,
+                }
+
+                record Occupation {
+                    name: string,
+                }
+
+                def main {
+                    var u: User = {
+                        name: \"snaztoz\",
+                        occupation: { name: \"programmer\" },
+                    };
+
+                    debug u.name;
+                    debug u.occupation.name;
+                }
+            "});
+    }
+
     //
     // Arrays
     //

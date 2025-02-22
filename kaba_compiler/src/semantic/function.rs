@@ -233,6 +233,26 @@ mod tests {
     }
 
     #[test]
+    fn accessing_record_field_from_inside_a_function() {
+        assert_is_ok(indoc! {"
+                def main {
+                    debug foo({ val: 5 });
+
+                    var d: Data = { val: 10 };
+                    debug foo(d);
+                }
+
+                def foo(d: Data): int {
+                    return d.val;
+                }
+
+                record Data {
+                    val: int,
+                }
+            "});
+    }
+
+    #[test]
     fn returning_record_from_a_function() {
         assert_is_ok(indoc! {"
                 def main {
