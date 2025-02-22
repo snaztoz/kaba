@@ -1,5 +1,5 @@
 use kaba::error::{Error, Result};
-use kabart::runtime::{stream::RuntimeStream, Runtime};
+use kaba_runtime::runtime::{stream::RuntimeStream, Runtime};
 use std::{fs, io, path::Path, process};
 
 macro_rules! exit_on_error {
@@ -15,9 +15,9 @@ macro_rules! exit_on_error {
 }
 
 pub fn handle(file_path: &Path) {
-    let src = exit_on_error!(read_content(file_path));
+    let src = kaba_compiler::normalize_newlines(&exit_on_error!(read_content(file_path)));
 
-    let compilation = kabac::compile(&src).map_err(|e| Error::CompilationError {
+    let compilation = kaba_compiler::compile(&src).map_err(|e| Error::CompilationError {
         path: Some(file_path),
         src: &src,
         message: e.message,

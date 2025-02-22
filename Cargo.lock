@@ -156,21 +156,21 @@ dependencies = [
  "clap",
  "colored",
  "indoc",
- "kabac",
- "kabart_p",
+ "kaba_compiler",
+ "kaba_runtime_prototype",
 ]
 
 [[package]]
-name = "kaba2js"
+name = "kaba_2js"
 version = "0.5.3"
 dependencies = [
  "indoc",
- "kabac",
+ "kaba_compiler",
  "wasm-bindgen",
 ]
 
 [[package]]
-name = "kabac"
+name = "kaba_compiler"
 version = "0.5.3"
 dependencies = [
  "indoc",
@@ -178,11 +178,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "kabart_p"
+name = "kaba_runtime_prototype"
 version = "0.5.3"
 dependencies = [
  "indoc",
- "kabac",
+ "kaba_compiler",
 ]
 
 [[package]]

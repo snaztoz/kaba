@@ -1,0 +1,13 @@
+[package]
+name = "kaba_runtime_prototype"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+kaba_compiler = { path = "../kaba_compiler" }
+
+[dev-dependencies]
+indoc = "2.0.4"
