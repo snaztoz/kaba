@@ -69,7 +69,7 @@ fn analyze_return(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
         span: node.span.clone(),
     })?;
 
-    assert::is_assignable(&expr_t, &return_t, || match expr {
+    assert::is_assignable(&expr_t, &return_t, state, || match expr {
         Some(expr) => expr.span.clone(),
         None => node.span.clone(),
     })

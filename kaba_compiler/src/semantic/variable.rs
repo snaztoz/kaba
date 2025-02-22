@@ -46,13 +46,13 @@ pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
         Some(var_tn) => {
             let t = match tn::analyze(state, var_tn, false)? {
                 Type::Symbol(sym_name) => {
-                    Cow::Borrowed(state.get_sym_variant(&sym_name).unwrap().as_entity_t())
+                    Cow::Borrowed(state.get_sym_variant(&sym_name).unwrap().as_type_t())
                 }
 
                 t => Cow::Owned(t),
             };
 
-            assert::is_assignable(&val_t, &t, || node.span.clone())?;
+            assert::is_assignable(&val_t, &t, state, || node.span.clone())?;
 
             t
         }
@@ -251,6 +251,53 @@ mod tests {
                 def main {}
 
                 def produce(f: () -> NotExist) {}
+            "});
+    }
+
+    //
+    // Records
+    //
+
+    #[test]
+    fn declaring_variable_with_record_literal() {
+        assert_is_ok(indoc! {"
+                def main {
+                    var u = { name: \"snaztoz\" };
+                }
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_record_literal_and_type_notation() {
+        assert_is_ok(indoc! {"
+                record User {
+                    name: string,
+                }
+
+                def main {
+                    var u: User = { name: \"snaztoz\" };
+                }
+            "});
+    }
+
+    #[test]
+    fn declaring_variable_with_nested_records() {
+        assert_is_ok(indoc! {"
+                record User {
+                    name: string,
+                    occupation: Occupation,
+                }
+
+                record Occupation {
+                    name: string,
+                }
+
+                def main {
+                    var u: User = {
+                        name: \"snaztoz\",
+                        occupation: { name: \"programmer\" },
+                    };
+                }
             "});
     }
 

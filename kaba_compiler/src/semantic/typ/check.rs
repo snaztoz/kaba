@@ -1,4 +1,7 @@
-use crate::semantic::typ::{FloatType, IntType};
+use crate::semantic::{
+    state::AnalyzerState,
+    typ::{FloatType, IntType},
+};
 
 use super::Type;
 
@@ -22,7 +25,19 @@ pub fn are_types_compatible(a: &Type, b: &Type) -> bool {
     false
 }
 
-pub fn is_type_assignable_to(t: &Type, to: &Type) -> bool {
+pub fn is_type_assignable_to(t: &Type, to: &Type, state: &AnalyzerState) -> bool {
+    let t = if let Type::Symbol(name) = t {
+        state.get_sym_variant(name).unwrap().as_type_t()
+    } else {
+        t
+    };
+
+    let to = if let Type::Symbol(name) = to {
+        state.get_sym_variant(name).unwrap().as_type_t()
+    } else {
+        to
+    };
+
     if t == to {
         return true;
     }
@@ -35,15 +50,13 @@ pub fn is_type_assignable_to(t: &Type, to: &Type) -> bool {
             return false;
         }
 
-        return t_fields.iter().all(|(field_name, field_t)| {
-            let to_field_t = to_fields.get(field_name);
+        return t_fields
+            .iter()
+            .all(|(field_name, field_t)| match to_fields.get(field_name) {
+                Some(to_field_t) => is_type_assignable_to(field_t, to_field_t, state),
 
-            if to_field_t.is_none() {
-                return false;
-            }
-
-            is_type_assignable_to(field_t, to_field_t.unwrap())
-        });
+                None => false,
+            });
     }
 
     if t.is_unbounded_int() || t.is_unbounded_float() {

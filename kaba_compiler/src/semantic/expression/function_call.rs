@@ -28,7 +28,7 @@ pub fn analyze<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, T
     }
 
     for (param_t, arg_t) in params_t.iter().zip(&args_t) {
-        if !check::is_type_assignable_to(arg_t, param_t) {
+        if !check::is_type_assignable_to(arg_t, param_t, state) {
             return Err(SemanticError {
                 variant: SemanticErrorVariant::InvalidArguments {
                     args_t: args_t.iter().map(|t| t.clone().into_owned()).collect(),

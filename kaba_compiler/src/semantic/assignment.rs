@@ -73,7 +73,7 @@ fn analyze_assignment<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Co
     let lhs_t = expression::analyze(state, lhs)?;
     let rhs_t = expression::analyze(state, rhs)?;
 
-    assert::is_assignable(&rhs_t, &lhs_t, || node.span.clone())?;
+    assert::is_assignable(&rhs_t, &lhs_t, state, || node.span.clone())?;
 
     Ok(Cow::Owned(Type::Void))
 }
@@ -97,7 +97,7 @@ fn analyze_shorthand_assignment<'a>(
 
     assert::is_number(&lhs_t, || lhs.span.clone())?;
     assert::is_number(&rhs_t, || rhs.span.clone())?;
-    assert::is_assignable(&rhs_t, &lhs_t, || node.span.clone())?;
+    assert::is_assignable(&rhs_t, &lhs_t, state, || node.span.clone())?;
 
     Ok(Cow::Owned(Type::Void))
 }

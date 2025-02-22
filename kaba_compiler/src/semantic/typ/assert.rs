@@ -1,5 +1,8 @@
 use super::{check, Type};
-use crate::semantic::error::{Result, SemanticError, SemanticErrorVariant};
+use crate::semantic::{
+    error::{Result, SemanticError, SemanticErrorVariant},
+    state::AnalyzerState,
+};
 use logos::Span;
 
 pub fn is_number<F>(t: &Type, err_span: F) -> Result<()>
@@ -117,11 +120,11 @@ where
     }
 }
 
-pub fn is_assignable<F>(t: &Type, to: &Type, err_span: F) -> Result<()>
+pub fn is_assignable<F>(t: &Type, to: &Type, state: &AnalyzerState, err_span: F) -> Result<()>
 where
     F: FnOnce() -> Span,
 {
-    if check::is_type_assignable_to(t, to) {
+    if check::is_type_assignable_to(t, to, state) {
         Ok(())
     } else {
         Err(SemanticError {
