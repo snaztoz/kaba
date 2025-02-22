@@ -184,7 +184,7 @@ mod tests {
     fn declaring_variable_with_void_type() {
         assert_is_err(indoc! {"
                 def main {
-                    var x: Void = 5;
+                    var x: void = 5;
                 }
             "});
     }
