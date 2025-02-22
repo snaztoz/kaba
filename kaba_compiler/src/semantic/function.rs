@@ -210,6 +210,49 @@ mod tests {
             "});
     }
 
+    //
+    // Records
+    //
+
+    #[test]
+    fn calling_function_with_record_parameter() {
+        assert_is_ok(indoc! {"
+                def main {
+                    foo({ val: 5 });
+
+                    var d: Data = { val: 10 };
+                    foo(d);
+                }
+
+                def foo(d: Data) {}
+
+                record Data {
+                    val: int,
+                }
+            "});
+    }
+
+    #[test]
+    fn returning_record_from_a_function() {
+        assert_is_ok(indoc! {"
+                def main {
+                    var arr_1: Data = producer();
+                }
+
+                def producer: Data {
+                    return { val: 10 };
+                }
+
+                record Data {
+                    val: int,
+                }
+            "});
+    }
+
+    //
+    // Arrays
+    //
+
     #[test]
     fn calling_function_with_array_parameter() {
         assert_is_ok(indoc! {"
