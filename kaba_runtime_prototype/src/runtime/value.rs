@@ -14,7 +14,7 @@ pub enum RuntimeValue {
 }
 
 impl RuntimeValue {
-    pub fn unwrap_integer(&self) -> usize {
+    pub fn as_integer(&self) -> usize {
         if let RuntimeValue::Int(i) = self {
             usize::try_from(*i).unwrap()
         } else {
@@ -22,7 +22,15 @@ impl RuntimeValue {
         }
     }
 
-    pub fn unwrap_array_ptr(&self) -> usize {
+    pub fn as_record_ptr(&self) -> usize {
+        if let Self::Record(ptr) = self {
+            *ptr
+        } else {
+            panic!()
+        }
+    }
+
+    pub fn as_array_ptr(&self) -> usize {
         if let Self::Array(ptr) = self {
             *ptr
         } else {

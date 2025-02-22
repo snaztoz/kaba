@@ -433,6 +433,59 @@ mod tests {
     }
 
     #[test]
+    fn debug_record() {
+        assert_output_equal(
+            indoc! {"
+                def main {
+                    debug { occupation: { name: \"programmer\" }}.occupation.name;
+
+                    var d: Data = { val: 10 };
+                    d.val *= 10;
+                    debug d.val + 10;
+                }
+
+                record Data {
+                    val: int,
+                }
+            "},
+            "programmer\n110\n".as_bytes(),
+        );
+    }
+
+    #[test]
+    fn assign_to_record_fields() {
+        assert_output_equal(
+            indoc! {"
+                def main {
+                    var d = {
+                        a: 0,
+                        b: 0,
+                        c: 5,
+                        d: 2,
+                        e: 10,
+                        f: 12,
+                    };
+
+                    d.a = 10;
+                    d.b += 10;
+                    d.c -= 2;
+                    d.d *= 5;
+                    d.e /= 1;
+                    d.f %= 2;
+
+                    debug d.a;
+                    debug d.b;
+                    debug d.c;
+                    debug d.d;
+                    debug d.e;
+                    debug d.f;
+                }
+            "},
+            "10\n10\n3\n10\n10\n0\n".as_bytes(),
+        );
+    }
+
+    #[test]
     fn debug_array() {
         assert_output_equal(
             indoc! {"
@@ -503,6 +556,28 @@ mod tests {
                 }
             "},
             "6\n7\n8\n".as_bytes(),
+        );
+    }
+
+    #[test]
+    fn complex_compound_types() {
+        assert_output_equal(
+            indoc! {"
+                def main {
+                    var users = [(string) -> User new_user];
+
+                    debug users[0](\"snaztoz\").name;
+                }
+
+                def new_user(name: string): User {
+                    return { name: name };
+                }
+
+                record User {
+                    name: string,
+                }
+            "},
+            "snaztoz\n".as_bytes(),
         );
     }
 

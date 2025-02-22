@@ -105,6 +105,22 @@ pub enum Object {
 }
 
 impl Object {
+    pub fn as_record(&self) -> &HashMap<String, RuntimeValue> {
+        if let Self::Record(rec) = self {
+            rec
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn as_record_mut(&mut self) -> &mut HashMap<String, RuntimeValue> {
+        if let Self::Record(rec) = self {
+            rec
+        } else {
+            unreachable!()
+        }
+    }
+
     pub fn as_array(&self) -> &[RuntimeValue] {
         if let Self::Array(arr) = self {
             arr
@@ -116,14 +132,6 @@ impl Object {
     pub fn as_array_mut(&mut self) -> &mut [RuntimeValue] {
         if let Self::Array(arr) = self {
             arr
-        } else {
-            unreachable!()
-        }
-    }
-
-    pub fn as_record(&self) -> &HashMap<String, RuntimeValue> {
-        if let Self::Record(rec) = self {
-            rec
         } else {
             unreachable!()
         }

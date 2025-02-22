@@ -25,6 +25,15 @@ impl<'src, 'a> AssignmentRunner<'src, 'a> {
                 self.state.update_value(name, val)?;
             }
 
+            Lhs::RecordField {
+                record_ptr,
+                field_name,
+            } => {
+                let rec = &mut self.state.objects_arena.borrow_mut()[*record_ptr];
+
+                *rec.as_record_mut().get_mut(field_name).unwrap() = val;
+            }
+
             Lhs::ArrayIndex { arr_ptr, index } => {
                 let arr = &mut self.state.objects_arena.borrow_mut()[*arr_ptr];
                 if *index >= arr.as_array().len() {
@@ -45,6 +54,18 @@ impl<'src, 'a> AssignmentRunner<'src, 'a> {
                 let new_val = self.math_add(&old_val, &val);
 
                 self.state.update_value(name, new_val)?;
+            }
+
+            Lhs::RecordField {
+                record_ptr,
+                field_name,
+            } => {
+                let rec = &mut self.state.objects_arena.borrow_mut()[*record_ptr];
+
+                let old_val = &rec.as_record()[field_name];
+                let new_val = self.math_add(old_val, &val);
+
+                *rec.as_record_mut().get_mut(field_name).unwrap() = new_val;
             }
 
             Lhs::ArrayIndex { arr_ptr, index } => {
@@ -72,6 +93,18 @@ impl<'src, 'a> AssignmentRunner<'src, 'a> {
                 self.state.update_value(name, new_val)?;
             }
 
+            Lhs::RecordField {
+                record_ptr,
+                field_name,
+            } => {
+                let rec = &mut self.state.objects_arena.borrow_mut()[*record_ptr];
+
+                let old_val = &rec.as_record()[field_name];
+                let new_val = self.math_sub(old_val, &val);
+
+                *rec.as_record_mut().get_mut(field_name).unwrap() = new_val;
+            }
+
             Lhs::ArrayIndex { arr_ptr, index } => {
                 let arr = &mut self.state.objects_arena.borrow_mut()[*arr_ptr];
                 if *index >= arr.as_array().len() {
@@ -95,6 +128,18 @@ impl<'src, 'a> AssignmentRunner<'src, 'a> {
                 let new_val = self.math_mul(&old_val, &val);
 
                 self.state.update_value(name, new_val)?;
+            }
+
+            Lhs::RecordField {
+                record_ptr,
+                field_name,
+            } => {
+                let rec = &mut self.state.objects_arena.borrow_mut()[*record_ptr];
+
+                let old_val = &rec.as_record()[field_name];
+                let new_val = self.math_mul(old_val, &val);
+
+                *rec.as_record_mut().get_mut(field_name).unwrap() = new_val;
             }
 
             Lhs::ArrayIndex { arr_ptr, index } => {
@@ -122,6 +167,18 @@ impl<'src, 'a> AssignmentRunner<'src, 'a> {
                 self.state.update_value(name, new_val)?;
             }
 
+            Lhs::RecordField {
+                record_ptr,
+                field_name,
+            } => {
+                let rec = &mut self.state.objects_arena.borrow_mut()[*record_ptr];
+
+                let old_val = &rec.as_record()[field_name];
+                let new_val = self.math_div(old_val, &val);
+
+                *rec.as_record_mut().get_mut(field_name).unwrap() = new_val;
+            }
+
             Lhs::ArrayIndex { arr_ptr, index } => {
                 let arr = &mut self.state.objects_arena.borrow_mut()[*arr_ptr];
                 if *index >= arr.as_array().len() {
@@ -145,6 +202,18 @@ impl<'src, 'a> AssignmentRunner<'src, 'a> {
                 let new_val = self.math_mod(&old_val, &val);
 
                 self.state.update_value(name, new_val)?;
+            }
+
+            Lhs::RecordField {
+                record_ptr,
+                field_name,
+            } => {
+                let rec = &mut self.state.objects_arena.borrow_mut()[*record_ptr];
+
+                let old_val = &rec.as_record()[field_name];
+                let new_val = self.math_mod(old_val, &val);
+
+                *rec.as_record_mut().get_mut(field_name).unwrap() = new_val;
             }
 
             Lhs::ArrayIndex { arr_ptr, index } => {
@@ -180,13 +249,23 @@ impl AssignmentRunner<'_, '_> {
         let lhs = match &lhs_node.as_ref().variant {
             AstNodeVariant::Symbol { name, .. } => Lhs::Identifier(name.to_string()),
 
+            AstNodeVariant::FieldAccess { object, field } => {
+                let record = ExpressionRunner::new(object, self.root, self.state).run()?;
+                let field_name = String::from(field.variant.as_sym_name());
+
+                Lhs::RecordField {
+                    record_ptr: record.as_record_ptr(),
+                    field_name,
+                }
+            }
+
             AstNodeVariant::IndexAccess { object, index, .. } => {
                 let arr = ExpressionRunner::new(object, self.root, self.state).run()?;
                 let idx = ExpressionRunner::new(index, self.root, self.state).run()?;
 
                 Lhs::ArrayIndex {
-                    arr_ptr: arr.unwrap_array_ptr(),
-                    index: idx.unwrap_integer(),
+                    arr_ptr: arr.as_array_ptr(),
+                    index: idx.as_integer(),
                 }
             }
 
@@ -261,5 +340,12 @@ impl AssignmentRunner<'_, '_> {
 
 enum Lhs {
     Identifier(String),
-    ArrayIndex { arr_ptr: usize, index: usize },
+    RecordField {
+        record_ptr: usize,
+        field_name: String,
+    },
+    ArrayIndex {
+        arr_ptr: usize,
+        index: usize,
+    },
 }
