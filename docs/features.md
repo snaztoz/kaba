@@ -190,8 +190,9 @@ Currently, Kaba only support these (non-`void`) data types:
 3. Boolean (`bool`)
 4. Char (`char`)
 5. String (`string`)
-5. Callable
-6. Array
+6. Callable
+7. Record
+8. Array
 
 (... more to come!)
 
@@ -209,10 +210,14 @@ def main {
 
     var f: () -> void = foo;
 
-    var g: []int = [int 99, 101];
+    var g: User = {};
+
+    var h: []int = [int 99, 101];
 }
 
 def foo() {}
+
+record User {}
 ```
 
 ### About `char` type
