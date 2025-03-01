@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `fn` keyword is replaced with `def` keyword.
 - Make parentheses optional in function definition when it does not receive any parameters.
 
+### Fixed
+
+- Reporting format in multi-line errors.
+
 ## [0.5.3] - 2025-02-03
 
 ### Fixed

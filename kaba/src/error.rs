@@ -1,10 +1,8 @@
 use colored::Colorize;
-use indoc::writedoc;
 use kaba_compiler::Span;
-use std::{fmt::Display, path::Path};
+use std::{cmp, fmt::Display, path::Path};
 
 pub type Result<'a, T> = std::result::Result<T, Error<'a>>;
-type Line = String;
 type Row = usize;
 type Col = usize;
 
@@ -34,33 +32,58 @@ impl Error<'_> {
         }
     }
 
-    fn position(&self) -> (Line, Row, Col) {
-        let (src, span) = if let Error::CompilationError { src, span, .. } = self {
-            (src, span)
-        } else {
-            unreachable!()
-        };
+    fn position(&self) -> (Vec<&str>, Row, Col) {
+        let src = self.as_compilation_error_src();
+        let span = self.as_compilation_error_span().unwrap();
 
-        let span = span.as_ref().unwrap();
-        let before_span = &src[..span.start];
-        let after_span = &src[span.end..];
+        let src_before_span = &src[..span.start];
+        let src_after_span = &src[span.end..];
 
-        let line_start = before_span
+        let line_start = src_before_span
             .rfind('\n')
             .map(|pos| pos + 1) // don't include the newline character
             .unwrap_or(0);
 
-        let next_newline = after_span.find('\n').map(|pos| span.end + pos); // offset
+        let line_end = src_after_span.find('\n').map(|pos| span.end + pos); // offset
 
-        let line = match next_newline {
+        let err_src = match line_end {
             Some(newline) => &src[line_start..newline],
             None => &src[line_start..],
         };
 
-        let row = before_span.matches('\n').count() + 1;
+        let lines = err_src.split('\n').collect::<Vec<_>>();
+        let row = src_before_span.matches('\n').count() + 1;
         let col = span.start - line_start + 1;
 
-        (String::from(line), row, col)
+        (lines, row, col)
+    }
+
+    fn is_compilation_error(&self) -> bool {
+        matches!(self, Self::CompilationError { .. })
+    }
+
+    fn as_compilation_error_path(&self) -> Option<&Path> {
+        if let Error::CompilationError { path, .. } = self {
+            *path
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn as_compilation_error_src(&self) -> &str {
+        if let Error::CompilationError { src, .. } = self {
+            src
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn as_compilation_error_span(&self) -> Option<&Span> {
+        if let Error::CompilationError { span, .. } = self {
+            span.as_ref()
+        } else {
+            unreachable!()
+        }
     }
 }
 
@@ -69,36 +92,73 @@ impl Display for Error<'_> {
         let label = "error:".bright_red().bold();
         let message = &self.message();
 
-        if let Self::CompilationError { path, span, .. } = self {
-            let (line, row, col) = self.position();
-            let file_path = path.as_ref().unwrap().display();
-            let position_information = format!("{file_path} ({row}:{col})");
+        if !self.is_compilation_error() {
+            return write!(f, "{label} {message}");
+        }
 
-            let row_number_pad = pad_white_spaces(row.to_string().len());
-            let col_pad = pad_white_spaces(col - 1);
-            let highlight_line_len = span.as_ref().unwrap().clone().count();
+        let path = self.as_compilation_error_path();
+        let src = self.as_compilation_error_src();
+        let span = self.as_compilation_error_span().unwrap();
+
+        let (lines, row, col) = self.position();
+        let file_path = path.as_ref().unwrap().display();
+
+        // Write header
+        writeln!(f, "{label} {file_path} ({row}:{col})")?;
+
+        let widest_row_width = cmp::max(
+            (row + lines.len() - 1).to_string().len(),
+            2, // the ".." characters
+        );
+
+        // Write empty line
+        if row == 1 {
+            writeln!(f, " {:>width$} |", "", width = widest_row_width)?;
+        } else {
+            writeln!(f, " {:>width$} |", "..", width = widest_row_width)?;
+        }
+
+        if lines.len() == 1 {
+            let line = lines[0];
+
+            // Write a single line with error highlighter
+            writeln!(f, " {:>width$} | {}", row, line, width = widest_row_width)?;
+
+            let highlight_line_len = span.clone().count();
             let highlight_line = create_highlight_line(highlight_line_len)
                 .bright_red()
                 .bold();
 
-            writedoc!(
+            // Write highlighter line
+            writeln!(
                 f,
-                "
-                {label} {position_information}
-                 {row_number_pad} |
-                 {row} | {line}
-                 {row_number_pad} | {col_pad}{highlight_line}
-                 {row_number_pad} |
-                 {row_number_pad} = {message}",
-            )
+                " {:>width$} | {:>col_width$}{highlight_line}",
+                "",
+                "",
+                width = widest_row_width,
+                col_width = col - 1,
+            )?;
         } else {
-            write!(f, "{label} {message}")
+            for (i, line) in lines.iter().enumerate() {
+                writeln!(
+                    f,
+                    " {:>width$} | {line}",
+                    (row + i).to_string().bright_red(),
+                    width = widest_row_width
+                )?;
+            }
         }
-    }
-}
 
-fn pad_white_spaces(n: usize) -> String {
-    (0..n).map(|_| " ").collect::<String>()
+        // Write empty line
+        if src[span.end..].find('\n').is_none() {
+            writeln!(f, " {:>width$} |", "", width = widest_row_width)?;
+        } else {
+            writeln!(f, " {:>width$} |", "..", width = widest_row_width)?;
+        }
+
+        // Write message
+        writeln!(f, " {:>width$} = {message}", "", width = widest_row_width)
+    }
 }
 
 fn create_highlight_line(n: usize) -> String {
@@ -137,7 +197,7 @@ mod tests {
 
             let (line, row, col) = error.position();
 
-            assert_eq!(line, expected_line);
+            assert_eq!(&line, &[expected_line]);
             assert_eq!(row, expected_row);
             assert_eq!(col, expected_col);
         }
