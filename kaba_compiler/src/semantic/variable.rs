@@ -281,6 +281,34 @@ mod tests {
     }
 
     #[test]
+    fn declaring_variable_with_record_type_notation() {
+        assert_is_ok(indoc! {"
+            def main {
+                var u: {
+                    name: string,
+                    age: int,
+                } = {
+                    name: \"snaztoz\",
+                    age: 23,
+                };
+            }
+        "});
+    }
+
+    #[test]
+    fn declaring_variable_with_record_type_notation_and_non_existing_type() {
+        assert_is_err(indoc! {"
+            def main {
+                var u: {
+                    name: NotExist,
+                } = {
+                    name: \"snaztoz\",
+                };
+            }
+        "});
+    }
+
+    #[test]
     fn declaring_variable_with_nested_records() {
         assert_is_ok(indoc! {"
                 record User {
