@@ -76,9 +76,14 @@ impl Display for SemanticErrorVariant {
                 write!(f, "expecting {expected} argument(s), but get {get} instead")
             }
             Self::InvalidArguments { args_t, .. } => {
+                let joined = args_t
+                    .iter()
+                    .map(|arg| format!("{arg}"))
+                    .collect::<Vec<_>>()
+                    .join(", ");
                 write!(
                     f,
-                    "unable to call function with argument(s) of type {args_t:?}"
+                    "unable to call function with argument(s) of type [{joined}]"
                 )
             }
             Self::NonCallableType => {
