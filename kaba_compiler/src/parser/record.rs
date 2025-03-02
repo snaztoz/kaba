@@ -33,7 +33,7 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
     })
 }
 
-fn parse_fields<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<RecordField<'src>>> {
+pub fn parse_fields<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<RecordField<'src>>> {
     let mut fields = vec![];
 
     while !state.tokens.current_is(&TokenKind::RBrace) {

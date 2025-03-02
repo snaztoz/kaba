@@ -211,65 +211,6 @@ mod tests {
     }
 
     //
-    // Records
-    //
-
-    #[test]
-    fn calling_function_with_record_parameter() {
-        assert_is_ok(indoc! {"
-                def main {
-                    foo({ val: 5 });
-
-                    var d: Data = { val: 10 };
-                    foo(d);
-                }
-
-                def foo(d: Data) {}
-
-                record Data {
-                    val: int,
-                }
-            "});
-    }
-
-    #[test]
-    fn accessing_record_field_from_inside_a_function() {
-        assert_is_ok(indoc! {"
-                def main {
-                    debug foo({ val: 5 });
-
-                    var d: Data = { val: 10 };
-                    debug foo(d);
-                }
-
-                def foo(d: Data): int {
-                    return d.val;
-                }
-
-                record Data {
-                    val: int,
-                }
-            "});
-    }
-
-    #[test]
-    fn returning_record_from_a_function() {
-        assert_is_ok(indoc! {"
-                def main {
-                    var arr_1: Data = producer();
-                }
-
-                def producer: Data {
-                    return { val: 10 };
-                }
-
-                record Data {
-                    val: int,
-                }
-            "});
-    }
-
-    //
     // Arrays
     //
 
@@ -311,6 +252,92 @@ mod tests {
 
                 def foo: []int {
                     return [int 1, 2, 3];
+                }
+            "});
+    }
+
+    //
+    // Records
+    //
+
+    #[test]
+    fn calling_function_with_anonymous_record_parameter() {
+        assert_is_ok(indoc! {"
+                def main {
+                    foo({ val: 5 });
+
+                    var d: { val: int } = { val: 10 };
+                    foo(d);
+                }
+
+                def foo(u: { val: int }) {}
+            "});
+    }
+
+    #[test]
+    fn calling_function_with_named_record_parameter() {
+        assert_is_ok(indoc! {"
+                def main {
+                    foo({ val: 5 });
+
+                    var d: Data = { val: 10 };
+                    foo(d);
+                }
+
+                def foo(d: Data) {}
+
+                record Data {
+                    val: int,
+                }
+            "});
+    }
+
+    #[test]
+    fn accessing_record_field_from_inside_a_function() {
+        assert_is_ok(indoc! {"
+                def main {
+                    debug foo({ val: 5 });
+
+                    var d: Data = { val: 10 };
+                    debug foo(d);
+                }
+
+                def foo(d: Data): int {
+                    return d.val;
+                }
+
+                record Data {
+                    val: int,
+                }
+            "});
+    }
+
+    #[test]
+    fn returning_record_from_a_function() {
+        assert_is_ok(indoc! {"
+                def main {
+                    var d: Data = producer();
+                }
+
+                def producer: Data {
+                    return { val: 10 };
+                }
+
+                record Data {
+                    val: int,
+                }
+            "});
+    }
+
+    #[test]
+    fn returning_anonymous_record_from_a_function() {
+        assert_is_ok(indoc! {"
+                def main {
+                    var d: { val: int } = producer();
+                }
+
+                def producer: { val: int } {
+                    return { val: 5 };
                 }
             "});
     }

@@ -52,7 +52,7 @@ fn parse_tn<'src>(state: &ParserState<'src, '_>) -> Result<'src, Option<AstNode<
 #[cfg(test)]
 mod tests {
     use crate::{
-        ast::{AstNode, AstNodeVariant, Literal, TypeNotation},
+        ast::{AstNode, AstNodeVariant, Literal, RecordField, TypeNotation},
         parser::test_util::{assert_ast, assert_is_err},
     };
 
@@ -358,5 +358,67 @@ mod tests {
                 span: 0..20,
             },
         );
+    }
+
+    #[test]
+    fn variable_declaration_with_record_type() {
+        assert_ast(
+            "var x: { nested: { num: int } } = foo;",
+            AstNode {
+                id: 0,
+                variant: AstNodeVariant::VariableDeclaration {
+                    sym: Box::new(AstNode {
+                        id: 0,
+                        variant: AstNodeVariant::Symbol { name: "x" },
+                        span: 4..5,
+                    }),
+                    tn: Some(Box::new(AstNode {
+                        id: 0,
+                        variant: AstNodeVariant::TypeNotation {
+                            tn: TypeNotation::Record {
+                                fields: vec![RecordField {
+                                    sym: AstNode {
+                                        id: 0,
+                                        variant: AstNodeVariant::Symbol { name: "nested" },
+                                        span: 9..15,
+                                    },
+                                    tn: AstNode {
+                                        id: 0,
+                                        variant: AstNodeVariant::TypeNotation {
+                                            tn: TypeNotation::Record {
+                                                fields: vec![RecordField {
+                                                    sym: AstNode {
+                                                        id: 0,
+                                                        variant: AstNodeVariant::Symbol {
+                                                            name: "num",
+                                                        },
+                                                        span: 19..22,
+                                                    },
+                                                    tn: AstNode {
+                                                        id: 0,
+                                                        variant: AstNodeVariant::TypeNotation {
+                                                            tn: TypeNotation::Symbol("int"),
+                                                        },
+                                                        span: 24..27,
+                                                    },
+                                                }],
+                                            },
+                                        },
+                                        span: 17..29,
+                                    },
+                                }],
+                            },
+                        },
+                        span: 7..31,
+                    })),
+                    val: Box::new(AstNode {
+                        id: 0,
+                        variant: AstNodeVariant::Symbol { name: "foo" },
+                        span: 34..37,
+                    }),
+                },
+                span: 0..37,
+            },
+        )
     }
 }

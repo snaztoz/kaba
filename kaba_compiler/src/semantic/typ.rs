@@ -1,4 +1,4 @@
-use crate::ast::{AstNode, AstNodeVariant, TypeNotation};
+use crate::ast::{AstNode, AstNodeVariant, RecordField, TypeNotation};
 use std::{cmp::Ordering, collections::HashMap, fmt::Display, hash::Hash};
 
 pub mod assert;
@@ -22,12 +22,12 @@ pub enum Type {
     Array {
         elem_t: Box<Self>,
     },
+    Record {
+        fields: HashMap<String, Self>,
+    },
     Callable {
         params_t: Vec<Self>,
         return_t: Box<Self>,
-    },
-    Record {
-        fields: HashMap<String, Self>,
     },
 
     // Other types (e.g. class)
@@ -54,16 +54,16 @@ impl Type {
         matches!(self, &Type::Int(IntType::Unbounded(_)))
     }
 
-    pub fn is_bounded_int(&self) -> bool {
-        matches!(self, Type::Int(t) if !matches!(t, IntType::Unbounded(_)))
+    pub const fn is_bounded_int(&self) -> bool {
+        !self.is_unbounded_int()
     }
 
     pub const fn is_unbounded_float(&self) -> bool {
         matches!(self, &Type::Float(FloatType::Unbounded(_)))
     }
 
-    pub fn is_bounded_float(&self) -> bool {
-        matches!(self, Type::Float(t) if !matches!(t, FloatType::Unbounded(_)))
+    pub const fn is_bounded_float(&self) -> bool {
+        !self.is_unbounded_float()
     }
 
     pub fn as_unbounded_int(&self) -> i32 {
@@ -150,6 +150,16 @@ impl<'a> From<&'a AstNode<'_>> for Type {
                 TypeNotation::Array { elem_tn } => Self::Array {
                     elem_t: Box::new(Self::from(elem_tn.as_ref())),
                 },
+
+                TypeNotation::Record { fields } => {
+                    let mut fields_t = HashMap::new();
+                    for RecordField { sym, tn } in fields {
+                        let sym_name = String::from(sym.variant.as_sym_name());
+                        let sym_t = Self::from(tn);
+                        fields_t.insert(sym_name, sym_t);
+                    }
+                    Self::Record { fields: fields_t }
+                }
 
                 TypeNotation::Callable {
                     params_tn,

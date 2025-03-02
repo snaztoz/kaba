@@ -44,11 +44,13 @@ impl AnalyzerState {
         match t {
             t if t.is_basic_t() => true,
 
+            Type::Array { elem_t } => self.has_t(elem_t),
+
+            Type::Record { fields } => fields.iter().all(|(_, t)| self.has_t(t)),
+
             Type::Callable { params_t, return_t } => {
                 params_t.iter().all(|t| self.has_t(t)) && self.has_t(return_t)
             }
-
-            Type::Array { elem_t } => self.has_t(elem_t),
 
             Type::Symbol(name) => {
                 matches!(

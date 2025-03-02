@@ -4,8 +4,26 @@ use super::{
     typ::Type,
 };
 use crate::ast::AstNode;
+use std::collections::HashSet;
 
 pub fn analyze(state: &AnalyzerState, node: &AstNode, allow_void: bool) -> Result<Type> {
+    if node.variant.as_tn().is_record() {
+        let mut names = HashSet::new();
+
+        for field in node.variant.as_tn().as_record_fields() {
+            let sym_name = field.sym.variant.as_sym_name();
+
+            if names.contains(sym_name) {
+                return Err(SemanticError {
+                    variant: SemanticErrorVariant::SymbolAlreadyExist(String::from(sym_name)),
+                    span: field.sym.span.clone(),
+                });
+            }
+
+            names.insert(sym_name);
+        }
+    }
+
     let t = Type::from(node);
 
     // The provided type must exist in the current scope

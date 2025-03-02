@@ -1,9 +1,8 @@
+use super::Type;
 use crate::semantic::{
     state::AnalyzerState,
     typ::{FloatType, IntType},
 };
-
-use super::Type;
 
 pub fn are_types_compatible(a: &Type, b: &Type) -> bool {
     if a == b {
