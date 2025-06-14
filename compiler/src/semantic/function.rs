@@ -293,21 +293,6 @@ mod tests {
     //
 
     #[test]
-    fn calling_function_with_anonymous_record_parameter() {
-        assert_is_ok(indoc! {"
-                def main()
-                {
-                    foo({ val: 5 });
-
-                    var d: { val: int } = { val: 10 };
-                    foo(d);
-                }
-
-                def foo(u: { val: int }) {}
-            "});
-    }
-
-    #[test]
     fn calling_function_with_named_record_parameter() {
         assert_is_ok(indoc! {"
                 def main()
@@ -366,21 +351,6 @@ mod tests {
                 record Data
                 {
                     val: int,
-                }
-            "});
-    }
-
-    #[test]
-    fn returning_anonymous_record_from_a_function() {
-        assert_is_ok(indoc! {"
-                def main()
-                {
-                    var d: { val: int } = producer();
-                }
-
-                def producer(): { val: int }
-                {
-                    return { val: 5 };
                 }
             "});
     }

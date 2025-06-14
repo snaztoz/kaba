@@ -1,6 +1,5 @@
 use super::{
     error::{ParsingError, ParsingErrorVariant, Result},
-    record,
     state::ParserState,
 };
 use crate::{
@@ -25,7 +24,6 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
         }
 
         TokenKind::LBrack => parse_array_tn(state),
-        TokenKind::LBrace => parse_record_tn(state),
         TokenKind::LParen => parse_function_tn(state),
 
         _ => Err(ParsingError {
@@ -58,29 +56,6 @@ fn parse_array_tn<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'
             tn: TypeNotation::Array {
                 elem_tn: Box::new(elem_tn),
             },
-        },
-        span: start..end,
-    })
-}
-
-fn parse_record_tn<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
-    let start = state.tokens.current().span.start;
-
-    // Expecting "{"
-    state.tokens.skip(&TokenKind::LBrace)?;
-
-    // Parse record fields
-    let fields = record::parse_fields(state)?;
-
-    let end = state.tokens.current().span.end;
-
-    // Expecting "}"
-    state.tokens.skip(&TokenKind::RBrace)?;
-
-    Ok(AstNode {
-        id: state.next_id(),
-        variant: AstNodeVariant::TypeNotation {
-            tn: TypeNotation::Record { fields },
         },
         span: start..end,
     })
