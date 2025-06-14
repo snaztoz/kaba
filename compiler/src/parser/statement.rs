@@ -10,31 +10,27 @@ use crate::{
 pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     // Check if statement starts with a keyword
     match state.tokens.current_kind() {
-        TokenKind::Var => return variable::parse(state),
-        TokenKind::If => return conditional::parse(state),
-        TokenKind::While => return while_loop::parse(state),
-        TokenKind::Each => return each_loop::parse(state),
-        TokenKind::Break | TokenKind::Continue => return parse_loop_control(state),
-        TokenKind::Def => return function::parse(state),
-        TokenKind::Return => return parse_return_statement(state),
-        TokenKind::Debug => return parse_debug_statement(state),
-        TokenKind::Record => return record::parse(state),
-        _ => (),
+        TokenKind::Var => variable::parse(state),
+        TokenKind::If => conditional::parse(state),
+        TokenKind::While => while_loop::parse(state),
+        TokenKind::Each => each_loop::parse(state),
+        TokenKind::Break | TokenKind::Continue => parse_loop_control(state),
+        TokenKind::Def => function::parse(state),
+        TokenKind::Return => parse_return_statement(state),
+        TokenKind::Debug => parse_debug_statement(state),
+        TokenKind::Record => record::parse(state),
+
+        _ => {
+            let expr = expression::parse(state)?;
+            state.tokens.expect(&TokenKind::Semicolon)?;
+            Ok(expr.into_group_inner())
+        }
     }
-
-    // Expecting expression
-    let expr = expression::parse(state)?;
-
-    // Expecting ";"
-    state.tokens.skip(&TokenKind::Semicolon)?;
-
-    Ok(expr.into_group_inner())
 }
 
 fn parse_loop_control<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let Token { kind, span, .. } = state.tokens.current();
 
-    // Expecting either "break" or "continue" keyword
     let control = match kind {
         TokenKind::Break => AstNode {
             id: state.next_id(),
@@ -51,8 +47,7 @@ fn parse_loop_control<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNo
 
     state.tokens.advance();
 
-    // Expecting ";"
-    state.tokens.skip(&TokenKind::Semicolon)?;
+    state.tokens.expect(&TokenKind::Semicolon)?;
 
     Ok(control)
 }
@@ -61,10 +56,8 @@ fn parse_return_statement<'src>(state: &ParserState<'src, '_>) -> Result<'src, A
     let start = state.tokens.current().span.start;
     let mut end = state.tokens.current().span.end;
 
-    // Expecting "return" keyword
-    state.tokens.skip(&TokenKind::Return)?;
+    state.tokens.expect(&TokenKind::Return)?;
 
-    // Expecting expression (optional)
     let expr = if state.tokens.current_is(&TokenKind::Semicolon) {
         None
     } else {
@@ -73,8 +66,7 @@ fn parse_return_statement<'src>(state: &ParserState<'src, '_>) -> Result<'src, A
         Some(expr)
     };
 
-    // Expecting ";"
-    state.tokens.skip(&TokenKind::Semicolon)?;
+    state.tokens.expect(&TokenKind::Semicolon)?;
 
     Ok(AstNode {
         id: state.next_id(),
@@ -88,20 +80,19 @@ fn parse_return_statement<'src>(state: &ParserState<'src, '_>) -> Result<'src, A
 fn parse_debug_statement<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
-    // Expecting "debug" keyword
-    state.tokens.skip(&TokenKind::Debug)?;
+    state.tokens.expect(&TokenKind::Debug)?;
 
-    // Expecting expression
-    let expr = Box::new(expression::parse(state)?);
+    let expr = expression::parse(state)?;
 
     let end = expr.span.end;
 
-    // Expecting ";"
-    state.tokens.skip(&TokenKind::Semicolon)?;
+    state.tokens.expect(&TokenKind::Semicolon)?;
 
     Ok(AstNode {
         id: state.next_id(),
-        variant: AstNodeVariant::Debug { expr },
+        variant: AstNodeVariant::Debug {
+            expr: Box::new(expr),
+        },
         span: start..end,
     })
 }

@@ -22,7 +22,8 @@ impl<'src> TokenStream<'src> {
         *self.cursor.borrow_mut() += 1;
     }
 
-    pub fn skip(&self, expected_token: &TokenKind<'src>) -> Result<'src, ()> {
+    /// Assert token and advance.
+    pub fn expect(&self, expected_token: &TokenKind<'src>) -> Result<'src, ()> {
         self.expect_current(expected_token)?;
         self.advance();
         Ok(())
@@ -38,6 +39,10 @@ impl<'src> TokenStream<'src> {
 
     pub fn current_is(&self, token: &TokenKind) -> bool {
         &self.current_kind() == token
+    }
+
+    pub fn current_is_in(&self, tokens: &[TokenKind]) -> bool {
+        tokens.contains(&self.current_kind())
     }
 
     fn expect_current(&self, expect: &TokenKind<'src>) -> Result<'src, ()> {

@@ -12,22 +12,18 @@ use crate::{
 pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
-    // Expecting "fn" keyword
-    state.tokens.skip(&TokenKind::Def)?;
+    state.tokens.expect(&TokenKind::Def)?;
 
-    // Expecting symbol
     let sym = sym::parse(state, "function name")?;
 
-    state.tokens.skip(&TokenKind::LParen)?;
+    state.tokens.expect(&TokenKind::LParen)?;
 
     let params = parse_params(state)?;
 
-    state.tokens.skip(&TokenKind::RParen)?;
+    state.tokens.expect(&TokenKind::RParen)?;
 
-    // Expecting return type notation (optional)
     let return_tn = parse_return_tn(state)?;
 
-    // Expecting function body
     let block = block::parse(state)?;
 
     Ok(AstNode {
@@ -46,19 +42,15 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
 fn parse_params<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<FunctionParam<'src>>> {
     let mut params = vec![];
     while !state.tokens.current_is(&TokenKind::RParen) {
-        // Expecting symbol
         let sym = sym::parse(state, "parameter name")?;
 
-        // Expecting type notation
         let tn = tn::parse(state)?;
 
         params.push(FunctionParam { sym, tn });
 
-        // Expecting either "," or ")"
-
         match state.tokens.current_kind() {
             TokenKind::Comma => {
-                state.tokens.skip(&TokenKind::Comma)?;
+                state.tokens.expect(&TokenKind::Comma)?;
                 continue;
             }
 

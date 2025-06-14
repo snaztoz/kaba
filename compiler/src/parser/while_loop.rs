@@ -7,13 +7,10 @@ use crate::{
 pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
-    // Expecting "while" keyword
-    state.tokens.skip(&TokenKind::While)?;
+    state.tokens.expect(&TokenKind::While)?;
 
-    // Expecting expression
     let cond = expression::parse(state)?;
 
-    // Expecting block
     let block = block::parse(state)?;
 
     let end = block.span.end;

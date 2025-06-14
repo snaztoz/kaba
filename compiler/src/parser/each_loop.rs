@@ -7,19 +7,14 @@ use crate::{
 pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
-    // Expecting "each" keyword
-    state.tokens.skip(&TokenKind::Each)?;
+    state.tokens.expect(&TokenKind::Each)?;
 
-    // Expecting element symbol
     let elem_sym = sym::parse(state, "item name")?;
 
-    // Expecting "in" keyword
-    state.tokens.skip(&TokenKind::In)?;
+    state.tokens.expect(&TokenKind::In)?;
 
-    // Expecting expression
     let arr = expression::parse(state)?;
 
-    // Expecting block
     let block = block::parse(state)?;
 
     let end = block.span.end;

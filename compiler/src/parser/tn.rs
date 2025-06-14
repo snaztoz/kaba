@@ -39,13 +39,10 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
 fn parse_array_tn<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
-    // Expecting "["
-    state.tokens.skip(&TokenKind::LBrack)?;
+    state.tokens.expect(&TokenKind::LBrack)?;
 
-    // Expecting "]"
-    state.tokens.skip(&TokenKind::RBrack)?;
+    state.tokens.expect(&TokenKind::RBrack)?;
 
-    // Parse array element type
     let elem_tn = parse(state)?;
 
     let end = elem_tn.span.end;
@@ -64,20 +61,17 @@ fn parse_array_tn<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'
 fn parse_function_tn<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
-    // Expecting "("
-    state.tokens.skip(&TokenKind::LParen)?;
+    state.tokens.expect(&TokenKind::LParen)?;
 
-    // Expecting parameter type notation(s)
     let mut params_tn = vec![];
     while !state.tokens.current_is(&TokenKind::RParen) {
-        // Expecting type notation
         let tn = parse(state)?;
 
         params_tn.push(tn);
 
         match state.tokens.current_kind() {
             TokenKind::Comma => {
-                state.tokens.skip(&TokenKind::Comma)?;
+                state.tokens.expect(&TokenKind::Comma)?;
                 continue;
             }
 
@@ -95,13 +89,10 @@ fn parse_function_tn<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNod
         }
     }
 
-    // Expecting ")"
-    state.tokens.skip(&TokenKind::RParen)?;
+    state.tokens.expect(&TokenKind::RParen)?;
 
-    // Expecting "->"
-    state.tokens.skip(&TokenKind::RightPoint)?;
+    state.tokens.expect(&TokenKind::RightPoint)?;
 
-    // Expecting return type notation
     let return_tn = Box::new(parse(state)?);
 
     let end = return_tn.span.end;

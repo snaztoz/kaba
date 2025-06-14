@@ -4,22 +4,24 @@ use super::{
     sym, tn, Result,
 };
 use crate::{
-    ast::{AstNode, AstNodeVariant, Literal, ObjectInitializer},
+    ast::{AstNode, AstNodeVariant, Literal},
     lexer::token::TokenKind,
 };
+use object as object_creation;
+
+mod object;
 
 pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     parse_assignment(state)
 }
 
 fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
-    // Parse first term
     let lhs = parse_logical_and_or_expression(state)?;
 
     // Expecting "=", "+=", "-=", "*=", "/=", or "%=" (optional)
     match state.tokens.current_kind() {
         TokenKind::Assign => {
-            state.tokens.skip(&TokenKind::Assign)?;
+            state.tokens.expect(&TokenKind::Assign)?;
 
             let rhs = parse_logical_and_or_expression(state)?;
             let span = lhs.span.start..rhs.span.end;
@@ -35,7 +37,7 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
         }
 
         TokenKind::AddAssign => {
-            state.tokens.skip(&TokenKind::AddAssign)?;
+            state.tokens.expect(&TokenKind::AddAssign)?;
 
             let rhs = parse_logical_and_or_expression(state)?;
             let span = lhs.span.start..rhs.span.end;
@@ -50,7 +52,7 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
             })
         }
         TokenKind::SubAssign => {
-            state.tokens.skip(&TokenKind::SubAssign)?;
+            state.tokens.expect(&TokenKind::SubAssign)?;
 
             let rhs = parse_logical_and_or_expression(state)?;
             let span = lhs.span.start..rhs.span.end;
@@ -65,7 +67,7 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
             })
         }
         TokenKind::MulAssign => {
-            state.tokens.skip(&TokenKind::MulAssign)?;
+            state.tokens.expect(&TokenKind::MulAssign)?;
 
             let rhs = parse_logical_and_or_expression(state)?;
             let span = lhs.span.start..rhs.span.end;
@@ -80,7 +82,7 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
             })
         }
         TokenKind::DivAssign => {
-            state.tokens.skip(&TokenKind::DivAssign)?;
+            state.tokens.expect(&TokenKind::DivAssign)?;
 
             let rhs = parse_logical_and_or_expression(state)?;
             let span = lhs.span.start..rhs.span.end;
@@ -95,7 +97,7 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
             })
         }
         TokenKind::ModAssign => {
-            state.tokens.skip(&TokenKind::ModAssign)?;
+            state.tokens.expect(&TokenKind::ModAssign)?;
 
             let rhs = parse_logical_and_or_expression(state)?;
             let span = lhs.span.start..rhs.span.end;
@@ -116,14 +118,13 @@ fn parse_assignment<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode
 fn parse_logical_and_or_expression<'src>(
     state: &ParserState<'src, '_>,
 ) -> Result<'src, AstNode<'src>> {
-    // Parse first term
     let mut lhs = parse_equality_expression(state)?;
 
     loop {
         // Expecting "||" or "&&" (both are optional)
         match state.tokens.current_kind() {
             TokenKind::Or => {
-                state.tokens.skip(&TokenKind::Or)?;
+                state.tokens.expect(&TokenKind::Or)?;
 
                 let rhs = parse_equality_expression(state)?;
                 let span = lhs.span.start..rhs.span.end;
@@ -138,7 +139,7 @@ fn parse_logical_and_or_expression<'src>(
                 };
             }
             TokenKind::And => {
-                state.tokens.skip(&TokenKind::And)?;
+                state.tokens.expect(&TokenKind::And)?;
 
                 let rhs = parse_equality_expression(state)?;
                 let span = lhs.span.start..rhs.span.end;
@@ -158,14 +159,13 @@ fn parse_logical_and_or_expression<'src>(
 }
 
 fn parse_equality_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
-    // Parse first term
     let mut lhs = parse_comparison_expression(state)?;
 
     loop {
         // Expecting "==" or "!=" (both are optional)
         match state.tokens.current_kind() {
             TokenKind::Eq => {
-                state.tokens.skip(&TokenKind::Eq)?;
+                state.tokens.expect(&TokenKind::Eq)?;
 
                 let rhs = parse_comparison_expression(state)?;
                 let span = lhs.span.start..rhs.span.end;
@@ -180,7 +180,7 @@ fn parse_equality_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src
                 };
             }
             TokenKind::Neq => {
-                state.tokens.skip(&TokenKind::Neq)?;
+                state.tokens.expect(&TokenKind::Neq)?;
 
                 let rhs = parse_comparison_expression(state)?;
                 let span = lhs.span.start..rhs.span.end;
@@ -200,13 +200,12 @@ fn parse_equality_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src
 }
 
 fn parse_comparison_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
-    // Parse first term
     let lhs = parse_additive_expression(state)?;
 
     // Expecting ">", ">=", "<" or "<=" (all are optional)
     match state.tokens.current_kind() {
         TokenKind::Gt => {
-            state.tokens.skip(&TokenKind::Gt)?;
+            state.tokens.expect(&TokenKind::Gt)?;
 
             let rhs = parse_additive_expression(state)?;
             let span = lhs.span.start..rhs.span.end;
@@ -221,7 +220,7 @@ fn parse_comparison_expression<'src>(state: &ParserState<'src, '_>) -> Result<'s
             })
         }
         TokenKind::Gte => {
-            state.tokens.skip(&TokenKind::Gte)?;
+            state.tokens.expect(&TokenKind::Gte)?;
 
             let rhs = parse_additive_expression(state)?;
             let span = lhs.span.start..rhs.span.end;
@@ -236,7 +235,7 @@ fn parse_comparison_expression<'src>(state: &ParserState<'src, '_>) -> Result<'s
             })
         }
         TokenKind::Lt => {
-            state.tokens.skip(&TokenKind::Lt)?;
+            state.tokens.expect(&TokenKind::Lt)?;
 
             let rhs = parse_additive_expression(state)?;
             let span = lhs.span.start..rhs.span.end;
@@ -251,7 +250,7 @@ fn parse_comparison_expression<'src>(state: &ParserState<'src, '_>) -> Result<'s
             })
         }
         TokenKind::Lte => {
-            state.tokens.skip(&TokenKind::Lte)?;
+            state.tokens.expect(&TokenKind::Lte)?;
 
             let rhs = parse_additive_expression(state)?;
             let span = lhs.span.start..rhs.span.end;
@@ -270,14 +269,13 @@ fn parse_comparison_expression<'src>(state: &ParserState<'src, '_>) -> Result<'s
 }
 
 fn parse_additive_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
-    // Parse first term
     let mut lhs = parse_multiplicative_expression(state)?;
 
     loop {
         // Expecting "+" or "-" (both are optional)
         match state.tokens.current_kind() {
             TokenKind::Add => {
-                state.tokens.skip(&TokenKind::Add)?;
+                state.tokens.expect(&TokenKind::Add)?;
 
                 let rhs = parse_multiplicative_expression(state)?;
                 let span = lhs.span.start..rhs.span.end;
@@ -292,7 +290,7 @@ fn parse_additive_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src
                 };
             }
             TokenKind::Sub => {
-                state.tokens.skip(&TokenKind::Sub)?;
+                state.tokens.expect(&TokenKind::Sub)?;
 
                 let rhs = parse_multiplicative_expression(state)?;
                 let span = lhs.span.start..rhs.span.end;
@@ -314,14 +312,13 @@ fn parse_additive_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src
 fn parse_multiplicative_expression<'src>(
     state: &ParserState<'src, '_>,
 ) -> Result<'src, AstNode<'src>> {
-    // Parse first term
     let mut lhs = parse_unary_expression(state, false)?;
 
     loop {
         // Expecting "*", "/" or "%" (all are optional)
         match state.tokens.current_kind() {
             TokenKind::Mul => {
-                state.tokens.skip(&TokenKind::Mul)?;
+                state.tokens.expect(&TokenKind::Mul)?;
 
                 let rhs = parse_unary_expression(state, false)?;
                 let span = lhs.span.start..rhs.span.end;
@@ -336,7 +333,7 @@ fn parse_multiplicative_expression<'src>(
                 };
             }
             TokenKind::Div => {
-                state.tokens.skip(&TokenKind::Div)?;
+                state.tokens.expect(&TokenKind::Div)?;
 
                 let rhs = parse_unary_expression(state, false)?;
                 let span = lhs.span.start..rhs.span.end;
@@ -351,7 +348,7 @@ fn parse_multiplicative_expression<'src>(
                 };
             }
             TokenKind::Mod => {
-                state.tokens.skip(&TokenKind::Mod)?;
+                state.tokens.expect(&TokenKind::Mod)?;
 
                 let rhs = parse_unary_expression(state, false)?;
                 let span = lhs.span.start..rhs.span.end;
@@ -375,29 +372,27 @@ fn parse_unary_expression<'src>(
     is_negated: bool,
 ) -> Result<'src, AstNode<'src>> {
     //  Prefixed by >= 0 "negation" or "not" expression
-    if state.tokens.current_is(&TokenKind::Sub) {
-        return parse_prefix_expression(state, &TokenKind::Sub);
-    } else if state.tokens.current_is(&TokenKind::Not) {
-        return parse_prefix_expression(state, &TokenKind::Not);
+    if state
+        .tokens
+        .current_is_in(&[TokenKind::Sub, TokenKind::Not])
+    {
+        return parse_prefix_expression(state);
     }
 
-    // Parse primary expression
     let mut expr = parse_primary_expression(state, is_negated)?;
 
     // Followed by >= 0 function call, field access, or indexed access
-    //
-    // TODO: field access
     loop {
         match state.tokens.current_kind() {
             TokenKind::LParen => {
                 let callee_start = expr.span.start;
 
-                state.tokens.skip(&TokenKind::LParen)?;
+                state.tokens.expect(&TokenKind::LParen)?;
 
                 let args = parse_function_call(state)?;
                 let span = callee_start..state.tokens.current().span.end;
 
-                state.tokens.skip(&TokenKind::RParen)?;
+                state.tokens.expect(&TokenKind::RParen)?;
 
                 expr = AstNode {
                     id: state.next_id(),
@@ -412,7 +407,7 @@ fn parse_unary_expression<'src>(
             TokenKind::Dot => {
                 let callee_start = expr.span.start;
 
-                state.tokens.skip(&TokenKind::Dot)?;
+                state.tokens.expect(&TokenKind::Dot)?;
 
                 // Expecting symbol
                 let field = sym::parse(state, "field name")?;
@@ -431,13 +426,13 @@ fn parse_unary_expression<'src>(
             TokenKind::LBrack => {
                 let callee_start = expr.span.start;
 
-                state.tokens.skip(&TokenKind::LBrack)?;
+                state.tokens.expect(&TokenKind::LBrack)?;
 
                 // Expecting expression
                 let index = parse(state)?;
                 let span = callee_start..state.tokens.current().span.end;
 
-                state.tokens.skip(&TokenKind::RBrack)?;
+                state.tokens.expect(&TokenKind::RBrack)?;
 
                 expr = AstNode {
                     id: state.next_id(),
@@ -456,17 +451,16 @@ fn parse_unary_expression<'src>(
     Ok(expr)
 }
 
-fn parse_prefix_expression<'src>(
-    state: &ParserState<'src, '_>,
-    token: &TokenKind<'src>,
-) -> Result<'src, AstNode<'src>> {
-    let start = state.tokens.current().span.start;
-    state.tokens.skip(token)?;
+fn parse_prefix_expression<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
+    let token = state.tokens.current();
+    let start = token.span.start;
 
-    let expr = parse_unary_expression(state, matches!(token, TokenKind::Sub))?;
+    state.tokens.advance();
+
+    let expr = parse_unary_expression(state, matches!(token.kind, TokenKind::Sub))?;
     let span = start..expr.span.end;
 
-    match token {
+    match token.kind {
         TokenKind::Sub => {
             // Don't wrap the expression in a negation operation if it's only
             // a literal. Instead, just update the span.
@@ -515,12 +509,12 @@ fn parse_primary_expression<'src>(
             // Parse group expression
 
             let lparen_start = token.span.start;
-            state.tokens.skip(&TokenKind::LParen)?;
+            state.tokens.expect(&TokenKind::LParen)?;
 
             let expr = parse(state)?;
 
             let span = lparen_start..state.tokens.current().span.end;
-            state.tokens.skip(&TokenKind::RParen)?;
+            state.tokens.expect(&TokenKind::RParen)?;
 
             Ok(AstNode {
                 id: state.next_id(),
@@ -530,6 +524,8 @@ fn parse_primary_expression<'src>(
                 span,
             })
         }
+
+        TokenKind::New => object_creation::parse(state),
 
         // Expecting either symbols or literals
         TokenKind::Symbol(name) => {
@@ -610,8 +606,6 @@ fn parse_primary_expression<'src>(
             })
         }
 
-        TokenKind::New => parse_object_creation(state),
-
         TokenKind::LBrack => parse_array_literal(state),
         TokenKind::LBrace => parse_record_literal(state),
 
@@ -626,29 +620,24 @@ fn parse_primary_expression<'src>(
 }
 
 fn parse_function_call<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<AstNode<'src>>> {
-    // Can have >= 0 arguments
     let mut args = vec![];
 
     loop {
-        // Stop when encounter a closing parentheses
         if state.tokens.current_is(&TokenKind::RParen) {
             return Ok(args);
         }
 
-        // Parse argument
         args.push(parse(state)?);
 
-        // Continue if encounter "," or break out of loop if encounter ")"
         match state.tokens.current_kind() {
             TokenKind::Comma => {
-                state.tokens.skip(&TokenKind::Comma)?;
+                state.tokens.expect(&TokenKind::Comma)?;
                 continue;
             }
 
             TokenKind::RParen => continue,
 
             kind => {
-                // Error if encountering neither "," or ")"
                 return Err(ParsingError {
                     variant: ParsingErrorVariant::UnexpectedToken {
                         expect: TokenKind::RParen,
@@ -661,176 +650,30 @@ fn parse_function_call<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<
     }
 }
 
-fn parse_object_creation<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
-    let start = state.tokens.current().span.start;
-
-    // Expecting "new"
-    state.tokens.skip(&TokenKind::New)?;
-
-    let object_tn = tn::parse(state)?;
-
-    state.tokens.skip(&TokenKind::LBrace)?;
-
-    if state.tokens.current_is(&TokenKind::RBrace) {
-        let end = state.tokens.current().span.end;
-
-        state.tokens.skip(&TokenKind::RBrace)?;
-
-        return Ok(AstNode {
-            id: state.next_id(),
-            variant: AstNodeVariant::ObjectCreation {
-                tn: Box::new(object_tn),
-                initializer: ObjectInitializer::Empty,
-            },
-            span: start..end,
-        });
-    }
-
-    let expr = parse(state)?;
-
-    let initializer = if state.tokens.current_is(&TokenKind::Colon) {
-        state.tokens.advance();
-
-        let value = parse(state)?;
-
-        if state.tokens.current_is(&TokenKind::Comma) {
-            state.tokens.advance();
-        }
-
-        let initializer = parse_object_keyval_initializer(state, vec![(expr, value)])?;
-
-        ObjectInitializer::KeyVal(initializer)
-    } else {
-        state.tokens.advance();
-
-        let initializer = parse_object_array_initializer(state, vec![expr])?;
-
-        ObjectInitializer::Array(initializer)
-    };
-
-    let end = state.tokens.current().span.end;
-
-    // Expecting "}"
-    state.tokens.skip(&TokenKind::RBrace)?;
-
-    Ok(AstNode {
-        id: state.next_id(),
-        variant: AstNodeVariant::ObjectCreation {
-            tn: Box::new(object_tn),
-            initializer,
-        },
-        span: start..end,
-    })
-}
-
-fn parse_object_keyval_initializer<'src>(
-    state: &ParserState<'src, '_>,
-    mut fields: Vec<(AstNode<'src>, AstNode<'src>)>,
-) -> Result<'src, Vec<(AstNode<'src>, AstNode<'src>)>> {
-    loop {
-        // Stop when encounter a closing bracket
-        if state.tokens.current_is(&TokenKind::RBrace) {
-            return Ok(fields);
-        }
-
-        let key = parse(state)?;
-
-        state.tokens.skip(&TokenKind::Colon)?;
-
-        let value = parse(state)?;
-
-        // Parse element
-        fields.push((key, value));
-
-        // Continue if encounter "," or break out of loop if encounter ")"
-        match state.tokens.current_kind() {
-            TokenKind::Comma => {
-                state.tokens.skip(&TokenKind::Comma)?;
-                continue;
-            }
-
-            TokenKind::RBrace => continue,
-
-            kind => {
-                // Error if encountering neither "," or "]"
-                return Err(ParsingError {
-                    variant: ParsingErrorVariant::UnexpectedToken {
-                        expect: TokenKind::RBrace,
-                        found: kind.clone(),
-                    },
-                    span: state.tokens.current().span,
-                });
-            }
-        }
-    }
-}
-
-fn parse_object_array_initializer<'src>(
-    state: &ParserState<'src, '_>,
-    mut elems: Vec<AstNode<'src>>,
-) -> Result<'src, Vec<AstNode<'src>>> {
-    loop {
-        // Stop when encounter a closing bracket
-        if state.tokens.current_is(&TokenKind::RBrace) {
-            return Ok(elems);
-        }
-
-        elems.push(parse(state)?);
-
-        // Continue if encounter "," or break out of loop if encounter ")"
-        match state.tokens.current_kind() {
-            TokenKind::Comma => {
-                state.tokens.skip(&TokenKind::Comma)?;
-                continue;
-            }
-
-            TokenKind::RBrace => continue,
-
-            kind => {
-                // Error if encountering neither "," or "]"
-                return Err(ParsingError {
-                    variant: ParsingErrorVariant::UnexpectedToken {
-                        expect: TokenKind::RBrace,
-                        found: kind.clone(),
-                    },
-                    span: state.tokens.current().span,
-                });
-            }
-        }
-    }
-}
-
 fn parse_array_literal<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
-    // Expecting "["
-    state.tokens.skip(&TokenKind::LBrack)?;
+    state.tokens.expect(&TokenKind::LBrack)?;
 
-    // Expecting type notation
     let elem_tn = tn::parse(state)?;
 
-    // Can have >= 0 elements
     let mut elems = vec![];
     loop {
-        // Stop when encounter a closing bracket
         if state.tokens.current_is(&TokenKind::RBrack) {
             break;
         }
 
-        // Parse element
         elems.push(parse(state)?);
 
-        // Continue if encounter "," or break out of loop if encounter ")"
         match state.tokens.current_kind() {
             TokenKind::Comma => {
-                state.tokens.skip(&TokenKind::Comma)?;
+                state.tokens.expect(&TokenKind::Comma)?;
                 continue;
             }
 
             TokenKind::RBrack => continue,
 
             kind => {
-                // Error if encountering neither "," or "]"
                 return Err(ParsingError {
                     variant: ParsingErrorVariant::UnexpectedToken {
                         expect: TokenKind::RBrack,
@@ -844,8 +687,7 @@ fn parse_array_literal<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstN
 
     let end = state.tokens.current().span.end;
 
-    // Expecting "]"
-    state.tokens.skip(&TokenKind::RBrack)?;
+    state.tokens.expect(&TokenKind::RBrack)?;
 
     Ok(AstNode {
         id: state.next_id(),
@@ -862,39 +704,31 @@ fn parse_array_literal<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstN
 fn parse_record_literal<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
-    // Expecting "{"
-    state.tokens.skip(&TokenKind::LBrace)?;
+    state.tokens.expect(&TokenKind::LBrace)?;
 
-    // Can have >= 0 fields
     let mut fields = vec![];
     loop {
-        // Stop when encounter a closing bracket
         if state.tokens.current_is(&TokenKind::RBrace) {
             break;
         }
 
-        // Parse field name
         let field_name = sym::parse(state, "field name")?;
 
-        // Expecting colon
-        state.tokens.skip(&TokenKind::Colon)?;
+        state.tokens.expect(&TokenKind::Colon)?;
 
-        // Parse field value
         let field_value = parse(state)?;
 
         fields.push((field_name, field_value));
 
-        // Continue if encounter "," or break out of loop if encounter ")"
         match state.tokens.current_kind() {
             TokenKind::Comma => {
-                state.tokens.skip(&TokenKind::Comma)?;
+                state.tokens.expect(&TokenKind::Comma)?;
                 continue;
             }
 
             TokenKind::RBrace => continue,
 
             kind => {
-                // Error if encountering neither "," or "]"
                 return Err(ParsingError {
                     variant: ParsingErrorVariant::UnexpectedToken {
                         expect: TokenKind::RBrack,
@@ -908,8 +742,7 @@ fn parse_record_literal<'src>(state: &ParserState<'src, '_>) -> Result<'src, Ast
 
     let end = state.tokens.current().span.end;
 
-    // Expecting "]"
-    state.tokens.skip(&TokenKind::RBrace)?;
+    state.tokens.expect(&TokenKind::RBrace)?;
 
     Ok(AstNode {
         id: state.next_id(),

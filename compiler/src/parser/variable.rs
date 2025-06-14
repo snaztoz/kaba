@@ -7,25 +7,19 @@ use crate::{
 pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
-    // Expecting "var" keyword
-    state.tokens.skip(&TokenKind::Var)?;
+    state.tokens.expect(&TokenKind::Var)?;
 
-    // Parse symbol
     let sym = sym::parse(state, "variable name")?;
 
-    // Parse type notation (optional)
     let tn = parse_tn(state)?;
 
-    // Expecting "="
-    state.tokens.skip(&TokenKind::Assign)?;
+    state.tokens.expect(&TokenKind::Assign)?;
 
-    // Parse value
     let expr = expression::parse(state)?;
 
     let end = expr.span.end;
 
-    // Expecting ";"
-    state.tokens.skip(&TokenKind::Semicolon)?;
+    state.tokens.expect(&TokenKind::Semicolon)?;
 
     Ok(AstNode {
         id: state.next_id(),

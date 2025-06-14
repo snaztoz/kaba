@@ -14,16 +14,13 @@ pub struct Block<'src> {
 pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, Block<'src>> {
     let start = state.tokens.current().span.start;
 
-    // Expecting "{"
-    state.tokens.skip(&TokenKind::LBrace)?;
+    state.tokens.expect(&TokenKind::LBrace)?;
 
-    // Expecting statements
     let stmts = parse_stmts(state)?;
 
     let end = state.tokens.current().span.end;
 
-    // Expecting "}"
-    state.tokens.skip(&TokenKind::RBrace)?;
+    state.tokens.expect(&TokenKind::RBrace)?;
 
     Ok(Block {
         body: stmts,
@@ -33,6 +30,7 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, Block<'src>> {
 
 fn parse_stmts<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<AstNode<'src>>> {
     let mut stmts = vec![];
+
     loop {
         if state.tokens.current_is(&TokenKind::RBrace) {
             break;
@@ -48,8 +46,7 @@ fn parse_stmts<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<AstNode<
             });
         }
 
-        let stmt = statement::parse(state)?;
-        stmts.push(stmt);
+        stmts.push(statement::parse(state)?);
     }
 
     Ok(stmts)

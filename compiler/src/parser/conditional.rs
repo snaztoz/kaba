@@ -14,13 +14,10 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
     let start = state.tokens.current().span.start;
     let mut end;
 
-    // Expecting "if" keyword
-    state.tokens.skip(&TokenKind::If)?;
+    state.tokens.expect(&TokenKind::If)?;
 
-    // Expecting expression
     let cond = expression::parse(state)?;
 
-    // Expecting block
     let block = block::parse(state)?;
 
     end = block.span.end;
@@ -49,12 +46,10 @@ fn parse_alt_branch<'src>(
 
     let start = state.tokens.current().span.start;
 
-    // Expecting "else" keyword
-    state.tokens.skip(&TokenKind::Else)?;
+    state.tokens.expect(&TokenKind::Else)?;
 
     match state.tokens.current_kind() {
         TokenKind::If => {
-            // Expecting "else if ..." statement
             let alt = parse(state)?;
 
             *end_pos = alt.span.end;
@@ -63,7 +58,6 @@ fn parse_alt_branch<'src>(
         }
 
         TokenKind::LBrace => {
-            // Expecting block
             let block = block::parse(state)?;
 
             *end_pos = block.span.end;

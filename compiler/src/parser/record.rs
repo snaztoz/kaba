@@ -11,17 +11,16 @@ use crate::{
 pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     let start = state.tokens.current().span.start;
 
-    // Expecting "record" keyword
-    state.tokens.skip(&TokenKind::Record)?;
+    state.tokens.expect(&TokenKind::Record)?;
 
-    // Parse symbol
     let sym = sym::parse(state, "record name")?;
 
-    state.tokens.skip(&TokenKind::LBrace)?;
-    let fields = parse_fields(state)?;
+    state.tokens.expect(&TokenKind::LBrace)?;
 
+    let fields = parse_fields(state)?;
     let end = state.tokens.current().span.end;
-    state.tokens.skip(&TokenKind::RBrace)?;
+
+    state.tokens.expect(&TokenKind::RBrace)?;
 
     Ok(AstNode {
         id: state.next_id(),
@@ -37,19 +36,15 @@ pub fn parse_fields<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<Rec
     let mut fields = vec![];
 
     while !state.tokens.current_is(&TokenKind::RBrace) {
-        // Expecting symbol
         let sym = sym::parse(state, "field name")?;
 
-        // Expecting type notation
         let tn = tn::parse(state)?;
 
         fields.push(RecordField { sym, tn });
 
-        // Expecting either "," or "}"
-
         match state.tokens.current_kind() {
             TokenKind::Comma => {
-                state.tokens.skip(&TokenKind::Comma)?;
+                state.tokens.expect(&TokenKind::Comma)?;
                 continue;
             }
 
