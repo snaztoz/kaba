@@ -1,4 +1,4 @@
-use crate::ast::{AstNode, AstNodeVariant, RecordField, TypeNotation};
+use crate::ast::{AstNode, AstNodeVariant, TypeNotation};
 use std::{cmp::Ordering, collections::HashMap, fmt::Display, hash::Hash};
 
 pub mod assert;
@@ -150,16 +150,6 @@ impl<'a> From<&'a AstNode<'_>> for Type {
                 TypeNotation::Array { elem_tn } => Self::Array {
                     elem_t: Box::new(Self::from(elem_tn.as_ref())),
                 },
-
-                TypeNotation::Record { fields } => {
-                    let mut fields_t = HashMap::new();
-                    for RecordField { sym, tn } in fields {
-                        let sym_name = String::from(sym.variant.as_sym_name());
-                        let sym_t = Self::from(tn);
-                        fields_t.insert(sym_name, sym_t);
-                    }
-                    Self::Record { fields: fields_t }
-                }
 
                 TypeNotation::Callable {
                     params_tn,

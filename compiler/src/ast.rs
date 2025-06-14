@@ -595,28 +595,10 @@ pub enum TypeNotation<'src> {
         elem_tn: Box<AstNode<'src>>,
     },
 
-    Record {
-        fields: Vec<RecordField<'src>>,
-    },
-
     Callable {
         params_tn: Vec<AstNode<'src>>,
         return_tn: Box<AstNode<'src>>,
     },
-}
-
-impl TypeNotation<'_> {
-    pub const fn is_record(&self) -> bool {
-        matches!(self, Self::Record { .. })
-    }
-
-    pub fn as_record_fields(&self) -> &[RecordField<'_>] {
-        if let Self::Record { fields } = self {
-            fields
-        } else {
-            unreachable!()
-        }
-    }
 }
 
 impl Display for TypeNotation<'_> {
@@ -626,15 +608,6 @@ impl Display for TypeNotation<'_> {
 
             Self::Array { elem_tn } => {
                 write!(f, "[]{elem_tn}")
-            }
-
-            Self::Record { fields } => {
-                let joined = fields
-                    .iter()
-                    .map(|RecordField { sym, tn }| format!("{sym}: {tn}"))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                write!(f, "{{ {joined} }}")
             }
 
             Self::Callable {
