@@ -16,7 +16,8 @@ mod tests {
     #[test]
     fn record_with_multiple_fields() {
         assert_is_ok(indoc! {"
-            record User {
+            record User
+            {
                 name: string,
                 age: int,
             }
@@ -26,7 +27,8 @@ mod tests {
     #[test]
     fn record_with_compound_type_fields() {
         assert_is_ok(indoc! {"
-            record User {
+            record User
+            {
                 friends: []int,
                 greet: () -> void,
             }
@@ -36,7 +38,8 @@ mod tests {
     #[test]
     fn record_with_recursive_type() {
         assert_is_ok(indoc! {"
-            record User {
+            record User
+            {
                 supervisor: User,
             }
         "});
@@ -45,11 +48,13 @@ mod tests {
     #[test]
     fn multiple_record_types_with_recursive_relation() {
         assert_is_ok(indoc! {"
-            record User {
+            record User
+            {
                 groups: []Group,
             }
 
-            record Group {
+            record Group
+            {
                 users: []User,
             }
         "});
@@ -75,7 +80,8 @@ mod tests {
     #[test]
     fn record_with_duplicated_fields() {
         assert_is_err(indoc! {"
-            record User {
+            record User
+            {
                 age: int,
                 age: sbyte,
             }

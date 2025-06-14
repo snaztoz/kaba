@@ -19,7 +19,8 @@ Next, create a [Kaba program file](docs/features.md) (the extension **must be** 
 For this example, let's create a file called `hello.kaba` with the following code:
 
 ```text
-def main {
+def main()
+{
     debug "Hello, World!";
 }
 ```

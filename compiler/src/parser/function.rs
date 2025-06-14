@@ -18,17 +18,11 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
     // Expecting symbol
     let sym = sym::parse(state, "function name")?;
 
-    // Expecting parameters (optional)
-    let params = if state.tokens.current_is(&TokenKind::LParen) {
-        // Expecting >= 0 function parameter declaration(s)
-        state.tokens.skip(&TokenKind::LParen)?;
-        let params = parse_params(state)?;
-        state.tokens.skip(&TokenKind::RParen)?;
+    state.tokens.skip(&TokenKind::LParen)?;
 
-        params
-    } else {
-        vec![]
-    };
+    let params = parse_params(state)?;
+
+    state.tokens.skip(&TokenKind::RParen)?;
 
     // Expecting return type notation (optional)
     let return_tn = parse_return_tn(state)?;
@@ -107,28 +101,6 @@ mod tests {
 
     #[test]
     fn empty_function_definition() {
-        assert_ast(
-            "def foo {}",
-            AstNode {
-                id: 0,
-                variant: AstNodeVariant::FunctionDefinition {
-                    sym: Box::new(AstNode {
-                        id: 0,
-                        variant: AstNodeVariant::Symbol { name: "foo" },
-                        span: 4..7,
-                    }),
-
-                    params: vec![],
-                    return_tn: None,
-                    body: vec![],
-                },
-                span: 0..10,
-            },
-        );
-    }
-
-    #[test]
-    fn function_definition_with_zero_parameters_but_with_parentheses() {
         assert_ast(
             "def foo() {}",
             AstNode {
@@ -256,7 +228,7 @@ mod tests {
     #[test]
     fn function_definition_with_return_statement() {
         assert_ast(
-            "def foo: int { return 5; }",
+            "def foo(): int { return 5; }",
             AstNode {
                 id: 0,
                 variant: AstNodeVariant::FunctionDefinition {
@@ -272,7 +244,7 @@ mod tests {
                         variant: AstNodeVariant::TypeNotation {
                             tn: TypeNotation::Symbol("int"),
                         },
-                        span: 9..12,
+                        span: 11..14,
                     })),
                     body: vec![AstNode {
                         id: 0,
@@ -282,13 +254,13 @@ mod tests {
                                 variant: AstNodeVariant::Literal {
                                     lit: Literal::Int(5),
                                 },
-                                span: 22..23,
+                                span: 24..25,
                             })),
                         },
-                        span: 15..23,
+                        span: 17..25,
                     }],
                 },
-                span: 0..26,
+                span: 0..28,
             },
         );
     }

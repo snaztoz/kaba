@@ -89,7 +89,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_type_annotation_and_initial_value() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+				{
                     var x: int = 5;
                 }
             "});
@@ -98,7 +99,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_type_inferring() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+				{
                     var x = 5;
                 }
             "});
@@ -107,7 +109,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_builtin_type_symbol() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+				{
                     var int = 5;
                 }
             "});
@@ -116,7 +119,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_float_literal() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+				{
                     var x: float = -0.5;
                     var y: double = 9.99;
                 }
@@ -126,7 +130,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_different_int_types() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+				{
                     var a: sbyte = 10;
                     var b: int = a;
                 }
@@ -136,7 +141,8 @@ mod tests {
     #[test]
     fn declaring_sbyte_variable_with_overflow_constant() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+				{
                     var a: sbyte = 127 + 1;
                 }
             "});
@@ -145,7 +151,8 @@ mod tests {
     #[test]
     fn declaring_short_variable_with_overflow_constant() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+				{
                     var a: short = -32768 - 1;
                 }
             "});
@@ -154,7 +161,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_bool_literal() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+				{
                     var x = true;
                 }
             "});
@@ -163,7 +171,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_char_literal() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+				{
                     var x = 'a';
                     var y: char = 'b';
                 }
@@ -173,7 +182,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_string_literal() {
         assert_is_ok(indoc! {r#"
-                def main {
+                def main()
+				{
                     var x = "abc def \n 123\t";
                     var y: string = "hello, world!";
                 }
@@ -183,7 +193,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_void_type() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+				{
                     var x: void = 5;
                 }
             "});
@@ -192,7 +203,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_incompatible_type() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+				{
                     var x: int = 5.0;
                 }
             "})
@@ -201,7 +213,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_non_existing_type() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+				{
                     var x: NonExistingType = 10;
                 }
             "})
@@ -210,7 +223,8 @@ mod tests {
     #[test]
     fn redeclaring_variable_in_the_same_scope() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+				{
                     var x = 5;
                     var x = 10;
                 }
@@ -224,13 +238,15 @@ mod tests {
     #[test]
     fn declaring_variable_with_function_pointer_as_value() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+				{
                     var x: () -> int = produce;
 
                     debug x();
                 }
 
-                def produce: int {
+                def produce(): int
+                {
                     return 5;
                 }
             "});
@@ -239,7 +255,7 @@ mod tests {
     #[test]
     fn declaring_callable_type_variable_with_non_existing_param_type() {
         assert_is_err(indoc! {"
-                def main {}
+                def main() {}
 
                 def produce(f: (NotExist) -> Void) {}
             "});
@@ -248,7 +264,7 @@ mod tests {
     #[test]
     fn declaring_callable_type_variable_with_non_existing_return_type() {
         assert_is_err(indoc! {"
-                def main {}
+                def main() {}
 
                 def produce(f: () -> NotExist) {}
             "});
@@ -261,7 +277,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_record_literal() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+				{
                     var u = { name: \"snaztoz\" };
                 }
             "});
@@ -270,11 +287,13 @@ mod tests {
     #[test]
     fn declaring_variable_with_record_literal_and_type_notation() {
         assert_is_ok(indoc! {"
-                record User {
+                record User
+                {
                     name: string,
                 }
 
-                def main {
+                def main()
+				{
                     var u: User = { name: \"snaztoz\" };
                 }
             "});
@@ -283,44 +302,49 @@ mod tests {
     #[test]
     fn declaring_variable_with_record_type_notation() {
         assert_is_ok(indoc! {"
-            def main {
-                var u: {
-                    name: string,
-                    age: int,
-                } = {
-                    name: \"snaztoz\",
-                    age: 23,
-                };
-            }
-        "});
+                def main()
+                {
+                    var u: {
+                        name: string,
+                        age: int,
+                    } = {
+                        name: \"snaztoz\",
+                        age: 23,
+                    };
+                }
+            "});
     }
 
     #[test]
     fn declaring_variable_with_record_type_notation_and_non_existing_type() {
         assert_is_err(indoc! {"
-            def main {
-                var u: {
-                    name: NotExist,
-                } = {
-                    name: \"snaztoz\",
-                };
-            }
-        "});
+                def main()
+                {
+                    var u: {
+                        name: NotExist,
+                    } = {
+                        name: \"snaztoz\",
+                    };
+                }
+            "});
     }
 
     #[test]
     fn declaring_variable_with_nested_records() {
         assert_is_ok(indoc! {"
-                record User {
+                record User
+                {
                     name: string,
                     occupation: Occupation,
                 }
 
-                record Occupation {
+                record Occupation
+                {
                     name: string,
                 }
 
-                def main {
+                def main()
+				{
                     var u: User = {
                         name: \"snaztoz\",
                         occupation: { name: \"programmer\" },
@@ -332,16 +356,19 @@ mod tests {
     #[test]
     fn accessing_variable_field() {
         assert_is_ok(indoc! {"
-                record User {
+                record User
+                {
                     name: string,
                     occupation: Occupation,
                 }
 
-                record Occupation {
+                record Occupation
+                {
                     name: string,
                 }
 
-                def main {
+                def main()
+				{
                     var u: User = {
                         name: \"snaztoz\",
                         occupation: { name: \"programmer\" },
@@ -360,7 +387,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_array_literal() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+				{
                     var arr = [int 1];
                 }
             "});
@@ -369,7 +397,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_empty_array_literal() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+				{
                     var arr = [int];
                 }
             "});
@@ -378,7 +407,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_array_type_notation() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+				{
                     var arr: []int = [int 5, 9, 10];
                 }
             "});
@@ -387,7 +417,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_empty_array_literal_and_type_notation() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+				{
                     var arr: []int = [int];
                 }
             "});
@@ -396,7 +427,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_incompatible_array_literal() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+				{
                     var arr: []int = [short 5];
                 }
             "});
@@ -405,7 +437,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_nested_arrays_and_type_notation() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+				{
                     var arr: [][]int = [[]int [int 5, 9, 10], [int 1, 2, 3]];
                 }
             "});
@@ -414,7 +447,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_nested_empty_arrays_and_type_notation() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+				{
                     var arr: [][][]int = [[][]int [[]int], [[]int]];
                 }
             "});
@@ -423,7 +457,8 @@ mod tests {
     #[test]
     fn declaring_variables_of_sbyte_array() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+				{
                     var arr: []sbyte = [sbyte];
 
                     var arr2: []sbyte = [sbyte 1, 2, 3];
@@ -434,7 +469,8 @@ mod tests {
     #[test]
     fn declaring_variables_of_long_array_with_math_expr_in_literal() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+				{
                     var x: long = 10;
                     var arr: []long = [long 1, 2, 3 + x];
                 }
@@ -444,15 +480,18 @@ mod tests {
     #[test]
     fn declaring_variable_with_array_literal_of_function_types() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+				{
                     var arr = [()->int five, six];
                 }
 
-                def five: int {
+                def five(): int
+                {
                     return 5;
                 }
 
-                def six: int {
+                def six(): int
+                {
                     return 6;
                 }
             "});
@@ -461,7 +500,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_incompatible_element_types() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+				{
                     var arr = [int 1, 0.5];
                 }
             "});
@@ -470,7 +510,8 @@ mod tests {
     #[test]
     fn declaring_variable_with_non_existing_array_type() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+				{
                     var arr = [NotExist];
                 }
             "})

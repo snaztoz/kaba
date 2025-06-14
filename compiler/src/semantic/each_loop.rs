@@ -75,7 +75,8 @@ mod tests {
     #[test]
     fn each_loop_statements() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+{
                     each n in [int 1, 2, 3] {
                         debug n;
                     }
@@ -91,7 +92,8 @@ mod tests {
     #[test]
     fn each_loop_statement_with_non_array_expression() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+                {
                     each n in true {
                         debug n;
                     }
@@ -102,7 +104,8 @@ mod tests {
     #[test]
     fn accessing_elem_id_outside_scope() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+                {
                     each n in [int 1, 2] {}
 
                     debug n;

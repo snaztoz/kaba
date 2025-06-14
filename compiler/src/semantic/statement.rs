@@ -112,7 +112,8 @@ mod tests {
     #[test]
     fn debug_expression() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+                {
                     debug 17 * 5;
                 }
             "});
@@ -121,11 +122,12 @@ mod tests {
     #[test]
     fn debug_expression_with_void_type() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+                {
                     debug this_is_void();
                 }
 
-                def this_is_void {}
+                def this_is_void() {}
             "});
     }
 }

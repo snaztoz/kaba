@@ -113,7 +113,8 @@ mod tests {
     #[test]
     fn assigning_variables() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+                {
                     var x = 0;
                     x = 10;
 
@@ -129,7 +130,8 @@ mod tests {
     #[test]
     fn assigning_variable_using_shorthand_forms() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+                {
                     var i = 0;
                     i += 1;
                     i -= 2;
@@ -143,7 +145,8 @@ mod tests {
     #[test]
     fn mod_assign_with_float_value() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+                {
                     var i = 5.0;
                     i %= 2.5;
                 }
@@ -153,7 +156,8 @@ mod tests {
     #[test]
     fn assigning_value_with_non_existing_variable() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+                {
                     var x: float = 5.0;
                     x = y;
                 }
@@ -163,7 +167,8 @@ mod tests {
     #[test]
     fn assigning_overflowed_value() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+                {
                     var x: sbyte = 0;
                     x = 128;
                 }
@@ -173,7 +178,8 @@ mod tests {
     #[test]
     fn using_math_expression_as_lhs_in_assignment() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+                {
                     1 + 1 = 5;
                 }
             "})
@@ -182,7 +188,8 @@ mod tests {
     #[test]
     fn using_boolean_expression_as_lhs_in_assignment() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+                {
                     true || false = false;
                 }
             "})
@@ -191,7 +198,8 @@ mod tests {
     #[test]
     fn using_integer_grouped_expression_as_lhs_in_assignment() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+                {
                     (50) = true;
                 }
             "})
@@ -200,7 +208,8 @@ mod tests {
     #[test]
     fn using_boolean_type_in_shorthand_assignment() {
         assert_is_err(indoc! {"
-                def main {
+                def main()
+                {
                     true += true;
                 }
             "})
@@ -213,7 +222,8 @@ mod tests {
     #[test]
     fn assign_to_record_field() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+                {
                     var d = { is_true: true };
                     d.is_true = false;
 
@@ -230,7 +240,8 @@ mod tests {
     #[test]
     fn shorthand_assign_to_record_field() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+                {
                     var d = { val: 10 };
                     d.val += 5;
 
@@ -238,7 +249,8 @@ mod tests {
                     d2.val += 99;
                 }
 
-                record Data {
+                record Data
+                {
                     val: int,
                 }
             "});
@@ -251,7 +263,8 @@ mod tests {
     #[test]
     fn assign_to_array_element() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+                {
                     var arr = [bool true, false, true];
 
                     arr[1] = true;
@@ -262,7 +275,8 @@ mod tests {
     #[test]
     fn shorthand_assign_to_array_element() {
         assert_is_ok(indoc! {"
-                def main {
+                def main()
+                {
                     var arr = [float 0.5, 1.1, 2.3];
 
                     arr[0] += 5.5;
