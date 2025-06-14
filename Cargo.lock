@@ -126,6 +126,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "compiler"
+version = "0.5.3"
+dependencies = [
+ "indoc",
+ "logos",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -155,34 +163,18 @@ version = "0.5.3"
 dependencies = [
  "clap",
  "colored",
+ "compiler",
  "indoc",
- "kaba_compiler",
- "kaba_runtime_prototype",
+ "runtime_prototype",
 ]
 
 [[package]]
-name = "kaba_2js"
+name = "kaba2js"
 version = "0.5.3"
 dependencies = [
+ "compiler",
  "indoc",
- "kaba_compiler",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "kaba_compiler"
-version = "0.5.3"
-dependencies = [
- "indoc",
- "logos",
-]
-
-[[package]]
-name = "kaba_runtime_prototype"
-version = "0.5.3"
-dependencies = [
- "indoc",
- "kaba_compiler",
 ]
 
 [[package]]
@@ -258,6 +250,14 @@ name = "regex-syntax"
 version = "0.6.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f162c6dd7b008981e4d40210aca20b4bd0f9b60ca9271061b07f78537722f2e1"
+
+[[package]]
+name = "runtime_prototype"
+version = "0.5.3"
+dependencies = [
+ "compiler",
+ "indoc",
+]
 
 [[package]]
 name = "rustversion"

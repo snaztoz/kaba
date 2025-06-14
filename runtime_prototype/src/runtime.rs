@@ -4,8 +4,8 @@
 //! operates on bytecodes (TODO).
 
 use self::{error::Result, state::RuntimeState, stream::RuntimeStream, value::RuntimeValue};
+use compiler::{AstNode, AstNodeVariant};
 use expression::ExpressionRunner;
-use kaba_compiler::{AstNode, AstNodeVariant};
 
 mod assignment;
 mod body;
@@ -70,14 +70,14 @@ impl<'src, 'a> Runtime<'src, 'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use compiler;
     use indoc::indoc;
-    use kaba_compiler;
 
     fn assert_output_equal(input: &str, expect: &[u8]) {
         let mut out_stream = vec![];
         let mut err_stream = vec![];
 
-        let (ast, _) = kaba_compiler::compile(input).unwrap();
+        let (ast, _) = compiler::compile(input).unwrap();
 
         let streams = RuntimeStream::new(&mut out_stream, &mut err_stream);
         let runtime = Runtime::new(ast, streams);

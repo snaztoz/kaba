@@ -1,5 +1,5 @@
 use colored::Colorize;
-use kaba_compiler::Span;
+use compiler::Span;
 use std::{cmp, fmt::Display, path::Path};
 
 pub type Result<'a, T> = std::result::Result<T, Error<'a>>;

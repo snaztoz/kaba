@@ -1,11 +1,11 @@
-use kaba_compiler::{AstNode, AstNodeVariant, Literal, Result, SymbolTable};
+use compiler::{AstNode, AstNodeVariant, Literal, Result, SymbolTable};
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
 
 pub fn compile(src: &str) -> Result<String> {
-    let src = kaba_compiler::normalize_newlines(src);
-    let (ast, sym_table) = kaba_compiler::compile(&src)?;
+    let src = compiler::normalize_newlines(src);
+    let (ast, sym_table) = compiler::compile(&src)?;
 
     let mut buff = String::new();
     if let AstNodeVariant::Program { body, .. } = &ast.variant {

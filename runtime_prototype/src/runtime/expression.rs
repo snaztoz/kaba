@@ -5,7 +5,7 @@ use super::{
     value::RuntimeValue,
 };
 use crate::runtime::body::BodyRunner;
-use kaba_compiler::{AstNode, AstNodeVariant, FunctionParam, Literal};
+use compiler::{AstNode, AstNodeVariant, FunctionParam, Literal};
 use std::collections::HashMap;
 
 pub struct ExpressionRunner<'src, 'a> {
