@@ -40,9 +40,6 @@ pub fn parse_fields<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<Rec
         // Expecting symbol
         let sym = sym::parse(state, "field name")?;
 
-        // Expecting ":"
-        state.tokens.skip(&TokenKind::Colon)?;
-
         // Expecting type notation
         let tn = tn::parse(state)?;
 
@@ -101,7 +98,7 @@ mod tests {
     #[test]
     fn record_with_single_field() {
         assert_ast(
-            "record User { name: string, }",
+            "record User { name string, }",
             AstNode {
                 id: 0,
                 variant: AstNodeVariant::RecordDefinition {
@@ -123,11 +120,11 @@ mod tests {
                             variant: AstNodeVariant::TypeNotation {
                                 tn: TypeNotation::Symbol("string"),
                             },
-                            span: 20..26,
+                            span: 19..25,
                         },
                     }],
                 },
-                span: 0..29,
+                span: 0..28,
             },
         );
     }

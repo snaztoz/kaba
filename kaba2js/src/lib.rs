@@ -445,7 +445,7 @@ mod tests {
     #[test]
     fn function_call() {
         let result = compile(indoc! {"
-            def foo(): int {
+            def foo() int {
                 return 5;
             }
 

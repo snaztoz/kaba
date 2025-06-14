@@ -9,7 +9,7 @@ Kaba is a:
 1. Statically typed language, where every type violations will be caught before the program is actually run.
 
     ```text
-    var x: int = 5;
+    var x int = 5;
 
     x = false;  // ERROR
     ```
@@ -63,7 +63,7 @@ From the example above, `foo()` return type is `void` (not returning anything).
 To return a value from functions, use the `return` keyword (and don't forget to specify the type notation as well):
 
 ```text
-def yield_five(): int
+def yield_five() int
 {
     return 5;
 }
@@ -100,7 +100,7 @@ If you want to specify the type manually, use the following syntax:
 ```text
 def main()
 {
-    var x: int = 5;
+    var x int = 5;
 }
 ```
 
@@ -109,7 +109,7 @@ If value type is incompatible with the variable, the compiler will throw an erro
 ```text
 def main()
 {
-    var x: int = 10.0;  // ERROR
+    var x int = 10.0;  // ERROR
 }
 ```
 
@@ -201,21 +201,21 @@ Currently, Kaba only support these (non-`void`) data types:
 ```text
 def main()
 {
-    var a: int = 10;
+    var a int = 10;
 
-    var b: float = 5.0;
+    var b float = 5.0;
 
-    var c: bool = false;
+    var c bool = false;
 
-    var d: char = 'A';
+    var d char = 'A';
 
-    var e: string = "Hello!";
+    var e string = "Hello!";
 
-    var f: () -> void = foo;
+    var f () -> void = foo;
 
-    var g: User = {};
+    var g User = {};
 
-    var h: []int = [int 99, 101];
+    var h []int = [int 99, 101];
 }
 
 def foo() {}
@@ -274,7 +274,7 @@ def main()
     foo(arr);
 }
 
-def foo(arr: [][]int) {
+def foo(arr [][]int) {
     debug arr[1][1];
 }
 ```

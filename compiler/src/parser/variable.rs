@@ -39,11 +39,10 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
 }
 
 fn parse_tn<'src>(state: &ParserState<'src, '_>) -> Result<'src, Option<AstNode<'src>>> {
-    let tn = if state.tokens.current_is(&TokenKind::Colon) {
-        state.tokens.skip(&TokenKind::Colon)?;
-        Some(tn::parse(state)?)
-    } else {
+    let tn = if state.tokens.current_is(&TokenKind::Assign) {
         None
+    } else {
+        Some(tn::parse(state)?)
     };
 
     Ok(tn)
@@ -161,13 +160,13 @@ mod tests {
 
     #[test]
     fn variable_declaration_without_initial_value() {
-        assert_is_err("var x: Int;");
+        assert_is_err("var x Int;");
     }
 
     #[test]
     fn variable_declaration_with_both_type_notation_and_initial_value() {
         assert_ast(
-            "var x: int = 5;",
+            "var x int = 5;",
             AstNode {
                 id: 0,
                 variant: AstNodeVariant::VariableDeclaration {
@@ -182,17 +181,17 @@ mod tests {
                         variant: AstNodeVariant::TypeNotation {
                             tn: TypeNotation::Symbol("int"),
                         },
-                        span: 7..10,
+                        span: 6..9,
                     })),
                     val: Box::new(AstNode {
                         id: 0,
                         variant: AstNodeVariant::Literal {
                             lit: Literal::Int(5),
                         },
-                        span: 13..14,
+                        span: 12..13,
                     }),
                 },
-                span: 0..14,
+                span: 0..13,
             },
         );
     }
@@ -200,7 +199,7 @@ mod tests {
     #[test]
     fn variable_declaration_with_function_type_notation() {
         assert_ast(
-            "var x: (int) -> void = foo;",
+            "var x (int) -> void = foo;",
             AstNode {
                 id: 0,
                 variant: AstNodeVariant::VariableDeclaration {
@@ -219,26 +218,26 @@ mod tests {
                                     variant: AstNodeVariant::TypeNotation {
                                         tn: TypeNotation::Symbol("int"),
                                     },
-                                    span: 8..11,
+                                    span: 7..10,
                                 }],
                                 return_tn: Box::new(AstNode {
                                     id: 0,
                                     variant: AstNodeVariant::TypeNotation {
                                         tn: TypeNotation::Symbol("void"),
                                     },
-                                    span: 16..20,
+                                    span: 15..19,
                                 }),
                             },
                         },
-                        span: 7..20,
+                        span: 6..19,
                     })),
                     val: Box::new(AstNode {
                         id: 0,
                         variant: AstNodeVariant::Symbol { name: "foo" },
-                        span: 23..26,
+                        span: 22..25,
                     }),
                 },
-                span: 0..26,
+                span: 0..25,
             },
         );
     }
@@ -246,7 +245,7 @@ mod tests {
     #[test]
     fn variable_declaration_with_nested_function_type_notation() {
         assert_ast(
-            "var x: (int, bool) -> (int,) -> void = foo;",
+            "var x (int, bool) -> (int,) -> void = foo;",
             AstNode {
                 id: 0,
                 variant: AstNodeVariant::VariableDeclaration {
@@ -266,14 +265,14 @@ mod tests {
                                         variant: AstNodeVariant::TypeNotation {
                                             tn: TypeNotation::Symbol("int"),
                                         },
-                                        span: 8..11,
+                                        span: 7..10,
                                     },
                                     AstNode {
                                         id: 0,
                                         variant: AstNodeVariant::TypeNotation {
                                             tn: TypeNotation::Symbol("bool"),
                                         },
-                                        span: 13..17,
+                                        span: 12..16,
                                     },
                                 ],
                                 return_tn: Box::new(AstNode {
@@ -285,30 +284,30 @@ mod tests {
                                                 variant: AstNodeVariant::TypeNotation {
                                                     tn: TypeNotation::Symbol("int"),
                                                 },
-                                                span: 23..26,
+                                                span: 22..25,
                                             }],
                                             return_tn: Box::new(AstNode {
                                                 id: 0,
                                                 variant: AstNodeVariant::TypeNotation {
                                                     tn: TypeNotation::Symbol("void"),
                                                 },
-                                                span: 32..36,
+                                                span: 31..35,
                                             }),
                                         },
                                     },
-                                    span: 22..36,
+                                    span: 21..35,
                                 }),
                             },
                         },
-                        span: 7..36,
+                        span: 6..35,
                     })),
                     val: Box::new(AstNode {
                         id: 0,
                         variant: AstNodeVariant::Symbol { name: "foo" },
-                        span: 39..42,
+                        span: 38..41,
                     }),
                 },
-                span: 0..42,
+                span: 0..41,
             },
         );
     }
@@ -316,7 +315,7 @@ mod tests {
     #[test]
     fn variable_declaration_with_array_type() {
         assert_ast(
-            "var x: [][]int = foo;",
+            "var x [][]int = foo;",
             AstNode {
                 id: 0,
                 variant: AstNodeVariant::VariableDeclaration {
@@ -339,23 +338,23 @@ mod tests {
                                                 variant: AstNodeVariant::TypeNotation {
                                                     tn: TypeNotation::Symbol("int"),
                                                 },
-                                                span: 11..14,
+                                                span: 10..13,
                                             }),
                                         },
                                     },
-                                    span: 9..14,
+                                    span: 8..13,
                                 }),
                             },
                         },
-                        span: 7..14,
+                        span: 6..13,
                     })),
                     val: Box::new(AstNode {
                         id: 0,
                         variant: AstNodeVariant::Symbol { name: "foo" },
-                        span: 17..20,
+                        span: 16..19,
                     }),
                 },
-                span: 0..20,
+                span: 0..19,
             },
         );
     }

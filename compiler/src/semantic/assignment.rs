@@ -118,7 +118,7 @@ mod tests {
                     var x = 0;
                     x = 10;
 
-                    var y: float = 0.0;
+                    var y float = 0.0;
                     y = 5.0;
 
                     var z = false;
@@ -158,7 +158,7 @@ mod tests {
         assert_is_err(indoc! {"
                 def main()
                 {
-                    var x: float = 5.0;
+                    var x float = 5.0;
                     x = y;
                 }
             "})
@@ -169,7 +169,7 @@ mod tests {
         assert_is_err(indoc! {"
                 def main()
                 {
-                    var x: sbyte = 0;
+                    var x sbyte = 0;
                     x = 128;
                 }
             "})
@@ -227,12 +227,12 @@ mod tests {
                     var d = { is_true: true };
                     d.is_true = false;
 
-                    var d2: Data = { val: 10 };
+                    var d2 Data = { val: 10 };
                     d2.val = 99;
                 }
 
                 record Data {
-                    val: int,
+                    val int,
                 }
             "});
     }
@@ -245,13 +245,13 @@ mod tests {
                     var d = { val: 10 };
                     d.val += 5;
 
-                    var d2: Data = { val: 10 };
+                    var d2 Data = { val: 10 };
                     d2.val += 99;
                 }
 
                 record Data
                 {
-                    val: int,
+                    val int,
                 }
             "});
     }

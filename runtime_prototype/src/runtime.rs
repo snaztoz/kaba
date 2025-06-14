@@ -293,11 +293,11 @@ mod tests {
                     debug add_two(5);
                 }
 
-                def add_two(n: int): int {
+                def add_two(n int) int {
                     return n + get_two();
                 }
 
-                def get_two(): int {
+                def get_two() int {
                     return 2;
                 }
             "},
@@ -315,7 +315,7 @@ mod tests {
                     dbg(x);
                 }
 
-                def dbg(n: int) {
+                def dbg(n int) {
                     debug n;
                 }
             "},
@@ -332,11 +332,11 @@ mod tests {
                     debug one() + two();
                 }
 
-                def one(): int {
+                def one() int {
                     return 1;
                 }
 
-                def two(): int {
+                def two() int {
                     return 2;
                 }
             "},
@@ -353,7 +353,7 @@ mod tests {
                     debug greet("snaztoz");
                 }
 
-                def greet(name: string): string {
+                def greet(name string) string {
                     debug "Hello";
                     debug name;
                     return name;
@@ -372,7 +372,7 @@ mod tests {
                     debug fibonacci(3);
                 }
 
-                def fibonacci(n: int): int {
+                def fibonacci(n int) int {
                     if n == 1 || n == 2 {
                         return 1;
                     }
@@ -392,7 +392,7 @@ mod tests {
                     count_to_zero(5);
                 }
 
-                def count_to_zero(n: int) {
+                def count_to_zero(n int) {
                     if n < 0 {
                         return;
                     }
@@ -413,15 +413,15 @@ mod tests {
                     print(produce);
                 }
 
-                def print(producer: () -> int) {
-                    var x: () -> int = producer;
+                def print(producer () -> int) {
+                    var x () -> int = producer;
                     debug x();
 
                     var y = producer;
                     debug y();
                 }
 
-                def produce(): int {
+                def produce() int {
                     return 5;
                 }
             "},
@@ -438,11 +438,11 @@ mod tests {
                     debug foo()();
                 }
 
-                def foo(): () -> int {
+                def foo() () -> int {
                     return bar;
                 }
 
-                def bar(): int {
+                def bar() int {
                     return 25;
                 }
             "},
@@ -458,13 +458,13 @@ mod tests {
 				{
                     debug { occupation: { name: \"programmer\" }}.occupation.name;
 
-                    var d: Data = { val: 10 };
+                    var d Data = { val: 10 };
                     d.val *= 10;
                     debug d.val + 10;
                 }
 
                 record Data {
-                    val: int,
+                    val int,
                 }
             "},
             "programmer\n110\n".as_bytes(),
@@ -566,15 +566,15 @@ mod tests {
                     }
                 }
 
-                def add_one(n: int): int {
+                def add_one(n int) int {
                     return n + 1;
                 }
 
-                def add_two(n: int): int {
+                def add_two(n int) int {
                     return n + 2;
                 }
 
-                def add_three(n: int): int {
+                def add_three(n int) int {
                     return n + 3;
                 }
             "},
@@ -593,12 +593,12 @@ mod tests {
                     debug users[0](\"snaztoz\").name;
                 }
 
-                def new_user(name: string): User {
+                def new_user(name string) User {
                     return { name: name };
                 }
 
                 record User {
-                    name: string,
+                    name string,
                 }
             "},
             "snaztoz\n".as_bytes(),
@@ -623,7 +623,7 @@ mod tests {
                     debug arr_2[0];
                 }
 
-                def foo(): []int {
+                def foo() []int {
                     return [int 0];
                 }
             "},

@@ -16,12 +16,12 @@ mod tests {
     #[test]
     fn defining_duplicated_functions() {
         assert_is_err(indoc! {"
-                def print_sum_of(a: int, b: int)
+                def print_sum_of(a int, b int)
                 {
                     debug a + b;
                 }
 
-                def print_sum_of(a: float, b: float)
+                def print_sum_of(a float, b float)
                 {
                     debug a + b;
                 }
@@ -31,7 +31,7 @@ mod tests {
     #[test]
     fn defining_functions_both_with_parameters_and_return_type() {
         assert_is_ok(indoc! {"
-                def sum(x: int, y: int): int
+                def sum(x int, y int) int
                 {
                     return x + y;
                 }
@@ -41,7 +41,7 @@ mod tests {
     #[test]
     fn recursive_fibonacci_function() {
         assert_is_ok(indoc! {"
-                def fibonacci(n: int): int
+                def fibonacci(n int) int
                 {
                     if n == 0 {
                         return 0;
@@ -56,7 +56,7 @@ mod tests {
     #[test]
     fn recursive_functions_with_void_return_type() {
         assert_is_ok(indoc! {"
-                def count_to_zero(n: int)
+                def count_to_zero(n int)
                 {
                     debug n;
                     if n == 0 {
@@ -75,12 +75,12 @@ mod tests {
     #[test]
     fn returning_from_functions_with_conditional_and_loop_statements() {
         assert_is_ok(indoc! {"
-                def first(): int
+                def first() int
                 {
                     return 5;
                 }
 
-                def second(): int
+                def second() int
                 {
                     if false {
                         return 0;
@@ -89,7 +89,7 @@ mod tests {
                     }
                 }
 
-                def third(): int
+                def third() int
                 {
                     if false {
                         return 0;
@@ -97,7 +97,7 @@ mod tests {
                     return 1;
                 }
 
-                def fourth(): int
+                def fourth() int
                 {
                     while false {
                         return 0;
@@ -105,7 +105,7 @@ mod tests {
                     return 1;
                 }
 
-                def fifth(): int
+                def fifth() int
                 {
                     return 1;
 
@@ -141,10 +141,10 @@ mod tests {
         assert_is_err(indoc! {"
                 def main()
                 {
-                    var x: int = foo();
+                    var x int = foo();
                 }
 
-                def foo(): sbyte
+                def foo() sbyte
                 {
                     return 5;
                 }
@@ -159,7 +159,7 @@ mod tests {
                     foo();
                 }
 
-                def foo(x: sbyte): sbyte
+                def foo(x sbyte) sbyte
                 {
                     return x;
                 }
@@ -174,7 +174,7 @@ mod tests {
                     foo(5, 7);
                 }
 
-                def foo(x: sbyte): sbyte
+                def foo(x sbyte) sbyte
                 {
                     return x;
                 }
@@ -191,7 +191,7 @@ mod tests {
                     debug aliased();
                 }
 
-                def return_two(): int
+                def return_two() int
                 {
                     return 2;
                 }
@@ -206,12 +206,12 @@ mod tests {
                     debug get_num(produce);
                 }
 
-                def get_num(producer: () -> int): int
+                def get_num(producer () -> int) int
                 {
                     return producer() + 5;
                 }
 
-                def produce(): int
+                def produce() int
                 {
                     return 10;
                 }
@@ -226,12 +226,12 @@ mod tests {
                     debug foo()();
                 }
 
-                def foo(): () -> int
+                def foo() () -> int
                 {
                     return bar;
                 }
 
-                def bar(): int
+                def bar() int
                 {
                     return 25;
                 }
@@ -250,7 +250,7 @@ mod tests {
                     foo([int 1, 2, 3]);
                 }
 
-                def foo(arr: []int) {}
+                def foo(arr []int) {}
             "});
     }
 
@@ -266,7 +266,7 @@ mod tests {
                     foo([int 1]);
                 }
 
-                def foo(arr: []int) {}
+                def foo(arr []int) {}
             "});
     }
 
@@ -275,13 +275,13 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
                 {
-                    var arr_1: []int = foo();
-                    var arr_2: []int = foo();
+                    var arr_1 []int = foo();
+                    var arr_2 []int = foo();
 
                     arr_1[0] = 10;
                 }
 
-                def foo(): []int
+                def foo() []int
                 {
                     return [int 1, 2, 3];
                 }
@@ -299,15 +299,15 @@ mod tests {
                 {
                     foo({ val: 5 });
 
-                    var d: Data = { val: 10 };
+                    var d Data = { val: 10 };
                     foo(d);
                 }
 
-                def foo(d: Data) {}
+                def foo(d Data) {}
 
                 record Data
                 {
-                    val: int,
+                    val int,
                 }
             "});
     }
@@ -319,18 +319,18 @@ mod tests {
                 {
                     debug foo({ val: 5 });
 
-                    var d: Data = { val: 10 };
+                    var d Data = { val: 10 };
                     debug foo(d);
                 }
 
-                def foo(d: Data): int
+                def foo(d Data) int
                 {
                     return d.val;
                 }
 
                 record Data
                 {
-                    val: int,
+                    val int,
                 }
             "});
     }
@@ -340,17 +340,17 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
                 {
-                    var d: Data = producer();
+                    var d Data = producer();
                 }
 
-                def producer(): Data
+                def producer() Data
                 {
                     return { val: 10 };
                 }
 
                 record Data
                 {
-                    val: int,
+                    val int,
                 }
             "});
     }
@@ -370,28 +370,28 @@ mod tests {
     #[test]
     fn defining_function_with_a_non_existing_return_type() {
         assert_is_err(indoc! {"
-                def foo(): NonExistingType { }
+                def foo() NonExistingType { }
             "});
     }
 
     #[test]
     fn defining_function_with_duplicated_parameter_name() {
         assert_is_err(indoc! {"
-                def add_sum_of(x: int, x: int) { }
+                def add_sum_of(x int, x int) { }
             "});
     }
 
     #[test]
     fn defining_function_with_a_non_existing_parameter_type() {
         assert_is_err(indoc! {"
-                def foo(x: NonExistingType) { }
+                def foo(x NonExistingType) { }
             "});
     }
 
     #[test]
     fn defining_function_with_void_parameter_type() {
         assert_is_err(indoc! {"
-                def foo(x: Void) { }
+                def foo(x void) { }
             "});
     }
 
@@ -408,7 +408,7 @@ mod tests {
     #[test]
     fn returning_value_from_function_with_mismatched_return_type() {
         assert_is_err(indoc! {"
-                def sum(x: int, y: int): int
+                def sum(x int, y int) int
                 {
                     return 5.0;
                 }
@@ -418,7 +418,7 @@ mod tests {
     #[test]
     fn invalid_statement_after_return() {
         assert_is_err(indoc! {"
-                def get_five(): int
+                def get_five() int
                 {
                     return 5;
                     1 + true; // should be error
@@ -429,7 +429,7 @@ mod tests {
     #[test]
     fn returning_non_existing_variable() {
         assert_is_err(indoc! {"
-                def foo(): int
+                def foo() int
                 {
                     return not_exist;
                 }
@@ -439,7 +439,7 @@ mod tests {
     #[test]
     fn defining_function_with_missing_return_in_other_branches() {
         assert_is_err(indoc! {"
-                def foo(): int
+                def foo() int
                 {
                     if false {
                         return 5;
@@ -451,7 +451,7 @@ mod tests {
     #[test]
     fn defining_function_with_missing_return_in_else_branch_or_outer_scope() {
         assert_is_err(indoc! {"
-                def foo(): int
+                def foo() int
                 {
                     if false {
                         return 0;
@@ -465,7 +465,7 @@ mod tests {
     #[test]
     fn defining_function_with_missing_return_in_outer_scope_of_while_statement() {
         assert_is_err(indoc! {"
-                def foo(): int
+                def foo() int
                 {
                     while false {
                         return 0;

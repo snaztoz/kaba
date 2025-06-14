@@ -18,8 +18,8 @@ mod tests {
         assert_is_ok(indoc! {"
             record User
             {
-                name: string,
-                age: int,
+                name string,
+                age  int,
             }
         "});
     }
@@ -29,8 +29,8 @@ mod tests {
         assert_is_ok(indoc! {"
             record User
             {
-                friends: []int,
-                greet: () -> void,
+                friends []int,
+                greet   () -> void,
             }
         "});
     }
@@ -40,7 +40,7 @@ mod tests {
         assert_is_ok(indoc! {"
             record User
             {
-                supervisor: User,
+                supervisor User,
             }
         "});
     }
@@ -50,12 +50,12 @@ mod tests {
         assert_is_ok(indoc! {"
             record User
             {
-                groups: []Group,
+                groups []Group,
             }
 
             record Group
             {
-                users: []User,
+                users []User,
             }
         "});
     }
@@ -63,7 +63,7 @@ mod tests {
     #[test]
     fn record_as_function_parameter() {
         assert_is_ok(indoc! {"
-            def foo(user: User) {}
+            def foo(user User) {}
 
             record User {}
         "});
@@ -82,8 +82,8 @@ mod tests {
         assert_is_err(indoc! {"
             record User
             {
-                age: int,
-                age: sbyte,
+                age int,
+                age sbyte,
             }
         "});
     }

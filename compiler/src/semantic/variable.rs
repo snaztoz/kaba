@@ -91,7 +91,7 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var x: int = 5;
+                    var x int = 5;
                 }
             "});
     }
@@ -121,8 +121,8 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var x: float = -0.5;
-                    var y: double = 9.99;
+                    var x float = -0.5;
+                    var y double = 9.99;
                 }
             "});
     }
@@ -132,8 +132,8 @@ mod tests {
         assert_is_err(indoc! {"
                 def main()
 				{
-                    var a: sbyte = 10;
-                    var b: int = a;
+                    var a sbyte = 10;
+                    var b int = a;
                 }
             "});
     }
@@ -143,7 +143,7 @@ mod tests {
         assert_is_err(indoc! {"
                 def main()
 				{
-                    var a: sbyte = 127 + 1;
+                    var a sbyte = 127 + 1;
                 }
             "});
     }
@@ -153,7 +153,7 @@ mod tests {
         assert_is_err(indoc! {"
                 def main()
 				{
-                    var a: short = -32768 - 1;
+                    var a short = -32768 - 1;
                 }
             "});
     }
@@ -174,7 +174,7 @@ mod tests {
                 def main()
 				{
                     var x = 'a';
-                    var y: char = 'b';
+                    var y char = 'b';
                 }
             "});
     }
@@ -185,7 +185,7 @@ mod tests {
                 def main()
 				{
                     var x = "abc def \n 123\t";
-                    var y: string = "hello, world!";
+                    var y string = "hello, world!";
                 }
             "#});
     }
@@ -195,7 +195,7 @@ mod tests {
         assert_is_err(indoc! {"
                 def main()
 				{
-                    var x: void = 5;
+                    var x void = 5;
                 }
             "});
     }
@@ -205,7 +205,7 @@ mod tests {
         assert_is_err(indoc! {"
                 def main()
 				{
-                    var x: int = 5.0;
+                    var x int = 5.0;
                 }
             "})
     }
@@ -215,7 +215,7 @@ mod tests {
         assert_is_err(indoc! {"
                 def main()
 				{
-                    var x: NonExistingType = 10;
+                    var x NonExistingType = 10;
                 }
             "})
     }
@@ -240,12 +240,12 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var x: () -> int = produce;
+                    var x () -> int = produce;
 
                     debug x();
                 }
 
-                def produce(): int
+                def produce() int
                 {
                     return 5;
                 }
@@ -257,7 +257,7 @@ mod tests {
         assert_is_err(indoc! {"
                 def main() {}
 
-                def produce(f: (NotExist) -> Void) {}
+                def produce(f (NotExist) -> void) {}
             "});
     }
 
@@ -266,7 +266,7 @@ mod tests {
         assert_is_err(indoc! {"
                 def main() {}
 
-                def produce(f: () -> NotExist) {}
+                def produce(f () -> NotExist) {}
             "});
     }
 
@@ -289,12 +289,12 @@ mod tests {
         assert_is_ok(indoc! {"
                 record User
                 {
-                    name: string,
+                    name string,
                 }
 
                 def main()
 				{
-                    var u: User = { name: \"snaztoz\" };
+                    var u User = { name: \"snaztoz\" };
                 }
             "});
     }
@@ -304,18 +304,18 @@ mod tests {
         assert_is_ok(indoc! {"
                 record User
                 {
-                    name: string,
-                    occupation: Occupation,
+                    name       string,
+                    occupation Occupation,
                 }
 
                 record Occupation
                 {
-                    name: string,
+                    name string,
                 }
 
                 def main()
 				{
-                    var u: User = {
+                    var u User = {
                         name: \"snaztoz\",
                         occupation: { name: \"programmer\" },
                     };
@@ -328,18 +328,18 @@ mod tests {
         assert_is_ok(indoc! {"
                 record User
                 {
-                    name: string,
-                    occupation: Occupation,
+                    name       string,
+                    occupation Occupation,
                 }
 
                 record Occupation
                 {
-                    name: string,
+                    name string,
                 }
 
                 def main()
 				{
-                    var u: User = {
+                    var u User = {
                         name: \"snaztoz\",
                         occupation: { name: \"programmer\" },
                     };
@@ -379,7 +379,7 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var arr: []int = [int 5, 9, 10];
+                    var arr []int = [int 5, 9, 10];
                 }
             "});
     }
@@ -389,7 +389,7 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var arr: []int = [int];
+                    var arr []int = [int];
                 }
             "});
     }
@@ -399,7 +399,7 @@ mod tests {
         assert_is_err(indoc! {"
                 def main()
 				{
-                    var arr: []int = [short 5];
+                    var arr []int = [short 5];
                 }
             "});
     }
@@ -409,7 +409,7 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var arr: [][]int = [[]int [int 5, 9, 10], [int 1, 2, 3]];
+                    var arr [][]int = [[]int [int 5, 9, 10], [int 1, 2, 3]];
                 }
             "});
     }
@@ -419,7 +419,7 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var arr: [][][]int = [[][]int [[]int], [[]int]];
+                    var arr [][][]int = [[][]int [[]int], [[]int]];
                 }
             "});
     }
@@ -429,9 +429,9 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var arr: []sbyte = [sbyte];
+                    var arr []sbyte = [sbyte];
 
-                    var arr2: []sbyte = [sbyte 1, 2, 3];
+                    var arr2 []sbyte = [sbyte 1, 2, 3];
                 }
             "});
     }
@@ -441,8 +441,8 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var x: long = 10;
-                    var arr: []long = [long 1, 2, 3 + x];
+                    var x long = 10;
+                    var arr []long = [long 1, 2, 3 + x];
                 }
             "});
     }
@@ -455,12 +455,12 @@ mod tests {
                     var arr = [()->int five, six];
                 }
 
-                def five(): int
+                def five() int
                 {
                     return 5;
                 }
 
-                def six(): int
+                def six() int
                 {
                     return 6;
                 }

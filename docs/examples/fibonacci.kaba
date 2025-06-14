@@ -5,7 +5,7 @@ def main()
     debug fibonacci(6);
 }
 
-def fibonacci(n: int): int
+def fibonacci(n int) int
 {
     if n <= 0 {
         return 0;

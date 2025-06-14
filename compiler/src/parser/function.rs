@@ -49,9 +49,6 @@ fn parse_params<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<Functio
         // Expecting symbol
         let sym = sym::parse(state, "parameter name")?;
 
-        // Expecting ":"
-        state.tokens.skip(&TokenKind::Colon)?;
-
         // Expecting type notation
         let tn = tn::parse(state)?;
 
@@ -83,11 +80,9 @@ fn parse_params<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<Functio
 }
 
 fn parse_return_tn<'src>(state: &ParserState<'src, '_>) -> Result<'src, Option<AstNode<'src>>> {
-    if !state.tokens.current_is(&TokenKind::Colon) {
+    if state.tokens.current_is(&TokenKind::LBrace) {
         return Ok(None);
     }
-
-    state.tokens.skip(&TokenKind::Colon)?;
 
     Ok(Some(tn::parse(state)?))
 }
@@ -124,7 +119,7 @@ mod tests {
     #[test]
     fn function_definition_with_parameters_and_trailing_comma() {
         assert_ast(
-            "def foo(x: int, y: bool,) {}",
+            "def foo(x int, y bool,) {}",
             AstNode {
                 id: 0,
                 variant: AstNodeVariant::FunctionDefinition {
@@ -147,14 +142,14 @@ mod tests {
                                 variant: AstNodeVariant::TypeNotation {
                                     tn: TypeNotation::Symbol("int"),
                                 },
-                                span: 11..14,
+                                span: 10..13,
                             },
                         },
                         FunctionParam {
                             sym: AstNode {
                                 id: 0,
                                 variant: AstNodeVariant::Symbol { name: "y" },
-                                span: 16..17,
+                                span: 15..16,
                             },
 
                             tn: AstNode {
@@ -162,14 +157,14 @@ mod tests {
                                 variant: AstNodeVariant::TypeNotation {
                                     tn: TypeNotation::Symbol("bool"),
                                 },
-                                span: 19..23,
+                                span: 17..21,
                             },
                         },
                     ],
                     return_tn: None,
                     body: vec![],
                 },
-                span: 0..28,
+                span: 0..26,
             },
         );
     }
@@ -177,7 +172,7 @@ mod tests {
     #[test]
     fn function_definition_with_parameter_and_body() {
         assert_ast(
-            "def write(x: int) { print(x); }",
+            "def write(x int) { print(x); }",
             AstNode {
                 id: 0,
                 variant: AstNodeVariant::FunctionDefinition {
@@ -199,7 +194,7 @@ mod tests {
                             variant: AstNodeVariant::TypeNotation {
                                 tn: TypeNotation::Symbol("int"),
                             },
-                            span: 13..16,
+                            span: 12..15,
                         },
                     }],
                     return_tn: None,
@@ -209,18 +204,18 @@ mod tests {
                             callee: Box::new(AstNode {
                                 id: 0,
                                 variant: AstNodeVariant::Symbol { name: "print" },
-                                span: 20..25,
+                                span: 19..24,
                             }),
                             args: vec![AstNode {
                                 id: 0,
                                 variant: AstNodeVariant::Symbol { name: "x" },
-                                span: 26..27,
+                                span: 25..26,
                             }],
                         },
-                        span: 20..28,
+                        span: 19..27,
                     }],
                 },
-                span: 0..31,
+                span: 0..30,
             },
         );
     }
@@ -228,7 +223,7 @@ mod tests {
     #[test]
     fn function_definition_with_return_statement() {
         assert_ast(
-            "def foo(): int { return 5; }",
+            "def foo() int { return 5; }",
             AstNode {
                 id: 0,
                 variant: AstNodeVariant::FunctionDefinition {
@@ -244,7 +239,7 @@ mod tests {
                         variant: AstNodeVariant::TypeNotation {
                             tn: TypeNotation::Symbol("int"),
                         },
-                        span: 11..14,
+                        span: 10..13,
                     })),
                     body: vec![AstNode {
                         id: 0,
@@ -254,13 +249,13 @@ mod tests {
                                 variant: AstNodeVariant::Literal {
                                     lit: Literal::Int(5),
                                 },
-                                span: 24..25,
+                                span: 23..24,
                             })),
                         },
-                        span: 17..25,
+                        span: 16..24,
                     }],
                 },
-                span: 0..28,
+                span: 0..27,
             },
         );
     }

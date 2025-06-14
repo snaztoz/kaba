@@ -28,7 +28,7 @@ pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>>
 
         _ => Err(ParsingError {
             variant: ParsingErrorVariant::UnexpectedToken {
-                expect: TokenKind::Symbol("TypeName"),
+                expect: TokenKind::Symbol("type name"),
                 found: state.tokens.current().kind.clone(),
             },
             span: state.tokens.current().span,
