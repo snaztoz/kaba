@@ -4,7 +4,7 @@ use super::{
     sym, tn, Result,
 };
 use crate::{
-    ast::{AstNode, AstNodeVariant, Literal},
+    ast::{AstNode, AstNodeVariant, Literal, ObjectInitializer},
     lexer::token::TokenKind,
 };
 
@@ -610,6 +610,8 @@ fn parse_primary_expression<'src>(
             })
         }
 
+        TokenKind::New => parse_object_creation(state),
+
         TokenKind::LBrack => parse_array_literal(state),
         TokenKind::LBrace => parse_record_literal(state),
 
@@ -650,6 +652,145 @@ fn parse_function_call<'src>(state: &ParserState<'src, '_>) -> Result<'src, Vec<
                 return Err(ParsingError {
                     variant: ParsingErrorVariant::UnexpectedToken {
                         expect: TokenKind::RParen,
+                        found: kind.clone(),
+                    },
+                    span: state.tokens.current().span,
+                });
+            }
+        }
+    }
+}
+
+fn parse_object_creation<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
+    let start = state.tokens.current().span.start;
+
+    // Expecting "new"
+    state.tokens.skip(&TokenKind::New)?;
+
+    let object_tn = tn::parse(state)?;
+
+    state.tokens.skip(&TokenKind::LBrace)?;
+
+    if state.tokens.current_is(&TokenKind::RBrace) {
+        let end = state.tokens.current().span.end;
+
+        state.tokens.skip(&TokenKind::RBrace)?;
+
+        return Ok(AstNode {
+            id: state.next_id(),
+            variant: AstNodeVariant::ObjectCreation {
+                tn: Box::new(object_tn),
+                initializer: ObjectInitializer::Empty,
+            },
+            span: start..end,
+        });
+    }
+
+    let expr = parse(state)?;
+
+    let initializer = if state.tokens.current_is(&TokenKind::Colon) {
+        state.tokens.advance();
+
+        let value = parse(state)?;
+
+        if state.tokens.current_is(&TokenKind::Comma) {
+            state.tokens.advance();
+        }
+
+        let initializer = parse_object_keyval_initializer(state, vec![(expr, value)])?;
+
+        ObjectInitializer::KeyVal(initializer)
+    } else {
+        state.tokens.advance();
+
+        let initializer = parse_object_array_initializer(state, vec![expr])?;
+
+        ObjectInitializer::Array(initializer)
+    };
+
+    let end = state.tokens.current().span.end;
+
+    // Expecting "}"
+    state.tokens.skip(&TokenKind::RBrace)?;
+
+    Ok(AstNode {
+        id: state.next_id(),
+        variant: AstNodeVariant::ObjectCreation {
+            tn: Box::new(object_tn),
+            initializer,
+        },
+        span: start..end,
+    })
+}
+
+fn parse_object_keyval_initializer<'src>(
+    state: &ParserState<'src, '_>,
+    mut fields: Vec<(AstNode<'src>, AstNode<'src>)>,
+) -> Result<'src, Vec<(AstNode<'src>, AstNode<'src>)>> {
+    loop {
+        // Stop when encounter a closing bracket
+        if state.tokens.current_is(&TokenKind::RBrace) {
+            return Ok(fields);
+        }
+
+        let key = parse(state)?;
+
+        state.tokens.skip(&TokenKind::Colon)?;
+
+        let value = parse(state)?;
+
+        // Parse element
+        fields.push((key, value));
+
+        // Continue if encounter "," or break out of loop if encounter ")"
+        match state.tokens.current_kind() {
+            TokenKind::Comma => {
+                state.tokens.skip(&TokenKind::Comma)?;
+                continue;
+            }
+
+            TokenKind::RBrace => continue,
+
+            kind => {
+                // Error if encountering neither "," or "]"
+                return Err(ParsingError {
+                    variant: ParsingErrorVariant::UnexpectedToken {
+                        expect: TokenKind::RBrace,
+                        found: kind.clone(),
+                    },
+                    span: state.tokens.current().span,
+                });
+            }
+        }
+    }
+}
+
+fn parse_object_array_initializer<'src>(
+    state: &ParserState<'src, '_>,
+    mut elems: Vec<AstNode<'src>>,
+) -> Result<'src, Vec<AstNode<'src>>> {
+    loop {
+        // Stop when encounter a closing bracket
+        if state.tokens.current_is(&TokenKind::RBrace) {
+            return Ok(elems);
+        }
+
+        elems.push(parse(state)?);
+
+        // Continue if encounter "," or break out of loop if encounter ")"
+        match state.tokens.current_kind() {
+            TokenKind::Comma => {
+                state.tokens.skip(&TokenKind::Comma)?;
+                continue;
+            }
+
+            TokenKind::RBrace => continue,
+
+            kind => {
+                // Error if encountering neither "," or "]"
+                return Err(ParsingError {
+                    variant: ParsingErrorVariant::UnexpectedToken {
+                        expect: TokenKind::RBrace,
                         found: kind.clone(),
                     },
                     span: state.tokens.current().span,
@@ -782,7 +923,7 @@ fn parse_record_literal<'src>(state: &ParserState<'src, '_>) -> Result<'src, Ast
 #[cfg(test)]
 mod tests {
     use crate::{
-        ast::{AstNode, AstNodeVariant, Literal, TypeNotation},
+        ast::{AstNode, AstNodeVariant, Literal, ObjectInitializer, TypeNotation},
         lexer::{self, token::TokenKind},
         parser::{
             error::{ParsingError, ParsingErrorVariant},
@@ -1633,6 +1774,128 @@ mod tests {
                     }),
                 },
                 span: 0..23,
+            },
+        );
+    }
+
+    #[test]
+    fn empty_object_initializer() {
+        assert_ast(
+            "new Data {};",
+            AstNode {
+                id: 0,
+                variant: AstNodeVariant::ObjectCreation {
+                    tn: Box::new(AstNode {
+                        id: 0,
+                        variant: AstNodeVariant::TypeNotation {
+                            tn: TypeNotation::Symbol("Data"),
+                        },
+                        span: 4..8,
+                    }),
+                    initializer: ObjectInitializer::Empty,
+                },
+                span: 0..11,
+            },
+        );
+    }
+
+    #[test]
+    fn array_object_initializer() {
+        assert_ast(
+            "new []int { 1, 2, 3 };",
+            AstNode {
+                id: 0,
+                variant: AstNodeVariant::ObjectCreation {
+                    tn: Box::new(AstNode {
+                        id: 0,
+                        variant: AstNodeVariant::TypeNotation {
+                            tn: TypeNotation::Array {
+                                elem_tn: Box::new(AstNode {
+                                    id: 0,
+                                    variant: AstNodeVariant::TypeNotation {
+                                        tn: TypeNotation::Symbol("int"),
+                                    },
+                                    span: 6..9,
+                                }),
+                            },
+                        },
+                        span: 4..9,
+                    }),
+                    initializer: ObjectInitializer::Array(vec![
+                        AstNode {
+                            id: 0,
+                            variant: AstNodeVariant::Literal {
+                                lit: Literal::Int(1),
+                            },
+                            span: 12..13,
+                        },
+                        AstNode {
+                            id: 0,
+                            variant: AstNodeVariant::Literal {
+                                lit: Literal::Int(2),
+                            },
+                            span: 15..16,
+                        },
+                        AstNode {
+                            id: 0,
+                            variant: AstNodeVariant::Literal {
+                                lit: Literal::Int(3),
+                            },
+                            span: 18..19,
+                        },
+                    ]),
+                },
+                span: 0..21,
+            },
+        );
+    }
+
+    #[test]
+    fn keyval_object_initializer() {
+        assert_ast(
+            "new Data { id: 1, name: \"snaztoz\", };",
+            AstNode {
+                id: 0,
+                variant: AstNodeVariant::ObjectCreation {
+                    tn: Box::new(AstNode {
+                        id: 0,
+                        variant: AstNodeVariant::TypeNotation {
+                            tn: TypeNotation::Symbol("Data"),
+                        },
+                        span: 4..8,
+                    }),
+                    initializer: ObjectInitializer::KeyVal(vec![
+                        (
+                            AstNode {
+                                id: 0,
+                                variant: AstNodeVariant::Symbol { name: "id" },
+                                span: 11..13,
+                            },
+                            AstNode {
+                                id: 0,
+                                variant: AstNodeVariant::Literal {
+                                    lit: Literal::Int(1),
+                                },
+                                span: 15..16,
+                            },
+                        ),
+                        (
+                            AstNode {
+                                id: 0,
+                                variant: AstNodeVariant::Symbol { name: "name" },
+                                span: 18..22,
+                            },
+                            AstNode {
+                                id: 0,
+                                variant: AstNodeVariant::Literal {
+                                    lit: Literal::String(String::from("snaztoz")),
+                                },
+                                span: 24..33,
+                            },
+                        ),
+                    ]),
+                },
+                span: 0..36,
             },
         );
     }

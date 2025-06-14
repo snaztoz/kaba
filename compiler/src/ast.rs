@@ -247,6 +247,11 @@ pub enum AstNodeVariant<'src> {
         tn: TypeNotation<'src>,
     },
 
+    ObjectCreation {
+        tn: Box<AstNode<'src>>,
+        initializer: ObjectInitializer<'src>,
+    },
+
     Literal {
         lit: Literal<'src>,
     },
@@ -566,6 +571,9 @@ impl Display for AstNodeVariant<'_> {
             Self::TypeNotation { .. } => {
                 write!(f, "type notation")
             }
+            Self::ObjectCreation { .. } => {
+                write!(f, "object creation")
+            }
             Self::Literal { .. } => {
                 write!(f, "value literal")
             }
@@ -622,6 +630,27 @@ impl Display for TypeNotation<'_> {
                 write!(f, "({joined}) -> {return_tn}")
             }
         }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ObjectInitializer<'src> {
+    Empty,
+    Array(Vec<AstNode<'src>>),
+    KeyVal(Vec<(AstNode<'src>, AstNode<'src>)>),
+}
+
+impl ObjectInitializer<'_> {
+    pub const fn is_empty(&self) -> bool {
+        matches!(self, Self::Empty)
+    }
+
+    pub const fn is_array(&self) -> bool {
+        matches!(self, Self::Array(_))
+    }
+
+    pub const fn is_record(&self) -> bool {
+        matches!(self, Self::KeyVal(_))
     }
 }
 

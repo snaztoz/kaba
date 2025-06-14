@@ -42,6 +42,7 @@ pub enum TokenKind<'src> {
     //
 
     #[token("var")]      Var,
+    #[token("new")]      New,
     #[token("if")]       If,
     #[token("else")]     Else,
     #[token("while")]    While,
@@ -121,6 +122,7 @@ impl Display for TokenKind<'_> {
             Self::String(_) => write!(f, "string literal"),
 
             Self::Var => write!(f, "`var` keyword"),
+            Self::New => write!(f, "`new` keyword"),
             Self::If => write!(f, "`if` keyword"),
             Self::Else => write!(f, "`else` keyword"),
             Self::While => write!(f, "`while` keyword"),
