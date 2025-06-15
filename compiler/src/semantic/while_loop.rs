@@ -72,7 +72,7 @@ mod tests {
     fn while_loop_statements() {
         assert_is_ok(indoc! {"
                 def main()
-				{
+                {
                     while 2 > 5 {
                         debug 1;
                     }
@@ -92,7 +92,7 @@ mod tests {
     fn using_math_expression_as_condition_in_while_statement() {
         assert_is_err(indoc! {"
                 def main()
-				{
+                {
                     while 5 + 5 {}
                 }
             "})
@@ -102,7 +102,7 @@ mod tests {
     fn using_break_statement_not_in_loop_scope() {
         assert_is_err(indoc! {"
                 def main()
-				{
+                {
                     if true {
                         break;
                     }
@@ -114,7 +114,7 @@ mod tests {
     fn using_invalid_statement_after_loop_control() {
         assert_is_err(indoc! {"
                 def main()
-				{
+                {
                     while true {
                         break;
                         1 + true; // this should be error

@@ -12,9 +12,9 @@ pub fn analyze<'a>(node: &AstNode) -> Result<Cow<'a, Type>> {
         Literal::Void => Type::Void,
 
         Literal::Bool(_) => Type::Bool,
-        Literal::Int(n) => Type::Int(IntType::Unbounded(*n)),
-        Literal::Float(n) => Type::Float(FloatType::Unbounded(*n)),
         Literal::Char(_) => Type::Char,
+        Literal::Float(n) => Type::Float(FloatType::Unbounded(*n)),
+        Literal::Int(n) => Type::Int(IntType::Unbounded(*n)),
         Literal::String(_) => Type::String,
     };
 

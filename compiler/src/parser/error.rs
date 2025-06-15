@@ -18,21 +18,21 @@ impl Display for ParsingError<'_> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ParsingErrorVariant<'src> {
+    NumberLiteralLimitExceeded,
     UnexpectedToken {
         expect: TokenKind<'src>,
         found: TokenKind<'src>,
     },
-    NumberLiteralLimitExceeded,
 }
 
 impl Display for ParsingErrorVariant<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::UnexpectedToken { expect, found, .. } => {
-                write!(f, "expecting {expect}, found {found} instead")
-            }
             Self::NumberLiteralLimitExceeded => {
                 write!(f, "number literal limit exceeded")
+            }
+            Self::UnexpectedToken { expect, found, .. } => {
+                write!(f, "expecting {expect}, found {found} instead")
             }
         }
     }

@@ -2,15 +2,14 @@ use super::{error::LexingError, rule};
 use logos::{Logos, Span};
 use std::fmt::Display;
 
-/// A wrapper around raw [`TokenKind`] that also store the metadata information
-/// of a token, such as its actual position inside the source code.
+/// A wrapper around raw [`TokenKind`] that also stores the metadata information
+/// of the actual token, such as its position inside the source code.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Token<'src> {
     pub kind: TokenKind<'src>,
     pub span: Span,
 }
 
-/// The list of all token kinds that may exists in a valid Kaba source code.
 #[derive(Logos, Clone, Debug, PartialEq)]
 #[logos(skip r"[ \t\r\n\f]+", error = LexingError)]
 #[rustfmt::skip]
@@ -18,15 +17,7 @@ pub enum TokenKind<'src> {
     #[regex("[a-zA-Z0-9_]+", rule::lex_symbol)]
     Symbol(&'src str),
 
-    //
     // Literals
-    //
-
-    #[regex("[0-9]+", priority = 2, callback = rule::lex_integer)]
-    Int(u32),
-
-    #[regex(r"[0-9]+\.[0-9]+", callback = rule::lex_float)]
-    Float(f32),
 
     #[regex(r"true|false", callback = rule::lex_bool)]
     Bool(bool),
@@ -34,30 +25,32 @@ pub enum TokenKind<'src> {
     #[token("\'", callback = rule::lex_char)]
     Char(char),
 
+    #[regex(r"[0-9]+\.[0-9]+", callback = rule::lex_float)]
+    Float(f32),
+
+    #[regex("[0-9]+", priority = 2, callback = rule::lex_integer)]
+    Int(u32),
+
     #[token("\"", callback = rule::lex_string)]
     String(String),
 
-    //
     // Keywords
-    //
 
-    #[token("var")]      Var,
-    #[token("new")]      New,
-    #[token("if")]       If,
-    #[token("else")]     Else,
-    #[token("while")]    While,
-    #[token("each")]     Each,
     #[token("break")]    Break,
     #[token("continue")] Continue,
-    #[token("in")]       In,
-    #[token("def")]      Def,
-    #[token("return")]   Return,
-    #[token("record")]   Record,
     #[token("debug")]    Debug,
+    #[token("def")]      Def,
+    #[token("each")]     Each,
+    #[token("else")]     Else,
+    #[token("if")]       If,
+    #[token("in")]       In,
+    #[token("new")]      New,
+    #[token("record")]   Record,
+    #[token("return")]   Return,
+    #[token("var")]      Var,
+    #[token("while")]    While,
 
-    //
     // Signs and operators
-    //
 
     #[token("+")] Add,
     #[token("-")] Sub,
@@ -69,12 +62,13 @@ pub enum TokenKind<'src> {
     #[token(";")] Semicolon,
     #[token(",")] Comma,
     #[token(".")] Dot,
-    #[token("(")] LParen,
-    #[token(")")] RParen,
-    #[token("[")] LBrack,
-    #[token("]")] RBrack,
+
     #[token("{")] LBrace,
+    #[token("[")] LBrack,
+    #[token("(")] LParen,
     #[token("}")] RBrace,
+    #[token("]")] RBrack,
+    #[token(")")] RParen,
 
     #[token("=")]  Assign,
     #[token("+=")] AddAssign,
@@ -90,8 +84,8 @@ pub enum TokenKind<'src> {
     #[token("<")]  Lt,
     #[token("<=")] Lte,
 
-    #[token("||")] Or,
     #[token("&&")] And,
+    #[token("||")] Or,
     #[token("!")]  Not,
 
     #[token("->")] RightPoint,
@@ -114,56 +108,61 @@ impl TokenKind<'_> {
 impl Display for TokenKind<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Symbol(s) => write!(f, "{s}"),
-            Self::Int(_) => write!(f, "integer literal"),
-            Self::Float(_) => write!(f, "float literal"),
             Self::Bool(b) => write!(f, "boolean `{b}` literal"),
             Self::Char(_) => write!(f, "char literal"),
+            Self::Float(_) => write!(f, "float literal"),
+            Self::Int(_) => write!(f, "integer literal"),
             Self::String(_) => write!(f, "string literal"),
+            Self::Symbol(s) => write!(f, "{s}"),
 
-            Self::Var => write!(f, "`var` keyword"),
-            Self::New => write!(f, "`new` keyword"),
-            Self::If => write!(f, "`if` keyword"),
-            Self::Else => write!(f, "`else` keyword"),
-            Self::While => write!(f, "`while` keyword"),
-            Self::Each => write!(f, "`each` keyword"),
             Self::Break => write!(f, "`break` keyword"),
             Self::Continue => write!(f, "`continue` keyword"),
-            Self::In => write!(f, "`in` keyword"),
-            Self::Def => write!(f, "`def` keyword"),
-            Self::Return => write!(f, "`return` keyword"),
-            Self::Record => write!(f, "`record` keyword"),
             Self::Debug => write!(f, "`debug` keyword"),
+            Self::Def => write!(f, "`def` keyword"),
+            Self::Each => write!(f, "`each` keyword"),
+            Self::Else => write!(f, "`else` keyword"),
+            Self::If => write!(f, "`if` keyword"),
+            Self::In => write!(f, "`in` keyword"),
+            Self::New => write!(f, "`new` keyword"),
+            Self::Record => write!(f, "`record` keyword"),
+            Self::Return => write!(f, "`return` keyword"),
+            Self::Var => write!(f, "`var` keyword"),
+            Self::While => write!(f, "`while` keyword"),
 
             Self::Add => write!(f, "addition operator (`+`)"),
             Self::Sub => write!(f, "subtraction operator (`-`)"),
             Self::Mul => write!(f, "multiplication operator (`*`)"),
             Self::Div => write!(f, "division operator (`/`)"),
             Self::Mod => write!(f, "modulo operator (`%`)"),
+
             Self::Colon => write!(f, "colon (`:`)"),
             Self::Semicolon => write!(f, "semicolon (`;`)"),
             Self::Comma => write!(f, "comma (`,`)"),
             Self::Dot => write!(f, "dot (`.`)"),
-            Self::LParen => write!(f, "left parentheses (`(`)"),
-            Self::RParen => write!(f, "right parentheses (`)`)"),
-            Self::LBrack => write!(f, "left bracket (`[`)"),
-            Self::RBrack => write!(f, "right bracket (`]`)"),
+
             Self::LBrace => write!(f, "left brace (`{{`)"),
+            Self::LBrack => write!(f, "left bracket (`[`)"),
+            Self::LParen => write!(f, "left parentheses (`(`)"),
             Self::RBrace => write!(f, "right bracket (`}}`)"),
+            Self::RBrack => write!(f, "right bracket (`]`)"),
+            Self::RParen => write!(f, "right parentheses (`)`)"),
+
             Self::Assign => write!(f, "assign operator (`=`)"),
             Self::AddAssign => write!(f, "add assign operator (`+=`)"),
             Self::SubAssign => write!(f, "sub assign operator (`-=`)"),
             Self::MulAssign => write!(f, "mul assign operator (`*=`)"),
             Self::DivAssign => write!(f, "div assign operator (`/=`)"),
             Self::ModAssign => write!(f, "mod assign operator (`%=`)"),
+
             Self::Eq => write!(f, "equal operator (`==`)"),
             Self::Neq => write!(f, "not equal operator (`!=`)"),
             Self::Gt => write!(f, "greater than operator (`>`)"),
             Self::Gte => write!(f, "greater than or equal operator (`>=`)"),
             Self::Lt => write!(f, "less than operator (`<`)"),
             Self::Lte => write!(f, "less than or equal operator (`<=`)"),
-            Self::Or => write!(f, "logical or operator (`||`)"),
+
             Self::And => write!(f, "logical and operator (`&&`)"),
+            Self::Or => write!(f, "logical or operator (`||`)"),
             Self::Not => write!(f, "logical not operator (`!`)"),
 
             Self::RightPoint => write!(f, "right pointing operator (`->`)"),

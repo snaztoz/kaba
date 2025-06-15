@@ -52,8 +52,8 @@ pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
     // reset the type after the loop body is evaluated.
     let returned_t_before_this = state.take_returned_type();
 
-    // Check all statements inside the body with a new scope
     let exit_scope_id = state.current_scope_id();
+
     state.create_scope(node.id, ScopeVariant::Loop, exit_scope_id);
     state.enter_scope(node.id);
 

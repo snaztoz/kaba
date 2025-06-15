@@ -34,7 +34,8 @@ use crate::{ast::AstNode, AstNodeVariant};
 /// * It can be the last statement of a function:
 ///
 /// ```text
-/// def foo(): int {
+/// def foo() int
+/// {
 ///     if false {
 ///         return 5;
 ///     } else {
@@ -59,7 +60,8 @@ use crate::{ast::AstNode, AstNodeVariant};
 ///   (exhaustive). Else, the compiler will throw an error.
 ///
 /// ```text
-/// def foo(): int {
+/// def foo() int
+/// {
 ///     if !true {
 ///         return 1;
 ///     } else {
@@ -92,15 +94,16 @@ pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
         // For example:
         //
         // ```
-        // def foo: int {
+        // def foo() int
+        // {
         //     return 1;  // The returned type is "int" here
         //
         //     if !true {
         //         return 5;
         //     }
         //
-        //     // Because the above if-else statement is not exhaustive, we
-        //     // can't take the returned type (the `5`).
+        //     // Because the above if statement is non-exhaustive, we can't use
+        //     // the returned type (the literal `5`).
         //     //
         //     // Instead, we must set it back to the previous returned type,
         //     // that is, the one where `1` was returned.
@@ -113,7 +116,7 @@ pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
     let or_else_branch = node.variant.as_or_else_branch().unwrap();
     match &or_else_branch.variant {
         AstNodeVariant::If { .. } => {
-            // All conditional branches must returning a value (exhaustive)
+            // All conditional branches must returning values (exhaustive)
             // for this statement to be considered as returning value
 
             analyze(state, or_else_branch)?;
@@ -128,8 +131,6 @@ pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
         }
 
         AstNodeVariant::Else { .. } => {
-            // Check all statements inside the body with a new scope
-
             let exit_scope_id = state.current_scope_id();
             state.create_scope(or_else_branch.id, ScopeVariant::Conditional, exit_scope_id);
             state.enter_scope(or_else_branch.id);

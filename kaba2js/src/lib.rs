@@ -315,7 +315,7 @@ mod tests {
     fn var_declaration_with_literals() {
         let result = compile(indoc! {"
             def main()
-			{
+            {
                 var x = 5;
                 var foo = new [][]int {
                     new []int { 1, 2, x },
@@ -335,7 +335,7 @@ mod tests {
     fn var_declaration_with_math_expr() {
         let result = compile(indoc! {"
             def main()
-			{
+            {
                 var x = 5;
                 var y = 1 + 5 / x - 2 * 7 % 2;
             }
@@ -353,7 +353,7 @@ mod tests {
         let result = compile(
             r#"
             def main()
-			{
+            {
                 var x = '1';
                 var y = "Hello, World!";
             }
@@ -371,7 +371,7 @@ mod tests {
     fn binary_operations() {
         let result = compile(indoc! {"
             def main()
-			{
+            {
                 var x = 5;
                 x += 1;
                 x -= 1;
@@ -393,7 +393,7 @@ mod tests {
     fn conditional_branches() {
         let result = compile(indoc! {"
             def main()
-			{
+            {
                 if !false {
                     if false {} else {}
                 } else if true {}
@@ -411,7 +411,7 @@ mod tests {
     fn while_loop() {
         let result = compile(indoc! {"
             def main()
-			{
+            {
                 while true {
                     var i = 0;
                     break;
@@ -430,7 +430,7 @@ mod tests {
     fn each_loop() {
         let result = compile(indoc! {"
             def main()
-			{
+            {
                 var arr = new []int { 1, 2, 3 };
                 each n in arr {
                     var i = n * 2;
@@ -449,7 +449,7 @@ mod tests {
     fn index_access() {
         let result = compile(indoc! {"
             def main()
-			{
+            {
                 var arr = new []int { 1, 2, 3 };
                 arr[0];
             }
@@ -470,7 +470,7 @@ mod tests {
             }
 
             def main()
-			{
+            {
                 var x = foo();
             }
         "});
@@ -486,7 +486,7 @@ mod tests {
     fn print_value() {
         let result = compile(indoc! {r#"
             def main()
-			{
+            {
                 debug "Hello, World!";
             }
         "#});

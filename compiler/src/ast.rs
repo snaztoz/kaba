@@ -237,8 +237,10 @@ pub enum AstNodeVariant<'src> {
         index: Box<AstNode<'src>>,
     },
 
-    // This variant is only used as the span information holder and then will be
-    // removed. It won't be present in the final resulting ASTs.
+    // This variant is only used as span information holder, and will be
+    // removed afterward.
+    //
+    // It won't be present in the final resulting ASTs.
     Group {
         expr: Box<AstNode<'src>>,
     },

@@ -12,10 +12,10 @@ pub struct AnalyzerState {
     // Maintain the current active scope by storing its ID.
     current_scope_id: NodeId,
 
-    // The last returned type.
+    // The latest returned type.
     //
-    // Used to track the type of `return` statements to facilitate the type
-    // checking with function's return type.
+    // Used to track the type of `return` statements in order to facilitate the
+    // type checking with function return types.
     returned_type: Box<Type>,
 }
 

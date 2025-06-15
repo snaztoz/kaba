@@ -14,7 +14,7 @@ mod semantic;
 /// Compile Kaba source code.
 ///
 /// It is assumed that all newlines are already normalized to line feed
-/// character (LF).
+/// characters (LF).
 ///
 /// If it is not yet normalized, use the [`normalize_newlines`] function to
 /// achieve this.
@@ -37,7 +37,7 @@ pub fn compile(src: &str) -> Result<(AstNode<'_>, SymbolTable)> {
     Ok((ast, sym_table))
 }
 
-// Normalize all newline characters to line feed (LF).
+/// Normalize all newline characters to line feed (LF).
 pub fn normalize_newlines(src: &str) -> String {
     src.replace("\r\n", "\n").replace('\r', "\n")
 }

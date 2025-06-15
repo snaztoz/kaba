@@ -26,9 +26,6 @@ mod tn;
 mod variable;
 mod while_loop;
 
-/// Parse a Kaba program from the provided tokens.
-///
-/// Produces an AST that represents the entire source code of the given tokens.
 pub fn parse(tokens: Vec<Token>) -> Result<AstNode> {
     let tokens = TokenStream::new(tokens);
     let parser_state = ParserState::new(&tokens);

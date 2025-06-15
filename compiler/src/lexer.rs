@@ -1,5 +1,5 @@
 //! This module contains the required logic operations during the tokenizing
-//! stage of a Kaba source code.
+//! stage of Kaba program.
 
 use error::Result;
 use logos::Logos;
@@ -9,11 +9,6 @@ mod error;
 mod rule;
 pub mod token;
 
-/// Provide a quick way to lex a Kaba program's source code, without the needs
-/// to setting up and running the lexer manually.
-///
-/// Produces a vector of [`Token`] that contains additional information of a
-/// token.
 pub fn lex(src: &str) -> Result<Vec<Token>> {
     let mut l = TokenKind::lexer(src);
     let mut tokens = vec![];

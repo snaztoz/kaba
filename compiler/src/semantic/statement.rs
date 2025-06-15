@@ -17,22 +17,23 @@ use std::borrow::Cow;
 pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
     match &node.variant {
         AstNodeVariant::VariableDeclaration { .. } => variable::analyze(state, node),
-        AstNodeVariant::If { .. } => conditional::analyze(state, node),
-        AstNodeVariant::While { .. } => while_loop::analyze(state, node),
-        AstNodeVariant::Each { .. } => each_loop::analyze(state, node),
+
         AstNodeVariant::Break { .. } | AstNodeVariant::Continue { .. } => {
             analyze_loop_control(state, node)
         }
+        AstNodeVariant::Each { .. } => each_loop::analyze(state, node),
+        AstNodeVariant::If { .. } => conditional::analyze(state, node),
+        AstNodeVariant::While { .. } => while_loop::analyze(state, node),
 
-        // Don't allow function and record definitions in non-global scope.
+        // Prevent function and record definitions in non-global scope.
         AstNodeVariant::FunctionDefinition { sym, .. }
         | AstNodeVariant::RecordDefinition { sym, .. } => Err(SemanticError {
             variant: SemanticErrorVariant::UnexpectedStatement(node.to_string()),
             span: sym.span.clone(),
         }),
 
-        AstNodeVariant::Return { .. } => analyze_return(state, node),
         AstNodeVariant::Debug { .. } => analyze_debug(state, node),
+        AstNodeVariant::Return { .. } => analyze_return(state, node),
 
         _ => {
             expression::analyze(state, node)?;

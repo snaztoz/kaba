@@ -10,15 +10,15 @@ use crate::{
 pub fn parse<'src>(state: &ParserState<'src, '_>) -> Result<'src, AstNode<'src>> {
     // Check if statement starts with a keyword
     match state.tokens.current_kind() {
-        TokenKind::Var => variable::parse(state),
-        TokenKind::If => conditional::parse(state),
-        TokenKind::While => while_loop::parse(state),
-        TokenKind::Each => each_loop::parse(state),
         TokenKind::Break | TokenKind::Continue => parse_loop_control(state),
-        TokenKind::Def => function::parse(state),
-        TokenKind::Return => parse_return_statement(state),
         TokenKind::Debug => parse_debug_statement(state),
+        TokenKind::Def => function::parse(state),
+        TokenKind::Each => each_loop::parse(state),
+        TokenKind::If => conditional::parse(state),
         TokenKind::Record => record::parse(state),
+        TokenKind::Return => parse_return_statement(state),
+        TokenKind::Var => variable::parse(state),
+        TokenKind::While => while_loop::parse(state),
 
         _ => {
             let expr = expression::parse(state)?;

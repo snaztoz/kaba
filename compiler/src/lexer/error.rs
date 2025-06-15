@@ -17,11 +17,11 @@ impl Display for LexingError {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum LexingErrorVariant {
+    InvalidHexNumber,
     InvalidSymbol,
     UnexpectedEof,
     UnexpectedToken,
     UnsupportedEscapeCharacter,
-    InvalidHexNumber,
 
     #[default]
     UnknownToken,
@@ -30,6 +30,9 @@ pub enum LexingErrorVariant {
 impl Display for LexingErrorVariant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::InvalidHexNumber => {
+                write!(f, "not a valid hex number")
+            }
             Self::InvalidSymbol => {
                 write!(f, "not a valid symbol")
             }
@@ -39,14 +42,11 @@ impl Display for LexingErrorVariant {
             Self::UnexpectedToken => {
                 write!(f, "unexpected token")
             }
-            Self::UnknownToken => {
-                write!(f, "unknown token")
-            }
             Self::UnsupportedEscapeCharacter => {
                 write!(f, "unsupported escape character")
             }
-            Self::InvalidHexNumber => {
-                write!(f, "not a valid hex number")
+            Self::UnknownToken => {
+                write!(f, "unknown token")
             }
         }
     }

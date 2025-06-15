@@ -92,7 +92,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     var x = 10;
                     debug x;
                 }
@@ -106,7 +106,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     var x = 5;
                     var y = 10;
 
@@ -122,7 +122,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     debug 2147483647 + 1;
 
                     var a = 2147483647;
@@ -147,7 +147,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     var x = 2048;
                     debug x;
 
@@ -164,7 +164,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     var x = 2048;
                     if true {
                         var x = 1024;
@@ -182,7 +182,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     var x = 2048;
                     if false {
                         x = 1024;
@@ -203,7 +203,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     var x = 0;
                     while true {
                         debug x;
@@ -223,7 +223,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     if false && true {
                         debug 1;
                     }
@@ -244,7 +244,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     var x = 0;
                     while true {
                         x = x + 1;
@@ -266,7 +266,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     var x = 5;
                     x += 5;
                     debug x;
@@ -289,7 +289,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     debug add_two(5);
                 }
 
@@ -310,7 +310,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     var x = 10;
                     dbg(x);
                 }
@@ -328,7 +328,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     debug one() + two();
                 }
 
@@ -349,7 +349,7 @@ mod tests {
         assert_output_equal(
             indoc! {r#"
                 def main()
-				{
+                {
                     debug greet("snaztoz");
                 }
 
@@ -368,7 +368,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     debug fibonacci(3);
                 }
 
@@ -388,7 +388,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     count_to_zero(5);
                 }
 
@@ -409,7 +409,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     print(produce);
                 }
 
@@ -434,7 +434,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     debug foo()();
                 }
 
@@ -455,7 +455,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     debug new Data1 {
                         occupation: new Occupation {
                             name: \"programmer\",
@@ -490,7 +490,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     var d = new Data {
                         a: 0,
                         b: 0,
@@ -534,7 +534,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     debug new [][]int {
                         new []int { 1, 2 },
                         new []int { 3, 4 },
@@ -554,7 +554,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     var arr = new []int { 0, 1, 2 };
 
                     arr[0] = 99;
@@ -579,7 +579,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     var arr = new [] (int) -> int {
                         add_one,
                         add_two,
@@ -614,7 +614,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     var users = new [](string) -> User { new_user };
 
                     debug users[0](\"snaztoz\").name;
@@ -639,7 +639,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     var arr_1 = foo();
                     var arr_2 = foo();
 
@@ -665,7 +665,7 @@ mod tests {
         assert_output_equal(
             indoc! {"
                 def main()
-				{
+                {
                     each n in new []int { 1, 2, 3, 4, 5, 6 } {
                         if n == 3 {
                             continue;

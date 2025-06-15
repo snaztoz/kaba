@@ -24,7 +24,6 @@ mod typ;
 mod variable;
 mod while_loop;
 
-/// Provides a quick way to run semantic analysis on a Kaba AST.
 pub fn analyze(program: &AstNode) -> Result<SymbolTable> {
     let mut state = AnalyzerState::new(program.id);
 
@@ -67,13 +66,8 @@ fn analyze_definitions(state: &mut AnalyzerState, stmts: &[AstNode]) -> Result<(
     Ok(())
 }
 
+// For now, global scopes only contain function & record definitions.
 fn ensure_all_permitted_in_global(stmts: &[AstNode]) -> Result<()> {
-    // We are expecting that in global scope, statements (currently) are
-    // only consisted of function definitions, while other statements are
-    // rejected in this scope.
-    //
-    // TODO: review other statements for possibilities to be applied here
-
     for stmt in stmts {
         match &stmt.variant {
             AstNodeVariant::FunctionDefinition { .. } | AstNodeVariant::RecordDefinition { .. } => {

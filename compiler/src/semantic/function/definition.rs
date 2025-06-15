@@ -32,18 +32,19 @@ pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
     // For example:
     //
     // ```
-    // def foo: int {
+    // def foo() int
+    // {
     //     return "no";
     // }
     // ```
     //
-    // The analyzer is able to detect that the `return` statement above
-    // is invalid (due to the types are not compatible).
+    // The analyzer is able to detect that the `return` statement above is
+    // invalid (due to the types are not compatible).
     //
     // But in the case of:
     //
     // ```
-    // def foo: int {}
+    // def foo() int {}
     // ```
     //
     // The analyzer will miss this return type checking, because there is
