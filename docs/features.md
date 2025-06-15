@@ -213,9 +213,9 @@ def main()
 
     var f () -> void = foo;
 
-    var g User = {};
+    var g User = new User {};
 
-    var h []int = [int 99, 101];
+    var h []int = new []int { 99, 101 };
 }
 
 def foo() {}
@@ -254,7 +254,7 @@ Kaba can infer the type of an array:
 ```text
 def main()
 {
-    var arr = [bool false, true, true];
+    var arr = new []bool { false, true, true };
 
     // The type of `arr` is `[]bool`
 
@@ -267,10 +267,15 @@ More complex scenarios are also supported:
 ```text
 def main()
 {
-    var arr = [[]int [int], [int 4, 5]];
+    var arr = new [][]int {
+        new []int {},
+        new []int { 4, 5 },
+    };
+
     foo(arr);
 
     arr[1][1] = 10;
+
     foo(arr);
 }
 
@@ -403,7 +408,7 @@ To simplify looping over elements of an iterable, use the `each` loop statement:
 ```text
 def main()
 {
-    each n in [int 1, 2, 3, 4] {
+    each n in new []int { 1, 2, 3, 4 } {
         debug n * 2;
     }
 }
@@ -414,7 +419,7 @@ Similar to the `while` statement, we can also use `continue` and `break` stateme
 ```text
 def main()
 {
-    each n in [int 1, 2, 3, 4, 5, 6] {
+    each n in new []int { 1, 2, 3, 4, 5, 6 } {
         if n == 3 {
             continue;
         }

@@ -47,10 +47,6 @@ See [features](docs/features.md) page to learn about all available features.
 
 See [docs/examples](docs/examples) directory for the examples of already-working Kaba programs.
 
-## 🎯 Next Goals
-
-The current priority is to add support for `record` data type.
-
 ## ⚒️ Contributing
 
 Thank you for considering contributing to the Kaba programming language! The contribution guide can be found in the [CONTRIBUTING.md](CONTRIBUTING.md) file.
@@ -74,8 +70,6 @@ limitations under the License.
 ```
 
 ## 🙌 Acknowledgements
-
-> Standing on the shoulders of giants
 
 This project can be made thanks to the help of amazing works done by the others. You can read [ACKNOWLEDGEMENTS.md](ACKNOWLEDGEMENTS.md) for the list of the projects that Kaba depends on.
 
