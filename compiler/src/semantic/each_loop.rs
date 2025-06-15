@@ -14,7 +14,7 @@ use crate::ast::AstNode;
 /// * The provided expression must evaluates to an array:
 ///
 /// ```text
-/// each n in [int 0, 1, 2] {
+/// each n in new []int { 0, 1, 2 } {
 ///     // ...
 /// }
 /// ```
@@ -22,7 +22,7 @@ use crate::ast::AstNode;
 /// * With `break` or `continue` statement:
 ///
 /// ```text
-/// each n in [int 0, 1, 2] {
+/// each n in new []int { 0, 1, 2 } {
 ///     if !false {
 ///         break;
 ///     }
@@ -76,12 +76,12 @@ mod tests {
     fn each_loop_statements() {
         assert_is_ok(indoc! {"
                 def main()
-{
-                    each n in [int 1, 2, 3] {
+                {
+                    each n in new []int { 1, 2, 3 } {
                         debug n;
                     }
 
-                    var arr = [int 4, 5, 6];
+                    var arr = new []int { 4, 5, 6 };
                     each n in arr {
                         debug n;
                     }
@@ -106,7 +106,7 @@ mod tests {
         assert_is_err(indoc! {"
                 def main()
                 {
-                    each n in [int 1, 2] {}
+                    each n in new []int { 1, 2 } {}
 
                     debug n;
                 }

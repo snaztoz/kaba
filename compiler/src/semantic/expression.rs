@@ -6,13 +6,14 @@ use super::{
     typ::{assert, FloatType, IntType, Type},
 };
 use crate::ast::{AstNode, AstNodeVariant};
+use object as object_creation;
 use std::{borrow::Cow, cmp};
 
 mod field_access;
 mod function_call;
 mod index_access;
+mod object;
 
-/// Analyze expressions.
 pub fn analyze<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, Type>> {
     match &node.variant {
         AstNodeVariant::Assign { .. }
@@ -43,6 +44,8 @@ pub fn analyze<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, T
         AstNodeVariant::Not { .. } => analyze_logical_not_expr(state, node),
         AstNodeVariant::Neg { .. } => analyze_neg_expr(state, node),
 
+        AstNodeVariant::ObjectCreation { .. } => object_creation::analyze(state, node),
+
         AstNodeVariant::Symbol { name } => state
             .get_sym_variant(name)
             .ok_or_else(|| SemanticError {
@@ -51,7 +54,7 @@ pub fn analyze<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, T
             })
             .map(|st| Cow::Borrowed(st.as_entity_t())),
 
-        AstNodeVariant::Literal { .. } => literal::analyze(state, node),
+        AstNodeVariant::Literal { .. } => literal::analyze(node),
         AstNodeVariant::FunctionCall { .. } => function_call::analyze(state, node),
         AstNodeVariant::FieldAccess { .. } => field_access::analyze(state, node),
         AstNodeVariant::IndexAccess { .. } => index_access::analyze(state, node),

@@ -64,7 +64,9 @@ fn parse_initializer<'src>(state: &ParserState<'src, '_>) -> Result<'src, Object
 
         ObjectInitializer::KeyVal(fields)
     } else {
-        state.tokens.advance();
+        if state.tokens.current_is(&TokenKind::Comma) {
+            state.tokens.advance();
+        }
 
         let elems = parse_initializer_array_elems(state, vec![expr])?;
 

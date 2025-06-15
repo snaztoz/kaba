@@ -456,15 +456,29 @@ mod tests {
             indoc! {"
                 def main()
 				{
-                    debug { occupation: { name: \"programmer\" }}.occupation.name;
+                    debug new Data1 {
+                        occupation: new Occupation {
+                            name: \"programmer\",
+                        }
+                    }.occupation.name;
 
-                    var d Data = { val: 10 };
+                    var d = new Data2 { val: 10 };
                     d.val *= 10;
                     debug d.val + 10;
                 }
 
-                record Data {
+                record Data1
+                {
+                    occupation Occupation,
+                }
+
+                record Data2 {
                     val int,
+                }
+
+                record Occupation
+                {
+                    name string,
                 }
             "},
             "programmer\n110\n".as_bytes(),
@@ -477,7 +491,7 @@ mod tests {
             indoc! {"
                 def main()
 				{
-                    var d = {
+                    var d = new Data {
                         a: 0,
                         b: 0,
                         c: 5,
@@ -500,6 +514,16 @@ mod tests {
                     debug d.e;
                     debug d.f;
                 }
+
+                record Data
+                {
+                    a int,
+                    b int,
+                    c int,
+                    d int,
+                    e int,
+                    f int,
+                }
             "},
             "10\n10\n3\n10\n10\n0\n".as_bytes(),
         );
@@ -511,9 +535,12 @@ mod tests {
             indoc! {"
                 def main()
 				{
-                    debug [[]int [int 1, 2], [int 3, 4]][1][0];
+                    debug new [][]int {
+                        new []int { 1, 2 },
+                        new []int { 3, 4 },
+                    }[1][0];
 
-                    var arr = [int 1, 3];
+                    var arr = new []int { 1, 3 };
                     var x = 98;
                     debug arr[99 - x] + 5;
                 }
@@ -528,7 +555,7 @@ mod tests {
             indoc! {"
                 def main()
 				{
-                    var arr = [int 0, 1, 2];
+                    var arr = new []int { 0, 1, 2 };
 
                     arr[0] = 99;
 
@@ -553,11 +580,11 @@ mod tests {
             indoc! {"
                 def main()
 				{
-                    var arr = [(int) -> int
+                    var arr = new [] (int) -> int {
                         add_one,
                         add_two,
                         add_three,
-                    ];
+                    };
 
                     var i = 0;
                     while i < 3 {
@@ -588,16 +615,18 @@ mod tests {
             indoc! {"
                 def main()
 				{
-                    var users = [(string) -> User new_user];
+                    var users = new [](string) -> User { new_user };
 
                     debug users[0](\"snaztoz\").name;
                 }
 
-                def new_user(name string) User {
-                    return { name: name };
+                def new_user(name string) User
+                {
+                    return new User { name: name };
                 }
 
-                record User {
+                record User
+                {
                     name string,
                 }
             "},
@@ -624,7 +653,7 @@ mod tests {
                 }
 
                 def foo() []int {
-                    return [int 0];
+                    return new []int { 0 };
                 }
             "},
             "0\n0\n10\n0\n".as_bytes(),
@@ -637,7 +666,7 @@ mod tests {
             indoc! {"
                 def main()
 				{
-                    each n in [int 1, 2, 3, 4, 5, 6] {
+                    each n in new []int { 1, 2, 3, 4, 5, 6 } {
                         if n == 3 {
                             continue;
                         }

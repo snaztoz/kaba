@@ -29,14 +29,14 @@ use std::borrow::Cow;
 /// * Variable can't be created without providing the initial value:
 ///
 /// ```text
-/// var x: int;
+/// var x int;
 /// ```
 ///
 /// * If type notation presents, the provided initial value must also be
 ///   assignable to the type:
 ///
 /// ```text
-/// var x: int = 5.0;
+/// var x int = 5.0;
 /// ```
 pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
     let val = node.variant.as_variable_declaration_val();
@@ -275,17 +275,22 @@ mod tests {
     //
 
     #[test]
-    fn declaring_variable_with_record_literal() {
+    fn declaring_variable_with_record() {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var u = { name: \"snaztoz\" };
+                    var u = new User { name: \"snaztoz\" };
+                }
+
+                record User
+                {
+                    name string,
                 }
             "});
     }
 
     #[test]
-    fn declaring_variable_with_record_literal_and_type_notation() {
+    fn declaring_variable_with_type_notation() {
         assert_is_ok(indoc! {"
                 record User
                 {
@@ -294,7 +299,7 @@ mod tests {
 
                 def main()
 				{
-                    var u User = { name: \"snaztoz\" };
+                    var u User = new User { name: \"snaztoz\" };
                 }
             "});
     }
@@ -315,9 +320,9 @@ mod tests {
 
                 def main()
 				{
-                    var u User = {
+                    var u = new User {
                         name: \"snaztoz\",
-                        occupation: { name: \"programmer\" },
+                        occupation: new Occupation { name: \"programmer\" },
                     };
                 }
             "});
@@ -339,9 +344,9 @@ mod tests {
 
                 def main()
 				{
-                    var u User = {
+                    var u = new User {
                         name: \"snaztoz\",
-                        occupation: { name: \"programmer\" },
+                        occupation: new Occupation { name: \"programmer\" },
                     };
 
                     debug u.name;
@@ -355,21 +360,21 @@ mod tests {
     //
 
     #[test]
-    fn declaring_variable_with_array_literal() {
+    fn declaring_variable_with_array() {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var arr = [int 1];
+                    var arr = new []int { 1 };
                 }
             "});
     }
 
     #[test]
-    fn declaring_variable_with_empty_array_literal() {
+    fn declaring_variable_with_empty_array() {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var arr = [int];
+                    var arr = new []int {};
                 }
             "});
     }
@@ -379,17 +384,17 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var arr []int = [int 5, 9, 10];
+                    var arr []int = new []int { 5, 9, 10 };
                 }
             "});
     }
 
     #[test]
-    fn declaring_variable_with_empty_array_literal_and_type_notation() {
+    fn declaring_variable_with_empty_array_and_type_notation() {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var arr []int = [int];
+                    var arr []int = new []int {};
                 }
             "});
     }
@@ -399,7 +404,7 @@ mod tests {
         assert_is_err(indoc! {"
                 def main()
 				{
-                    var arr []int = [short 5];
+                    var arr []int = new []short { 5 };
                 }
             "});
     }
@@ -409,7 +414,10 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var arr [][]int = [[]int [int 5, 9, 10], [int 1, 2, 3]];
+                    var arr [][]int = new [][]int {
+                        new []int { 5, 9, 10 },
+                        new []int { 1, 2, 3 },
+                    };
                 }
             "});
     }
@@ -419,7 +427,12 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var arr [][][]int = [[][]int [[]int], [[]int]];
+                    var arr [][][]int = new [][][]int {
+                        new [][]int {
+                            new []int {},
+                            new []int {}
+                        }
+                    };
                 }
             "});
     }
@@ -429,9 +442,9 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var arr []sbyte = [sbyte];
+                    var arr []sbyte = new []sbyte {};
 
-                    var arr2 []sbyte = [sbyte 1, 2, 3];
+                    var arr2 []sbyte = new []sbyte { 1, 2, 3 };
                 }
             "});
     }
@@ -442,7 +455,7 @@ mod tests {
                 def main()
 				{
                     var x long = 10;
-                    var arr []long = [long 1, 2, 3 + x];
+                    var arr []long = new []long { 1, 2, 3 + x };
                 }
             "});
     }
@@ -452,7 +465,7 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
 				{
-                    var arr = [()->int five, six];
+                    var arr = new []()->int { five, six };
                 }
 
                 def five() int
@@ -472,7 +485,7 @@ mod tests {
         assert_is_err(indoc! {"
                 def main()
 				{
-                    var arr = [int 1, 0.5];
+                    var arr = new []int { 1, 0.5 };
                 }
             "});
     }
@@ -482,7 +495,7 @@ mod tests {
         assert_is_err(indoc! {"
                 def main()
 				{
-                    var arr = [NotExist];
+                    var arr = new []NotExist {};
                 }
             "})
     }

@@ -33,6 +33,10 @@ impl AstNode<'_> {
         matches!(self.variant, AstNodeVariant::RecordDefinition { .. })
     }
 
+    pub const fn is_symbol(&self) -> bool {
+        matches!(self.variant, AstNodeVariant::Symbol { .. })
+    }
+
     pub fn into_group_inner(self) -> Self {
         if let AstNodeVariant::Group { expr } = self.variant {
             expr.into_group_inner()
@@ -253,7 +257,7 @@ pub enum AstNodeVariant<'src> {
     },
 
     Literal {
-        lit: Literal<'src>,
+        lit: Literal,
     },
 }
 
@@ -442,7 +446,23 @@ impl AstNodeVariant<'_> {
         }
     }
 
-    pub fn as_literal(&self) -> &Literal<'_> {
+    pub fn as_object_creation_tn(&self) -> &AstNode<'_> {
+        if let Self::ObjectCreation { tn, .. } = self {
+            tn.as_ref()
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn as_object_creation_initializer(&self) -> &ObjectInitializer<'_> {
+        if let Self::ObjectCreation { initializer, .. } = self {
+            initializer
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn as_literal(&self) -> &Literal {
         match self {
             Self::Literal { lit } => lit,
             _ => unreachable!(),
@@ -654,11 +674,9 @@ impl ObjectInitializer<'_> {
     }
 }
 
-/// The representation of each value that may exists in a Kaba source code,
-/// such as integer or string.
 #[derive(Debug, PartialEq)]
-pub enum Literal<'src> {
-    // A temporary value while the runtime is still using a tree-walk
+pub enum Literal {
+    // A temporary value while the runtime is still using the tree-walk
     // interpreter mode
     Void,
 
@@ -667,18 +685,9 @@ pub enum Literal<'src> {
     Float(f32),
     Char(char),
     String(String),
-
-    Array {
-        elem_tn: Box<AstNode<'src>>,
-        elems: Vec<AstNode<'src>>,
-    },
-
-    Record {
-        fields: Vec<(AstNode<'src>, AstNode<'src>)>,
-    },
 }
 
-impl Display for Literal<'_> {
+impl Display for Literal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Void => write!(f, "void"),
@@ -688,26 +697,6 @@ impl Display for Literal<'_> {
             Self::Float(n) => write!(f, "{n}"),
             Self::Char(c) => write!(f, "{c}"),
             Self::String(s) => write!(f, "{s}"),
-
-            Self::Array { elems, .. } => {
-                let joined = elems
-                    .iter()
-                    .map(|tn| tn.to_string())
-                    .collect::<Vec<_>>()
-                    .join(", ");
-
-                write!(f, "[{joined}]")
-            }
-
-            Self::Record { fields } => {
-                let joined = fields
-                    .iter()
-                    .map(|(name, val)| format!("{name}: {val}"))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-
-                write!(f, "{{ {joined} }}")
-            }
         }
     }
 }

@@ -41,14 +41,3 @@ pub fn analyze<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, T
         Cow::Owned(t) => Cow::Owned(t.into_record_fields().remove(field_name).unwrap()),
     })
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::semantic::test_util::assert_expr_type;
-
-    #[test]
-    fn field_accessing() {
-        assert_expr_type("{ name: \"snaztoz\" }.name;", &[], Type::String);
-    }
-}

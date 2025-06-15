@@ -224,14 +224,12 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
                 {
-                    var d = { is_true: true };
-                    d.is_true = false;
-
-                    var d2 Data = { val: 10 };
-                    d2.val = 99;
+                    var d = new Data { val: 5 };
+                    d.val = 10;
                 }
 
-                record Data {
+                record Data
+                {
                     val int,
                 }
             "});
@@ -242,11 +240,8 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
                 {
-                    var d = { val: 10 };
+                    var d = new Data { val: 10 };
                     d.val += 5;
-
-                    var d2 Data = { val: 10 };
-                    d2.val += 99;
                 }
 
                 record Data
@@ -265,7 +260,7 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
                 {
-                    var arr = [bool true, false, true];
+                    var arr = new []bool { true, false, true };
 
                     arr[1] = true;
                 }
@@ -277,7 +272,7 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
                 {
-                    var arr = [float 0.5, 1.1, 2.3];
+                    var arr = new []float { 0.5, 1.1, 2.3 };
 
                     arr[0] += 5.5;
                 }

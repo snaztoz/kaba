@@ -46,6 +46,10 @@ impl Type {
         matches!(self, Type::Void)
     }
 
+    pub const fn is_array(&self) -> bool {
+        matches!(self, Type::Array { .. })
+    }
+
     pub const fn is_record(&self) -> bool {
         matches!(self, Type::Record { .. })
     }

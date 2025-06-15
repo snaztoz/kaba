@@ -247,7 +247,7 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
                 {
-                    foo([int 1, 2, 3]);
+                    foo(new []int { 1, 2, 3 });
                 }
 
                 def foo(arr []int) {}
@@ -259,11 +259,11 @@ mod tests {
         assert_is_ok(indoc! {"
                 def main()
                 {
-                    foo([int 1, 2, 3]);
+                    foo(new []int { 1, 2, 3 });
 
-                    foo([int]);
+                    foo(new []int {});
 
-                    foo([int 1]);
+                    foo(new []int { 1 });
                 }
 
                 def foo(arr []int) {}
@@ -283,7 +283,7 @@ mod tests {
 
                 def foo() []int
                 {
-                    return [int 1, 2, 3];
+                    return new []int { 1, 2, 3 };
                 }
             "});
     }
@@ -293,33 +293,13 @@ mod tests {
     //
 
     #[test]
-    fn calling_function_with_named_record_parameter() {
-        assert_is_ok(indoc! {"
-                def main()
-                {
-                    foo({ val: 5 });
-
-                    var d Data = { val: 10 };
-                    foo(d);
-                }
-
-                def foo(d Data) {}
-
-                record Data
-                {
-                    val int,
-                }
-            "});
-    }
-
-    #[test]
     fn accessing_record_field_from_inside_a_function() {
         assert_is_ok(indoc! {"
                 def main()
                 {
-                    debug foo({ val: 5 });
+                    debug foo(new Data { val: 5 });
 
-                    var d Data = { val: 10 };
+                    var d = new Data { val: 10 };
                     debug foo(d);
                 }
 
@@ -345,7 +325,7 @@ mod tests {
 
                 def producer() Data
                 {
-                    return { val: 10 };
+                    return new Data { val: 10 };
                 }
 
                 record Data

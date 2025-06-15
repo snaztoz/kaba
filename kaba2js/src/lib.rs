@@ -1,4 +1,4 @@
-use compiler::{AstNode, AstNodeVariant, Literal, Result, SymbolTable};
+use compiler::{AstNode, AstNodeVariant, Literal, ObjectInitializer, Result, SymbolTable};
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
@@ -196,8 +196,12 @@ fn compile_expression(expr: &AstNode, sym_table: &SymbolTable, buff: &mut String
             buff.push(']');
         }
 
+        AstNodeVariant::ObjectCreation { initializer, .. } => {
+            compile_object_creation(initializer, sym_table, buff);
+        }
+
         AstNodeVariant::Symbol { name, .. } => buff.push_str(name),
-        AstNodeVariant::Literal { lit, .. } => compile_literal(lit, sym_table, buff),
+        AstNodeVariant::Literal { lit, .. } => compile_literal(lit, buff),
 
         _ => unreachable!(),
     }
@@ -256,23 +260,36 @@ fn compile_binary_expression(expr: &AstNode, sym_table: &SymbolTable, buff: &mut
     compile_expression(rhs, sym_table, buff);
 }
 
-fn compile_literal(lit: &Literal, sym_table: &SymbolTable, buff: &mut String) {
+fn compile_object_creation(
+    initializer: &ObjectInitializer,
+    sym_table: &SymbolTable,
+    buff: &mut String,
+) {
+    if initializer.is_record() {
+        todo!("record literal initializer");
+    }
+
+    buff.push('[');
+
+    if let ObjectInitializer::Array(elems) = initializer {
+        for (i, el) in elems.iter().enumerate() {
+            compile_expression(el, sym_table, buff);
+            if i != elems.len() - 1 {
+                buff.push(',');
+            }
+        }
+    }
+
+    buff.push(']');
+}
+
+fn compile_literal(lit: &Literal, buff: &mut String) {
     match lit {
         Literal::Int(n) => buff.push_str(&n.to_string()),
         Literal::Float(n) => buff.push_str(&n.to_string()),
         Literal::Bool(b) => buff.push_str(&b.to_string()),
         Literal::Char(ch) => buff.push_str(&format!("\"{ch}\"")),
         Literal::String(s) => buff.push_str(&format!("\"{s}\"")),
-        Literal::Array { elems, .. } => {
-            buff.push('[');
-            for (i, el) in elems.iter().enumerate() {
-                compile_expression(el, sym_table, buff);
-                if i != elems.len() - 1 {
-                    buff.push(',');
-                }
-            }
-            buff.push(']');
-        }
         _ => unreachable!(),
     }
 }
@@ -300,7 +317,10 @@ mod tests {
             def main()
 			{
                 var x = 5;
-                var foo = [[]int [int 1, 2, x], [int]];
+                var foo = new [][]int {
+                    new []int { 1, 2, x },
+                    new []int {},
+                };
             }
         "});
 
@@ -411,7 +431,7 @@ mod tests {
         let result = compile(indoc! {"
             def main()
 			{
-                var arr = [int 1, 2, 3];
+                var arr = new []int { 1, 2, 3 };
                 each n in arr {
                     var i = n * 2;
                 }
@@ -430,7 +450,7 @@ mod tests {
         let result = compile(indoc! {"
             def main()
 			{
-                var arr = [int 1, 2, 3];
+                var arr = new []int { 1, 2, 3 };
                 arr[0];
             }
         "});

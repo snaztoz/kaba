@@ -24,20 +24,3 @@ pub fn analyze<'a>(state: &'a AnalyzerState, node: &AstNode) -> Result<Cow<'a, T
         Cow::Owned(t) => Cow::Owned(t.into_array_elem_t()),
     })
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::semantic::{test_util::assert_expr_type, typ::IntType};
-
-    #[test]
-    fn index_accessing() {
-        assert_expr_type(
-            "[[]int [int 1, 2]][0];",
-            &[],
-            Type::Array {
-                elem_t: Box::new(Type::Int(IntType::Int)),
-            },
-        );
-    }
-}

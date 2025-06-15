@@ -1,11 +1,8 @@
 use super::{
-    assignment::AssignmentRunner,
-    error::Result,
-    state::{Object, RuntimeState},
-    value::RuntimeValue,
+    assignment::AssignmentRunner, error::Result, state::RuntimeState, value::RuntimeValue,
 };
-use crate::runtime::body::BodyRunner;
-use compiler::{AstNode, AstNodeVariant, FunctionParam, Literal};
+use crate::runtime::{body::BodyRunner, state::Object};
+use compiler::{AstNode, AstNodeVariant, FunctionParam, Literal, ObjectInitializer};
 use std::collections::HashMap;
 
 pub struct ExpressionRunner<'src, 'a> {
@@ -79,17 +76,9 @@ impl<'src, 'a> ExpressionRunner<'src, 'a> {
         unreachable!()
     }
 
-    fn literal_to_value(&self, lit: &'a Literal) -> Result<RuntimeValue> {
-        let val = match lit {
-            Literal::Void => RuntimeValue::Void,
-
-            Literal::Bool(b) => RuntimeValue::Bool(*b),
-            Literal::Int(n) => RuntimeValue::Int(*n),
-            Literal::Float(n) => RuntimeValue::Float(*n),
-            Literal::Char(c) => RuntimeValue::Char(*c),
-            Literal::String(s) => RuntimeValue::String(s.clone()),
-
-            Literal::Array { elems: arr, .. } => {
+    fn object_creation_to_value(&self, initializer: &'a ObjectInitializer) -> Result<RuntimeValue> {
+        match initializer {
+            ObjectInitializer::Array(arr) => {
                 let mut elems = vec![];
                 for elem in arr {
                     let val = ExpressionRunner::new(elem, self.root, self.state).run()?;
@@ -102,10 +91,10 @@ impl<'src, 'a> ExpressionRunner<'src, 'a> {
                     .push(Object::Array(elems));
                 let ptr = self.state.objects_arena.borrow().len() - 1;
 
-                RuntimeValue::Array(ptr)
+                Ok(RuntimeValue::Array(ptr))
             }
 
-            Literal::Record { fields } => {
+            ObjectInitializer::KeyVal(fields) => {
                 let mut f = HashMap::new();
                 for (name, val) in fields {
                     let name = name.variant.as_sym_name();
@@ -119,8 +108,30 @@ impl<'src, 'a> ExpressionRunner<'src, 'a> {
                     .push(Object::Record(f));
                 let ptr = self.state.objects_arena.borrow().len() - 1;
 
-                RuntimeValue::Record(ptr)
+                Ok(RuntimeValue::Record(ptr))
             }
+
+            ObjectInitializer::Empty => {
+                self.state
+                    .objects_arena
+                    .borrow_mut()
+                    .push(Object::Record(HashMap::new()));
+                let ptr = self.state.objects_arena.borrow().len() - 1;
+
+                Ok(RuntimeValue::Record(ptr))
+            }
+        }
+    }
+
+    fn literal_to_value(&self, lit: &'a Literal) -> Result<RuntimeValue> {
+        let val = match lit {
+            Literal::Void => RuntimeValue::Void,
+
+            Literal::Bool(b) => RuntimeValue::Bool(*b),
+            Literal::Int(n) => RuntimeValue::Int(*n),
+            Literal::Float(n) => RuntimeValue::Float(*n),
+            Literal::Char(c) => RuntimeValue::Char(*c),
+            Literal::String(s) => RuntimeValue::String(s.clone()),
         };
 
         Ok(val)
@@ -172,6 +183,9 @@ impl ExpressionRunner<'_, '_> {
                 self.run_index_access(object, index)
             }
 
+            AstNodeVariant::ObjectCreation { initializer, .. } => {
+                self.object_creation_to_value(initializer)
+            }
             AstNodeVariant::Symbol { name, .. } => self.state.get_value(name),
             AstNodeVariant::Literal { lit, .. } => self.literal_to_value(lit),
 
