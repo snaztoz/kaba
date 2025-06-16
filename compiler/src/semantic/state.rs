@@ -127,7 +127,7 @@ impl AnalyzerState {
 
     /// Check if the given `sym_name` can be saved.
     ///
-    /// A symbol is considered to can't be saved if:
+    /// A symbol is unable to be saved if:
     ///
     ///  1. It is a builtin (reserved) name,
     ///  2. or it's already exist in the current scope.
@@ -142,8 +142,7 @@ impl AnalyzerState {
         !current_scope.symbols.contains_key(sym_name)
     }
 
-    /// Save type declaration to current active scope without providing type.
-    pub fn save_type_declaration(&mut self, sym_id: NodeId, sym_name: &str) {
+    pub fn declare_type(&mut self, sym_id: NodeId, sym_name: &str) {
         // Save to scope table
         let scope = self.get_scope_mut(self.current_scope_id());
         scope.symbols.insert(String::from(sym_name), sym_id);
@@ -158,8 +157,7 @@ impl AnalyzerState {
         );
     }
 
-    /// Set the definition of a type.
-    pub fn set_type_definition(&mut self, sym_id: NodeId, t: Type) {
+    pub fn define_type(&mut self, sym_id: NodeId, t: Type) {
         self.symbol_table.get_mut(&sym_id).unwrap().variant = SymbolVariant::Type(t);
     }
 

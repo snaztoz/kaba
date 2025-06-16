@@ -17,7 +17,7 @@ pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
         });
     }
 
-    state.save_type_declaration(sym.id, sym_name);
+    state.declare_type(sym.id, sym_name);
 
     Ok(())
 }

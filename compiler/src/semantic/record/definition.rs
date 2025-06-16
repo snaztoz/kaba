@@ -25,7 +25,7 @@ pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
 
     let record_sym = node.variant.as_sym();
 
-    state.set_type_definition(
+    state.define_type(
         record_sym.id,
         Type::Record {
             name: String::from(record_sym.variant.as_sym_name()),
