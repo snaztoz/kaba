@@ -23,6 +23,7 @@ pub enum Type {
         elem_t: Box<Self>,
     },
     Record {
+        name: String,
         fields: HashMap<String, Self>,
     },
     Callable {
@@ -95,7 +96,7 @@ impl Type {
     }
 
     pub fn as_record_fields(&self) -> &HashMap<String, Self> {
-        if let Self::Record { fields } = self {
+        if let Self::Record { fields, .. } = self {
             fields
         } else {
             unreachable!()
@@ -119,7 +120,7 @@ impl Type {
     }
 
     pub fn into_record_fields(self) -> HashMap<String, Self> {
-        if let Self::Record { fields } = self {
+        if let Self::Record { fields, .. } = self {
             fields
         } else {
             unreachable!()
@@ -197,14 +198,7 @@ impl Display for Type {
                 write!(f, "({params_str}) -> {return_t}")
             }
 
-            Self::Record { fields } => {
-                let fields_str = fields
-                    .iter()
-                    .map(|(name, t)| format!("{name}: {t}"))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                write!(f, "{{ {fields_str} }}")
-            }
+            Self::Record { name, .. } => write!(f, "{name}"),
         }
     }
 }

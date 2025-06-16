@@ -23,7 +23,15 @@ pub fn analyze(state: &mut AnalyzerState, node: &AstNode) -> Result<()> {
         fields.insert(String::from(field_name), field_t);
     }
 
-    state.set_type_definition(node.variant.as_sym().id, Type::Record { fields });
+    let record_sym = node.variant.as_sym();
+
+    state.set_type_definition(
+        record_sym.id,
+        Type::Record {
+            name: String::from(record_sym.variant.as_sym_name()),
+            fields,
+        },
+    );
 
     Ok(())
 }

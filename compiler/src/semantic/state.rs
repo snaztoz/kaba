@@ -46,13 +46,11 @@ impl AnalyzerState {
 
             Type::Array { elem_t } => self.has_t(elem_t),
 
-            Type::Record { fields } => fields.iter().all(|(_, t)| self.has_t(t)),
-
             Type::Callable { params_t, return_t } => {
                 params_t.iter().all(|t| self.has_t(t)) && self.has_t(return_t)
             }
 
-            Type::Symbol(name) => {
+            Type::Record { name, .. } | Type::Symbol(name) => {
                 matches!(
                     self.get_sym_variant(name),
                     Some(SymbolVariant::UndefinedType) | Some(SymbolVariant::Type(_))
