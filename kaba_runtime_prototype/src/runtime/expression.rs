@@ -155,7 +155,7 @@ impl ExpressionRunner<'_, '_> {
                 let lhs_val = ExpressionRunner::new(lhs, self.root, self.state).run()?;
                 let rhs_val = ExpressionRunner::new(rhs, self.root, self.state).run()?;
 
-                Ok(self.run_binary_op(&lhs_val, &rhs_val))
+                self.run_binary_op(&lhs_val, &rhs_val)
             }
 
             AstNodeVariant::Not { expr, .. } | AstNodeVariant::Neg { expr, .. } => {
@@ -179,19 +179,19 @@ impl ExpressionRunner<'_, '_> {
         }
     }
 
-    fn run_binary_op(&self, lhs_val: &RuntimeValue, rhs_val: &RuntimeValue) -> RuntimeValue {
+    fn run_binary_op(&self, lhs_val: &RuntimeValue, rhs_val: &RuntimeValue) -> Result<RuntimeValue> {
         match &self.ast.variant {
-            AstNodeVariant::Or { .. } => self.run_or(lhs_val, rhs_val),
-            AstNodeVariant::And { .. } => self.run_and(lhs_val, rhs_val),
-            AstNodeVariant::Eq { .. } => self.run_eq(lhs_val, rhs_val),
-            AstNodeVariant::Neq { .. } => self.run_neq(lhs_val, rhs_val),
-            AstNodeVariant::Gt { .. } => self.run_gt(lhs_val, rhs_val),
-            AstNodeVariant::Gte { .. } => self.run_gte(lhs_val, rhs_val),
-            AstNodeVariant::Lt { .. } => self.run_lt(lhs_val, rhs_val),
-            AstNodeVariant::Lte { .. } => self.run_lte(lhs_val, rhs_val),
-            AstNodeVariant::Add { .. } => self.math_add(lhs_val, rhs_val),
-            AstNodeVariant::Sub { .. } => self.math_sub(lhs_val, rhs_val),
-            AstNodeVariant::Mul { .. } => self.math_mul(lhs_val, rhs_val),
+            AstNodeVariant::Or { .. } => Ok(self.run_or(lhs_val, rhs_val)),
+            AstNodeVariant::And { .. } => Ok(self.run_and(lhs_val, rhs_val)),
+            AstNodeVariant::Eq { .. } => Ok(self.run_eq(lhs_val, rhs_val)),
+            AstNodeVariant::Neq { .. } => Ok(self.run_neq(lhs_val, rhs_val)),
+            AstNodeVariant::Gt { .. } => Ok(self.run_gt(lhs_val, rhs_val)),
+            AstNodeVariant::Gte { .. } => Ok(self.run_gte(lhs_val, rhs_val)),
+            AstNodeVariant::Lt { .. } => Ok(self.run_lt(lhs_val, rhs_val)),
+            AstNodeVariant::Lte { .. } => Ok(self.run_lte(lhs_val, rhs_val)),
+            AstNodeVariant::Add { .. } => Ok(self.math_add(lhs_val, rhs_val)),
+            AstNodeVariant::Sub { .. } => Ok(self.math_sub(lhs_val, rhs_val)),
+            AstNodeVariant::Mul { .. } => Ok(self.math_mul(lhs_val, rhs_val)),
             AstNodeVariant::Div { .. } => self.math_div(lhs_val, rhs_val),
             AstNodeVariant::Mod { .. } => self.math_mod(lhs_val, rhs_val),
 
@@ -279,18 +279,30 @@ impl ExpressionRunner<'_, '_> {
         }
     }
 
-    fn math_div(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
+    fn math_div(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> Result<RuntimeValue> {
         match (lhs, rhs) {
-            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l.wrapping_div(*r)),
-            (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l / r),
+            (RuntimeValue::Int(_), RuntimeValue::Int(r)) if *r == 0 => {
+                Err(super::error::RuntimeError::DivisionByZero)
+            }
+            (RuntimeValue::Float(_), RuntimeValue::Float(r)) if *r == 0.0 => {
+                Err(super::error::RuntimeError::DivisionByZero)
+            }
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => Ok(RuntimeValue::Int(l / r)),
+            (RuntimeValue::Float(l), RuntimeValue::Float(r)) => Ok(RuntimeValue::Float(l / r)),
             _ => unreachable!(),
         }
     }
 
-    fn math_mod(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
+    fn math_mod(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> Result<RuntimeValue> {
         match (lhs, rhs) {
-            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l.wrapping_rem(*r)),
-            (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l % r),
+            (RuntimeValue::Int(_), RuntimeValue::Int(r)) if *r == 0 => {
+                Err(super::error::RuntimeError::DivisionByZero)
+            }
+            (RuntimeValue::Float(_), RuntimeValue::Float(r)) if *r == 0.0 => {
+                Err(super::error::RuntimeError::DivisionByZero)
+            }
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => Ok(RuntimeValue::Int(l % r)),
+            (RuntimeValue::Float(l), RuntimeValue::Float(r)) => Ok(RuntimeValue::Float(l % r)),
             _ => unreachable!(),
         }
     }

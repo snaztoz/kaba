@@ -162,7 +162,7 @@ impl<'src, 'a> AssignmentRunner<'src, 'a> {
         match lhs {
             Lhs::Identifier(name) => {
                 let old_val = self.state.get_value(name)?;
-                let new_val = self.math_div(&old_val, &val);
+                let new_val = self.math_div(&old_val, &val)?;
 
                 self.state.update_value(name, new_val)?;
             }
@@ -174,7 +174,7 @@ impl<'src, 'a> AssignmentRunner<'src, 'a> {
                 let rec = &mut self.state.objects_arena.borrow_mut()[*record_ptr];
 
                 let old_val = &rec.as_record()[field_name];
-                let new_val = self.math_div(old_val, &val);
+                let new_val = self.math_div(old_val, &val)?;
 
                 *rec.as_record_mut().get_mut(field_name).unwrap() = new_val;
             }
@@ -186,7 +186,7 @@ impl<'src, 'a> AssignmentRunner<'src, 'a> {
                 }
 
                 let old_val = &arr.as_array()[*index];
-                let new_val = self.math_div(old_val, &val);
+                let new_val = self.math_div(old_val, &val)?;
 
                 arr.as_array_mut()[*index] = new_val;
             }
@@ -321,10 +321,16 @@ impl AssignmentRunner<'_, '_> {
         }
     }
 
-    fn math_div(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> RuntimeValue {
+    fn math_div(&self, lhs: &RuntimeValue, rhs: &RuntimeValue) -> Result<RuntimeValue> {
         match (lhs, rhs) {
-            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => RuntimeValue::Int(l / r),
-            (RuntimeValue::Float(l), RuntimeValue::Float(r)) => RuntimeValue::Float(l / r),
+            (RuntimeValue::Int(_), RuntimeValue::Int(r)) if *r == 0 => {
+                Err(super::error::RuntimeError::DivisionByZero)
+            }
+            (RuntimeValue::Float(_), RuntimeValue::Float(r)) if *r == 0.0 => {
+                Err(super::error::RuntimeError::DivisionByZero)
+            }
+            (RuntimeValue::Int(l), RuntimeValue::Int(r)) => Ok(RuntimeValue::Int(l / r)),
+            (RuntimeValue::Float(l), RuntimeValue::Float(r)) => Ok(RuntimeValue::Float(l / r)),
             _ => unreachable!(),
         }
     }
