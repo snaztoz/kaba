@@ -4,11 +4,13 @@ pub type Result<T> = std::result::Result<T, RuntimeError>;
 
 #[derive(Debug, PartialEq)]
 pub enum RuntimeError {
-    // TODO: division by zero error, etc.
+    DivisionByZero,
 }
 
 impl Display for RuntimeError {
-    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RuntimeError::DivisionByZero => write!(f, "division by zero"),
+        }
     }
 }
